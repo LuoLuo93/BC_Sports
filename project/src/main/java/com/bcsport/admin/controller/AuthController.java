@@ -237,4 +237,20 @@ public class AuthController {
         return "monitor/schedule";
     }
 
+    /**
+     * IHR入职排除页面
+     */
+    @GetMapping("/ihr/onboarding-exclusion")
+    public String onboardingExclusionPage() {
+        return "ihr/onboarding-exclusion";
+    }
+
+    /**
+     * IHR离职排除页面
+     */
+    @GetMapping("/ihr/leaving-exclusion")
+    public String leavingExclusionPage() {
+        return "ihr/leaving-exclusion";
+    }
+
 }

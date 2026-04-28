@@ -39,7 +39,7 @@ public class ScheduleTaskRegistry {
         //register("qywx.department.member.detail.sync.follow", "QW-同步成员详情[仅客户联系]", "qywxDepartmentMemberDetailTask", "syncFromFollowUser", "仅同步配置了客户联系功能的成员详情", MODULE_QYWX, 8);
         //register("qywx.customer.detail.sync", "QW-同步客户详情", "qywxCustomerDetailTask", "sync", "同步企业微信外部联系人详情", MODULE_QYWX, 9);
         register("qywx.group.chat.and.stat.sync", "QW-一键同步群聊相关", "qywxGroupChatAndStatSyncTask", "syncAll", "一键同步：客户联系成员→群聊列表→群聊统计→群发消息→朋友圈", MODULE_QYWX, 13);
-        register("qywx.employee.lifecycle.sync", "QW-员工生命周期整合同步", "qywxEmployeeLifecycleSyncTask", "syncAll", "一键同步：部门→新员工入职→员工信息变更→员工离职", MODULE_QYWX, 14);
+        register("qywx.employee.lifecycle.sync", "QW-员工生命周期整合同步", "qywxEmployeeLifecycleSyncTask", "syncAll", "一键同步：企微基础信息→新员工入职→员工信息变更→员工离职", MODULE_QYWX, 14);
         register("qywx.new.employee.sync", "QW-录入企微新员工", "qywxNewEmployeeSyncTask", "sync", "从IHR新入职员工数据同步到企微通讯录", MODULE_QYWX, 15);
         register("qywx.employee.update.sync", "QW-更新企微员工信息", "qywxEmployeeUpdateSyncTask", "sync", "从IHR变更员工数据更新企微通讯录信息", MODULE_QYWX, 16);
         register("qywx.employee.leave.sync", "QW-企微员工离职同步", "qywxEmployeeLeaveSyncTask", "sync", "从IHR离职员工数据删除企微通讯录成员", MODULE_QYWX, 17);

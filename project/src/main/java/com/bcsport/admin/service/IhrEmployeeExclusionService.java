@@ -9,12 +9,12 @@ import com.bcsport.admin.dto.IhrEmployeeExclusionQueryDTO;
 import com.bcsport.admin.entity.qywx.IhrEmployeeExclusion;
 import com.bcsport.admin.vo.IhrEmployeeExclusionVO;
 
-public interface IhrEmployeeExclusionService extends IService&lt;IhrEmployeeExclusion&gt; {
+public interface IhrEmployeeExclusionService extends IService<IhrEmployeeExclusion> {
 
     /**
      * 分页查询
      */
-    PageResult&lt;IhrEmployeeExclusionVO&gt; pageExclusions(PageQuery pageQuery, IhrEmployeeExclusionQueryDTO queryDTO);
+    PageResult<IhrEmployeeExclusionVO> pageExclusions(PageQuery pageQuery, IhrEmployeeExclusionQueryDTO queryDTO);
 
     /**
      * 根据ID查询

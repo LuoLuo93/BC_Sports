@@ -10,7 +10,9 @@
       "Bash(perl -pi -e 's/\\\\xef\\\\xbf\\\\xbd\\\\?/\\)/g' src/main/java/com/bcsport/admin/common/Result.java src/main/java/com/bcsport/admin/controller/BrandController.java src/main/java/com/bcsport/admin/controller/ChannelNatureController.java src/main/java/com/bcsport/admin/controller/ChannelTypeController.java src/main/java/com/bcsport/admin/controller/DeptController.java)",
       "Bash(xargs perl *)",
       "Bash(xargs -0 perl -pi -e 's/处理\\)/处理器/g; s/不存\\)/不存在/g; s/路\\)/路径/g; s/状态\\)/状态码/g; s/上下\\)/上下文/g; s/匹配\\)/匹配器/g; s/过滤\\)/过滤器/g; s/管理\\)/管理员/g; s/池大\\)/池大小/g')",
-      "PowerShell(Test-Path *)"
+      "PowerShell(Test-Path *)",
+      "Bash(git add *)",
+      "Bash(git commit *)"
     ]
   }
 }

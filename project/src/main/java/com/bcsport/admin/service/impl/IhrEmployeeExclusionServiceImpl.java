@@ -17,13 +17,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 @Service
-public class IhrEmployeeExclusionServiceImpl extends ServiceImpl&lt;IhrEmployeeExclusionMapper, IhrEmployeeExclusion&gt; implements IhrEmployeeExclusionService {
+public class IhrEmployeeExclusionServiceImpl extends ServiceImpl<IhrEmployeeExclusionMapper, IhrEmployeeExclusion> implements IhrEmployeeExclusionService {
 
     @Override
-    public PageResult&lt;IhrEmployeeExclusionVO&gt; pageExclusions(PageQuery pageQuery, IhrEmployeeExclusionQueryDTO queryDTO) {
-        Page&lt;IhrEmployeeExclusion&gt; page = pageQuery.toPage();
+    public PageResult<IhrEmployeeExclusionVO> pageExclusions(PageQuery pageQuery, IhrEmployeeExclusionQueryDTO queryDTO) {
+        Page<IhrEmployeeExclusion> page = pageQuery.toPage();
 
-        LambdaQueryWrapper&lt;IhrEmployeeExclusion&gt; queryWrapper = new LambdaQueryWrapper&lt;&gt;();
+        LambdaQueryWrapper<IhrEmployeeExclusion> queryWrapper = new LambdaQueryWrapper<>();
         if (queryDTO != null) {
             if (StringUtils.hasText(queryDTO.getStaffName())) {
                 queryWrapper.like(IhrEmployeeExclusion::getStaffName, queryDTO.getStaffName());
@@ -45,7 +45,7 @@ public class IhrEmployeeExclusionServiceImpl extends ServiceImpl&lt;IhrEmployeeE
             queryWrapper.orderByDesc(IhrEmployeeExclusion::getCreateTime);
         }
 
-        Page&lt;IhrEmployeeExclusion&gt; resultPage = baseMapper.selectPage(page, queryWrapper);
+        Page<IhrEmployeeExclusion> resultPage = baseMapper.selectPage(page, queryWrapper);
         return BeanCopyUtils.copyPage(PageResult.of(resultPage), IhrEmployeeExclusionVO.class);
     }
 

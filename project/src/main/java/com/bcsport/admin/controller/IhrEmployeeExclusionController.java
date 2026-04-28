@@ -29,16 +29,16 @@ public class IhrEmployeeExclusionController {
     @GetMapping("/page")
     @ApiOperation("分页查询排除名单")
     @RequiresPermissions("ihr:exclusion:query")
-    public Result&lt;PageResult&lt;IhrEmployeeExclusionVO&gt;&gt; page(PageQuery pageQuery, IhrEmployeeExclusionQueryDTO queryDTO) {
+    public Result<PageResult<IhrEmployeeExclusionVO>> page(PageQuery pageQuery, IhrEmployeeExclusionQueryDTO queryDTO) {
         log.debug("查询IHR排除名单, pageNum={}, pageSize={}", pageQuery.getPageNum(), pageQuery.getPageSize());
-        PageResult&lt;IhrEmployeeExclusionVO&gt; pageResult = exclusionService.pageExclusions(pageQuery, queryDTO);
+        PageResult<IhrEmployeeExclusionVO> pageResult = exclusionService.pageExclusions(pageQuery, queryDTO);
         return Result.success(pageResult);
     }
 
     @GetMapping("/{id}")
     @ApiOperation("根据ID查询")
     @RequiresPermissions("ihr:exclusion:query")
-    public Result&lt;IhrEmployeeExclusionVO&gt; getById(@PathVariable String id) {
+    public Result<IhrEmployeeExclusionVO> getById(@PathVariable String id) {
         log.debug("查询IHR排除记录, id={}", id);
         IhrEmployeeExclusionVO vo = exclusionService.getExclusionVOById(id);
         if (vo == null) {
@@ -50,7 +50,7 @@ public class IhrEmployeeExclusionController {
     @PostMapping
     @ApiOperation("新增排除记录")
     @RequiresPermissions("ihr:exclusion:add")
-    public Result&lt;?&gt; add(@Valid @RequestBody IhrEmployeeExclusionDTO dto) {
+    public Result<?> add(@Valid @RequestBody IhrEmployeeExclusionDTO dto) {
         log.info("新增IHR排除记录, staffName={}, staffNo={}", dto.getStaffName(), dto.getStaffNo());
         boolean success = exclusionService.addExclusion(dto);
         return success ? Result.success("新增成功") : Result.error("新增失败");
@@ -59,7 +59,7 @@ public class IhrEmployeeExclusionController {
     @PutMapping("/{id}")
     @ApiOperation("修改排除记录")
     @RequiresPermissions("ihr:exclusion:edit")
-    public Result&lt;?&gt; update(@PathVariable String id, @Valid @RequestBody IhrEmployeeExclusionDTO dto) {
+    public Result<?> update(@PathVariable String id, @Valid @RequestBody IhrEmployeeExclusionDTO dto) {
         log.info("更新IHR排除记录, id={}", id);
         dto.setId(id);
         boolean success = exclusionService.updateExclusion(dto);
@@ -69,7 +69,7 @@ public class IhrEmployeeExclusionController {
     @DeleteMapping("/{id}")
     @ApiOperation("删除排除记录")
     @RequiresPermissions("ihr:exclusion:delete")
-    public Result&lt;?&gt; delete(@PathVariable String id) {
+    public Result<?> delete(@PathVariable String id) {
         log.info("删除IHR排除记录, id={}", id);
         boolean success = exclusionService.deleteExclusion(id);
         return success ? Result.success("删除成功") : Result.error("删除失败");

@@ -1,4 +1,3 @@
-
 package com.bcsport.admin.qywxmapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
@@ -9,7 +8,7 @@ import org.apache.ibatis.annotations.Param;
 import java.util.List;
 
 @Mapper
-public interface IhrEmployeeExclusionMapper extends BaseMapper&lt;IhrEmployeeExclusion&gt; {
+public interface IhrEmployeeExclusionMapper extends BaseMapper<IhrEmployeeExclusion> {
 
     /**
      * 检查员工是否在排除列表中（启用状态）
@@ -25,6 +24,5 @@ public interface IhrEmployeeExclusionMapper extends BaseMapper&lt;IhrEmployeeExc
     /**
      * 批量插入
      */
-    void insertBatch(@Param("list") List&lt;IhrEmployeeExclusion&gt; list);
+    void insertBatch(@Param("list") List<IhrEmployeeExclusion> list);
 }
-

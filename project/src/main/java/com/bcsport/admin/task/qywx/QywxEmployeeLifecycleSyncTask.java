@@ -23,8 +23,8 @@ public class QywxEmployeeLifecycleSyncTask {
     @Autowired
     private QywxNewEmployeeSyncTask newEmployeeSyncTask;
 
-    @Autowired
-    private QywxEmployeeUpdateSyncTask employeeUpdateSyncTask;
+    // @Autowired
+    // private QywxEmployeeUpdateSyncTask employeeUpdateSyncTask;
 
     @Autowired
     private QywxEmployeeLeaveSyncTask employeeLeaveSyncTask;
@@ -65,15 +65,15 @@ public class QywxEmployeeLifecycleSyncTask {
             }
 
             // 步骤3：更新企微员工信息
-            log.info("--- 步骤 3/4：更新企微员工信息 ---");
-            try {
-                employeeUpdateSyncTask.sync();
-                successCount++;
-                log.info("--- 步骤 3/4：更新企微员工信息 完成 ---");
-            } catch (Exception e) {
-                failCount++;
-                log.error("--- 步骤 3/4：更新企微员工信息 失败 ---", e);
-            }
+            // log.info("--- 步骤 3/4：更新企微员工信息 ---");
+            // try {
+            //     employeeUpdateSyncTask.sync();
+            //     successCount++;
+            //     log.info("--- 步骤 3/4：更新企微员工信息 完成 ---");
+            // } catch (Exception e) {
+            //     failCount++;
+            //     log.error("--- 步骤 3/4：更新企微员工信息 失败 ---", e);
+            // }
 
             // 步骤4：企微员工离职同步
             log.info("--- 步骤 4/4：企微员工离职同步 ---");

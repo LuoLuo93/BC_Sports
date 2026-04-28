@@ -1,25 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bcsport.admin.qywxmapper.IhrEmployeeExclusionMapper">
 
-&lt;?xml version="1.0" encoding="UTF-8"?&gt;
-&lt;!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd"&gt;
-&lt;mapper namespace="com.bcsport.admin.qywxmapper.IhrEmployeeExclusionMapper"&gt;
-
-    &lt;select id="checkExcluded" resultType="java.lang.Boolean"&gt;
-        SELECT CASE WHEN COUNT(1) &gt; 0 THEN 1 ELSE 0 END
+    <select id="checkExcluded" resultType="java.lang.Boolean">
+        SELECT CASE WHEN COUNT(1) > 0 THEN 1 ELSE 0 END
         FROM ihr_employee_exclusion
         WHERE staff_name = #{staffName}
           AND staff_no = #{staffNo}
           AND exclusion_type = #{exclusionType}
           AND status = 1
           AND deleted = 0
-    &lt;/select&gt;
+    </select>
 
-    &lt;insert id="insertBatch"&gt;
+    <insert id="insertBatch">
         INSERT INTO ihr_employee_exclusion (id, staff_name, staff_no, exclusion_type, status, reason, create_time, update_time, create_by, update_by, deleted)
         VALUES
-        &lt;foreach collection="list" item="item" separator=","&gt;
+        <foreach collection="list" item="item" separator=",">
             (#{item.id}, #{item.staffName}, #{item.staffNo}, #{item.exclusionType}, #{item.status}, #{item.reason}, #{item.createTime}, #{item.updateTime}, #{item.createBy}, #{item.updateBy}, 0)
-        &lt;/foreach&gt;
-    &lt;/insert&gt;
+        </foreach>
+    </insert>
 
-&lt;/mapper&gt;
-
+</mapper>

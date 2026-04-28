@@ -6,6 +6,7 @@ import com.bcsport.admin.entity.ihr.IhrEmployeeDetail;
 import com.bcsport.admin.ihrmapper.IhrEmployeeAdditionMapper;
 import com.bcsport.admin.ihrmapper.IhrEmployeeDetailMapper;
 import com.bcsport.admin.qywxmapper.QywxDepartmentMapper;
+import com.bcsport.admin.service.IhrEmployeeExclusionService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -40,6 +41,9 @@ public class QywxNewEmployeeSyncTask {
 
     @Autowired
     private QywxDepartmentTask departmentTask;
+
+    @Autowired
+    private IhrEmployeeExclusionService exclusionService;
 
     public void sync() {
         log.info("========================================");
@@ -106,7 +110,16 @@ public class QywxNewEmployeeSyncTask {
 
             for (IhrEmployeeDetail employee : allEmployees) {
                 try {
+                    String staffName = employee.getStaffName();
+                    String staffNo = employee.getStaffNo();
                     String mobile = employee.getMobileNo();
+
+                    // 检查是否在入职排除列表中
+                    if (exclusionService.checkExcluded(staffName, staffNo, 1)) {
+                        log.info("员工 {}({}) 在入职排除列表中，跳过", staffName, staffNo);
+                        skipCount++;
+                        continue;
+                    }
 
                     // 检查企微是否已存在
                     String existingUserId = apiClient.getUserIdByMobile(mobile);

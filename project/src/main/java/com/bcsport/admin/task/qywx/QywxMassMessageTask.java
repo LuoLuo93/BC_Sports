@@ -68,15 +68,17 @@ public class QywxMassMessageTask {
                 return null;
             });
 
-            List<VxMassMessage> allMessages = new ArrayList<>();
+            int totalInserted = 0;
             String cursor = "";
 
-            // 循环获取所有数据（支持游标翻页）
+            // 循环获取所有数据（支持游标翻页），每批获取后立即插入
             do {
                 JSONObject result = apiClient.getMassMessageList(yesterdayStartTimestamp, yesterdayEndTimestamp, cursor, "single");
 
                 JSONArray groupMsgList = result.getJSONArray("group_msg_list");
                 if (groupMsgList != null && groupMsgList.size() > 0) {
+                    final List<VxMassMessage> batchMessages = new ArrayList<>();
+
                     for (int i = 0; i < groupMsgList.size(); i++) {
                         JSONObject msgItem = groupMsgList.getJSONObject(i);
                         VxMassMessage msg = new VxMassMessage();
@@ -94,7 +96,17 @@ public class QywxMassMessageTask {
                             msg.setContent(textObj.getStr("content"));
                         }
 
-                        allMessages.add(msg);
+                        batchMessages.add(msg);
+                    }
+
+                    // 立即插入这一批数据
+                    if (!batchMessages.isEmpty()) {
+                        txTemplate.execute(status -> {
+                            massMessageMapper.insertBatch(batchMessages);
+                            return null;
+                        });
+                        totalInserted += batchMessages.size();
+                        log.info("Batch inserted {} messages, total {}", batchMessages.size(), totalInserted);
                     }
                 }
 
@@ -103,15 +115,7 @@ public class QywxMassMessageTask {
 
             } while (cursor != null && cursor.length() > 0);
 
-            // 批量插入数据
-            if (!allMessages.isEmpty()) {
-                final List<VxMassMessage> messagesToInsert = new ArrayList<>(allMessages);
-                txTemplate.execute(status -> {
-                    massMessageMapper.insertBatch(messagesToInsert);
-                    return null;
-                });
-                log.info("Inserted {} mass message records", allMessages.size());
-            }
+            log.info("Inserted {} mass message records in total", totalInserted);
 
             long totalTime = System.currentTimeMillis() - totalStartTime;
             log.info("=== QYWX sync mass message completed, total time: {} ms ===", totalTime);

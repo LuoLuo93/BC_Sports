@@ -76,9 +76,9 @@ public class QywxGroupChatStatTask {
                 return null;
             });
 
-            List<VxGroupchatYesterday> allData = new ArrayList<>();
+            int totalInserted = 0;
 
-            // 分批获取数据
+            // 分批获取数据，每批获取后立即插入
             for (int i = 0; i < userIds.size(); i += USER_BATCH_SIZE) {
                 int end = Math.min(i + USER_BATCH_SIZE, userIds.size());
                 List<String> batchUserIds = userIds.subList(i, end);
@@ -89,6 +89,8 @@ public class QywxGroupChatStatTask {
 
                 JSONArray items = result.getJSONArray("items");
                 if (items != null && items.size() > 0) {
+                    final List<VxGroupchatYesterday> batchData = new ArrayList<>();
+
                     for (int j = 0; j < items.size(); j++) {
                         JSONObject item = items.getJSONObject(j);
                         VxGroupchatYesterday stat = new VxGroupchatYesterday();
@@ -104,20 +106,22 @@ public class QywxGroupChatStatTask {
                             stat.setMsgTotal(data.getStr("msg_total"));
                         }
                         stat.setStarttime(yesterdayDateStr);
-                        allData.add(stat);
+                        batchData.add(stat);
+                    }
+
+                    // 立即插入这一批数据
+                    if (!batchData.isEmpty()) {
+                        txTemplate.execute(status -> {
+                            groupchatYesterdayMapper.insertBatch(batchData);
+                            return null;
+                        });
+                        totalInserted += batchData.size();
+                        log.info("Batch inserted {} records, total {}", batchData.size(), totalInserted);
                     }
                 }
             }
 
-            // 批量插入数据
-            if (!allData.isEmpty()) {
-                final List<VxGroupchatYesterday> dataToInsert = new ArrayList<>(allData);
-                txTemplate.execute(status -> {
-                    groupchatYesterdayMapper.insertBatch(dataToInsert);
-                    return null;
-                });
-                log.info("Inserted {} group chat statistic records", allData.size());
-            }
+            log.info("Inserted {} group chat statistic records in total", totalInserted);
 
             long totalTime = System.currentTimeMillis() - totalStartTime;
             log.info("=== QYWX sync group chat statistic completed, total time: {} ms ===", totalTime);

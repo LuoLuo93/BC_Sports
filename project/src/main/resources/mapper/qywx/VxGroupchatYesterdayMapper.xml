@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bcsport.admin.qywxmapper.VxGroupchatYesterdayMapper">
+
+    <delete id="deleteAll">
+        DELETE FROM VX_GroupChat_Yesterday
+    </delete>
+
+    <insert id="insertBatch">
+        INSERT INTO VX_GroupChat_Yesterday (owner, new_chat_cnt, chat_total, chat_has_msg, new_member_cnt, member_total, member_has_msg, msg_total, starttime, createtime)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.owner}, #{item.newChatCnt}, #{item.chatTotal}, #{item.chatHasMsg}, #{item.newMemberCnt}, #{item.memberTotal}, #{item.memberHasMsg}, #{item.msgTotal}, #{item.starttime}, GETDATE())
+        </foreach>
+    </insert>
+
+</mapper>

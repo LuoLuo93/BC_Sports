@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据字典 - BC体育后台中心</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/layout.css}">
+    <style>
+        .dict-split-container {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 24px;
+            height: calc(100vh - 220px);
+        }
+        .dict-list-scroll {
+            overflow-y: auto;
+            max-height: calc(100% - 100px);
+            padding-right: 4px;
+        }
+        .dict-type-item {
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+        }
+        .dict-type-item:hover {
+            background: var(--bg-light-soft);
+            border-color: var(--primary-light);
+        }
+        .dict-type-item.active {
+            background: var(--primary-soft);
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+    </style>
+</head>
+<body>
+    <div th:replace="~{common/fragments :: sidebar}"></div>
+    <div class="main-content">
+        <nav th:replace="~{common/fragments :: top-navbar}"></nav>
+        <div class="content-wrapper">
+            <div class="dict-split-container">
+                <!-- 左侧：字典类型 -->
+                <div class="bc-card mb-0 d-flex flex-column">
+                    <div class="p-3">
+                        <div class="d-flex align-items-center gap-2 mb-3">
+                            <div class="bc-input-group flex-grow-1">
+                                <i class="bi bi-search"></i>
+                                <input type="text" class="bc-input" placeholder="检索字典类型...">
+                            </div>
+                            <button class="btn bc-btn-success btn-sm px-2" onclick="BC.toast('新增类型功能已准备就绪', 'success')" title="新增类型">
+                                <i class="bi bi-plus-lg"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="dict-list-scroll px-3 pb-3 flex-grow-1">
+                        <div class="list-group list-group-flush gap-2">
+                            <div class="list-group-item dict-type-item rounded-3 p-3 active border">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="fw-bold">用户性别</span>
+                                    <span class="bc-tag bc-tag-info">sys_user_sex</span>
+                                </div>
+                                <div class="small text-muted mt-1 text-truncate">系统用户性别属性标识</div>
+                            </div>
+                            <div class="list-group-item dict-type-item rounded-3 p-3 border">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="fw-bold">菜单状态</span>
+                                    <span class="bc-tag bc-tag-secondary">sys_show_hide</span>
+                                </div>
+                                <div class="small text-muted mt-1 text-truncate">控制导航菜单显示或隐藏</div>
+                            </div>
+                            <div class="list-group-item dict-type-item rounded-3 p-3 border">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="fw-bold">运维通知类型</span>
+                                    <span class="bc-tag bc-tag-secondary">sys_notice_type</span>
+                                </div>
+                                <div class="small text-muted mt-1 text-truncate">公告、通知、运维警示等</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 右侧：字典内容数据 -->
+                <div class="bc-card mb-0">
+                    <div class="bc-card-body">
+                        <div class="d-flex align-items-center bc-toolbar">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-collection me-2 text-primary fs-5"></i>
+                                <h6 class="mb-0 fw-bold">字段明细数据</h6>
+                                <span class="ms-3 text-muted small">当前选中：<span class="text-primary fw-bold">用户性别</span></span>
+                            </div>
+                            <div class="ms-auto">
+                                <button class="btn bc-btn-success btn-sm" onclick="BC.toast('新增字段模态框加载中', 'info')">
+                                    <i class="bi bi-plus-lg"></i> 新增键值对
+                                </button>
+                            </div>
+                        </div>
+                        <div class="bc-table-container">
+                            <table class="bc-table bc-table-hover">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 60px;">#</th>
+                                        <th>字典标签</th>
+                                        <th>字典键值</th>
+                                        <th>显示状态</th>
+                                        <th>排序</th>
+                                        <th>创建时间</th>
+                                        <th class="text-end" style="padding-right: 24px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><span class="text-muted small">1</span></td>
+                                        <td><span class="fw-bold text-main">男</span></td>
+                                        <td><code class="small text-muted">male</code></td>
+                                        <td>1</td>
+                                        <td><span class="bc-tag bc-tag-success">启用</span></td>
+                                        <td>
+                                            <div class="bc-table-actions">
+                                                <button class="bc-btn-icon bc-btn-icon-primary" title="编辑"><i class="bi bi-pencil"></i></button>
+                                                <button class="bc-btn-icon bc-btn-icon-danger" title="删除"><i class="bi bi-trash"></i></button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr class="bg-light-soft">
+                                        <td><span class="text-muted small">2</span></td>
+                                        <td><span class="fw-bold text-main">女</span></td>
+                                        <td><code class="small text-muted">female</code></td>
+                                        <td>2</td>
+                                        <td><span class="bc-tag bc-tag-success">启用</span></td>
+                                        <td>
+                                            <div class="bc-table-actions">
+                                                <button class="bc-btn-icon bc-btn-icon-primary" title="编辑"><i class="bi bi-pencil"></i></button>
+                                                <button class="bc-btn-icon bc-btn-icon-danger" title="删除"><i class="bi bi-trash"></i></button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="text-muted small">3</span></td>
+                                        <td><span class="fw-bold text-main">未知</span></td>
+                                        <td><code class="small text-muted">unknown</code></td>
+                                        <td>3</td>
+                                        <td><span class="bc-tag bc-tag-secondary">禁用</span></td>
+                                        <td>
+                                            <div class="bc-table-actions">
+                                                <button class="bc-btn-icon bc-btn-icon-primary" title="编辑"><i class="bi bi-pencil"></i></button>
+                                                <button class="bc-btn-icon bc-btn-icon-danger" title="删除"><i class="bi bi-trash"></i></button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div th:replace="~{common/fragments :: footer}"></div>
+    </div>
+    <div th:replace="~{common/fragments :: confirm-modal}"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script src="/js/common.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('.dict-type-item').click(function() {
+                $('.dict-type-item').removeClass('active');
+                $(this).addClass('active');
+                BC.toast('正在切换字典集：' + $(this).find('.fw-bold').text(), 'info');
+            });
+        });
+    </script>
+</body>
+</html>

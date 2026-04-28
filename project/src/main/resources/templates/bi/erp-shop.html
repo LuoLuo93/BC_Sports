@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ERP 店铺管理 - BC体育后台管理系统</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- 自定义CSS -->
+    <link rel="stylesheet" th:href="@{/css/layout.css}">
+</head>
+<body>
+    <!-- 侧边栏 -->
+    <div th:replace="~{common/fragments :: sidebar}"></div>
+
+    <!-- 主内容区 -->
+    <div class="main-content">
+        <!-- 顶部导航 -->
+        <nav th:replace="~{common/fragments :: top-navbar}"></nav>
+
+        <!-- 内容区域 -->
+        <div class="content-wrapper">
+            <div class="bc-card">
+                <div class="bc-card-body">
+                    <!-- 搜索与操作栏 -->
+                    <form class="row g-3 bc-toolbar align-items-center" id="searchForm">
+                        <div class="col-auto">
+                            <div class="bc-input-group">
+                                <i class="bi bi-upc-scan"></i>
+                                <input type="text" class="bc-input" id="searchShopCode" placeholder="搜索店铺编码...">
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <div class="bc-input-group">
+                                <i class="bi bi-shop"></i>
+                                <input type="text" class="bc-input" id="searchShopName" placeholder="搜索店铺名称...">
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <select class="bc-select" id="searchShopType">
+                                <option value="">全部类型</option>
+                                <option value="offline">线下店铺</option>
+                                <option value="online">线上店铺</option>
+                            </select>
+                        </div>
+                        <div class="col-auto">
+                            <select class="bc-select" id="searchStatus">
+                                <option value="">全部状态</option>
+                                <option value="1">启用</option>
+                                <option value="0">禁用</option>
+                            </select>
+                        </div>
+                        <div class="col-auto">
+                            <button type="button" class="btn bc-btn-primary" id="searchBtn">
+                                <i class="bi bi-search"></i> 查询
+                            </button>
+                            <button type="button" class="btn bc-btn-secondary" id="resetBtn">
+                                <i class="bi bi-arrow-counterclockwise"></i> 重置
+                            </button>
+                        </div>
+                        <div class="col-auto ms-auto" th:if="${#lists.contains(permissions, '*') or #lists.contains(permissions, 'bi:erpShop:add')}">
+                            <button type="button" class="btn bc-btn-success" id="addBtn">
+                                <i class="bi bi-plus-lg"></i> 新增店铺
+                            </button>
+                        </div>
+                    </form>
+
+                    <div class="bc-table-container">
+                        <table class="bc-table bc-table-hover" id="dataTable">
+                            <thead>
+                                <tr>
+                                    <th style="width: 60px;">序号</th>
+                                    <th style="width: 100px;">店铺编码</th>
+                                    <th>店铺名称</th>
+                                    <th style="width: 100px;">类型</th>
+                                    <th>所在地区</th>
+                                    <th>联系人</th>
+                                    <th>联系电话</th>
+                                    <th style="width: 80px;">排序</th>
+                                    <th style="width: 80px;">状态</th>
+                                    <th style="width: 120px;" class="text-end">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dataTableBody">
+                                <!-- 动态加载数据 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 底部: 分页 -->
+            <div th:replace="~{common/fragments :: pagination}"></div>
+        </div>
+
+        <!-- 底部页脚 -->
+        <div th:replace="~{common/fragments :: footer}"></div>
+    </div>
+
+    <!-- 店铺编辑模态框 -->
+    <div class="modal fade" id="dataModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content bc-modal-content">
+                <div class="modal-header bc-modal-header">
+                    <h5 class="modal-title bc-modal-title">
+                        <i class="bi bi-shop"></i> <span>新增店铺</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body bc-modal-body">
+                    <form id="dataForm">
+                        <input type="hidden" id="dataId">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="bc-form-label">店铺编码 <span class="text-danger">*</span></label>
+                                <input type="text" class="bc-input" id="shopCode" placeholder="示例：SH001" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="bc-form-label">店铺名称 <span class="text-danger">*</span></label>
+                                <input type="text" class="bc-input" id="shopName" placeholder="请输入店铺名称" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="bc-form-label">店铺类型 <span class="text-danger">*</span></label>
+                                <select class="bc-select" id="shopType" required>
+                                    <option value="">请选择类型</option>
+                                    <option value="offline">线下店铺</option>
+                                    <option value="online">线上店铺</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="bc-form-label">状态</label>
+                                <select class="bc-select" id="status">
+                                    <option value="1">启用</option>
+                                    <option value="0">禁用</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="bc-form-label">省份</label>
+                                <input type="text" class="bc-input" id="province" placeholder="省份">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="bc-form-label">城市</label>
+                                <input type="text" class="bc-input" id="city" placeholder="城市">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="bc-form-label">区县</label>
+                                <input type="text" class="bc-input" id="district" placeholder="区县">
+                            </div>
+                            <div class="col-md-12">
+                                <label class="bc-form-label">详细地址</label>
+                                <input type="text" class="bc-input" id="address" placeholder="详细地址">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="bc-form-label">联系人</label>
+                                <input type="text" class="bc-input" id="contactPerson" placeholder="联系人姓名">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="bc-form-label">联系电话</label>
+                                <input type="text" class="bc-input" id="contactPhone" placeholder="联系电话">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="bc-form-label">排序</label>
+                                <input type="number" class="bc-input" id="sort" value="0">
+                            </div>
+                            <div class="col-md-12">
+                                <label class="bc-form-label">备注</label>
+                                <textarea class="bc-textarea" id="remark" rows="2" placeholder="备注信息"></textarea>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer bc-modal-footer">
+                    <button type="button" class="btn bc-btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn bc-btn-primary" id="saveBtn">保存信息</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 通用确认弹窗 -->
+    <div th:replace="~{common/fragments :: confirm-modal}"></div>
+
+    <!-- JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script th:inline="javascript">
+        // 将后端注入的权限列表同步到前端 JS 作用域
+        window.userPermissions = /*[[${permissions}]]*/ [];
+
+        function hasPermission(p) {
+            if (!window.userPermissions) return false;
+            return window.userPermissions.includes('*') || window.userPermissions.includes(p);
+        }
+    </script>
+    <script src="/js/common.js"></script>
+
+    <script>
+        let currentPage = 1;
+        let pageSize = 10;
+
+        $(document).ready(function() {
+            loadDataList();
+
+            $('#searchBtn').click(() => { currentPage = 1; loadDataList(); });
+            $('#resetBtn').click(() => {
+                $('#searchForm')[0].reset();
+                currentPage = 1;
+                loadDataList();
+            });
+            $('#addBtn').click(() => openModal('add'));
+            $('#saveBtn').click(() => saveData());
+        });
+
+        function loadDataList() {
+            $.ajax({
+                url: '/api/erp-shop/page',
+                type: 'GET',
+                data: {
+                    pageNum: currentPage,
+                    pageSize: pageSize,
+                    shopCode: $('#searchShopCode').val(),
+                    shopName: $('#searchShopName').val(),
+                    shopType: $('#searchShopType').val(),
+                    status: $('#searchStatus').val()
+                },
+                success: function(res) {
+                    if (res.code === 200) {
+                        renderTable(res.data.records);
+                        renderPagination(res.data);
+                    } else {
+                        BC.toast(res.message, 'error');
+                    }
+                }
+            });
+        }
+
+        function renderTable(data) {
+            const tbody = $('#dataTableBody');
+            tbody.empty();
+            if (!data || data.length === 0) {
+                tbody.append('<tr><td colspan="10" class="text-center py-5 text-muted">未找到匹配的店铺数据</td></tr>');
+                return;
+            }
+            data.forEach((item, i) => {
+                const seq = (currentPage - 1) * pageSize + i + 1;
+                const typeTag = BC.getTag(item.shopType === 'online' ? 'info' : 'primary', item.shopTypeName);
+                const statusTag = BC.getTag(item.status === 1 ? 'success' : 'danger', item.statusName);
+                const safeId = String(item.id);
+
+                // 组合地址显示
+                let location = '-';
+                if (item.province || item.city || item.district) {
+                    location = [item.province, item.city, item.district].filter(Boolean).join(' ');
+                }
+
+                const btnGroup = [];
+                if (hasPermission('bi:erpShop:edit')) {
+                    btnGroup.push({ icon: 'bi-pencil', title: '修改信息', onclick: `editData('${safeId}')` });
+                }
+                if (hasPermission('bi:erpShop:delete')) {
+                    btnGroup.push({ icon: 'bi-trash', title: '彻底移除', onclick: `deleteData('${safeId}')` });
+                }
+
+                const actions = BC.getTableActions(btnGroup);
+
+                tbody.append(`
+                    <tr>
+                        <td><span class="text-muted small">${seq}</span></td>
+                        <td><span class="font-monospace small">${item.shopCode || '-'}</span></td>
+                        <td><span class="fw-bold text-main">${item.shopName || '-'}</span></td>
+                        <td>${typeTag}</td>
+                        <td><span class="small text-secondary">${location}</span></td>
+                        <td><span class="small">${item.contactPerson || '-'}</span></td>
+                        <td><span class="small">${item.contactPhone || '-'}</span></td>
+                        <td><span class="small">${item.sort}</span></td>
+                        <td>${statusTag}</td>
+                        <td class="text-end">${actions}</td>
+                    </tr>
+                `);
+            });
+        }
+
+        function renderPagination(pageData) {
+            BC.renderPagination({
+                total: pageData.total,
+                pages: pageData.pages,
+                current: pageData.pageNum,
+                limit: pageData.pageSize,
+                callback: (page) => {
+                    currentPage = page;
+                    loadDataList();
+                }
+            });
+        }
+
+        function openModal(mode, id) {
+            const modal = $('#dataModal');
+            $('#dataForm')[0].reset();
+            $('#dataId').val('');
+
+            if (mode === 'add') {
+                modal.find('.modal-title span').text('新增店铺');
+                $('#status').val('1');
+                modal.modal('show');
+            } else {
+                modal.find('.modal-title span').text('编辑店铺信息');
+                $.get(`/api/erp-shop/${id}`, res => {
+                    if (res.code === 200) {
+                        const d = res.data;
+                        $('#dataId').val(d.id);
+                        $('#shopCode').val(d.shopCode);
+                        $('#shopName').val(d.shopName);
+                        $('#shopType').val(d.shopType);
+                        $('#status').val(d.status);
+                        $('#province').val(d.province);
+                        $('#city').val(d.city);
+                        $('#district').val(d.district);
+                        $('#address').val(d.address);
+                        $('#contactPerson').val(d.contactPerson);
+                        $('#contactPhone').val(d.contactPhone);
+                        $('#sort').val(d.sort);
+                        $('#remark').val(d.remark);
+                        modal.modal('show');
+                    }
+                });
+            }
+        }
+
+        function editData(id) { openModal('edit', id); }
+
+        function saveData() {
+            const id = $('#dataId').val();
+            const data = {
+                shopCode: $('#shopCode').val(),
+                shopName: $('#shopName').val(),
+                shopType: $('#shopType').val(),
+                status: $('#status').val(),
+                province: $('#province').val(),
+                city: $('#city').val(),
+                district: $('#district').val(),
+                address: $('#address').val(),
+                contactPerson: $('#contactPerson').val(),
+                contactPhone: $('#contactPhone').val(),
+                sort: $('#sort').val(),
+                remark: $('#remark').val()
+            };
+
+            if (!data.shopCode) { BC.toast('请输入店铺编码', 'warning'); return; }
+            if (!data.shopName) { BC.toast('请输入店铺名称', 'warning'); return; }
+            if (!data.shopType) { BC.toast('请选择店铺类型', 'warning'); return; }
+
+            $.ajax({
+                url: id ? `/api/erp-shop/${id}` : '/api/erp-shop',
+                type: id ? 'PUT' : 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                success: res => {
+                    if (res.code === 200) {
+                        $('#dataModal').modal('hide');
+                        BC.toast(id ? '店铺资料已成功更新' : '新店铺已成功收录', 'success');
+                        loadDataList();
+                    } else {
+                        BC.toast(res.message, 'error');
+                    }
+                }
+            });
+        }
+
+        function deleteData(id) {
+            BC.confirm({
+                title: '确认移除',
+                message: '确定要将该店铺从系统中移除吗？此操作不可撤销。',
+                type: 'danger'
+            }, (ok) => {
+                if (ok) {
+                    $.ajax({
+                        url: `/api/erp-shop/${id}`,
+                        type: 'DELETE',
+                        success: res => {
+                            if (res.code === 200) {
+                                BC.toast('店铺已被安全移除', 'success');
+                                loadDataList();
+                            }
+                        }
+                    });
+                }
+            });
+        }
+    </script>
+</body>
+</html>

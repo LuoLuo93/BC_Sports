@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bcsport.admin.ihrmapper.IhrEmployeeFlexAttrMapper">
+    <delete id="deleteAll">DELETE FROM employee_flex_attributes</delete>
+    <insert id="insertBatch">
+        INSERT INTO employee_flex_attributes(id, d_code_type_1, d_code_type_2, d_code_type_3, d_code_type_4,
+            d_boolean_0, d_code_type_5, d_code_type_6, d_date_2, d_code_type_7, d_code_type_8, d_code_type_9,
+            create_time, update_time)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.id}, #{item.dCodeType1}, #{item.dCodeType2}, #{item.dCodeType3}, #{item.dCodeType4},
+             #{item.dBoolean0}, #{item.dCodeType5}, #{item.dCodeType6}, #{item.dDate2}, #{item.dCodeType7},
+             #{item.dCodeType8}, #{item.dCodeType9}, GETDATE(), GETDATE())
+        </foreach>
+    </insert>
+</mapper>

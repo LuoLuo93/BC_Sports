@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>部门管理 - BC体育后台管理系统</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- 自定义CSS -->
+    <link rel="stylesheet" th:href="@{/css/layout.css}">
+</head>
+<body>
+    <!-- 侧边栏 -->
+    <div th:replace="~{common/fragments :: sidebar}"></div>
+
+    <!-- 主内容区 -->
+    <div class="main-content">
+        <!-- 顶部导航 -->
+        <nav th:replace="~{common/fragments :: top-navbar}"></nav>
+
+        <!-- 内容区域 -->
+        <div class="content-wrapper">
+            <!-- 部门管理内容 -->
+            <div class="bc-card">
+                <div class="bc-card-body">
+                    <!-- 搜索表单 -->
+                    <form class="row g-3 bc-toolbar align-items-center" id="searchForm">
+                        <div class="col-auto">
+                            <div class="bc-input-group">
+                                <i class="bi bi-diagram-2"></i>
+                                <input type="text" class="bc-input" id="searchDeptName" placeholder="部门名称">
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <select class="bc-select" id="searchStatus">
+                                <option value="">全部状态</option>
+                                <option value="1">正常</option>
+                                <option value="0">停用</option>
+                            </select>
+                        </div>
+                        <div class="col-auto">
+                            <button type="button" class="btn bc-btn-primary" onclick="loadDeptData()">
+                                <i class="bi bi-search"></i> 搜索
+                            </button>
+                            <button type="button" class="btn bc-btn-secondary" onclick="resetSearch()">
+                                <i class="bi bi-arrow-counterclockwise"></i> 重置
+                            </button>
+                        </div>
+                        <div class="col-auto ms-auto">
+                            <button type="button" class="btn bc-btn-success" id="addDeptBtn">
+                                <i class="bi bi-plus-lg"></i> 添加部门
+                            </button>
+                        </div>
+                    </form>
+                    <div class="bc-table-container">
+                        <table class="bc-table bc-table-hover" id="deptTable">
+                            <thead>
+                                <tr>
+                                    <th style="width: 60px;">#</th>
+                                    <th>部门名称</th>
+                                    <th style="width: 150px;">级别</th>
+                                    <th>排序</th>
+                                    <th>状态</th>
+                                    <th>负责人</th>
+                                    <th>电话</th>
+                                    <th>邮箱</th>
+                                    <th>创建时间</th>
+                                    <th class="text-end" style="padding-right: 24px;">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="deptTableBody">
+                                <!-- 动态加载部门数据 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 底部页脚 -->
+        <div th:replace="~{common/fragments :: footer}"></div>
+    </div>
+
+    <!-- 通用确认弹窗 -->
+    <div th:replace="~{common/fragments :: confirm-modal}"></div>
+
+    <!-- 添加/编辑部门模态框 -->
+    <div class="modal fade" id="deptModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content bc-modal-content">
+                <div class="modal-header bc-modal-header">
+                    <h5 class="modal-title bc-modal-title" id="deptModalTitle">
+                        <i class="bi bi-diagram-3"></i> <span>添加部门</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body bc-modal-body">
+                    <form id="deptForm">
+                        <input type="hidden" id="deptId">
+                        <div class="bc-form-grid">
+                            <div class="bc-form-group bc-form-group-full">
+                                <label class="bc-form-label">上级部门</label>
+                                <select class="bc-select" id="parentId">
+                                    <option value="0">顶级部门</option>
+                                </select>
+                            </div>
+                            <div class="bc-form-group">
+                                <label class="bc-form-label">部门名称 <span class="text-danger">*</span></label>
+                                <input type="text" class="bc-input" id="deptName" placeholder="如：财务部" required>
+                                <div class="invalid-feedback">请输入部门名称</div>
+                            </div>
+                            <div class="bc-form-group">
+                                <label class="bc-form-label">显示排序</label>
+                                <input type="number" class="bc-input" id="sort" value="0">
+                            </div>
+                            <div class="bc-form-group">
+                                <label class="bc-form-label">负责人</label>
+                                <input type="text" class="bc-input" id="leader" placeholder="部门管理人员">
+                            </div>
+                            <div class="bc-form-group">
+                                <label class="bc-form-label">联系电话</label>
+                                <input type="text" class="bc-input" id="phone" placeholder="负责人手机号">
+                            </div>
+                            <div class="bc-form-group">
+                                <label class="bc-form-label">邮箱</label>
+                                <input type="email" class="bc-input" id="email" placeholder="example@bcsport.com">
+                            </div>
+                             <div class="bc-form-group">
+                                <label class="bc-form-label">部门状态</label>
+                                <select class="bc-select" id="deptStatus">
+                                    <option value="1">正常</option>
+                                    <option value="0">停用</option>
+                                </select>
+                            </div>
+                            <div class="bc-form-group">
+                                <label class="bc-form-label">级别</label>
+                                <select class="bc-select" id="deptLevel" disabled>
+                                    <option value="1">公司 / 区域 (一级)</option>
+                                    <option value="2">部门 (二级)</option>
+                                    <option value="3">小组 (三级)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer bc-modal-footer">
+                    <button type="button" class="btn bc-btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn bc-btn-primary" id="saveDeptBtn">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- jQuery -->
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <!-- 公共JavaScript -->
+    <script src="/js/common.js"></script>
+    
+    <script>
+        $(document).ready(function() {
+            // 加载部门数据
+            loadDeptData();
+            
+            // 添加部门按钮
+            $('#addDeptBtn').click(function() {
+                resetDeptForm();
+                $('#deptModalTitle').text('添加部门');
+                loadParentDeptOptions();
+                $('#deptModal').modal('show');
+            });
+            
+            // 保存部门
+            $('#saveDeptBtn').click(function() {
+                saveDept();
+            });
+            
+            // 表格事件委托
+            $('#deptTableBody').on('click', '.edit-btn', function() {
+                var deptId = $(this).data('id');
+                editDept(deptId);
+            });
+            
+            $('#deptTableBody').on('click', '.delete-btn', function() {
+                var deptId = $(this).data('id');
+                deleteDept(deptId);
+            });
+
+            // 模态框上级选择联动级别
+            $('#parentId').change(function () {
+                var parentId = $(this).val();
+                if (parentId === '0') {
+                    $('#deptLevel').val('1');
+                } else {
+                    // 默认设为二级，实际保存时若有更深层级前端仅做展示
+                    $('#deptLevel').val('2'); 
+                }
+            });
+        });
+        
+        // 加载部门数据
+        function loadDeptData() {
+            var searchData = {
+                deptName: $('#searchDeptName').val(),
+                status: $('#searchStatus').val()
+            };
+            
+            $.ajax({
+                url: '/api/dept/list',
+                type: 'GET',
+                data: searchData,
+                success: function(response) {
+                    if (response.code === 200) {
+                        renderDeptTable(response.data);
+                    } else {
+                        BC.toast(response.message || '加载部门数据失败', 'error');
+                    }
+                },
+                error: function() {
+                    BC.toast('网络通信故障，请检查服务器状态', 'error');
+                }
+            });
+        }
+
+        function addSubDept(parentId, parentName) {
+            resetDeptForm();
+            $('#deptModalTitle').text('新增子部门 - ' + parentName);
+            loadParentDeptOptions();
+            setTimeout(() => {
+                $('#parentId').val(parentId);
+                $('#deptLevel').val(parentId === '0' ? '1' : '2');
+            }, 200);
+            $('#deptModal').modal('show');
+        }
+        
+        // 重置搜索
+        function resetSearch() {
+            $('#searchDeptName').val('');
+            $('#searchStatus').val('');
+            loadDeptData();
+        }
+        
+        // 渲染部门表格
+        function renderDeptTable(depts) {
+            var tbody = $('#deptTableBody');
+            tbody.empty();
+            
+            if (!depts || depts.length === 0) {
+                tbody.append('<tr><td colspan="8" class="text-center">暂无数据</td></tr>');
+                return;
+            }
+            
+            var globalIndex = 0;
+            
+            function renderDeptItems(deptList, level) {
+                $.each(deptList, function(index, dept) {
+                    globalIndex++;
+                    var indent = level * 20;
+                    var row = $('<tr>');
+                    
+                    // 序号列
+                    row.append($('<td><span class="text-muted small">' + globalIndex + '</span></td>'));
+                    
+                    // 部门名称带层级缩进和图标
+                    var nameCell = $('<td>').css('padding-left', (indent + 12) + 'px');
+                    var icon = dept.children && dept.children.length > 0 ? 'bi-building-fill' : 'bi-building';
+                    nameCell.html('<i class="bi ' + icon + ' text-muted me-2"></i><span class="fw-bold text-main">' + dept.deptName + '</span>');
+                    row.append(nameCell);
+                    
+                    // 级别标签
+                    var levelTag = '';
+                    if (level === 0) {
+                        levelTag = BC.getTag('info', '公司/区域');
+                    } else if (level === 1) {
+                        levelTag = BC.getTag('success', '部门');
+                    } else {
+                        levelTag = BC.getTag('success', '小组');
+                    }
+                    row.append($('<td>' + levelTag + '</td>'));
+                    
+                    row.append($('<td><span class="small">' + (dept.sort || 0) + '</span></td>'));
+                    
+                    // 负责人、电话、邮箱
+                    row.append($('<td><span class="small">' + (dept.leader || '-') + '</span></td>'));
+                    row.append($('<td><span class="small text-muted">' + (dept.phone || '-') + '</span></td>'));
+                    row.append($('<td><span class="small text-muted">' + (dept.email || '-') + '</span></td>'));
+                    
+                    // 状态
+                    var statusTag = BC.getTag(dept.status === 1 ? 'success' : 'danger', dept.status === 1 ? '正常' : '停用');
+                    row.append($('<td>' + statusTag + '</td>'));
+                    
+                    row.append($('<td><span class="small text-muted">' + (dept.createTime ? dept.createTime.split('T')[0] : '-') + '</span></td>'));
+                    
+                    // 操作
+                    var actions = BC.getTableActions([
+                        { icon: 'bi-plus-lg', title: '添加子部门', onclick: 'addSubDept("' + dept.id + '", "' + dept.deptName + '")' },
+                        { icon: 'bi-pencil', title: '编辑部门', onclick: 'editDept("' + dept.id + '")' },
+                        { icon: 'bi-trash', title: '删除部门', onclick: 'deleteDept("' + dept.id + '")' }
+                    ]);
+                    row.append($('<td class="text-end">' + actions + '</td>'));
+                    
+                    tbody.append(row);
+                    
+                    // 递归渲染子部门
+                    if (dept.children && dept.children.length > 0) {
+                        renderDeptItems(dept.children, level + 1);
+                    }
+                });
+            }
+            
+            renderDeptItems(depts, 0);
+        }
+        
+        // 加载上级部门选项
+        function loadParentDeptOptions() {
+            $.ajax({
+                url: '/api/dept/list',
+                type: 'GET',
+                success: function(response) {
+                    if (response.code === 200) {
+                        var select = $('#parentId');
+                        select.empty();
+                        select.append('<option value="0">顶级部门</option>');
+                        
+                        function addOptions(deptList, level) {
+                            $.each(deptList, function(index, dept) {
+                                var indent = '';
+                                for (var i = 0; i < level; i++) {
+                                    indent += '　';
+                                }
+                                select.append('<option value="' + dept.id + '">' + indent + dept.deptName + '</option>');
+                                
+                                if (dept.children && dept.children.length > 0) {
+                                    addOptions(dept.children, level + 1);
+                                }
+                            });
+                        }
+                        
+                        addOptions(response.data, 0);
+                    }
+                }
+            });
+        }
+        
+        // 重置表单
+        function resetDeptForm() {
+            $('#deptForm')[0].reset();
+            $('#deptId').val('');
+            $('#parentId').val('0');
+            $('#deptStatus').val('1');
+            $('#deptLevel').val('1');
+        }
+        
+        // 编辑部门
+        function editDept(deptId) {
+            $.ajax({
+                url: '/api/dept/' + deptId,
+                type: 'GET',
+                success: function(response) {
+                    if (response.code === 200) {
+                        var dept = response.data;
+                        $('#deptId').val(dept.id);
+                        $('#deptName').val(dept.deptName);
+                        $('#sort').val(dept.sort);
+                        $('#leader').val(dept.leader || '');
+                        $('#phone').val(dept.phone || '');
+                        $('#email').val(dept.email || '');
+                        
+                        $('#deptStatus').val(dept.status);
+                        
+                        loadParentDeptOptions();
+                        setTimeout(function() {
+                            $('#parentId').val(dept.parentId);
+                            $('#deptLevel').val(dept.parentId === '0' ? '1' : '2');
+                        }, 500);
+                        
+                        $('#deptModalTitle').text('编辑部门');
+                        $('#deptModal').modal('show');
+                    } else {
+                        alert('获取部门信息失败: ' + response.message);
+                    }
+                },
+                error: function() {
+                    alert('获取部门信息失败');
+                }
+            });
+        }
+        
+        // 保存部门
+        function saveDept() {
+            var deptId = $('#deptId').val();
+            var deptData = {
+                parentId: $('#parentId').val(),
+                deptName: $('#deptName').val(),
+                sort: parseInt($('#sort').val()),
+                leader: $('#leader').val(),
+                phone: $('#phone').val(),
+                email: $('#email').val(),
+                status: parseInt($('#deptStatus').val())
+            };
+            
+            if (!deptData.deptName) {
+                alert('部门名称不能为空');
+                return;
+            }
+            
+            var url = '/api/dept';
+            var type = 'POST';
+            
+            if (deptId) {
+                url = '/api/dept/' + deptId;
+                type = 'PUT';
+            }
+            
+            $.ajax({
+                url: url,
+                type: type,
+                contentType: 'application/json',
+                data: JSON.stringify(deptData),
+                success: function(response) {
+                    if (response.code === 200) {
+                        $('#deptModal').modal('hide');
+                        // 延迟弹出，确保旧背景遮罩已销毁
+                        setTimeout(function() {
+                            BC.alert({
+                                title: '架构已更新',
+                                message: '部门组织架构变更已成功同步至核心系统',
+                                type: 'success'
+                            }, function() {
+                                loadDeptData();
+                            });
+                        }, 300);
+                    } else {
+                        BC.toast(response.message || '保存失败', 'error');
+                    }
+                },
+                error: function() {
+                    BC.toast('网络请求失败', 'error');
+                }
+            });
+        }
+        
+        // 删除部门
+        function deleteDept(deptId) {
+            BC.confirm({
+                title: '删除部门',
+                message: '确定要删除该部门吗？此操作不可撤销！',
+                type: 'danger',
+                confirmText: '确认删除',
+                cancelText: '取消'
+            }, function(confirmed) {
+                if (confirmed) {
+                    $.ajax({
+                        url: '/api/dept/' + deptId,
+                        type: 'DELETE',
+                        success: function(response) {
+                            if (response.code === 200) {
+                                BC.toast('部门及其子级架构已成功移除', 'success');
+                                loadDeptData();
+                            } else {
+                                BC.toast(response.message || '移除失败', 'error');
+                            }
+                        },
+                        error: function() {
+                            BC.toast('网络异常，请稍后再试', 'error');
+                        }
+                    });
+                }
+            });
+        }
+    </script>
+</body>
+</html>

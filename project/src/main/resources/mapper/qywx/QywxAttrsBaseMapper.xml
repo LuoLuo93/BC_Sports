@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bcsport.admin.qywxmapper.QywxAttrsBaseMapper">
+
+    <delete id="deleteAll">
+        DELETE FROM VX_attrsBase
+    </delete>
+
+    <insert id="insertBatch">
+        INSERT INTO VX_attrsBase (id, userid, name, enrollInDate, type, createTime)
+        VALUES
+        <foreach collection="list" index="index" item="item" separator=",">
+            (#{item.id}, #{item.userid}, #{item.name}, #{item.enrollInDate}, #{item.type}, #{item.createTime})
+        </foreach>
+    </insert>
+
+</mapper>

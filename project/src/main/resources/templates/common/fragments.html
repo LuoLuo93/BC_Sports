@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>布局片段</title>
+</head>
+<body>
+
+<!-- 左侧菜单栏片段 -->
+<div th:fragment="sidebar" class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <i class="bi bi-compass"></i>
+        <span>BC SPÖRT</span>
+    </div>
+    <div class="sidebar-menu" id="menuContainer">
+        <!-- 菜单将通过JavaScript动态加载 -->
+    </div>
+</div>
+
+<!-- 顶部导航栏片段 -->
+<nav th:fragment="top-navbar" class="top-navbar navbar navbar-expand-lg navbar-light">
+    <div class="container-fluid">
+        <button class="btn btn-link d-md-none" id="sidebarToggle">
+            <i class="bi bi-list"></i>
+        </button>
+        
+        <!-- 当前页面标题 (居中动态显示) -->
+        <div class="navbar-title flex-grow-1 text-center" id="navbarTitle">
+            <div class="d-inline-flex align-items-center justify-content-center gap-2">
+                <i class="title-icon d-none"></i>
+                <span class="page-title">巅峰探索 · 后台中心</span>
+            </div>
+        </div>
+        
+        <div class="ms-auto d-flex align-items-center">
+            <!-- 消息通知 -->
+            <div class="dropdown me-3">
+                <button class="btn btn-link position-relative" data-bs-toggle="dropdown">
+                    <i class="bi bi-bell fs-5"></i>
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                        3
+                    </span>
+                </button>
+                <div class="dropdown-menu dropdown-menu-end">
+                    <h6 class="dropdown-header">消息通知</h6>
+                    <a class="dropdown-item" href="#">新用户注册</a>
+                    <a class="dropdown-item" href="#">系统更新通知</a>
+                    <a class="dropdown-item" href="#">安全提醒</a>
+                </div>
+            </div>
+            
+            <!-- 用户信息 -->
+            <div class="dropdown">
+                <button class="user-dropdown dropdown-toggle btn btn-link text-decoration-none p-0 border-0" data-bs-toggle="dropdown" type="button">
+                    <div class="user-avatar" th:text="${username?.substring(0,1) ?: 'U'}">U</div>
+                    <div class="user-info text-start d-none d-sm-block">
+                        <div class="fw-bold" th:text="${username ?: '用户'}">用户</div>
+                        <small class="text-muted" th:text="${nickname ?: '昵称'}">昵称</small>
+                    </div>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="/profile"><i class="bi bi-person"></i> 个人中心</a></li>
+                    <li><a class="dropdown-item" href="/settings"><i class="bi bi-gear"></i> 系统设置</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="#" id="logoutBtn"><i class="bi bi-box-arrow-right"></i> 退出登录</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- 底部页脚片段 -->
+<footer th:fragment="footer" class="footer">
+    <div class="container text-center">
+        <span>© 2026 BC体育 & 巅峰探索. <i class="bi bi-snow2 ms-2"></i> 滑雪 · <i class="bi bi-tree mx-1"></i> 徒步</span>
+    </div>
+</footer>
+
+<!-- 通用分页组件片段 -->
+<div th:fragment="pagination" class="bc-pagination-container mt-4">
+    <div class="pagination-info">
+        共 <span id="totalRecords">0</span> 条记录
+    </div>
+    <nav aria-label="Page navigation">
+        <ul class="pagination pagination-sm mb-0" id="paginationList">
+            <!-- 分页项由 BC.renderPagination 动态加载 -->
+        </ul>
+    </nav>
+</div>
+
+<!-- 通用确认弹窗片段 -->
+<div th:fragment="confirm-modal" id="bcConfirmModal" class="modal fade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 400px;">
+        <div class="modal-content bc-modal-content p-4 text-center">
+            <div class="bc-modal-icon mb-3 mx-auto" id="bcModalIcon" style="width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #f0fdf4; color: #16a34a; font-size: 2rem;">
+                <i class="bi bi-question-circle"></i>
+            </div>
+            <h5 class="fw-bold mb-2" id="bcModalTitle" style="color: var(--text-main); font-size: 1.25rem;">确认操作</h5>
+            <p class="text-secondary mb-4" id="bcModalMessage">您确定要执行此操作吗？</p>
+            <div class="d-flex gap-3 mt-2">
+                <button class="btn bc-btn-secondary flex-fill py-2" id="bcModalCancel" data-bs-dismiss="modal">取消</button>
+                <button class="btn bc-btn-primary flex-fill py-2" id="bcModalConfirm">确定</button>
+            </div>
+        </div>
+    </div>
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        window.userPermissions = /*[[${permissions}]]*/ [];
+        window.hasPermission = function(perm) {
+            if (!window.userPermissions || !Array.isArray(window.userPermissions)) return false;
+            // 管理员拥有的最高权限
+            if (window.userPermissions.includes('*') || window.userPermissions.includes('*:*:*')) return true;
+            // 为了兼顾可能的系统级别前缀和纯模块级别权限
+            let systemPerm = perm.startsWith('system:') ? perm : 'system:' + perm;
+            let purePerm = perm.replace(/^system:/, '');
+            return window.userPermissions.includes(perm) || window.userPermissions.includes(systemPerm) || window.userPermissions.includes(purePerm);
+        };
+        /*]]>*/
+    </script>
+</div>
+
+</body>
+</html>

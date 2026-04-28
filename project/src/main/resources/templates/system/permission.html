@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>权限管理 - BC体育巅峰后台</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- 自定义CSS -->
+    <link rel="stylesheet" th:href="@{/css/layout.css}">
+</head>
+<body>
+    <!-- 侧边栏 -->
+    <div th:replace="~{common/fragments :: sidebar}"></div>
+
+    <!-- 主内容区 -->
+    <div class="main-content">
+        <!-- 顶部导航 -->
+        <nav th:replace="~{common/fragments :: top-navbar}"></nav>
+
+        <!-- 内容区域 -->
+        <div class="content-wrapper">
+            <!-- 权限管理内容 -->
+            <div class="bc-card">
+                <div class="bc-card-body">
+                    <!-- 搜索表单 -->
+                    <form class="row g-3 mb-4 align-items-center" id="searchForm">
+                        <div class="col-auto">
+                            <div class="bc-input-group">
+                                <i class="bi bi-search"></i>
+                                <input type="text" class="bc-input" id="searchInput" placeholder="搜索名称或标识...">
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <button type="button" class="btn bc-btn-primary" id="searchBtn">
+                                检索权限
+                            </button>
+                            <button type="button" class="btn bc-btn-secondary" onclick="location.reload()">
+                                <i class="bi bi-arrow-counterclockwise"></i>
+                            </button>
+                        </div>
+                        <div class="col-auto ms-auto">
+                            <button type="button" class="btn bc-btn-success" id="addPermissionBtn">
+                                <i class="bi bi-plus-lg"></i> 定义新权限
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <div class="bc-table-container">
+                        <table class="bc-table bc-table-hover" id="permissionTable">
+                            <thead>
+                                <tr>
+                                    <th style="width: 80px;">#</th>
+                                    <th>权限名称</th>
+                                    <th>权限标识</th>
+                                    <th>描述</th>
+                                    <th>同步时间</th>
+                                    <th class="text-end" style="padding-right: 24px;">管理</th>
+                                </tr>
+                            </thead>
+                            <tbody id="permissionTableBody">
+                                <!-- 模拟数据呈现 -->
+                                <tr>
+                                    <td><span class="text-muted small">1</span></td>
+                                    <td><span class="fw-bold text-main">用户管理</span></td>
+                                    <td><code class="small text-primary">user:manage</code></td>
+                                    <td><span class="small text-muted">管理系统账户的核心业务权限</span></td>
+                                    <td><span class="small text-muted">2024-01-01 10:00</span></td>
+                                    <td>
+                                        <div class="bc-btn-group justify-content-end">
+                                            <button class="bc-btn-icon bc-btn-edit" title="配置"><i class="bi bi-pencil"></i></button>
+                                            <button class="bc-btn-icon bc-btn-delete" title="移除"><i class="bi bi-trash"></i></button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr class="bg-light-soft">
+                                    <td><span class="text-muted small">2</span></td>
+                                    <td><span class="fw-bold text-main">角色管理</span></td>
+                                    <td><code class="small text-primary">role:manage</code></td>
+                                    <td><span class="small text-muted">管理职权范围与权限映射</span></td>
+                                    <td><span class="small text-muted">2024-01-01 10:00</span></td>
+                                    <td>
+                                        <div class="bc-btn-group justify-content-end">
+                                            <button class="bc-btn-icon bc-btn-edit" title="配置"><i class="bi bi-pencil"></i></button>
+                                            <button class="bc-btn-icon bc-btn-delete" title="移除"><i class="bi bi-trash"></i></button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><span class="text-muted small">3</span></td>
+                                    <td><span class="fw-bold text-main">菜单管理</span></td>
+                                    <td><code class="small text-primary">menu:manage</code></td>
+                                    <td><span class="small text-muted">系统功能导航骨架管理权限</span></td>
+                                    <td><span class="small text-muted">2024-01-01 10:00</span></td>
+                                    <td>
+                                        <div class="bc-btn-group justify-content-end">
+                                            <button class="bc-btn-icon bc-btn-edit" title="配置"><i class="bi bi-pencil"></i></button>
+                                            <button class="bc-btn-icon bc-btn-delete" title="移除"><i class="bi bi-trash"></i></button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 底部页脚 -->
+        <div th:replace="~{common/fragments :: footer}"></div>
+    </div>
+
+    <!-- 通用确认弹窗 -->
+    <div th:replace="~{common/fragments :: confirm-modal}"></div>
+
+    <!-- 新增/编辑权限模态框 -->
+    <div class="modal fade" id="permissionModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content bc-modal-content">
+                <div class="modal-header bc-modal-header">
+                    <h5 class="modal-title bc-modal-title">
+                        <i class="bi bi-key"></i> <span>权限配置</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body bc-modal-body">
+                    <form id="permissionForm">
+                        <input type="hidden" id="permissionId">
+                        <div class="bc-form-group mb-4">
+                            <label class="bc-form-label">权限名称 <span class="text-danger">*</span></label>
+                            <input type="text" class="bc-input" id="permissionName" placeholder="如：用户列表查看">
+                        </div>
+                        <div class="bc-form-group mb-4">
+                            <label class="bc-form-label">权限标识 <span class="text-danger">*</span></label>
+                            <input type="text" class="bc-input" id="permissionCode" placeholder="如：user:view">
+                        </div>
+                        <div class="bc-form-group mb-2">
+                            <label class="bc-form-label">职能描述</label>
+                            <textarea class="bc-textarea" id="permissionDesc" rows="3" placeholder="详细说明此权限可执行的操作"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer bc-modal-footer">
+                    <button type="button" class="btn bc-btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn bc-btn-primary" id="savePermissionBtn">保存权限</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- jQuery -->
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <!-- 公共JavaScript -->
+    <script src="/js/common.js"></script>
+    
+    <script>
+        $(document).ready(function() {
+            // 新增按钮
+            $('#addPermissionBtn').click(function() {
+                $('#permissionId').val('');
+                $('#permissionName').val('');
+                $('#permissionCode').val('');
+                $('#permissionDesc').val('');
+                $('#permissionModal').modal('show');
+            });
+            
+            // 编辑按钮模拟
+            $(document).on('click', '.bc-btn-edit', function() {
+                BC.toast('当前环境为 UI 演示模式，编辑功能已锁定', 'info');
+            });
+
+            // 删除按钮模拟
+            $(document).on('click', '.bc-btn-delete', function() {
+                BC.confirm({
+                    title: '同步冲突预警',
+                    message: '移除此权限元数据可能导致关联角色对应的功能模块失效，是否确认？',
+                    type: 'danger',
+                    confirmText: '强制移除',
+                    cancelText: '取消'
+                }, function(confirmed) {
+                    if (confirmed) {
+                        BC.toast('权限项已成功移除', 'success');
+                    }
+                });
+            });
+            
+            // 保存按钮
+            $('#savePermissionBtn').click(function() {
+                $('#permissionModal').modal('hide');
+                BC.alert({
+                    title: '同步成功',
+                    message: '全新定义的权限元数据已成功同步至安全集群',
+                    type: 'success'
+                });
+            });
+            
+            // 搜索模拟
+            $('#searchBtn').click(function() {
+                var searchText = $('#searchInput').val();
+                if (searchText) {
+                    BC.toast('正在检索匹配项: ' + searchText, 'info');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,107 @@
+package com.bcsport.admin.entity.ihr;
+
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import lombok.Data;
+
+import java.io.Serializable;
+import java.util.Date;
+
+/**
+ * 员工详细信息
+ */
+@Data
+@TableName("employee_information")
+public class IhrEmployeeDetail implements Serializable {
+    private static final long serialVersionUID = 1L;
+
+    @TableId("id")
+    private String id;
+
+    private String age;
+    private String createdDate;
+    private String companyId;
+    private String qqNo;
+    private String wechatNo;
+    private String staffNo;
+    private String staffName;
+    private String idCardNo;
+    private String idCardType;
+    private String birthday;
+    private String sex;
+    private String mobileNo;
+    private String email;
+    private String workPhone;
+    private String workEmail;
+    private String marryStatus;
+    private String highestEducation;
+    private String nationality;
+    private String nativePlace;
+    private String nativePlaceProvinceCode;
+    private String nativePlaceCityCode;
+    private String politicalStatus;
+    private String nickName;
+    private String bloodType;
+    private String spouseName;
+    private String childName;
+    private String emergencyContactName;
+    private String emergencyContactMobile;
+    private String staffStatus;
+    private String staffType;
+    private String leaveDate;
+    private String probationEndDate;
+    private String enrollInDate;
+    private String probationLength;
+    private String contractBeginDate;
+    private String contractEndDate;
+    private String positiveDate;
+    private String hukouType;
+    private String hukouAddress;
+    private String hukouProvinceCode;
+    private String hukouCityCode;
+    private String livingAddress;
+    private String livingProvinceCode;
+    private String livingCityCode;
+    private String departmentId;
+    private String departmentName;
+    private String corporationName;
+    private String corporationId;
+    private String positionName;
+    private String positionId;
+    private String jobTitleName;
+    private String jobTitleId;
+    private String supervisorName;
+    private String supervisorId;
+    private String positionLevelId;
+    private String positionLevelName;
+    private String lastName;
+    private String firstName;
+    private String legalName;
+    private String workPlace;
+    private String contractType;
+    private String isDeleted;
+    private String deleteDate;
+    private String quitType;
+    private String lastWorkDay;
+    private String staffOrigin;
+    private String initialWorkYears;
+    private String enrollWorkYears;
+    private String firstLevelDepartmentId;
+    private String firstLevelDepartmentName;
+    private String staffRemark;
+    private String quitReason;
+    private String quitReasonType;
+    private String quitRemindStaff;
+    private String lunarBirthdayYear;
+    private String lunarBirthdayMonth;
+    private String lunarBirthdayDay;
+    private String nextSolarBirthday;
+    private String reinstateNumber;
+    private String companySiteId;
+    private String companySiteName;
+    private String country;
+    private String isProbation;
+    private String probationStatus;
+    private Date createTime;
+    private Date updateTime;
+}

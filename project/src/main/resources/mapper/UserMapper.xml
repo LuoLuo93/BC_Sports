@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bcsport.admin.mapper.UserMapper">
+
+    <resultMap id="UserVOResultMap" type="com.bcsport.admin.vo.UserVO">
+        <id property="id" column="id"/>
+        <result property="username" column="username"/>
+        <result property="nickname" column="nickname"/>
+        <result property="email" column="email"/>
+        <result property="phone" column="phone"/>
+        <result property="avatar" column="avatar"/>
+        <result property="status" column="status"/>
+        <result property="lastLoginTime" column="last_login_time"/>
+        <result property="lastLoginIp" column="last_login_ip"/>
+        <result property="remark" column="remark"/>
+        <result property="deptId" column="dept_id"/>
+        <result property="sort" column="sort"/>
+        <result property="createTime" column="create_time"/>
+        <result property="roleNames" column="role_names"/>
+        <result property="deptName" column="dept_name"/>
+    </resultMap>
+
+    <select id="selectUserPageWithConditions" resultMap="UserVOResultMap">
+        SELECT u.*, d.dept_name,
+               (SELECT LISTAGG(r.role_name, ',') WITHIN GROUP (ORDER BY r.role_name)
+                FROM bc_sports_sys_role r
+                INNER JOIN bc_sports_sys_user_role ur ON r.id = ur.role_id
+                WHERE ur.user_id = u.id AND r.deleted = 0) as role_names
+        FROM bc_sports_sys_user u
+        LEFT JOIN bc_sports_sys_dept d ON u.dept_id = d.id AND d.deleted = 0
+        WHERE u.deleted = 0
+        <if test="queryUser.username != null and queryUser.username != ''">
+            AND u.username LIKE '%' || #{queryUser.username} || '%'
+        </if>
+        <if test="queryUser.nickname != null and queryUser.nickname != ''">
+            AND u.nickname LIKE '%' || #{queryUser.nickname} || '%'
+        </if>
+        <if test="queryUser.phone != null and queryUser.phone != ''">
+            AND u.phone LIKE '%' || #{queryUser.phone} || '%'
+        </if>
+        <if test="queryUser.status != null">
+            AND u.status = #{queryUser.status}
+        </if>
+        <if test="queryUser.deptId != null and queryUser.deptId != ''">
+            AND u.dept_id = #{queryUser.deptId}
+        </if>
+        ORDER BY u.sort ASC, u.create_time DESC
+    </select>
+
+</mapper>

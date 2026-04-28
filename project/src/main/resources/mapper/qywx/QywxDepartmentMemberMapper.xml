@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bcsport.admin.qywxmapper.QywxDepartmentMemberMapper">
+    <delete id="deleteAll">DELETE FROM VX_DepartmentMember</delete>
+    <insert id="insertBatch">
+        INSERT INTO VX_DepartmentMember(id, userid, name, open_userid, department, createTime, updateTime)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.id}, #{item.userid}, #{item.name}, #{item.openUserid}, #{item.department}, GETDATE(), GETDATE())
+        </foreach>
+    </insert>
+    <select id="selectAllUserIds" resultType="java.lang.String">
+        SELECT userid FROM VX_DepartmentMember
+    </select>
+</mapper>

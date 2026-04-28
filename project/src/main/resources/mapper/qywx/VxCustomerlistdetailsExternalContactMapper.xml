@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bcsport.admin.qywxmapper.VxCustomerlistdetailsExternalContactMapper">
+
+    <delete id="deleteAll">
+        DELETE FROM VX_CustomerListDetails_external_contact
+    </delete>
+
+    <insert id="insertBatch">
+        INSERT INTO VX_CustomerListDetails_external_contact (externalUserid, name, type, gender, unionid, corp_name, createTime)
+        VALUES
+        <foreach collection="list" index="index" item="item" separator=",">
+            (#{item.externalUserid}, #{item.name}, #{item.type}, #{item.gender}, #{item.unionid}, #{item.corpName}, GETDATE())
+        </foreach>
+    </insert>
+
+</mapper>

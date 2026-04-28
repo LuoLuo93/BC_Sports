@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BC体育 - 巅峰探索 | 户外运动数字化中心</title>
+    
+    <!-- Google Fonts: Outfit & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    
+    <style>
+        :root {
+            --summit-blue: #1d4ed8;
+            --alpine-white: #ffffff;
+            --stone-warm: #fafaf9;
+            --forest-deep: #064e3b;
+            --safety-orange: #f97316;
+            --text-main: #1c1917;
+            --text-muted: #78716c;
+            --border-light: #e7e5e4;
+            --success-green: #10b981;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body { 
+            height: 100vh; 
+            width: 100vw; 
+            overflow: hidden; 
+            background: var(--alpine-white);
+            font-family: 'Inter', sans-serif;
+        }
+
+        .login-layout {
+            display: flex;
+            height: 100%;
+        }
+
+        /* --- 左侧：品牌意境区 (68%) --- */
+        .brand-side {
+            flex: 0 0 68%;
+            position: relative;
+            background-color: var(--forest-deep);
+            overflow: hidden;
+        }
+
+        .brand-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            filter: contrast(1.1) brightness(0.9);
+            transition: transform 15s ease-in-out;
+        }
+
+        .brand-side:hover .brand-image {
+            transform: scale(1.1);
+        }
+
+        .brand-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(6, 78, 59, 0.4) 0%, rgba(29, 78, 216, 0.2) 100%);
+            z-index: 1;
+        }
+
+        .brand-text {
+            position: absolute;
+            bottom: 60px;
+            left: 60px;
+            z-index: 2;
+            color: white;
+            max-width: 500px;
+        }
+
+        .brand-text h2 {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 900;
+            font-size: 3.5rem;
+            line-height: 1;
+            margin-bottom: 24px;
+            text-transform: uppercase;
+            letter-spacing: -0.02em;
+        }
+
+        .brand-text p {
+            font-size: 1.125rem;
+            font-weight: 500;
+            opacity: 0.9;
+            margin-bottom: 0;
+        }
+
+        /* --- 右侧：高精操作区 (50%) --- */
+        .form-side {
+            flex: 1;
+            background-color: var(--stone-warm);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+            position: relative;
+        }
+
+        .form-wrapper {
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .login-header {
+            margin-bottom: 48px;
+            text-align: center;
+        }
+
+        .login-header .logo-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 8px 16px;
+            background: white;
+            border: 1.5px solid var(--border-light);
+            border-radius: 12px;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 800;
+            font-size: 1rem;
+            color: var(--summit-blue);
+            margin-bottom: 32px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .login-header h1 {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 900;
+            font-size: 2.25rem;
+            color: var(--text-main);
+            margin-bottom: 12px;
+            letter-spacing: -0.03em;
+        }
+
+        .login-header p {
+            color: var(--text-muted);
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        /* 运动品牌风格表单 */
+        .bc-form-group {
+            margin-bottom: 24px;
+        }
+
+        .bc-label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 800;
+            color: var(--text-main);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 10px;
+            padding-left: 2px;
+        }
+
+        .input-group-custom {
+            position: relative;
+        }
+
+        .input-group-custom i {
+            position: absolute;
+            left: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 1.2rem;
+            z-index: 5;
+        }
+
+        .bc-input {
+            width: 100%;
+            height: 60px;
+            background: white;
+            border: 2px solid var(--border-light);
+            border-radius: 14px;
+            padding: 0 20px 0 54px;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-main);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .bc-input:focus {
+            outline: none;
+            border-color: var(--summit-blue);
+            box-shadow: 0 10px 20px -5px rgba(29, 78, 216, 0.15);
+        }
+
+        .bc-input:focus + i {
+            color: var(--summit-blue);
+        }
+
+        .options-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
+        .check-box {
+            display: flex;
+            align-items: center;
+            color: var(--text-muted);
+            cursor: pointer;
+        }
+
+        .check-box input { margin-right: 10px; accent-color: var(--summit-blue); width: 18px; height: 18px; }
+
+        .form-link {
+            color: var(--summit-blue);
+            text-decoration: none;
+        }
+
+        .form-link:hover { text-decoration: underline; }
+
+        /* 极速提交按钮 */
+        .btn-adventure {
+            width: 100%;
+            height: 64px;
+            background-color: var(--text-main);
+            color: white;
+            border: none;
+            border-radius: 16px;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 800;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .btn-adventure:hover {
+            background-color: var(--summit-blue);
+            transform: translateY(-4px);
+            box-shadow: 0 20px 30px -10px rgba(29, 78, 216, 0.4);
+        }
+
+        .btn-adventure:active {
+            transform: translateY(0);
+        }
+
+        .btn-adventure i {
+            font-size: 1.2rem;
+            transition: transform 0.3s ease;
+        }
+
+        .btn-adventure:hover i {
+            transform: translateX(4px);
+        }
+
+        /* 错误反馈 */
+        .error-toast {
+            background: #ef4444;
+            color: white;
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            margin-top: 24px;
+            display: none;
+            text-align: center;
+            box-shadow: 0 12px 24px rgba(239, 68, 68, 0.3);
+        }
+
+        /* 品牌勋章区 */
+        .brand-footer {
+            margin-top: auto;
+            width: 100%;
+            display: flex;
+            justify-content: space-around;
+            padding-top: 40px;
+            border-top: 1px solid var(--border-light);
+        }
+
+        .badge-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: var(--text-muted);
+            opacity: 0.6;
+            transition: opacity 0.3s;
+        }
+
+        .badge-item:hover { opacity: 1; }
+
+        .badge-item i { font-size: 1.5rem; margin-bottom: 4px; }
+        .badge-item span { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; }
+
+        /* 旋转动画 */
+        .spin-anim {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* 响应式 */
+        @media (max-width: 1024px) {
+            .brand-side { display: none; }
+            .form-side { flex: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="login-layout">
+        <!-- 左侧：品牌展示 -->
+        <div class="brand-side">
+            <img src="https://images.unsplash.com/photo-1551698618-1dfe5d97d256?auto=format&fit=crop&q=80&w=3540" class="brand-image" alt="Skiing Summit">
+            <div class="brand-overlay"></div>
+            <div class="brand-text">
+                <p>PRO ATHLETIC GEAR</p>
+                <h2>Touch the<br>Highest Peak</h2>
+                <p>BC SPÖRT 巅峰数字化中心，为每一场远征保驾护航。</p>
+            </div>
+        </div>
+
+        <!-- 右侧：登录操作 -->
+        <div class="form-side">
+            <div class="form-wrapper">
+                <div class="login-header">
+                    <div class="logo-badge">
+                        <i class="bi bi-geo-alt-fill"></i>
+                        BC-SPÖRT HQ
+                    </div>
+                    <h1>巅峰·再出发</h1>
+                    <p>请通过您的专业凭据访问系统中心</p>
+                </div>
+
+                <form id="loginForm">
+                    <div class="bc-form-group">
+                        <label class="bc-label" for="username">IDENTITY / 通行证</label>
+                        <div class="input-group-custom">
+                            <input type="text" id="username" class="bc-input" placeholder="请输入员工账号/ID" required>
+                            <i class="bi bi-person-circle"></i>
+                        </div>
+                    </div>
+
+                    <div class="bc-form-group">
+                        <label class="bc-label" for="password">SECURITY / 校验码</label>
+                        <div class="input-group-custom">
+                            <input type="password" id="password" class="bc-input" placeholder="请输入访问密钥" required>
+                            <i class="bi bi-key-fill"></i>
+                        </div>
+                    </div>
+
+                    <div class="options-bar">
+                        <label class="check-box">
+                            <input type="checkbox" id="rememberMe">
+                            信任此设备
+                        </label>
+                        <a href="#" class="form-link">授权遇到困难?</a>
+                    </div>
+
+                    <button type="submit" class="btn-adventure">
+                        <span id="btnText">进入数字化中心</span>
+                        <i id="btnIcon" class="bi bi-arrow-right-short"></i>
+                    </button>
+                </form>
+
+                <div id="loginError" class="error-toast"></div>
+            </div>
+
+            <!-- 业务勋章 -->
+            <div class="brand-footer">
+                <div class="badge-item">
+                    <i class="bi bi-tree-fill"></i>
+                    <span>Hiking / 徒步</span>
+                </div>
+                <div class="badge-item">
+                    <i class="bi bi-cup-hot-fill"></i>
+                    <span>Camping / 露营</span>
+                </div>
+                <div class="badge-item">
+                    <i class="bi bi-snow"></i>
+                    <span>Skiing / 滑雪</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- jQuery -->
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    
+    <script>
+        $(document).ready(function() {
+            $('#loginForm').on('submit', function(e) {
+                e.preventDefault();
+                
+                const $btn = $('.btn-adventure');
+                const $text = $('#btnText');
+                const $icon = $('#btnIcon');
+                
+                $btn.prop('disabled', true).css('opacity', '0.7');
+                $text.text('正在验证专业凭据...');
+                $icon.attr('class', 'bi bi-arrow-repeat spin-anim');
+                $('#loginError').fadeOut();
+                
+                $.ajax({
+                    url: '/doLogin',
+                    type: 'POST',
+                    data: {
+                        username: $('#username').val(),
+                        password: $('#password').val(),
+                        rememberMe: $('#rememberMe').is(':checked')
+                    },
+                    success: function(res) {
+                        if (res.code === 200) {
+                            $text.text('认证成功，同步中');
+                            $icon.attr('class', 'bi bi-check-lg');
+                            $btn.css('background-color', 'var(--success-green)');
+                            setTimeout(() => window.location.href = '/index', 600);
+                        } else {
+                            showError(res.message || '凭据检验未通过，请核对后重试');
+                        }
+                    },
+                    error: function() {
+                        showError('系统网关通信超时，请检查信道');
+                    }
+                });
+
+                function showError(msg) {
+                    $('#loginError').text(msg).fadeIn();
+                    $btn.prop('disabled', false).css({'opacity': '1', 'background-color': ''});
+                    $text.text('进入数字化中心');
+                    $icon.attr('class', 'bi bi-arrow-right-short');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bcsport.admin.ihrmapper.IhrEmployeeDetailMapper">
+    <delete id="deleteAll">DELETE FROM employee_information</delete>
+    <insert id="insertBatch">
+        INSERT INTO employee_information(id, age, created_date, company_id, qq_no, wechat_no, staff_no,
+            staff_name, id_card_no, id_card_type, birthday, sex, mobile_no, email, work_phone, work_email,
+            marry_status, highest_education, nationality, native_place, native_place_province_code,
+            native_place_city_code, political_status, nick_name, blood_type, spouse_name, child_name,
+            emergency_contact_name, emergency_contact_mobile, staff_status, staff_type, leave_date,
+            probation_end_date, enroll_in_date, probation_length, contract_begin_date, contract_end_date,
+            positive_date, hukou_type, hukou_address, hukou_province_code, hukou_city_code,
+            living_address, living_province_code, living_city_code, department_id, department_name,
+            corporation_name, corporation_id, position_name, position_id, job_title_name, job_title_id,
+            supervisor_name, supervisor_id, position_level_id, position_level_name, last_name, first_name,
+            legal_name, work_place, contract_type, is_deleted, delete_date, quit_type, last_work_day,
+            staff_origin, initial_work_years, enroll_work_years, first_level_department_id,
+            first_level_department_name, staff_remark, quit_reason, quit_reason_type, quit_remind_staff,
+            lunar_birthday_year, lunar_birthday_month, lunar_birthday_day, next_solar_birthday,
+            reinstate_number, company_site_id, company_site_name, country, is_probation, probation_status,
+            create_time, update_time)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.id}, #{item.age}, #{item.createdDate}, #{item.companyId}, #{item.qqNo}, #{item.wechatNo},
+             #{item.staffNo}, #{item.staffName}, #{item.idCardNo}, #{item.idCardType}, #{item.birthday},
+             #{item.sex}, #{item.mobileNo}, #{item.email}, #{item.workPhone}, #{item.workEmail},
+             #{item.marryStatus}, #{item.highestEducation}, #{item.nationality}, #{item.nativePlace},
+             #{item.nativePlaceProvinceCode}, #{item.nativePlaceCityCode}, #{item.politicalStatus},
+             #{item.nickName}, #{item.bloodType}, #{item.spouseName}, #{item.childName},
+             #{item.emergencyContactName}, #{item.emergencyContactMobile}, #{item.staffStatus},
+             #{item.staffType}, #{item.leaveDate}, #{item.probationEndDate}, #{item.enrollInDate},
+             #{item.probationLength}, #{item.contractBeginDate}, #{item.contractEndDate},
+             #{item.positiveDate}, #{item.hukouType}, #{item.hukouAddress}, #{item.hukouProvinceCode},
+             #{item.hukouCityCode}, #{item.livingAddress}, #{item.livingProvinceCode},
+             #{item.livingCityCode}, #{item.departmentId}, #{item.departmentName},
+             #{item.corporationName}, #{item.corporationId}, #{item.positionName}, #{item.positionId},
+             #{item.jobTitleName}, #{item.jobTitleId}, #{item.supervisorName}, #{item.supervisorId},
+             #{item.positionLevelId}, #{item.positionLevelName}, #{item.lastName}, #{item.firstName},
+             #{item.legalName}, #{item.workPlace}, #{item.contractType}, #{item.isDeleted},
+             #{item.deleteDate}, #{item.quitType}, #{item.lastWorkDay}, #{item.staffOrigin},
+             #{item.initialWorkYears}, #{item.enrollWorkYears}, #{item.firstLevelDepartmentId},
+             #{item.firstLevelDepartmentName}, #{item.staffRemark}, #{item.quitReason},
+             #{item.quitReasonType}, #{item.quitRemindStaff}, #{item.lunarBirthdayYear},
+             #{item.lunarBirthdayMonth}, #{item.lunarBirthdayDay}, #{item.nextSolarBirthday},
+             #{item.reinstateNumber}, #{item.companySiteId}, #{item.companySiteName}, #{item.country},
+             #{item.isProbation}, #{item.probationStatus}, GETDATE(), GETDATE())
+        </foreach>
+    </insert>
+</mapper>

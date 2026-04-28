@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bcsport.admin.ihrmapper.IhrEmployeeMapper">
+    <delete id="deleteAll">DELETE FROM employees</delete>
+    <insert id="insertBatch">
+        INSERT INTO employees(id, staff_id, staff_no, staff_name, nick_name, mobile_no, email,
+            staff_status, id_card_type, id_card_no, department_name, position_name, sex, staff_type,
+            marry_status, highest_education, work_place, birthday, contract_begin_date, contract_end_date,
+            enroll_in_date, probation_end_date, created_date, last_update_date, create_time, update_time)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.id}, #{item.staffId}, #{item.staffNo}, #{item.staffName}, #{item.nickName},
+             #{item.mobileNo}, #{item.email}, #{item.staffStatus}, #{item.idCardType}, #{item.idCardNo},
+             #{item.departmentName}, #{item.positionName}, #{item.sex}, #{item.staffType},
+             #{item.marryStatus}, #{item.highestEducation}, #{item.workPlace}, #{item.birthday},
+             #{item.contractBeginDate}, #{item.contractEndDate}, #{item.enrollInDate},
+             #{item.probationEndDate}, #{item.createdDate}, #{item.lastUpdateDate}, GETDATE(), GETDATE())
+        </foreach>
+    </insert>
+</mapper>

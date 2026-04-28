@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据统计 - BC体育巅峰后台</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- ECharts -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <!-- 自定义CSS -->
+    <link rel="stylesheet" th:href="@{/css/layout.css}">
+    <style>
+        .stat-tile {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid var(--border-light);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        .stat-tile:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 24px -10px rgba(0, 0, 0, 0.1);
+            border-color: var(--primary-soft);
+        }
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 16px;
+        }
+        .trend-badge {
+            font-size: 0.75rem;
+            padding: 4px 8px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+        .chart-container {
+            min-height: 400px;
+            width: 100%;
+        }
+        .cockpit-header {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            color: white;
+            border-radius: 16px;
+            padding: 32px;
+            margin-bottom: 24px;
+            box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <!-- 侧边栏 -->
+    <div th:replace="~{common/fragments :: sidebar}"></div>
+
+    <!-- 主内容区 -->
+    <div class="main-content">
+        <!-- 顶部导航 -->
+        <nav th:replace="~{common/fragments :: top-navbar}"></nav>
+
+        <!-- 内容区域 -->
+        <div class="content-wrapper">
+            <!-- 驾驶舱头部 -->
+            <div class="cockpit-header">
+                <div class="row align-items-center">
+                    <div class="col">
+                        <h3 class="fw-bold mb-1">BC Sport 数据驾驶舱</h3>
+                        <p class="mb-0 opacity-75">实时监控平台核心运行指标与业务增长趋势</p>
+                    </div>
+                    <div class="col-auto">
+                        <div class="bc-btn-group bg-white bg-opacity-10 p-1 rounded-3">
+                            <button class="btn btn-sm text-white px-3 active">日</button>
+                            <button class="btn btn-sm text-white px-3">周</button>
+                            <button class="btn btn-sm text-white px-3">月</button>
+                            <button class="btn btn-sm text-white px-3">年</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 顶部指标区 -->
+            <div class="row g-4 mb-4">
+                <div class="col-md-3">
+                    <div class="stat-tile">
+                        <div class="stat-icon bg-primary-soft text-primary">
+                            <i class="bi bi-currency-yen"></i>
+                        </div>
+                        <div class="text-muted small fw-600 mb-1">本月营业总额</div>
+                        <div class="d-flex align-items-end gap-2">
+                            <h3 class="fw-bold text-main mb-0">¥ 1,284,500</h3>
+                            <span class="trend-badge bg-success-soft text-success">
+                                <i class="bi bi-arrow-up-short"></i> 12.5%
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-tile">
+                        <div class="stat-icon bg-success-soft text-success">
+                            <i class="bi bi-people"></i>
+                        </div>
+                        <div class="text-muted small fw-600 mb-1">新增注册用户</div>
+                        <div class="d-flex align-items-end gap-2">
+                            <h3 class="fw-bold text-main mb-0">8,492</h3>
+                            <span class="trend-badge bg-success-soft text-success">
+                                <i class="bi bi-arrow-up-short"></i> 5.2%
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-tile">
+                        <div class="stat-icon bg-warning-soft text-warning">
+                            <i class="bi bi-cart-check"></i>
+                        </div>
+                        <div class="text-muted small fw-600 mb-1">订单转化率</div>
+                        <div class="d-flex align-items-end gap-2">
+                            <h3 class="fw-bold text-main mb-0">14.8%</h3>
+                            <span class="trend-badge bg-danger-soft text-danger">
+                                <i class="bi bi-arrow-down-short"></i> 2.1%
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-tile">
+                        <div class="stat-icon bg-info-soft text-info">
+                            <i class="bi bi-lightning-charge"></i>
+                        </div>
+                        <div class="text-muted small fw-600 mb-1">实时在线人数</div>
+                        <div class="d-flex align-items-end gap-2">
+                            <h3 class="fw-bold text-main mb-0">3,105</h3>
+                            <span class="trend-badge bg-primary-soft text-primary">
+                                <i class="bi bi-dash"></i> 持平
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 图表矩阵 -->
+            <div class="row g-4 mb-4">
+                <!-- 业务增长曲线 -->
+                <div class="col-lg-8">
+                    <div class="bc-card">
+                        <div class="bc-card-header d-flex justify-content-between align-items-center">
+                            <h5 class="bc-card-title mb-0">2026 年度业务增长趋势监测</h5>
+                            <button class="btn btn-sm bc-btn-secondary"><i class="bi bi-download"></i></button>
+                        </div>
+                        <div class="bc-card-body">
+                            <div id="trendChart" class="chart-container"></div>
+                        </div>
+                    </div>
+                </div>
+                <!-- 分类占比 -->
+                <div class="col-lg-4">
+                    <div class="bc-card">
+                        <div class="bc-card-header">
+                            <h5 class="bc-card-title mb-0">各运动品类营收占比</h5>
+                        </div>
+                        <div class="bc-card-body">
+                            <div id="pieChart" class="chart-container"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 数据明细抽样 -->
+            <div class="bc-card">
+                <div class="bc-card-header">
+                    <h5 class="bc-card-title mb-0">最近异常交易监控</h5>
+                </div>
+                <div class="bc-card-body p-0">
+                    <table class="bc-table">
+                        <thead>
+                            <tr>
+                                <th>时间</th>
+                                <th>订单 ID</th>
+                                <th>用户</th>
+                                <th>金额</th>
+                                <th>状态</th>
+                                <th>风险等阶</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="text-muted">14:23:05</td>
+                                <td><code>ORD-8293-AX</code></td>
+                                <td>张晓明</td>
+                                <td class="fw-bold">¥ 4,200</td>
+                                <td><span class="bc-tag bc-tag-warning">审核中</span></td>
+                                <td><span class="text-warning"><i class="bi bi-exclamation-triangle"></i> 中等</span></td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">14:20:12</td>
+                                <td><code>ORD-1049-BQ</code></td>
+                                <td>李思齐</td>
+                                <td class="fw-bold">¥ 12,800</td>
+                                <td><span class="bc-tag bc-tag-danger">拦截成功</span></td>
+                                <td><span class="text-danger"><i class="bi bi-shield-x"></i> 高危</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 底部页脚 -->
+        <div th:replace="~{common/fragments :: footer}"></div>
+    </div>
+
+    <!-- 通用确认弹窗 (必须放在 body 直接子节点以确保 fixed 定位不被 container 动画干扰) -->
+    <div th:replace="~{common/fragments :: confirm-modal}"></div>
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- jQuery -->
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <!-- 公共JavaScript -->
+    <script src="/js/common.js"></script>
+    
+    <script>
+        $(document).ready(function() {
+            // 初始化趋势图
+            const trendChart = echarts.init(document.getElementById('trendChart'));
+            trendChart.setOption({
+                tooltip: { trigger: 'axis' },
+                grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+                xAxis: { type: 'category', boundaryGap: false, data: ['1月','2月','3月','4月','5月','6月','7月'] },
+                yAxis: { type: 'value' },
+                series: [
+                    {
+                        name: '营收额',
+                        type: 'line',
+                        smooth: true,
+                        data: [120, 132, 101, 134, 90, 230, 210],
+                        itemStyle: { color: '#2563eb' },
+                        areaStyle: {
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: 'rgba(37, 99, 235, 0.2)' },
+                                { offset: 1, color: 'rgba(37, 99, 235, 0.01)' }
+                            ])
+                        }
+                    }
+                ]
+            });
+
+            // 初始化占比图
+            const pieChart = echarts.init(document.getElementById('pieChart'));
+            pieChart.setOption({
+                tooltip: { trigger: 'item' },
+                legend: { bottom: '5%', left: 'center' },
+                series: [
+                    {
+                        type: 'pie',
+                        radius: ['40%', '70%'],
+                        avoidLabelOverlap: false,
+                        itemStyle: { borderRadius: 10, borderColor: '#fff', borderWidth: 2 },
+                        label: { show: false },
+                        data: [
+                            { value: 1048, name: '滑雪设备', itemStyle: { color: '#2563eb' } },
+                            { value: 735, name: '徒步装备', itemStyle: { color: '#10b981' } },
+                            { value: 580, name: '水上运动', itemStyle: { color: '#f59e0b' } },
+                            { value: 484, name: '攀岩竞技', itemStyle: { color: '#ef4444' } }
+                        ]
+                    }
+                ]
+            });
+
+            // 自适应窗口大小
+            window.addEventListener('resize', () => {
+                trendChart.resize();
+                pieChart.resize();
+            });
+        });
+    </script>
+</body>
+</html>

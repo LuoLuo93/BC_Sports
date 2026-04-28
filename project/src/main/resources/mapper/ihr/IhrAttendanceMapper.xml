@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bcsport.admin.ihrmapper.IhrAttendanceMapper">
+    <delete id="deleteAll">DELETE FROM attendance</delete>
+    <insert id="insertBatch">
+        INSERT INTO attendance(id, staff_id, supposed_attendance_days, supposed_attendance_hours,
+            actual_attendance_days, actual_attendance_hours, rest_days, absence_hours, absence_number,
+            absence_times, appeal_times, late_minutes, late_times, early_minutes, early_times,
+            sign_in_missing_times, sign_out_missing_times, business_travel_days, field_work_hours,
+            normal_hour, weekend_hour, statutory_hour, normal_to_rest_hour, weekend_to_rest_hour,
+            statutory_to_rest_hour, normal_to_salary_hour, weekend_to_salary_hour, statutory_to_salary_hour,
+            workday_delay_hours, day_off_delay_hours, holiday_delay_hours, deep_night_duration,
+            annual_leave, personal_leave, breastfeeding_leave, compensated_leave, mourning_leave,
+            full_pay_sick_leave, paid_sick_leave, paternity_leave, home_leave, marriage_leave,
+            maternity_leave, other_vacation, prenatal_checkup, remark, update_date, create_time, update_time)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.id}, #{item.staffId}, #{item.supposedAttendanceDays}, #{item.supposedAttendanceHours},
+             #{item.actualAttendanceDays}, #{item.actualAttendanceHours}, #{item.restDays},
+             #{item.absenceHours}, #{item.absenceNumber}, #{item.absenceTimes}, #{item.appealTimes},
+             #{item.lateMinutes}, #{item.lateTimes}, #{item.earlyMinutes}, #{item.earlyTimes},
+             #{item.signInMissingTimes}, #{item.signOutMissingTimes}, #{item.businessTravelDays},
+             #{item.fieldWorkHours}, #{item.normalHour}, #{item.weekendHour}, #{item.statutoryHour},
+             #{item.normalToRestHour}, #{item.weekendToRestHour}, #{item.statutoryToRestHour},
+             #{item.normalToSalaryHour}, #{item.weekendToSalaryHour}, #{item.statutoryToSalaryHour},
+             #{item.workdayDelayHours}, #{item.dayOffDelayHours}, #{item.holidayDelayHours},
+             #{item.deepNightDuration}, #{item.annualLeave}, #{item.personalLeave},
+             #{item.breastfeedingLeave}, #{item.compensatedLeave}, #{item.mourningLeave},
+             #{item.fullPaySickLeave}, #{item.paidSickLeave}, #{item.paternityLeave}, #{item.homeLeave},
+             #{item.marriageLeave}, #{item.maternityLeave}, #{item.otherVacation}, #{item.prenatalCheckup},
+             #{item.remark}, #{item.updateDate}, GETDATE(), GETDATE())
+        </foreach>
+    </insert>
+</mapper>

@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>报表管理 - BC体育巅峰后台</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- 自定义CSS -->
+    <link rel="stylesheet" th:href="@{/css/layout.css}">
+    <style>
+        .report-card {
+            border: 1px solid var(--border-light);
+            border-radius: 16px;
+            padding: 24px;
+            background: white;
+            height: 100%;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        .report-card:hover {
+            border-color: var(--primary-color);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05);
+        }
+        .report-icon {
+            width: 54px;
+            height: 54px;
+            border-radius: 14px;
+            background: var(--bg-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+        }
+        .report-tag {
+            position: absolute;
+            top: 24px;
+            right: 24px;
+        }
+        .export-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+        }
+        .btn-export {
+            flex: 1;
+            padding: 8px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .history-badge {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 6px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 侧边栏 -->
+    <div th:replace="~{common/fragments :: sidebar}"></div>
+
+    <!-- 主内容区 -->
+    <div class="main-content">
+        <!-- 顶部导航 -->
+        <nav th:replace="~{common/fragments :: top-navbar}"></nav>
+
+        <!-- 内容区域 -->
+        <div class="content-wrapper">
+            <!-- 顶部筛选操作区 -->
+            <div class="bc-card mb-4">
+                <div class="bc-card-body">
+                    <div class="row align-items-center g-3">
+                        <div class="col-md-auto">
+                            <h5 class="fw-bold mb-0 text-main"><i class="bi bi-plus-circle me-2"></i>自定义报表生成</h5>
+                        </div>
+                        <div class="col-md">
+                            <div class="d-flex gap-3 justify-content-end">
+                                <select class="bc-select" style="width: 180px;">
+                                    <option>所有数据范畴</option>
+                                    <option>财务运营数据</option>
+                                    <option>用户活跃分析</option>
+                                    <option>库存变动日志</option>
+                                </select>
+                                <div class="bc-input-group" style="width: 260px;">
+                                    <i class="bi bi-calendar-range"></i>
+                                    <input type="text" class="bc-input" placeholder="选择统计周期">
+                                </div>
+                                <button class="btn bc-btn-primary px-4"><i class="bi bi-play-fill me-1"></i> 立即执行</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 报表模板矩阵 -->
+            <div class="row g-4 mb-5">
+                <!-- 财务报表 -->
+                <div class="col-md-4">
+                    <div class="report-card">
+                        <span class="badge bg-primary-soft text-primary report-tag">高频率</span>
+                        <div class="report-icon">
+                            <i class="bi bi-wallet2"></i>
+                        </div>
+                        <h6 class="fw-bold text-main">月度财务运营汇总</h6>
+                        <p class="text-muted small mb-3">包含各品类营收、退款率及各支付渠道的手续费明细。</p>
+                        <div class="export-actions">
+                            <button class="btn bc-btn-secondary btn-export"><i class="bi bi-file-pdf"></i> PDF</button>
+                            <button class="btn bc-btn-secondary btn-export"><i class="bi bi-file-earmark-excel"></i> EXCEL</button>
+                        </div>
+                    </div>
+                </div>
+                <!-- 销售预测 -->
+                <div class="col-md-4">
+                    <div class="report-card">
+                        <span class="badge bg-warning-soft text-warning report-tag">AI 辅助</span>
+                        <div class="report-icon" style="color: var(--warning-color);">
+                            <i class="bi bi-lightning-charge"></i>
+                        </div>
+                        <h6 class="fw-bold text-main">智能销售趋势预测</h6>
+                        <p class="text-muted small mb-3">基于历史同期数据与当前增长模型的下季度销售额预估。</p>
+                        <div class="export-actions">
+                            <button class="btn bc-btn-secondary btn-export"><i class="bi bi-file-pdf"></i> PDF</button>
+                            <button class="btn bc-btn-secondary btn-export"><i class="bi bi-file-earmark-excel"></i> EXCEL</button>
+                        </div>
+                    </div>
+                </div>
+                <!-- 用户画像 -->
+                <div class="col-md-4">
+                    <div class="report-card">
+                        <span class="badge bg-info-soft text-info report-tag">动态数据</span>
+                        <div class="report-icon" style="color: var(--info-color);">
+                            <i class="bi bi-person-bounding-box"></i>
+                        </div>
+                        <h6 class="fw-bold text-main">用户行为画像报告</h6>
+                        <p class="text-muted small mb-3">深度分析用户活跃时段、运动偏好及复购生命周期。</p>
+                        <div class="export-actions">
+                            <button class="btn bc-btn-secondary btn-export"><i class="bi bi-file-pdf"></i> PDF</button>
+                            <button class="btn bc-btn-secondary btn-export"><i class="bi bi-file-earmark-excel"></i> EXCEL</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 最近生成记录 -->
+            <div class="bc-card">
+                <div class="bc-card-header d-flex justify-content-between align-items-center">
+                    <h5 class="bc-card-title mb-0">生成历史与下载中心</h5>
+                    <button class="btn btn-sm btn-link text-decoration-none">查看更多历史</button>
+                </div>
+                <div class="bc-card-body p-0">
+                    <table class="bc-table bc-table-hover">
+                        <thead>
+                            <tr>
+                                <th>文件名称</th>
+                                <th>生成时间</th>
+                                <th>范畴</th>
+                                <th>大小</th>
+                                <th>状态</th>
+                                <th class="text-end">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="fw-600"><i class="bi bi-file-earmark-excel text-success me-2"></i>2026_Q1_财务汇总.xlsx</td>
+                                <td class="text-muted">2026-04-13 15:30</td>
+                                <td>财务审计</td>
+                                <td>2.4 MB</td>
+                                <td><span class="history-badge bg-success"></span><span class="small">就绪</span></td>
+                                <td class="text-end">
+                                    <button class="bc-btn-icon" title="下载"><i class="bi bi-download"></i></button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="fw-600"><i class="bi bi-file-earmark-pdf text-danger me-2"></i>3月库存盘点分析.pdf</td>
+                                <td class="text-muted">2026-04-12 09:12</td>
+                                <td>仓储物流</td>
+                                <td>854 KB</td>
+                                <td><span class="history-badge bg-success"></span><span class="small">就绪</span></td>
+                                <td class="text-end">
+                                    <button class="bc-btn-icon" title="下载"><i class="bi bi-download"></i></button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="fw-600"><i class="bi bi-file-earmark-excel text-success me-2"></i>潜在流失用户清单.xlsx</td>
+                                <td class="text-muted">2026-04-10 18:45</td>
+                                <td>用户运营</td>
+                                <td>1.2 MB</td>
+                                <td><span class="history-badge bg-secondary"></span><span class="small">已失效</span></td>
+                                <td class="text-end">
+                                    <button class="bc-btn-icon disabled" title="重新生成"><i class="bi bi-arrow-clockwise"></i></button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 底部页脚 -->
+        <div th:replace="~{common/fragments :: footer}"></div>
+    </div>
+
+    <!-- 通用确认弹窗 (必须放在 body 直接子节点以确保 fixed 定位不被 container 动画干扰) -->
+    <div th:replace="~{common/fragments :: confirm-modal}"></div>
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- jQuery -->
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <!-- 公共JavaScript -->
+    <script src="/js/common.js"></script>
+    
+    <script>
+        $(document).ready(function() {
+            // 模拟导出操作
+            $('.btn-export').click(function() {
+                const reportName = $(this).closest('.report-card').find('h6').text();
+                BC.toast('正在准备 ' + reportName + ' 的导出文件...', 'info');
+                setTimeout(() => {
+                    BC.toast('报表生成成功，正在触发浏览器下载', 'success');
+                }, 1500);
+            });
+        });
+    </script>
+</body>
+</html>

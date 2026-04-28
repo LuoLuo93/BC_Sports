@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ERP 仓库管理 - BC体育后台管理系统</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- 自定义CSS -->
+    <link rel="stylesheet" th:href="@{/css/layout.css}">
+</head>
+<body>
+    <!-- 侧边栏 -->
+    <div th:replace="~{common/fragments :: sidebar}"></div>
+
+    <!-- 主内容区 -->
+    <div class="main-content">
+        <!-- 顶部导航 -->
+        <nav th:replace="~{common/fragments :: top-navbar}"></nav>
+
+        <!-- 内容区域 -->
+        <div class="content-wrapper">
+            <div class="bc-card">
+                <div class="bc-card-body">
+                    <!-- 搜索与操作栏 -->
+                    <form class="row g-3 bc-toolbar align-items-center" id="searchForm">
+                        <div class="col-auto">
+                            <div class="bc-input-group">
+                                <i class="bi bi-upc-scan"></i>
+                                <input type="text" class="bc-input" id="searchWarehouseCode" placeholder="搜索仓库编码...">
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <div class="bc-input-group">
+                                <i class="bi bi-box-seam"></i>
+                                <input type="text" class="bc-input" id="searchWarehouseName" placeholder="搜索仓库名称...">
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <select class="bc-select" id="searchWarehouseType">
+                                <option value="">全部类型</option>
+                                <option value="normal">普通仓</option>
+                                <option value="cold">冷链仓</option>
+                                <option value="bonded">保税仓</option>
+                            </select>
+                        </div>
+                        <div class="col-auto">
+                            <select class="bc-select" id="searchStatus">
+                                <option value="">全部状态</option>
+                                <option value="1">启用</option>
+                                <option value="0">禁用</option>
+                            </select>
+                        </div>
+                        <div class="col-auto">
+                            <button type="button" class="btn bc-btn-primary" id="searchBtn">
+                                <i class="bi bi-search"></i> 查询
+                            </button>
+                            <button type="button" class="btn bc-btn-secondary" id="resetBtn">
+                                <i class="bi bi-arrow-counterclockwise"></i> 重置
+                            </button>
+                        </div>
+                        <div class="col-auto ms-auto" th:if="${#lists.contains(permissions, '*') or #lists.contains(permissions, 'bi:erpWarehouse:add')}">
+                            <button type="button" class="btn bc-btn-success" id="addBtn">
+                                <i class="bi bi-plus-lg"></i> 新增仓库
+                            </button>
+                        </div>
+                    </form>
+
+                    <div class="bc-table-container">
+                        <table class="bc-table bc-table-hover" id="dataTable">
+                            <thead>
+                                <tr>
+                                    <th style="width: 60px;">序号</th>
+                                    <th style="width: 100px;">仓库编码</th>
+                                    <th>仓库名称</th>
+                                    <th style="width: 100px;">类型</th>
+                                    <th>所在地区</th>
+                                    <th>负责人</th>
+                                    <th>联系电话</th>
+                                    <th style="width: 120px;">容量/已用</th>
+                                    <th style="width: 80px;">状态</th>
+                                    <th style="width: 120px;" class="text-end">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dataTableBody">
+                                <!-- 动态加载数据 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 底部: 分页 -->
+            <div th:replace="~{common/fragments :: pagination}"></div>
+        </div>
+
+        <!-- 底部页脚 -->
+        <div th:replace="~{common/fragments :: footer}"></div>
+    </div>
+
+    <!-- 仓库编辑模态框 -->
+    <div class="modal fade" id="dataModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content bc-modal-content">
+                <div class="modal-header bc-modal-header">
+                    <h5 class="modal-title bc-modal-title">
+                        <i class="bi bi-box-seam"></i> <span>新增仓库</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body bc-modal-body">
+                    <form id="dataForm">
+                        <input type="hidden" id="dataId">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="bc-form-label">仓库编码 <span class="text-danger">*</span></label>
+                                <input type="text" class="bc-input" id="warehouseCode" placeholder="示例：WH001" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="bc-form-label">仓库名称 <span class="text-danger">*</span></label>
+                                <input type="text" class="bc-input" id="warehouseName" placeholder="请输入仓库名称" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="bc-form-label">仓库类型 <span class="text-danger">*</span></label>
+                                <select class="bc-select" id="warehouseType" required>
+                                    <option value="">请选择类型</option>
+                                    <option value="normal">普通仓</option>
+                                    <option value="cold">冷链仓</option>
+                                    <option value="bonded">保税仓</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="bc-form-label">状态</label>
+                                <select class="bc-select" id="status">
+                                    <option value="1">启用</option>
+                                    <option value="0">禁用</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="bc-form-label">省份</label>
+                                <input type="text" class="bc-input" id="province" placeholder="省份">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="bc-form-label">城市</label>
+                                <input type="text" class="bc-input" id="city" placeholder="城市">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="bc-form-label">区县</label>
+                                <input type="text" class="bc-input" id="district" placeholder="区县">
+                            </div>
+                            <div class="col-md-12">
+                                <label class="bc-form-label">详细地址</label>
+                                <input type="text" class="bc-input" id="address" placeholder="详细地址">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="bc-form-label">仓库负责人</label>
+                                <input type="text" class="bc-input" id="manager" placeholder="负责人姓名">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="bc-form-label">联系电话</label>
+                                <input type="text" class="bc-input" id="contactPhone" placeholder="联系电话">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="bc-form-label">仓库容量</label>
+                                <input type="number" class="bc-input" id="capacity" placeholder="仓库总容量" value="0">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="bc-form-label">已使用容量</label>
+                                <input type="number" class="bc-input" id="usedCapacity" placeholder="已使用容量" value="0">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="bc-form-label">排序</label>
+                                <input type="number" class="bc-input" id="sort" value="0">
+                            </div>
+                            <div class="col-md-12">
+                                <label class="bc-form-label">备注</label>
+                                <textarea class="bc-textarea" id="remark" rows="2" placeholder="备注信息"></textarea>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer bc-modal-footer">
+                    <button type="button" class="btn bc-btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn bc-btn-primary" id="saveBtn">保存信息</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 通用确认弹窗 -->
+    <div th:replace="~{common/fragments :: confirm-modal}"></div>
+
+    <!-- JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script th:inline="javascript">
+        // 将后端注入的权限列表同步到前端 JS 作用域
+        window.userPermissions = /*[[${permissions}]]*/ [];
+
+        function hasPermission(p) {
+            if (!window.userPermissions) return false;
+            return window.userPermissions.includes('*') || window.userPermissions.includes(p);
+        }
+    </script>
+    <script src="/js/common.js"></script>
+
+    <script>
+        let currentPage = 1;
+        let pageSize = 10;
+
+        $(document).ready(function() {
+            loadDataList();
+
+            $('#searchBtn').click(() => { currentPage = 1; loadDataList(); });
+            $('#resetBtn').click(() => {
+                $('#searchForm')[0].reset();
+                currentPage = 1;
+                loadDataList();
+            });
+            $('#addBtn').click(() => openModal('add'));
+            $('#saveBtn').click(() => saveData());
+        });
+
+        function loadDataList() {
+            $.ajax({
+                url: '/api/erp-warehouse/page',
+                type: 'GET',
+                data: {
+                    pageNum: currentPage,
+                    pageSize: pageSize,
+                    warehouseCode: $('#searchWarehouseCode').val(),
+                    warehouseName: $('#searchWarehouseName').val(),
+                    warehouseType: $('#searchWarehouseType').val(),
+                    status: $('#searchStatus').val()
+                },
+                success: function(res) {
+                    if (res.code === 200) {
+                        renderTable(res.data.records);
+                        renderPagination(res.data);
+                    } else {
+                        BC.toast(res.message, 'error');
+                    }
+                }
+            });
+        }
+
+        function renderTable(data) {
+            const tbody = $('#dataTableBody');
+            tbody.empty();
+            if (!data || data.length === 0) {
+                tbody.append('<tr><td colspan="10" class="text-center py-5 text-muted">未找到匹配的仓库数据</td></tr>');
+                return;
+            }
+            data.forEach((item, i) => {
+                const seq = (currentPage - 1) * pageSize + i + 1;
+                
+                // 仓库类型标签样式
+                let typeTagClass = 'primary';
+                if (item.warehouseType === 'cold') typeTagClass = 'info';
+                if (item.warehouseType === 'bonded') typeTagClass = 'warning';
+                const typeTag = BC.getTag(typeTagClass, item.warehouseTypeName);
+                
+                const statusTag = BC.getTag(item.status === 1 ? 'success' : 'danger', item.statusName);
+                const safeId = String(item.id);
+
+                // 组合地址显示
+                let location = '-';
+                if (item.province || item.city || item.district) {
+                    location = [item.province, item.city, item.district].filter(Boolean).join(' ');
+                }
+
+                // 容量显示
+                const capacityText = item.capacity > 0 
+                    ? `${item.usedCapacity || 0} / ${item.capacity}` 
+                    : '-';
+
+                const btnGroup = [];
+                if (hasPermission('bi:erpWarehouse:edit')) {
+                    btnGroup.push({ icon: 'bi-pencil', title: '修改信息', onclick: `editData('${safeId}')` });
+                }
+                if (hasPermission('bi:erpWarehouse:delete')) {
+                    btnGroup.push({ icon: 'bi-trash', title: '彻底移除', onclick: `deleteData('${safeId}')` });
+                }
+
+                const actions = BC.getTableActions(btnGroup);
+
+                tbody.append(`
+                    <tr>
+                        <td><span class="text-muted small">${seq}</span></td>
+                        <td><span class="font-monospace small">${item.warehouseCode || '-'}</span></td>
+                        <td><span class="fw-bold text-main">${item.warehouseName || '-'}</span></td>
+                        <td>${typeTag}</td>
+                        <td><span class="small text-secondary">${location}</span></td>
+                        <td><span class="small">${item.manager || '-'}</span></td>
+                        <td><span class="small">${item.contactPhone || '-'}</span></td>
+                        <td><span class="small">${capacityText}</span></td>
+                        <td>${statusTag}</td>
+                        <td class="text-end">${actions}</td>
+                    </tr>
+                `);
+            });
+        }
+
+        function renderPagination(pageData) {
+            BC.renderPagination({
+                total: pageData.total,
+                pages: pageData.pages,
+                current: pageData.pageNum,
+                limit: pageData.pageSize,
+                callback: (page) => {
+                    currentPage = page;
+                    loadDataList();
+                }
+            });
+        }
+
+        function openModal(mode, id) {
+            const modal = $('#dataModal');
+            $('#dataForm')[0].reset();
+            $('#dataId').val('');
+
+            if (mode === 'add') {
+                modal.find('.modal-title span').text('新增仓库');
+                $('#status').val('1');
+                modal.modal('show');
+            } else {
+                modal.find('.modal-title span').text('编辑仓库信息');
+                $.get(`/api/erp-warehouse/${id}`, res => {
+                    if (res.code === 200) {
+                        const d = res.data;
+                        $('#dataId').val(d.id);
+                        $('#warehouseCode').val(d.warehouseCode);
+                        $('#warehouseName').val(d.warehouseName);
+                        $('#warehouseType').val(d.warehouseType);
+                        $('#status').val(d.status);
+                        $('#province').val(d.province);
+                        $('#city').val(d.city);
+                        $('#district').val(d.district);
+                        $('#address').val(d.address);
+                        $('#manager').val(d.manager);
+                        $('#contactPhone').val(d.contactPhone);
+                        $('#capacity').val(d.capacity);
+                        $('#usedCapacity').val(d.usedCapacity);
+                        $('#sort').val(d.sort);
+                        $('#remark').val(d.remark);
+                        modal.modal('show');
+                    }
+                });
+            }
+        }
+
+        function editData(id) { openModal('edit', id); }
+
+        function saveData() {
+            const id = $('#dataId').val();
+            const data = {
+                warehouseCode: $('#warehouseCode').val(),
+                warehouseName: $('#warehouseName').val(),
+                warehouseType: $('#warehouseType').val(),
+                status: $('#status').val(),
+                province: $('#province').val(),
+                city: $('#city').val(),
+                district: $('#district').val(),
+                address: $('#address').val(),
+                manager: $('#manager').val(),
+                contactPhone: $('#contactPhone').val(),
+                capacity: $('#capacity').val(),
+                usedCapacity: $('#usedCapacity').val(),
+                sort: $('#sort').val(),
+                remark: $('#remark').val()
+            };
+
+            if (!data.warehouseCode) { BC.toast('请输入仓库编码', 'warning'); return; }
+            if (!data.warehouseName) { BC.toast('请输入仓库名称', 'warning'); return; }
+            if (!data.warehouseType) { BC.toast('请选择仓库类型', 'warning'); return; }
+
+            $.ajax({
+                url: id ? `/api/erp-warehouse/${id}` : '/api/erp-warehouse',
+                type: id ? 'PUT' : 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                success: res => {
+                    if (res.code === 200) {
+                        $('#dataModal').modal('hide');
+                        BC.toast(id ? '仓库资料已成功更新' : '新仓库已成功收录', 'success');
+                        loadDataList();
+                    } else {
+                        BC.toast(res.message, 'error');
+                    }
+                }
+            });
+        }
+
+        function deleteData(id) {
+            BC.confirm({
+                title: '确认移除',
+                message: '确定要将该仓库从系统中移除吗？此操作不可撤销。',
+                type: 'danger'
+            }, (ok) => {
+                if (ok) {
+                    $.ajax({
+                        url: `/api/erp-warehouse/${id}`,
+                        type: 'DELETE',
+                        success: res => {
+                            if (res.code === 200) {
+                                BC.toast('仓库已被安全移除', 'success');
+                                loadDataList();
+                            }
+                        }
+                    });
+                }
+            });
+        }
+    </script>
+</body>
+</html>

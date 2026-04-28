@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>实体渠道配置 - BC体育后台管理系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/layout.css}">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <style>
+        /* Select2 样式适配 */
+        .select2-container--default .select2-selection--single {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            height: 42px;
+            padding: 8px 12px;
+            background: var(--bg-main);
+            display: flex;
+            align-items: center;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 40px;
+            right: 8px;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            color: var(--text-main);
+            padding-left: 0;
+            line-height: 24px;
+        }
+        .select2-dropdown {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: var(--shadow-modal);
+            z-index: 2000;
+        }
+        .select2-search--dropdown .select2-search__field {
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 6px 10px;
+        }
+        .select2-results__option--highlighted[aria-selected] {
+            background-color: var(--primary-color);
+        }
+
+    </style>
+</head>
+<body>
+    <div th:replace="~{common/fragments :: sidebar}"></div>
+
+    <div class="main-content">
+        <nav th:replace="~{common/fragments :: top-navbar}"></nav>
+
+        <div class="content-wrapper">
+            <div class="bc-card">
+                <div class="bc-card-body">
+                    <form id="searchForm" class="bc-toolbar p-4">
+                        <!-- 第一行：基础属性及品牌 -->
+                        <div class="row g-3 mb-3">
+                            <div class="col-12 col-md-3">
+                                <label class="bc-form-label small text-muted mb-1">实体类型</label>
+                                <select class="bc-select" id="searchEntityType">
+                                    <option value="">全部类型</option>
+                                    <option value="shop">店铺</option>
+                                    <option value="stock">仓库</option>
+                                    <option value="customer">客户</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-3">
+                                <label class="bc-form-label small text-muted mb-1">外部ID</label>
+                                <div class="bc-input-group">
+                                    <i class="bi bi-upc-scan"></i>
+                                    <input type="text" class="bc-input" id="searchExternalId" placeholder="搜索外部ID...">
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-3">
+                                <label class="bc-form-label small text-muted mb-1">实体名称</label>
+                                <div class="bc-input-group">
+                                    <i class="bi bi-tag"></i>
+                                    <input type="text" class="bc-input" id="searchEntityName" placeholder="搜索实体名称...">
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-3">
+                                <label class="bc-form-label small text-muted mb-1">所属品牌</label>
+                                <select class="bc-select" id="searchBrandId">
+                                    <option value="">全部品牌</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- 第二行：渠道配置 -->
+                        <div class="row g-3 mb-3">
+                            <div class="col-12 col-md-3">
+                                <label class="bc-form-label small text-muted mb-1">渠道类型</label>
+                                <select class="bc-select" id="searchChannelTypeId">
+                                    <option value="">全部渠道类型</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-3">
+                                <label class="bc-form-label small text-muted mb-1">渠道定义</label>
+                                <select class="bc-select" id="searchChannelDefId">
+                                    <option value="">全部渠道定义</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-3">
+                                <label class="bc-form-label small text-muted mb-1">渠道性质</label>
+                                <select class="bc-select" id="searchChannelNatureId">
+                                    <option value="">全部渠道性质</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-3">
+                                <label class="bc-form-label small text-muted mb-1">经营类型</label>
+                                <select class="bc-select" id="searchBusinessTypeId">
+                                    <option value="">全部经营类型</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- 第三行：区域、状态与操作 -->
+                        <div class="row g-3 align-items-end">
+                            <div class="col-12 col-md-3">
+                                <label class="bc-form-label small text-muted mb-1">一级地区</label>
+                                <select class="bc-select" id="searchRegionLevel1Id">
+                                    <option value="">全部一级地区</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-3">
+                                <label class="bc-form-label small text-muted mb-1">二级地区</label>
+                                <select class="bc-select" id="searchRegionLevel2Id">
+                                    <option value="">全部二级地区</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-3">
+                                <label class="bc-form-label small text-muted mb-1">状态</label>
+                                <select class="bc-select" id="searchStatus">
+                                    <option value="">全部状态</option>
+                                    <option value="1">启用</option>
+                                    <option value="0">禁用</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-3 d-flex gap-2">
+                                <button type="button" class="btn bc-btn-primary flex-grow-1" id="searchBtn">
+                                    <i class="bi bi-search"></i> 查询
+                                </button>
+                                <button type="button" class="btn bc-btn-secondary" id="resetBtn" title="重置">
+                                    <i class="bi bi-arrow-counterclockwise"></i>
+                                </button>
+                                <button th:if="${#lists.contains(permissions, '*') or #lists.contains(permissions, 'bi:entity:add')}" 
+                                        type="button" class="btn bc-btn-success" id="addBtn" title="新增配置">
+                                    <i class="bi bi-plus-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+
+                    <div class="bc-table-container">
+                        <table class="bc-table bc-table-hover" id="dataTable">
+                            <thead>
+                                <tr>
+                                    <th style="width: 60px;">序号</th>
+                                    <th style="width: 80px;">类型</th>
+                                    <th>外部ID</th>
+                                    <th>实体名称</th>
+                                    <th>品牌</th>
+                                    <th>一级地区</th>
+                                    <th>二级地区</th>
+                                    <th>渠道类型</th>
+                                    <th>渠道定义</th>
+                                    <th>渠道性质</th>
+                                    <th>经营类型</th>
+                                    <th style="width: 80px;">状态</th>
+                                    <th style="width: 100px;" class="text-end">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dataTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 分页组件 -->
+            <div th:replace="~{common/fragments :: pagination}"></div>
+        </div>
+
+        <div th:replace="~{common/fragments :: footer}"></div>
+    </div>
+
+    <!-- 新增/编辑模态框 -->
+    <div class="modal fade" id="dataModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content bc-modal-content">
+                <div class="modal-header bc-modal-header">
+                    <h5 class="modal-title bc-modal-title">
+                        <i class="bi bi-diagram-3"></i> <span>新增配置</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body bc-modal-body">
+                    <form id="dataForm">
+                        <input type="hidden" id="dataId">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="bc-form-label">实体类型 <span class="text-danger">*</span></label>
+                                <select class="bc-select" id="entityType" required>
+                                    <option value="">请选择实体类型</option>
+                                    <option value="shop">店铺</option>
+                                    <option value="stock">仓库</option>
+                                    <option value="customer">客户</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="bc-form-label">外部ID <span class="text-danger">*</span></label>
+                                <select class="bc-select" id="externalId" required style="width: 100%;">
+                                    <option value="">请先选择实体类型</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="bc-form-label">实体名称 <span class="text-danger">*</span></label>
+                                <input type="text" class="bc-input" id="entityName" placeholder="实体名称将自动带出" required readonly>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="bc-form-label">品牌</label>
+                                <select class="bc-select" id="brandId">
+                                    <option value="">请选择品牌</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="bc-form-label">状态</label>
+                                <select class="bc-select" id="status">
+                                    <option value="1">启用</option>
+                                    <option value="0">禁用</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="bc-form-label">渠道类型</label>
+                                <select class="bc-select" id="channelTypeId">
+                                    <option value="">请选择渠道类型</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="bc-form-label">渠道定义</label>
+                                <select class="bc-select" id="channelDefId">
+                                    <option value="">请选择渠道定义</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="bc-form-label">渠道性质</label>
+                                <select class="bc-select" id="channelNatureId">
+                                    <option value="">请选择渠道性质</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="bc-form-label">经营类型</label>
+                                <select class="bc-select" id="businessTypeId">
+                                    <option value="">请选择经营类型</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="bc-form-label">一级地区</label>
+                                <select class="bc-select" id="regionLevel1Id">
+                                    <option value="">请选择一级地区</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="bc-form-label">二级地区</label>
+                                <select class="bc-select" id="regionLevel2Id">
+                                    <option value="">请选择二级地区</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="bc-form-label">排序</label>
+                                <input type="number" class="bc-input" id="sort" value="0">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer bc-modal-footer">
+                    <button type="button" class="btn bc-btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn bc-btn-primary" id="saveBtn">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div th:replace="~{common/fragments :: confirm-modal}"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script th:inline="javascript">
+        window.userPermissions = /*[[${permissions}]]*/ [];
+        
+        function hasPermission(p) {
+            if (!window.userPermissions) return false;
+            return window.userPermissions.includes('*') || window.userPermissions.includes(p);
+        }
+    </script>
+    <script src="/js/common.js"></script>
+
+    <script>
+        let currentPage = 1;
+        let pageSize = 10;
+
+        $(document).ready(function() {
+            loadDataList();
+            loadDropdownData();
+
+            $('#searchBtn').click(() => { currentPage = 1; loadDataList(); });
+            $('#resetBtn').click(() => {
+                $('#searchForm')[0].reset();
+                $('#searchRegionLevel2Id').html('<option value="">全部二级地区</option>');
+                $('#searchChannelDefId').html('<option value="">全部渠道定义</option>');
+                $('#searchBusinessTypeId').html('<option value="">全部经营类型</option>');
+                $('#searchBrandId').val('');
+                currentPage = 1;
+                loadDataList();
+            });
+            $('#addBtn').click(() => openModal('add'));
+            $('#saveBtn').click(() => saveData());
+            
+            // 初始化 Select2
+            $('#externalId').select2({
+                dropdownParent: $('#dataModal'),
+                placeholder: '请选择实体',
+                language: {
+                    noResults: function() { return "未找到匹配项"; }
+                }
+            });
+            
+            // 实体类型变化时加载外部数据
+            $('#entityType').change(function() {
+                var type = $(this).val();
+                $('#entityName').val('');
+                if (type) {
+                    loadExternalEntities(type);
+                } else {
+                    $('#externalId').html('<option value="">请先选择实体类型</option>').trigger('change');
+                }
+            });
+
+            // 外部ID变化时自动填充实体名称
+            $('#externalId').change(function() {
+                var code = $(this).val();
+                var type = $('#entityType').val();
+                if (code && currentExternalEntities) {
+                    var entity = currentExternalEntities.find(item => {
+                        if (type === 'shop') return item.shopCode === code;
+                        if (type === 'stock') return item.warehouseCode === code;
+                        if (type === 'customer') return item.customerCode === code;
+                    });
+                    if (entity) {
+                        var name = type === 'shop' ? entity.shopName : (type === 'stock' ? entity.warehouseName : entity.customerName);
+                        $('#entityName').val(name);
+                    }
+                } else {
+                    $('#entityName').val('');
+                }
+            });
+            
+            // 渠道类型变化时加载渠道定义
+            $('#channelTypeId').change(function() {
+                loadChannelDefOptions($(this).val());
+            });
+            
+            // 渠道性质变化时加载经营类型
+            $('#channelNatureId').change(function() {
+                loadBusinessTypeOptions($(this).val());
+            });
+            
+            // 一级地区变化时加载二级地区
+            $('#regionLevel1Id').change(function() {
+                loadRegionLevel2Options($(this).val());
+            });
+            
+            // 搜索一级地区变化时加载搜索二级地区
+            $('#searchRegionLevel1Id').change(function() {
+                loadSearchRegionLevel2Options($(this).val());
+            });
+
+            // 搜索渠道类型变化时加载搜索渠道定义
+            $('#searchChannelTypeId').change(function() {
+                loadSearchChannelDefOptions($(this).val());
+            });
+
+            // 搜索渠道性质变化时加载经营类型
+            $('#searchChannelNatureId').change(function() {
+                loadSearchBusinessTypeOptions($(this).val());
+            });
+        });
+
+        let currentExternalEntities = [];
+
+        function renderExternalOptions(list, type, selectedValue) {
+            var options = '<option value="">请选择实体</option>';
+            list.forEach(function(item) {
+                var code = type === 'shop' ? item.shopCode : (type === 'stock' ? item.warehouseCode : item.customerCode);
+                var name = type === 'shop' ? item.shopName : (type === 'stock' ? item.warehouseName : item.customerName);
+                options += `<option value="${code}">${code} - ${name}</option>`;
+            });
+            $('#externalId').html(options).trigger('change');
+            if (selectedValue) {
+                $('#externalId').val(selectedValue).trigger('change');
+            }
+        }
+
+        function loadExternalEntities(type, selectedValue) {
+            var url = '';
+            if (type === 'shop') url = '/api/erp-shop/list-enabled';
+            else if (type === 'stock') url = '/api/erp-warehouse/list-enabled';
+            else if (type === 'customer') url = '/api/erp-customer/list-enabled';
+
+            if (!url) return;
+
+            $.get(url, function(res) {
+                if (res.code === 200) {
+                    currentExternalEntities = res.data;
+                    renderExternalOptions(res.data, type, selectedValue);
+                }
+            });
+        }
+
+        function loadDropdownData() {
+            // 加载渠道类型（父节点）
+            $.get('/api/channel-type/tree?parentId=0', function(res) {
+                if (res.code === 200) {
+                    var searchOptions = '<option value="">全部渠道类型</option>';
+                    var modalOptions = '<option value="">请选择渠道类型</option>';
+                    res.data.forEach(function(item) {
+                        var opt = `<option value="${item.id}">${item.typeName}</option>`;
+                        searchOptions += opt;
+                        modalOptions += opt;
+                    });
+                    $('#searchChannelTypeId').html(searchOptions);
+                    $('#channelTypeId').html(modalOptions);
+                }
+            });
+            
+            // 加载渠道性质（父节点）
+            $.get('/api/channel-nature/tree?parentId=0', function(res) {
+                if (res.code === 200) {
+                    var searchOptions = '<option value="">全部渠道性质</option>';
+                    var modalOptions = '<option value="">请选择渠道性质</option>';
+                    res.data.forEach(function(item) {
+                        var opt = `<option value="${item.id}">${item.natureName}</option>`;
+                        searchOptions += opt;
+                        modalOptions += opt;
+                    });
+                    $('#searchChannelNatureId').html(searchOptions);
+                    $('#channelNatureId').html(modalOptions);
+                }
+            });
+            
+            // 加载一级地区（parentId=0）
+            $.get('/api/region/tree?parentId=0', function(res) {
+                if (res.code === 200) {
+                    var searchOptions = '<option value="">全部一级地区</option>';
+                    var modalOptions = '<option value="">请选择一级地区</option>';
+                    res.data.forEach(function(item) {
+                        var opt = `<option value="${item.id}">${item.regionName}</option>`;
+                        searchOptions += opt;
+                        modalOptions += opt;
+                    });
+                    $('#searchRegionLevel1Id').html(searchOptions);
+                    $('#regionLevel1Id').html(modalOptions);
+                }
+            });
+
+            // 加载品牌列表
+            $.get('/api/brand/list', function(res) {
+                if (res.code === 200) {
+                    var searchOptions = '<option value="">全部品牌</option>';
+                    var modalOptions = '<option value="">请选择品牌</option>';
+                    res.data.forEach(function(item) {
+                        var opt = `<option value="${item.id}">${item.brandName}</option>`;
+                        searchOptions += opt;
+                        modalOptions += opt;
+                    });
+                    $('#searchBrandId').html(searchOptions);
+                    $('#brandId').html(modalOptions);
+                }
+            });
+        }
+
+        function loadRegionLevel2Options(parentId) {
+            if (!parentId) {
+                $('#regionLevel2Id').html('<option value="">请选择二级地区</option>');
+                return;
+            }
+            $.get('/api/region/tree?parentId=' + parentId, function(res) {
+                if (res.code === 200) {
+                    var options = '<option value="">请选择二级地区</option>';
+                    res.data.forEach(function(item) {
+                        options += `<option value="${item.id}">${item.regionName}</option>`;
+                    });
+                    $('#regionLevel2Id').html(options);
+                }
+            });
+        }
+
+        function loadSearchRegionLevel2Options(parentId) {
+            if (!parentId) {
+                $('#searchRegionLevel2Id').html('<option value="">全部二级地区</option>');
+                return;
+            }
+            $.get('/api/region/tree?parentId=' + parentId, function(res) {
+                if (res.code === 200) {
+                    var options = '<option value="">全部二级地区</option>';
+                    res.data.forEach(function(item) {
+                        options += `<option value="${item.id}">${item.regionName}</option>`;
+                    });
+                    $('#searchRegionLevel2Id').html(options);
+                }
+            });
+        }
+
+        function loadSearchChannelDefOptions(parentId) {
+            if (!parentId) {
+                $('#searchChannelDefId').html('<option value="">全部渠道定义</option>');
+                return;
+            }
+            $.get('/api/channel-type/tree?parentId=' + parentId, function(res) {
+                if (res.code === 200) {
+                    var options = '<option value="">全部渠道定义</option>';
+                    res.data.forEach(function(item) {
+                        options += `<option value="${item.id}">${item.typeName}</option>`;
+                    });
+                    $('#searchChannelDefId').html(options);
+                }
+            });
+        }
+
+        function loadSearchBusinessTypeOptions(parentId) {
+            if (!parentId) {
+                $('#searchBusinessTypeId').html('<option value="">全部经营类型</option>');
+                return;
+            }
+            $.get('/api/channel-nature/tree?parentId=' + parentId, function(res) {
+                if (res.code === 200) {
+                    var options = '<option value="">全部经营类型</option>';
+                    res.data.forEach(function(item) {
+                        options += `<option value="${item.id}">${item.natureName}</option>`;
+                    });
+                    $('#searchBusinessTypeId').html(options);
+                }
+            });
+        }
+
+        function loadChannelDefOptions(parentId) {
+            if (!parentId) {
+                $('#channelDefId').html('<option value="">请选择渠道定义</option>');
+                return;
+            }
+            $.get('/api/channel-type/tree?parentId=' + parentId, function(res) {
+                if (res.code === 200) {
+                    var options = '<option value="">请选择渠道定义</option>';
+                    res.data.forEach(function(item) {
+                        options += `<option value="${item.id}">${item.typeName}</option>`;
+                    });
+                    $('#channelDefId').html(options);
+                }
+            });
+        }
+
+        function loadBusinessTypeOptions(parentId) {
+            if (!parentId) {
+                $('#businessTypeId').html('<option value="">请选择经营类型</option>');
+                return;
+            }
+            $.get('/api/channel-nature/tree?parentId=' + parentId, function(res) {
+                if (res.code === 200) {
+                    var options = '<option value="">请选择经营类型</option>';
+                    res.data.forEach(function(item) {
+                        options += `<option value="${item.id}">${item.natureName}</option>`;
+                    });
+                    $('#businessTypeId').html(options);
+                }
+            });
+        }
+
+        function loadDataList() {
+            $.ajax({
+                url: '/api/entity-channel/page',
+                type: 'GET',
+                data: {
+                    pageNum: currentPage,
+                    pageSize: pageSize,
+                    entityType: $('#searchEntityType').val(),
+                    externalId: $('#searchExternalId').val(),
+                    entityName: $('#searchEntityName').val(),
+                    brandId: $('#searchBrandId').val(),
+                    channelTypeId: $('#searchChannelTypeId').val(),
+                    channelDefId: $('#searchChannelDefId').val(),
+                    channelNatureId: $('#searchChannelNatureId').val(),
+                    businessTypeId: $('#searchBusinessTypeId').val(),
+                    regionLevel1Id: $('#searchRegionLevel1Id').val(),
+                    regionLevel2Id: $('#searchRegionLevel2Id').val(),
+                    status: $('#searchStatus').val()
+                },
+                success: function(res) {
+                    if (res.code === 200) {
+                        renderTable(res.data.records);
+                        renderPagination(res.data);
+                    } else {
+                        BC.toast(res.message, 'error');
+                    }
+                }
+            });
+        }
+
+        function renderTable(data) {
+            const tbody = $('#dataTableBody');
+            tbody.empty();
+            if (!data || data.length === 0) {
+                tbody.append('<tr><td colspan="12" class="text-center py-5 text-muted">暂无数据</td></tr>');
+                return;
+            }
+            data.forEach((item, i) => {
+                const seq = (currentPage - 1) * pageSize + i + 1;
+                const typeTag = BC.getTag(item.entityType === 'shop' ? 'primary' : (item.entityType === 'stock' ? 'warning' : 'info'), item.entityTypeName);
+                const statusTag = BC.getTag(item.status === 1 ? 'success' : 'danger', item.statusName);
+                const safeId = String(item.id);
+
+                const btnGroup = [];
+                if (hasPermission('bi:entity:edit')) {
+                    btnGroup.push({ icon: 'bi-pencil', title: '编辑', onclick: `editData('${safeId}')` });
+                }
+                if (hasPermission('bi:entity:delete')) {
+                    btnGroup.push({ icon: 'bi-trash', title: '删除', onclick: `deleteData('${safeId}')` });
+                }
+                const actions = BC.getTableActions(btnGroup);
+                
+                tbody.append(`
+                    <tr>
+                        <td><span class="text-muted small">${seq}</span></td>
+                        <td>${typeTag}</td>
+                        <td><span class="font-monospace">${item.externalId || '-'}</span></td>
+                        <td><span class="fw-bold">${item.entityName || '-'}</span></td>
+                        <td><span class="small">${item.brandName || '-'}</span></td>
+                        <td><span class="small">${item.regionLevel1Name || '-'}</span></td>
+                        <td><span class="small">${item.regionLevel2Name || '-'}</span></td>
+                        <td><span class="small">${item.channelTypeName || '-'}</span></td>
+                        <td><span class="small">${item.channelDefName || '-'}</span></td>
+                        <td><span class="small">${item.channelNatureName || '-'}</span></td>
+                        <td><span class="small">${item.businessTypeName || '-'}</span></td>
+                        <td>${statusTag}</td>
+                        <td class="text-end">${actions}</td>
+                    </tr>
+                `);
+            });
+        }
+
+        function renderPagination(pageData) {
+            BC.renderPagination({
+                total: pageData.total,
+                pages: pageData.pages,
+                current: pageData.pageNum,
+                limit: pageData.pageSize,
+                callback: (page) => {
+                    currentPage = page;
+                    loadDataList();
+                }
+            });
+        }
+
+        function openModal(mode, id) {
+            const modal = $('#dataModal');
+            $('#dataForm')[0].reset();
+            $('#dataId').val('');
+            $('#externalId').val(null).trigger('change'); // 重置 Select2
+            $('#channelDefId').html('<option value="">请选择渠道定义</option>');
+            $('#businessTypeId').html('<option value="">请选择经营类型</option>');
+            $('#regionLevel2Id').html('<option value="">请选择二级地区</option>');
+            
+            // 新增时启用所有字段，编辑时禁用关键字段
+            $('#entityType').prop('disabled', false);
+            $('#externalId').prop('disabled', false);
+            $('#entityName').prop('disabled', false);
+            
+            if (mode === 'add') {
+                modal.find('.modal-title span').text('新增配置');
+                $('#status').val('1');
+                modal.modal('show');
+            } else {
+                modal.find('.modal-title span').text('编辑配置');
+                $.get(`/api/entity-channel/${id}`, res => {
+                    if (res.code === 200) {
+                        const d = res.data;
+                        $('#dataId').val(d.id);
+                        $('#entityType').val(d.entityType).prop('disabled', true);
+                        
+                        // 编辑模式下先加载外部数据再设置值
+                        loadExternalEntities(d.entityType, d.externalId);
+                        
+                        $('#entityName').val(d.entityName);
+                        $('#brandId').val(d.brandId);
+                        $('#status').val(d.status);
+                        $('#sort').val(d.sort);
+                        
+                        if (d.channelTypeId) {
+                            $('#channelTypeId').val(d.channelTypeId);
+                            loadChannelDefOptions(d.channelTypeId);
+                            setTimeout(() => { $('#channelDefId').val(d.channelDefId); }, 300);
+                        }
+                        
+                        if (d.channelNatureId) {
+                            $('#channelNatureId').val(d.channelNatureId);
+                            loadBusinessTypeOptions(d.channelNatureId);
+                            setTimeout(() => { $('#businessTypeId').val(d.businessTypeId); }, 300);
+                        }
+                        
+                        if (d.regionLevel1Id) {
+                            $('#regionLevel1Id').val(d.regionLevel1Id);
+                            loadRegionLevel2Options(d.regionLevel1Id);
+                            setTimeout(() => { $('#regionLevel2Id').val(d.regionLevel2Id); }, 300);
+                        }
+                        
+                        modal.modal('show');
+                    }
+                });
+            }
+        }
+
+        function editData(id) { openModal('edit', id); }
+
+        function saveData() {
+            const id = $('#dataId').val();
+            const data = {
+                entityType: $('#entityType').val(),
+                externalId: $('#externalId').val(),
+                entityName: $('#entityName').val(),
+                brandId: $('#brandId').val(),
+                channelTypeId: $('#channelTypeId').val(),
+                channelDefId: $('#channelDefId').val(),
+                channelNatureId: $('#channelNatureId').val(),
+                businessTypeId: $('#businessTypeId').val(),
+                regionLevel1Id: $('#regionLevel1Id').val(),
+                regionLevel2Id: $('#regionLevel2Id').val(),
+                status: $('#status').val(),
+                sort: $('#sort').val()
+            };
+
+            if (!data.entityType) { BC.toast('请选择实体类型', 'warning'); return; }
+            if (!data.externalId) { BC.toast('请输入外部ID', 'warning'); return; }
+            if (!data.entityName) { BC.toast('请输入实体名称', 'warning'); return; }
+
+            var type = id ? 'PUT' : 'POST';
+            var url = '/api/entity-channel' + (id ? '/' + id : '');
+
+            $.ajax({
+                url: url,
+                type: type,
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                success: res => {
+                    if (res.code === 200) {
+                        $('#dataModal').modal('hide');
+                        BC.toast(id ? '修改成功' : '新增成功', 'success');
+                        loadDataList();
+                    } else {
+                        BC.toast(res.message, 'error');
+                    }
+                }
+            });
+        }
+
+        function deleteData(id) {
+            BC.confirm({
+                title: '确认删除',
+                message: '确定要删除该配置吗？',
+                type: 'danger'
+            }, (ok) => {
+                if (ok) {
+                    $.ajax({
+                        url: `/api/entity-channel/${id}`,
+                        type: 'DELETE',
+                        success: res => {
+                            if (res.code === 200) {
+                                BC.toast('删除成功', 'success');
+                                loadDataList();
+                            }
+                        }
+                    });
+                }
+            });
+        }
+    </script>
+</body>
+</html>

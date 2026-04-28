@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org" xmlns:shiro="http://www.pollix.at/thymeleaf/shiro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>角色管理 - BC体育后台管理系统</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- 自定义CSS -->
+    <link rel="stylesheet" th:href="@{/css/layout.css}">
+</head>
+<body>
+    <!-- 侧边栏 -->
+    <div th:replace="~{common/fragments :: sidebar}"></div>
+
+    <!-- 主内容区 -->
+    <div class="main-content">
+        <!-- 顶部导航 -->
+        <nav th:replace="~{common/fragments :: top-navbar}"></nav>
+
+        <!-- 内容区域 -->
+        <div class="content-wrapper">
+            <!-- 角色管理内容 -->
+            <div class="bc-card">
+                <div class="bc-card-body">
+                    <!-- 搜索表单 -->
+                    <form class="row g-3 bc-toolbar align-items-center" id="searchForm">
+                        <div class="col-auto">
+                            <div class="bc-input-group">
+                                <i class="bi bi-person-badge"></i>
+                                <input type="text" class="bc-input" id="searchRoleName" placeholder="角色名称">
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <div class="bc-input-group">
+                                <i class="bi bi-code-square"></i>
+                                <input type="text" class="bc-input" id="searchRoleCode" placeholder="角色编码">
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <select class="bc-select" id="searchStatus">
+                                <option value="">全部状态</option>
+                                <option value="1">启用</option>
+                                <option value="0">禁用</option>
+                            </select>
+                        </div>
+                        <div class="col-auto">
+                            <button type="button" class="btn bc-btn-primary" id="searchBtn">
+                                <i class="bi bi-search"></i> 搜索
+                            </button>
+                            <button type="button" class="btn bc-btn-secondary" id="resetBtn">
+                                <i class="bi bi-arrow-counterclockwise"></i> 重置
+                            </button>
+                        </div>
+                        <div class="col-auto ms-auto" shiro:hasPermission="system:role:add">
+                            <button type="button" class="btn bc-btn-success" id="addRoleBtn">
+                                <i class="bi bi-plus-lg"></i> 新增角色
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <div class="bc-table-container">
+                        <table class="bc-table bc-table-hover">
+                            <thead>
+                                <tr>
+                                    <th style="width: 80px;">序号</th>
+                                    <th>角色名称</th>
+                                    <th>角色编码</th>
+                                    <th>描述</th>
+                                    <th>状态</th>
+                                    <th class="text-end" style="width: 150px; padding-right: 24px;">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="roleTableBody">
+                                <!-- 动态加载数据 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 底部页脚 -->
+        <div th:replace="~{common/fragments :: footer}"></div>
+    </div>
+
+    <!-- 通用确认弹窗 -->
+    <div th:replace="~{common/fragments :: confirm-modal}"></div>
+    
+    <!-- 角色编辑模态框 -->
+    <div class="modal fade" id="roleModal" tabindex="-1" aria-labelledby="roleModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content bc-modal-content">
+                <div class="modal-header bc-modal-header">
+                    <h5 class="modal-title bc-modal-title" id="roleModalLabel">
+                        <i class="bi bi-person-badge"></i> <span>新增角色</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body bc-modal-body">
+                    <form id="roleForm">
+                        <input type="hidden" id="roleId">
+                        <div class="bc-form-grid">
+                            <div class="bc-form-group">
+                                <label for="roleName" class="bc-form-label">角色名称 <span class="text-danger">*</span></label>
+                                <input type="text" class="bc-input" id="roleName" placeholder="如：系统管理员" required>
+                                <div class="invalid-feedback">请输入角色名称</div>
+                            </div>
+                            <div class="bc-form-group">
+                                <label for="roleCode" class="bc-form-label">角色编码 <span class="text-danger">*</span></label>
+                                <input type="text" class="bc-input" id="roleCode" placeholder="如：admin" required>
+                                <div class="invalid-feedback">请输入角色编码</div>
+                            </div>
+                            <div class="bc-form-group">
+                                <label for="roleStatus" class="bc-form-label">状态</label>
+                                <select class="bc-select" id="roleStatus">
+                                    <option value="1">启用</option>
+                                    <option value="0">禁用</option>
+                                </select>
+                            </div>
+                            <div class="bc-form-group">
+                                <label for="roleSort" class="bc-form-label">排序</label>
+                                <input type="number" class="bc-input" id="roleSort" value="0">
+                            </div>
+                            <div class="bc-form-group bc-form-group-full">
+                                <label for="roleDescription" class="bc-form-label">描述</label>
+                                <textarea class="bc-textarea" id="roleDescription" rows="2" placeholder="请输入对此角色的职能描述"></textarea>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer bc-modal-footer">
+                    <button type="button" class="btn bc-btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn bc-btn-primary" onclick="saveRole()">保存角色</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 权限分配模态框 -->
+    <div class="modal fade" id="permissionModal" tabindex="-1" aria-labelledby="permissionModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content bc-modal-content">
+                <div class="modal-header bc-modal-header">
+                    <h5 class="modal-title bc-modal-title" id="permissionModalLabel">
+                        <i class="bi bi-shield-lock"></i> <span>权限分配</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body bc-modal-body">
+                    <form id="permissionForm">
+                        <input type="hidden" id="permissionRoleId">
+                        <div class="mb-2">
+                            <label class="bc-form-label mb-2 fw-bold text-primary">勾选菜单权限：</label>
+                            <div id="menuTreeContainer" class="bc-table-container p-3" style="max-height: 450px; background: #fff; border-radius: 12px; border: 1px solid #e2e8f0;">
+                                <!-- 动态加载菜单树 -->
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer bc-modal-footer">
+                    <button type="button" class="btn bc-btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn bc-btn-primary" onclick="savePermissions()">提交分配</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- jQuery -->
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <!-- 公共JavaScript -->
+    <script src="/js/common.js"></script>
+    
+    <!-- 角色管理JavaScript -->
+    <script>
+        // 全局变量
+        let currentPage = 1;
+        let pageSize = 10;
+        let totalRecords = 0;
+        let totalPages = 0;
+        
+        // 页面加载完成后执行
+        $(document).ready(function() {
+            // 初始化加载角色列表
+            loadRoleList();
+            
+            // 搜索按钮点击事件
+            $('#searchBtn').click(function() {
+                currentPage = 1;
+                loadRoleList();
+            });
+            
+            // 重置按钮点击事件
+            $('#resetBtn').click(function() {
+                $('#searchRoleName').val('');
+                $('#searchRoleCode').val('');
+                $('#searchStatus').val('');
+                currentPage = 1;
+                loadRoleList();
+            });
+            
+            // 新增角色按钮点击事件
+            $('#addRoleBtn').click(function() {
+                openRoleModal('add');
+            });
+            
+            // 角色表单提交事件
+            $('#roleForm').submit(function(e) {
+                e.preventDefault();
+                saveRole();
+            });
+            
+            // 权限分配表单提交事件
+            $('#permissionForm').submit(function(e) {
+                e.preventDefault();
+                savePermissions();
+            });
+        });
+        
+        // 加载角色列表
+        function loadRoleList() {
+            var roleName = $('#searchRoleName').val();
+            var roleCode = $('#searchRoleCode').val();
+            var status = $('#searchStatus').val();
+            
+            $.ajax({
+                url: '/api/role/page',
+                type: 'GET',
+                data: {
+                    current: currentPage,
+                    size: pageSize,
+                    roleName: roleName,
+                    roleCode: roleCode,
+                    status: status
+                },
+                success: function(response) {
+                    if (response.code === 200) {
+                        var pageResult = response.data;
+                        totalRecords = pageResult.total;
+                        totalPages = pageResult.pages;
+                        
+                        // 更新总记录数显示
+                        $('#totalRecords').text(totalRecords);
+                        
+                        renderRoleTable(pageResult.records);
+                        renderPagination();
+                    } else {
+                        BC.toast(response.message || '加载角色列表失败', 'error');
+                    }
+                },
+                error: function() {
+                    BC.toast('无法连接到服务器，请检查网络连接', 'error');
+                }
+            });
+        }
+        
+        // 渲染角色表格
+        function renderRoleTable(roles) {
+            var tbody = $('#roleTableBody');
+            tbody.empty();
+            
+            if (roles.length === 0) {
+                tbody.append('<tr><td colspan="6" class="text-center text-muted">暂无数据</td></tr>');
+                return;
+            }
+            
+            roles.forEach(function(role, i) {
+                var seq = (currentPage - 1) * pageSize + i + 1;
+                var statusTag = BC.getTag(role.status === 1 ? 'success' : 'danger', role.status === 1 ? '启用' : '禁用');
+                
+                var actionsConfig = [];
+                if (hasPermission('system:role:edit')) {
+                    actionsConfig.push({ icon: 'bi-pencil', title: '编辑角色', onclick: 'editRole("' + role.id + '")' });
+                }
+                if (hasPermission('system:role:perm')) {
+                    actionsConfig.push({ icon: 'bi-shield-lock', title: '分配权限', onclick: 'assignPermissions("' + role.id + '")' });
+                }
+                if (hasPermission('system:role:delete')) {
+                    actionsConfig.push({ icon: 'bi-trash', title: '移除角色', onclick: 'deleteRole("' + role.id + '")' });
+                }
+                
+                var actions = BC.getTableActions(actionsConfig);
+
+                var row = '<tr>' +
+                    '<td><span class="text-muted small">' + seq + '</span></td>' +
+                    '<td><span class="fw-bold text-main">' + role.roleName + '</span></td>' +
+                    '<td><code class="small text-muted">' + role.roleCode + '</code></td>' +
+                    '<td><span class="small text-secondary">' + (role.description || '-') + '</span></td>' +
+                    '<td>' + statusTag + '</td>' +
+                    '<td class="text-end">' + actions + '</td>' +
+                    '</tr>';
+                
+                tbody.append(row);
+            });
+        }
+        
+        // 渲染分页
+        function renderPagination() {
+            BC.renderPagination({
+                elem: '#pagination',
+                total: totalRecords,
+                pages: totalPages,
+                current: currentPage,
+                limit: pageSize,
+                callback: function(page) {
+                    currentPage = page;
+                    loadRoleList();
+                }
+            });
+        }
+        
+        // 打开角色模态框
+        function openRoleModal(mode, roleId) {
+            var modal = $('#roleModal');
+            var form = $('#roleForm');
+            
+            // 重置表单
+            form[0].reset();
+            $('#roleId').val('');
+            
+            if (mode === 'add') {
+                modal.find('.modal-title').text('新增角色');
+                $('#roleStatus').val('1');
+            } else if (mode === 'edit') {
+                modal.find('.modal-title').text('编辑角色');
+                loadRoleData(roleId);
+            }
+            
+            modal.modal('show');
+        }
+        
+        // 加载角色数据
+        function loadRoleData(roleId) {
+            $.ajax({
+                url: '/api/role/' + roleId,
+                type: 'GET',
+                success: function(response) {
+                    if (response.code === 200) {
+                        var role = response.data;
+                        $('#roleId').val(role.id);
+                        $('#roleName').val(role.roleName);
+                        $('#roleCode').val(role.roleCode);
+                        $('#roleDescription').val(role.description);
+                        $('#roleStatus').val(role.status);
+                        $('#roleSort').val(role.sort);
+                    } else {
+                        BC.confirm({
+                            title: '加载失败',
+                            message: response.message || '加载角色数据失败',
+                            type: 'danger'
+                        });
+                    }
+                },
+                error: function() {
+                    BC.confirm({
+                        title: '网络错误',
+                        message: '无法连接到服务器，请检查网络连接',
+                        type: 'danger'
+                    });
+                }
+            });
+        }
+        
+        // 编辑角色
+        function editRole(roleId) {
+            openRoleModal('edit', roleId);
+        }
+        
+        // 保存角色
+        function saveRole() {
+            var roleId = $('#roleId').val();
+            var roleData = {
+                roleName: $('#roleName').val(),
+                roleCode: $('#roleCode').val(),
+                description: $('#roleDescription').val(),
+                status: parseInt($('#roleStatus').val()),
+                sort: parseInt($('#roleSort').val()) || 0
+            };
+            
+            var url = '/api/role';
+            var type = 'POST';
+            
+            if (roleId) {
+                url = '/api/role/' + roleId;
+                type = 'PUT';
+            }
+            
+            $.ajax({
+                url: url,
+                type: type,
+                contentType: 'application/json',
+                data: JSON.stringify(roleData),
+                success: function(response) {
+                    if (response.code === 200) {
+                        $('#roleModal').modal('hide');
+                        BC.toast('角色信息已成功保存', 'success');
+                        loadRoleList();
+                    } else {
+                        BC.toast(response.message || '保存角色失败', 'error');
+                    }
+                },
+                error: function() {
+                    BC.toast('网络连接失败', 'error');
+                }
+            });
+        }
+        
+        // 删除角色
+        function deleteRole(roleId) {
+            BC.confirm({
+                title: '确认删除',
+                message: '您确定要删除这个角色吗？删除后不可恢复。',
+                type: 'danger',
+                confirmText: '确认删除',
+                cancelText: '取消'
+            }, function(confirmed) {
+                if (confirmed) {
+                        $.ajax({
+                            url: '/api/role/' + roleId,
+                            type: 'DELETE',
+                            success: function(response) {
+                                if (response.code === 200) {
+                                    BC.toast('角色已成功移除', 'success');
+                                    loadRoleList();
+                                } else {
+                                BC.confirm({
+                                    title: '删除失败',
+                                    message: response.message || '删除角色失败',
+                                    type: 'danger'
+                                });
+                            }
+                        },
+                        error: function() {
+                            BC.confirm({
+                                title: '网络错误',
+                                message: '无法连接到服务器，请检查网络连接',
+                                type: 'danger'
+                            });
+                        }
+                    });
+                }
+            });
+        }
+        
+        // 权限分配
+        function assignPermissions(roleId) {
+            $('#permissionRoleId').val(roleId);
+            loadPermissionTree(roleId);
+            $('#permissionModal').modal('show');
+        }
+        
+        // 加载菜单树
+        function loadPermissionTree(roleId) {
+            // 先加载所有菜单
+            $.ajax({
+                url: '/api/menu/tree',
+                type: 'GET',
+                success: function(response) {
+                    if (response.code === 200) {
+                        var menuData = response.data;
+                        // 加载角色已有权限
+                        loadRolePermissions(roleId, menuData);
+                    }
+                }
+            });
+        }
+        
+        // 加载角色已有权限
+        function loadRolePermissions(roleId, menuData) {
+            $.ajax({
+                url: '/api/role/' + roleId + '/permissions',
+                type: 'GET',
+                success: function(response) {
+                    if (response.code === 200) {
+                        var permissionIds = response.data;
+                        renderMenuTree(menuData, permissionIds);
+                    }
+                }
+            });
+        }
+        
+        // 渲染菜单树
+        function renderMenuTree(menus, permissionIds) {
+            var container = $('#menuTreeContainer');
+            container.empty();
+            
+            function renderMenuItems(items, parentElement, level) {
+                items.forEach(function(menu) {
+                    var isChecked = permissionIds.includes(menu.id) ? 'checked' : '';
+                    
+                    // 创建节点包装器 (不使用 JS padding，交给 CSS 级联处理)
+                    var menuItem = $('<div class="menu-tree-item"></div>');
+                    
+                    // 节点头部 (包含复选框和名称)
+                    var nodeHeader = $('<div class="d-flex align-items-center py-1"></div>');
+                    nodeHeader.append('<input type="checkbox" class="menu-checkbox" value="' + menu.id + '" ' + isChecked + '>');
+                    nodeHeader.append('<span class="menu-name">' + menu.menuName + '</span>');
+                    menuItem.append(nodeHeader);
+                    
+                    if (menu.children && menu.children.length > 0) {
+                        // 有子菜单，创建子容器
+                        var subMenuContainer = $('<div class="sub-menu-container"></div>');
+                        renderMenuItems(menu.children, subMenuContainer, level + 1);
+                        menuItem.append(subMenuContainer);
+                    }
+                    
+                    parentElement.append(menuItem);
+                });
+            }
+            
+            renderMenuItems(menus, container, 0);
+            
+            // 绑定复选框事件 (使用事件委托并优化逻辑)
+            $(container).off('change', '.menu-checkbox').on('change', '.menu-checkbox', function() {
+                var isChecked = $(this).is(':checked');
+                var $item = $(this).closest('.menu-tree-item');
+                
+                // 1. 向下级联：选中/取消选中所有后代
+                $item.find('.menu-checkbox').prop('checked', isChecked);
+                
+                // 2. 向上级联：如果选中了任一子项，强制选中其路径上的所有父项
+                if (isChecked) {
+                    $item.parents('.menu-tree-item').each(function() {
+                        $(this).find('> .d-flex .menu-checkbox').prop('checked', true);
+                    });
+                } else {
+                    // 如果取消选中，则需要检查同级节点。如果同级全都没选中，则不强制取消父级
+                    // 但在大多数 ERP 逻辑中，手动取消父级应连带取消子级（已在向下级联处理）
+                    // 此处保留父级状态不联动，允许用户更精细控制，或仅在全空时联动
+                }
+            });
+        }
+        
+        // 保存权限分配
+        function savePermissions() {
+            var roleId = $('#permissionRoleId').val();
+            var permissionIds = [];
+            
+            $('.menu-checkbox:checked').each(function() {
+                permissionIds.push($(this).val());
+            });
+            
+            $.ajax({
+                url: '/api/role/' + roleId + '/permissions',
+                type: 'PUT',
+                contentType: 'application/json',
+                data: JSON.stringify(permissionIds),
+                success: function(response) {
+                    if (response.code === 200) {
+                        $('#permissionModal').modal('hide');
+                        // 清理菜单缓存，确保下次加载或登录时同步最新权限
+                        sessionStorage.removeItem('cachedMenus');
+                        BC.toast('权限分配已成功生效，请重新登录以同步菜单', 'success');
+                    } else {
+                        BC.confirm({
+                            title: '分配失败',
+                            message: response.message || '权限分配失败',
+                            type: 'danger'
+                        });
+                    }
+                },
+                error: function() {
+                    BC.confirm({
+                        title: '网络错误',
+                        message: '无法连接到服务器，请检查网络连接',
+                        type: 'danger'
+                    });
+                }
+            });
+        }
+    </script>
+</body>
+</html>

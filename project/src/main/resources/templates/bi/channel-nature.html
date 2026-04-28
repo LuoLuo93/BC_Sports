@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>渠道性质管理 - BC体育后台中心</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- 自定义CSS -->
+    <link rel="stylesheet" th:href="@{/css/layout.css}">
+</head>
+
+<body>
+    <!-- 侧边栏 -->
+    <div th:replace="~{common/fragments :: sidebar}"></div>
+
+    <!-- 主内容区 -->
+    <div class="main-content">
+        <!-- 顶部导航 -->
+        <nav th:replace="~{common/fragments :: top-navbar}"></nav>
+
+        <!-- 内容区域 -->
+        <div class="content-wrapper">
+            <div class="bc-card">
+                <div class="bc-card-body">
+                    <!-- 搜索与操作栏 -->
+                    <form class="row g-3 bc-toolbar align-items-center" id="searchForm">
+                        <div class="col-auto">
+                            <div class="bc-input-group">
+                                <i class="bi bi-layers"></i>
+                                <input type="text" class="bc-input" id="searchName" placeholder="搜索性质名称或编码...">
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <select class="bc-select" id="searchLevel1">
+                                <option value="">所有渠道性质</option>
+                            </select>
+                        </div>
+                        <div class="col-auto">
+                            <select class="bc-select" id="searchLevel2">
+                                <option value="">所有经营类型</option>
+                            </select>
+                        </div>
+                        <div class="col-auto">
+                            <select class="bc-select" id="searchStatus">
+                                <option value="">全部状态</option>
+                                <option value="1">正常</option>
+                                <option value="0">停用</option>
+                            </select>
+                        </div>
+                        <div class="col-auto">
+                            <button type="button" class="btn bc-btn-primary" onclick="loadChannelNatureData()">
+                                <i class="bi bi-search"></i> 查询
+                            </button>
+                            <button type="button" class="btn bc-btn-secondary" onclick="resetSearch()">
+                                <i class="bi bi-arrow-counterclockwise"></i> 重置
+                            </button>
+                        </div>
+                        <div class="col-auto ms-auto"
+                            th:if="${#lists.contains(permissions, '*') or #lists.contains(permissions, 'bi:channelNature:add')}">
+                            <button type="button" class="btn bc-btn-success" id="addBtn">
+                                <i class="bi bi-plus-lg"></i> 新增性质
+                            </button>
+                        </div>
+                    </form>
+
+                    <div class="bc-table-container">
+                        <table class="bc-table bc-table-hover">
+                            <thead>
+                                <tr>
+                                    <th style="width: 80px;">序号</th>
+                                    <th>性质名称</th>
+                                    <th style="width: 150px;">性质编码</th>
+                                    <th style="width: 150px;">级别</th>
+                                    <th style="width: 100px;">排序</th>
+                                    <th style="width: 100px;">状态</th>
+                                    <th style="width: 120px;" class="text-end">管理操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="channelNatureTableBody">
+                                <!-- 动态加载数据 -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- 分页组件 -->
+                    <div th:replace="~{common/fragments :: pagination}"></div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- 添加/编辑模态框 -->
+    <div class="modal fade" id="channelNatureModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content bc-modal-content">
+                <div class="modal-header bc-modal-header">
+                    <h5 class="modal-title bc-modal-title">
+                        <i class="bi bi-layers"></i> <span id="modalTitle">新增渠道性质</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body bc-modal-body">
+                    <form id="channelNatureForm">
+                        <input type="hidden" id="channelNatureId">
+                        <div class="bc-form-grid">
+                            <div class="bc-form-group bc-form-group-full">
+                                <label class="bc-form-label">上级性质</label>
+                                <select class="bc-select" id="parentId">
+                                    <option value="0">无（顶级性质）</option>
+                                </select>
+                            </div>
+                            <div class="bc-form-group">
+                                <label class="bc-form-label">性质名称 <span class="text-danger">*</span></label>
+                                <input type="text" class="bc-input" id="natureName" placeholder="如：直营" required>
+                            </div>
+                             <div class="bc-form-group">
+                                <label class="bc-form-label">性质编码</label>
+                                <input type="text" class="bc-input" id="natureCode" placeholder="如：DIRECT">
+                            </div>
+                            <div class="bc-form-group">
+                                <label class="bc-form-label">级别</label>
+                                <select class="bc-select" id="natureLevel" disabled>
+                                    <option value="1">渠道性质 (一级)</option>
+                                    <option value="2">经营类型 (二级)</option>
+                                </select>
+                            </div>
+                            <div class="bc-form-group">
+                                <label class="bc-form-label">显示排序</label>
+                                <input type="number" class="bc-input" id="sort" value="0">
+                            </div>
+                            <div class="bc-form-group">
+                                <label class="bc-form-label">状态</label>
+                                <select class="bc-select" id="status">
+                                    <option value="1">启用</option>
+                                    <option value="0">禁用</option>
+                                </select>
+                            </div>
+                            <div class="bc-form-group-full">
+                                <label class="bc-form-label">备注</label>
+                                <textarea class="bc-textarea" id="remark" rows="2" placeholder="补充说明信息..."></textarea>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer bc-modal-footer">
+                    <button type="button" class="btn bc-btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn bc-btn-primary" id="saveBtn">保存性质</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 通用确认弹窗 -->
+    <div th:replace="~{common/fragments :: confirm-modal}"></div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script th:inline="javascript">
+        // 将后端注入的权限列表同步到前端 JS 作用域
+        window.userPermissions = /*[[${permissions}]]*/[];
+
+        function hasPermission(p) {
+            if (!window.userPermissions) return false;
+            return window.userPermissions.includes('*') || window.userPermissions.includes(p);
+        }
+    </script>
+    <script src="/js/common.js"></script>
+
+    <script>
+        var currentPage = 1;
+        var pageSize = 10;
+
+        $(document).ready(function () {
+            loadSearchDropdowns();
+            loadChannelNatureData();
+
+            $('#addBtn').click(function () {
+                openModal();
+            });
+
+            $('#saveBtn').click(function () {
+                saveChannelNature();
+            });
+
+            // 联动逻辑
+            $('#searchLevel1').change(function () {
+                loadSearchLevel2($(this).val());
+            });
+
+            // 模态框上级选择联动级别
+            $('#parentId').change(function () {
+                var parentId = $(this).val();
+                $('#natureLevel').val(parentId === '0' ? '1' : '2');
+            });
+        });
+
+        function loadSearchDropdowns() {
+            $.get('/api/channel-nature/tree?parentId=0', function (res) {
+                if (res.code === 200) {
+                    var html = '<option value="">所有渠道性质</option>';
+                    res.data.forEach(item => {
+                        html += `<option value="${item.id}">${item.natureName}</option>`;
+                    });
+                    $('#searchLevel1').html(html);
+                }
+            });
+        }
+
+        function loadSearchLevel2(parentId) {
+            var select2 = $('#searchLevel2');
+            if (!parentId) {
+                select2.html('<option value="">所有经营类型</option>');
+                return;
+            }
+            $.get('/api/channel-nature/tree?parentId=' + parentId, function (res) {
+                if (res.code === 200) {
+                    var html = '<option value="">所有经营类型</option>';
+                    res.data.forEach(item => {
+                        html += `<option value="${item.id}">${item.natureName}</option>`;
+                    });
+                    select2.html(html);
+                }
+            });
+        }
+
+        function loadChannelNatureData(page) {
+            if (page) currentPage = page;
+            var params = {
+                natureName: $('#searchName').val(),
+                status: $('#searchStatus').val(),
+                level1Id: $('#searchLevel1').val(),
+                level2Id: $('#searchLevel2').val(),
+                pageNum: currentPage,
+                pageSize: pageSize
+            };
+
+            $.get('/api/channel-nature/page', params, function (res) {
+                if (res.code === 200) {
+                    renderTable(res.data.records);
+                    renderPagination(res.data);
+                } else {
+                    BC.toast(res.message, 'error');
+                }
+            });
+        }
+
+        function renderPagination(data) {
+            BC.renderPagination({
+                total: data.total,
+                pages: data.pages,
+                current: data.current,
+                callback: function (p) {
+                    loadChannelNatureData(p);
+                }
+            });
+        }
+
+        function renderTable(data) {
+            var tbody = $('#channelNatureTableBody');
+            tbody.empty();
+
+            if (!data || data.length === 0) {
+                tbody.append('<tr><td colspan="7" class="text-center py-4">暂无渠道性质数据</td></tr>');
+                return;
+            }
+
+            // 判断是否处于搜索模式
+            var isSearchMode = $('#searchName').val() || $('#searchLevel1').val() || $('#searchLevel2').val();
+
+            var globalIndex = (currentPage - 1) * pageSize;
+            data.forEach(function (item) {
+                globalIndex++;
+                tbody.append(renderRow(item, 0, globalIndex, isSearchMode));
+            });
+        }
+
+        function renderRow(item, level, index, isSearchMode) {
+            var indent = level * 24;
+            var statusTag = BC.getTag(item.status === 1 ? 'success' : 'danger', item.status === 1 ? '启用' : '禁用');
+
+            var btnGroup = [];
+            // 仅对第一级显示添加子项按钮
+            if (hasPermission('bi:channelNature:add') && level === 0 && !isSearchMode) {
+                btnGroup.push({ icon: 'bi-plus-lg', title: '添加下级性质', onclick: `addChannelNatureSub('${item.id}', '${item.natureName}')` });
+            }
+            if (hasPermission('bi:channelNature:edit')) {
+                btnGroup.push({ icon: 'bi-pencil', title: '编辑性质', onclick: `openModal('${item.id}')` });
+            }
+            if (hasPermission('bi:channelNature:delete')) {
+                btnGroup.push({ icon: 'bi-trash', title: '注销性质', onclick: `deleteChannelNature('${item.id}')` });
+            }
+
+            var actions = BC.getTableActions(btnGroup);
+
+            var displayName = isSearchMode ? (item.fullPath || item.natureName) : item.natureName;
+            var displayIndent = isSearchMode ? 0 : indent;
+
+            // 懒加载图标
+            var expandIcon = '';
+            if (!isSearchMode && item.hasChildren) {
+                expandIcon = `<i class="bi bi-chevron-right expand-icon me-2" style="cursor:pointer;" onclick="toggleNature(this, '${item.id}', ${level + 1})"></i>`;
+            } else {
+                expandIcon = `<i class="bi bi-layers text-muted me-2"></i>`;
+            }
+
+            var typeTag = '';
+            if (item.parentId === '0') {
+                typeTag = BC.getTag('info', '渠道性质');
+            } else {
+                typeTag = BC.getTag('success', '经营类型');
+            }
+
+            return `
+                <tr id="row-${item.id}" data-id="${item.id}" data-level="${level}">
+                    <td><span class="text-muted small">${index || '-'}</span></td>
+                    <td style="padding-left: ${displayIndent + 20}px">
+                        ${expandIcon}
+                        <span class="fw-bold text-main">${displayName}</span>
+                    </td>
+                    <td><code class="small text-muted">${item.natureCode || '-'}</code></td>
+                    <td>${typeTag}</td>
+                    <td><span class="small">${item.sort}</span></td>
+                    <td>${statusTag}</td>
+                    <td class="text-end">${actions}</td>
+                </tr>
+            `;
+        }
+
+        function toggleNature(icon, parentId, nextLevel) {
+            var $icon = $(icon);
+            var $row = $(`#row-${parentId}`);
+            var isExpanded = $icon.hasClass('bi-chevron-down');
+
+            if (isExpanded) {
+                $icon.removeClass('bi-chevron-down').addClass('bi-chevron-right');
+                loadChannelNatureData(); // 重载当前页以折叠
+            } else {
+                $icon.removeClass('bi-chevron-right').addClass('bi-chevron-down');
+                $.get('/api/channel-nature/tree', { parentId: parentId }, function (res) {
+                    if (res.code === 200 && res.data.length > 0) {
+                        var html = '';
+                        res.data.forEach(item => {
+                            html += renderRow(item, nextLevel, null, false);
+                        });
+                        $row.after(html);
+                    }
+                });
+            }
+        }
+
+        function addChannelNatureSub(parentId, parentName) {
+            openModal(); // 先置空并打开
+            $('#modalTitle').text('新增下级性质 - ' + parentName);
+
+            // 延迟设置，确保 openModal 中的 select 加载完成后能选中
+            setTimeout(function () {
+                $('#parentId').val(parentId);
+                $('#natureLevel').val('2');
+                // 二级默认性质名称为"经营类型"
+                $('#natureName').val('经营类型');
+            }, 300);
+        }
+
+        function openModal(id) {
+            $('#channelNatureForm')[0].reset();
+            $('#channelNatureId').val('');
+            $('#modalTitle').text(id ? '编辑渠道性质' : '新增渠道性质');
+
+            // 一级（顶级）新增时，默认性质名称为"渠道性质"
+            if (!id) {
+                $('#natureName').val('渠道性质');
+                $('#natureLevel').val('1'); // 默认一级
+            }
+
+            // 加载上级选项
+            $.get('/api/channel-nature/tree', function (res) {
+                var select = $('#parentId');
+                select.empty().append('<option value="0">无（顶级性质）</option>');
+
+                function addOptions(nodes, level) {
+                    nodes.forEach(function (node) {
+                        if (node.id !== id) { // 不能选自己作为上级
+                            var prefix = '　'.repeat(level);
+                            select.append(`<option value="${node.id}">${prefix}${node.natureName}</option>`);
+                            if (node.children) addOptions(node.children, level + 1);
+                        }
+                    });
+                }
+                addOptions(res.data, 0);
+
+                if (id) {
+                    $.get('/api/channel-nature/' + id, function (res) {
+                        var d = res.data;
+                        $('#channelNatureId').val(d.id);
+                        $('#parentId').val(d.parentId);
+                        $('#natureLevel').val(d.parentId === '0' ? '1' : '2');
+                        $('#natureName').val(d.natureName);
+                        $('#natureCode').val(d.natureCode);
+                        $('#sort').val(d.sort);
+                        $('#status').val(d.status);
+                        $('#remark').val(d.remark);
+                    });
+                }
+            });
+
+            $('#channelNatureModal').modal('show');
+        }
+
+        function saveChannelNature() {
+            var id = $('#channelNatureId').val();
+            var data = {
+                parentId: $('#parentId').val(),
+                natureName: $('#natureName').val(),
+                natureCode: $('#natureCode').val(),
+                sort: $('#sort').val(),
+                status: $('#status').val(),
+                remark: $('#remark').val()
+            };
+
+            if (!data.natureName) {
+                BC.toast('请输入性质名称', 'warning');
+                return;
+            }
+
+            var type = id ? 'PUT' : 'POST';
+            var url = '/api/channel-nature' + (id ? '/' + id : '');
+
+            $.ajax({
+                url: url,
+                type: type,
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                success: function (res) {
+                    if (res.code === 200) {
+                        $('#channelNatureModal').modal('hide');
+                        BC.toast(res.message, 'success');
+                        loadChannelNatureData();
+                    } else {
+                        BC.toast(res.message, 'error');
+                    }
+                }
+            });
+        }
+
+        function deleteChannelNature(id) {
+            BC.confirm({
+                title: '删除渠道性质',
+                message: '确定要移除该渠道性质吗？如果该性质下存在子级，子级也将被一并移除！',
+                type: 'danger'
+            }, function (confirmed) {
+                if (confirmed) {
+                    $.ajax({
+                        url: '/api/channel-nature/' + id,
+                        type: 'DELETE',
+                        success: function (res) {
+                            if (res.code === 200) {
+                                BC.toast(res.message, 'success');
+                                loadChannelNatureData();
+                            }
+                        }
+                    });
+                }
+            });
+        }
+
+        function resetSearch() {
+            $('#searchForm')[0].reset();
+            $('#searchLevel2').html('<option value="">所有二级性质</option>');
+            loadChannelNatureData();
+        }
+    </script>
+</body>
+
+</html>

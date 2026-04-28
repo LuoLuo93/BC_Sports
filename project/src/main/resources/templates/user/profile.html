@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人中心 - BC体育后台管理系统</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- 自定义CSS -->
+    <link rel="stylesheet" th:href="@{/css/layout.css}">
+</head>
+<body>
+    <!-- 侧边栏 -->
+    <div th:replace="~{common/fragments :: sidebar}"></div>
+
+    <!-- 主内容区 -->
+    <div class="main-content">
+        <!-- 顶部导航 -->
+        <nav th:replace="~{common/fragments :: top-navbar}"></nav>
+
+        <!-- 内容区域 -->
+        <div class="content-wrapper">
+            <!-- 个人中心内容: Tier-1 Dual-Column Layout -->
+            <div class="row g-4">
+                <!-- 左侧: 个人概要名片 -->
+                <div class="col-lg-4">
+                    <div class="bc-card text-center py-5">
+                        <div class="position-relative d-inline-block mb-4">
+                            <img id="profileAvatar" th:src="${user.avatar != null ? user.avatar : '/images/default-avatar.png'}" 
+                                 class="rounded-circle border border-4 border-white shadow-sm" 
+                                 style="width: 120px; height: 120px; object-fit: cover;">
+                            <button class="btn btn-sm btn-primary position-absolute bottom-0 end-0 rounded-circle shadow-sm" title="修改头像">
+                                <i class="bi bi-camera"></i>
+                            </button>
+                        </div>
+                        <h4 class="fw-bold mb-1" th:text="${user.nickname != null ? user.nickname : user.username}">用户昵称</h4>
+                        <p class="text-muted small mb-3" th:text="${user.deptName != null ? user.deptName : '暂无部门'}">研发部</p>
+                        
+                        <div class="d-flex justify-content-center gap-2 mb-4">
+                            <span th:each="role : ${#strings.arraySplit(user.roleNames != null ? user.roleNames : '', ',')}" 
+                                  class="badge bg-primary-soft text-primary px-3 py-2 rounded-pill" th:text="${role}">
+                                管理员
+                            </span>
+                            <span th:if="${user.roleNames == null}" class="badge bg-secondary-soft text-secondary px-3 py-2 rounded-pill">普通用户</span>
+                        </div>
+                        
+                        <div class="border-top pt-4 text-start px-4">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted small">账户状态</span>
+                                <span class="badge bg-success-soft text-success px-2 py-1" th:text="${user.status == 1 ? '正常' : '禁用'}">正常</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted small">最后登录</span>
+                                <span class="text-main small fw-medium" th:text="${#temporals.format(user.lastLoginTime, 'yyyy-MM-dd HH:mm')}">2026-04-13 10:00</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span class="text-muted small">登录地点</span>
+                                <span class="text-main small fw-medium" th:text="${user.lastLoginIp != null ? user.lastLoginIp : '未知'}">127.0.0.1</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 右侧: 操作中心 -->
+                <div class="col-lg-8">
+                    <div class="bc-card p-0 overflow-hidden">
+                        <!-- 选项卡导航 -->
+                        <ul class="nav nav-tabs nav-tabs-custom border-bottom px-4 pt-2 bg-light bg-opacity-50" id="profileTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active py-3 px-4 fw-medium border-0 bg-transparent position-relative" id="basic-tab" data-bs-toggle="tab" data-bs-target="#basic-panel" type="button" role="tab">
+                                    <i class="bi bi-info-circle me-2"></i>基本信息
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link py-3 px-4 fw-medium border-0 bg-transparent position-relative" id="security-tab" data-bs-toggle="tab" data-bs-target="#security-panel" type="button" role="tab">
+                                    <i class="bi bi-shield-lock me-2"></i>安全设置
+                                </button>
+                            </li>
+                        </ul>
+                        
+                        <!-- 选项卡内容 -->
+                        <div class="tab-content p-4" id="profileTabContent">
+                            <!-- 基本信息面板 -->
+                            <div class="tab-pane fade show active" id="basic-panel" role="tabpanel">
+                                <form id="basicInfoForm">
+                                    <input type="hidden" name="id" th:value="${user.id}">
+                                    <div class="row g-4">
+                                        <div class="col-md-6">
+                                            <label class="bc-form-label">登录账号</label>
+                                            <input type="text" class="bc-input bg-light border-0" name="username" th:value="${user.username}" readonly>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="bc-form-label">用户昵称</label>
+                                            <input type="text" class="bc-input" name="nickname" th:value="${user.nickname}" placeholder="设置一个好听的名字">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="bc-form-label">联系邮箱</label>
+                                            <input type="email" class="bc-input" name="email" th:value="${user.email}" placeholder="example@bcsport.com">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="bc-form-label">手机号码</label>
+                                            <input type="text" class="bc-input" name="phone" th:value="${user.phone}" placeholder="138xxxx8888">
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="bc-form-label">个人备注</label>
+                                            <textarea class="bc-textarea" name="remark" rows="3" th:text="${user.remark}" placeholder="向大家介绍一下自己..."></textarea>
+                                        </div>
+                                        <div class="col-12 mt-5 border-top pt-4">
+                                            <button type="submit" class="btn bc-btn-primary px-5 py-2">
+                                                保存资料 <i class="bi bi-check2 ms-2"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <!-- 安全设置面板 -->
+                            <div class="tab-pane fade" id="security-panel" role="tabpanel">
+                                <form id="passwordForm">
+                                    <input type="hidden" name="id" th:value="${user.id}">
+                                    <div class="row g-4" style="max-width: 500px;">
+                                        <div class="col-12">
+                                            <label class="bc-form-label">当前密码</label>
+                                            <div class="input-group">
+                                                <input type="password" class="bc-input" name="oldPassword" required placeholder="验证当前身份">
+                                                <button class="btn btn-outline-secondary toggle-password" type="button"><i class="bi bi-eye"></i></button>
+                                            </div>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="bc-form-label">新密码</label>
+                                            <div class="input-group">
+                                                <input type="password" class="bc-input" id="newPassword" name="newPassword" required placeholder="输入 6-20 位新密码">
+                                                <button class="btn btn-outline-secondary toggle-password" type="button"><i class="bi bi-eye"></i></button>
+                                            </div>
+                                            <!-- 密码强度计 -->
+                                            <div class="mt-2" style="height: 4px; background: #eee; border-radius: 2px; overflow: hidden;">
+                                                <div id="strengthProgress" style="height: 100%; width: 0%; transition: all 0.3s; background: #ff4d4d;"></div>
+                                            </div>
+                                            <div class="d-flex justify-content-between mt-1">
+                                                <span id="strengthText" class="text-muted small">请输入新密码</span>
+                                                <span class="text-muted small">强度推荐: 强</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="bc-form-label">确认新密码</label>
+                                            <div class="input-group">
+                                                <input type="password" class="bc-input" id="confirmPassword" name="confirmPassword" required placeholder="重复输入一次">
+                                                <button class="btn btn-outline-secondary toggle-password" type="button"><i class="bi bi-eye"></i></button>
+                                            </div>
+                                            <div id="matchFeedback" class="small mt-1 d-none">
+                                                <i class="bi bi-x-circle me-1"></i><span>密码不匹配</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-12 mt-4">
+                                            <button type="submit" class="btn bc-btn-primary px-5 py-2">
+                                                确认修改 <i class="bi bi-shield-check ms-2"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 底部页脚 -->
+        <div th:replace="~{common/fragments :: footer}"></div>
+    </div>
+
+    <!-- 通用确认弹窗 -->
+    <div th:replace="~{common/fragments :: confirm-modal}"></div>
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- jQuery -->
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <!-- 公共JavaScript -->
+    <script src="/js/common.js"></script>
+    <script>
+        $(document).ready(function() {
+            // 基本信息提交
+            $('#basicInfoForm').on('submit', function(e) {
+                e.preventDefault();
+                const userId = $('input[name="id"]').val();
+                const data = {
+                    username: $('input[name="username"]').val(),
+                    nickname: $('input[name="nickname"]').val(),
+                    email: $('input[name="email"]').val(),
+                    phone: $('input[name="phone"]').val(),
+                    remark: $('textarea[name="remark"]').val(),
+                    roleIds: [] // 个人中心不修改角色
+                };
+                
+                $.ajax({
+                    url: '/api/user/' + userId,
+                    type: 'PUT',
+                    contentType: 'application/json',
+                    data: JSON.stringify(data),
+                    success: function(res) {
+                        if (res.code === 200) {
+                            BC.alert({
+                                title: '更新成功',
+                                message: '您的个人身份资料已成功同步至系统云端',
+                                type: 'success'
+                            }, function() {
+                                window.location.reload();
+                            });
+                        } else {
+                            BC.toast(res.message || '更新失败', 'error');
+                        }
+                    }
+                });
+            });
+
+            // 确认密码实时匹配逻辑
+            $('#confirmPassword').on('input', function() {
+                const newPwd = $('#newPassword').val();
+                const confirmPwd = $(this).val();
+                const feedback = $('#matchFeedback');
+                
+                if (confirmPwd === '') {
+                    feedback.addClass('d-none');
+                } else if (newPwd === confirmPwd) {
+                    feedback.removeClass('d-none text-danger').addClass('text-success')
+                            .html('<i class="bi bi-check-circle me-1"></i>密码匹配');
+                } else {
+                    feedback.removeClass('d-none text-success').addClass('text-danger')
+                            .html('<i class="bi bi-x-circle me-1"></i>密码不匹配');
+                }
+            });
+
+            // 密码强度检测
+            $('#newPassword').on('input', function() {
+                const pwd = $(this).val();
+                let score = 0;
+                
+                if (pwd.length >= 6) score += 20;
+                if (pwd.length >= 10) score += 20;
+                if (/[A-Z]/.test(pwd)) score += 20;
+                if (/[0-9]/.test(pwd)) score += 20;
+                if (/[^A-Za-z0-9]/.test(pwd)) score += 20;
+                
+                const progress = $('#strengthProgress');
+                const text = $('#strengthText');
+                
+                progress.css('width', score + '%');
+                
+                if (score <= 20) {
+                    progress.css('background', '#ff4d4d');
+                    text.text('强度: 弱').css('color', '#ff4d4d');
+                } else if (score <= 60) {
+                    progress.css('background', '#ffa500');
+                    text.text('强度: 中').css('color', '#ffa500');
+                } else {
+                    progress.css('background', '#2ecc71');
+                    text.text('强度: 强').css('color', '#2ecc71');
+                }
+            });
+
+            // 密码可见性切换
+            $(document).on('click', '.toggle-password', function() {
+                const input = $(this).siblings('input');
+                const icon = $(this).find('i');
+                
+                if (input.attr('type') === 'password') {
+                    input.attr('type', 'text');
+                    icon.removeClass('bi-eye').addClass('bi-eye-slash');
+                } else {
+                    input.attr('type', 'password');
+                    icon.removeClass('bi-eye-slash').addClass('bi-eye');
+                }
+            });
+
+            // 修改密码提交
+            $('#passwordForm').on('submit', function(e) {
+                e.preventDefault();
+                const userId = $('input[name="id"]').val();
+                const oldPassword = $('input[name="oldPassword"]').val();
+                const newPassword = $('input[name="newPassword"]').val();
+                const confirmPassword = $('input[name="confirmPassword"]').val();
+                
+                if (oldPassword === newPassword) {
+                    BC.toast('新密码不能与当前密码相同', 'warning');
+                    return;
+                }
+
+                if (newPassword !== confirmPassword) {
+                    BC.toast('两次输入的密码不一致', 'warning');
+                    return;
+                }
+                
+                $.ajax({
+                    url: '/api/user/' + userId + '/changePassword',
+                    type: 'PUT',
+                    data: {
+                        oldPassword: oldPassword,
+                        newPassword: newPassword
+                    },
+                    success: function(res) {
+                        if (res.code === 200) {
+                            BC.alert({
+                                title: '密码更新成功',
+                                message: '您的账户安全凭证已成功同步，新密码已立即生效',
+                                type: 'success'
+                            }, function() {
+                                window.location.reload();
+                            });
+                        } else {
+                            BC.toast(res.message || '密码验证失败', 'error');
+                        }
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

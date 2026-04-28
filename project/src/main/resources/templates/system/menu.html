@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org" xmlns:shiro="http://www.pollix.at/thymeleaf/shiro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>菜单管理 - BC体育巅峰后台</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- 自定义CSS -->
+    <link rel="stylesheet" th:href="@{/css/layout.css}">
+</head>
+<body>
+    <!-- 侧边栏 -->
+    <div th:replace="~{common/fragments :: sidebar}"></div>
+
+    <!-- 主内容区 -->
+    <div class="main-content">
+        <!-- 顶部导航 -->
+        <nav th:replace="~{common/fragments :: top-navbar}"></nav>
+
+        <!-- 内容区域 -->
+        <div class="content-wrapper">
+            <!-- 菜单管理内容 -->
+            <div class="bc-card">
+                <div class="bc-card-body">
+                    <div class="bc-toolbar d-flex justify-content-end" shiro:hasPermission="menu:add">
+                        <button class="btn bc-btn-success" id="addMenuBtn">
+                            <i class="bi bi-plus-lg"></i> 新增根菜单
+                        </button>
+                    </div>
+                    <div class="bc-table-container">
+                        <table class="bc-table bc-table-hover" id="menuTable">
+                            <thead>
+                                <tr>
+                                    <th style="width: 80px;">序号</th>
+                                    <th>菜单名称</th>
+                                    <th style="width: 150px;">级别</th>
+                                    <th style="width: 80px;">图标</th>
+                                    <th style="width: 100px;">类型</th>
+                                    <th>展示路径</th>
+                                    <th>权限标识</th>
+                                    <th style="width: 80px;">排序</th>
+                                    <th style="width: 100px;">状态</th>
+                                    <th style="width: 120px;">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="menuTableBody">
+                                <!-- 动态加载菜单数据 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    <!-- 底部页脚 -->
+        <div th:replace="~{common/fragments :: footer}"></div>
+    </div>
+
+    <!-- 通用确认弹窗 (必须放在 body 直接子节点以确保 fixed 定位有效) -->
+    <div th:replace="~{common/fragments :: confirm-modal}"></div>
+
+    <!-- 菜单模态框 -->
+    <div class="modal fade" id="menuModal" tabindex="-1" aria-labelledby="menuModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content bc-modal-content">
+                <div class="modal-header bc-modal-header">
+                    <h5 class="modal-title bc-modal-title" id="menuModalLabel">
+                        <i class="bi bi-plus-circle"></i> <span id="modalTitleText">配置菜单</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button>
+                </div>
+                <div class="modal-body bc-modal-body">
+                    <form id="menuForm" class="needs-validation" novalidate>
+                        <input type="hidden" id="menuId">
+                        
+                        <!-- 核心配置：一行两列 -->
+                        <div class="bc-form-grid mb-4">
+                            <div class="bc-form-group">
+                                <label for="parentId" class="bc-form-label">上级菜单</label>
+                                <select class="bc-select" id="parentId">
+                                    <option value="0">顶级菜单</option>
+                                    <!-- 动态加载 -->
+                                </select>
+                            </div>
+                            <div class="bc-form-group">
+                                <label for="menuType" class="bc-form-label">菜单类型</label>
+                                <select class="bc-select" id="menuType">
+                                    <option value="0">📁 目录 (Directory)</option>
+                                    <option value="1">📄 菜单 (Menu)</option>
+                                    <option value="2">⚡ 按钮 (Button/Action)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- 基础信息：一行两列 -->
+                        <div class="bc-form-grid mb-4">
+                            <div class="bc-form-group">
+                                <label for="menuName" class="bc-form-label">菜单名称 <span class="text-danger">*</span></label>
+                                <input type="text" class="bc-input" id="menuName" placeholder="如：系统设置" required>
+                            </div>
+                            <div class="bc-form-group">
+                                <label for="icon" class="bc-form-label">菜单图标</label>
+                                <div class="bc-input-group">
+                                    <i class="bi bi-display" id="iconPreview"></i>
+                                    <input type="text" class="bc-input" id="icon" placeholder="如：bi-people">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 路由配置：一行两列 -->
+                        <div class="bc-form-grid mb-4">
+                            <div class="bc-form-group">
+                                <label for="path" class="bc-form-label">路由路径</label>
+                                <input type="text" class="bc-input" id="path" placeholder="/system/settings">
+                            </div>
+                            <div class="bc-form-group">
+                                <label for="permission" class="bc-form-label">权限标识</label>
+                                <input type="text" class="bc-input" id="permission" placeholder="system:user:view">
+                            </div>
+                        </div>
+
+                        <!-- 扩展配置：一行三列 -->
+                        <div class="bc-form-grid bc-form-grid-3">
+                            <div class="bc-form-group">
+                                <label for="sort" class="bc-form-label">显示排序</label>
+                                <input type="number" class="bc-input" id="sort" value="0">
+                            </div>
+                            <div class="bc-form-group">
+                                <label for="status" class="bc-form-label">状态</label>
+                                <select class="bc-select" id="status">
+                                    <option value="1">启用</option>
+                                    <option value="0">禁用</option>
+                                </select>
+                            </div>
+                            <div class="bc-form-group">
+                                <label for="visible" class="bc-form-label">侧栏显示</label>
+                                <select class="bc-select" id="visible">
+                                    <option value="1">显示</option>
+                                    <option value="0">隐藏</option>
+                                </select>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer bc-modal-footer">
+                    <button type="button" class="btn bc-btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn bc-btn-primary" id="saveMenuBtn">保存配置</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- jQuery -->
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <!-- 公共JavaScript -->
+    <script src="/js/common.js"></script>
+    
+    <script>
+        $(document).ready(function() {
+            loadMenuData();
+            
+            // 图标即时预览
+            $('#icon').on('input', function() {
+                var icon = $(this).val() || 'bi-display';
+                $('#iconPreview').attr('class', 'bi ' + icon);
+            });
+
+            $('#addMenuBtn').click(function() {
+                resetMenuForm();
+                $('#modalTitleText').text('新增菜单');
+                loadParentMenuOptions();
+                $('#menuModal').modal('show');
+            });
+            
+            $('#saveMenuBtn').click(saveMenu);
+        });
+        
+        function loadMenuData() {
+            $.ajax({
+                url: '/api/menu/tree',
+                type: 'GET',
+                success: function(response) {
+                    if (response.code === 200) {
+                        renderMenuTable(response.data);
+                    } else {
+                        BC.toast(response.message || '加载菜单树失败', 'error');
+                    }
+                }
+            });
+        }
+
+        function addSubMenu(parentId, parentName) {
+            resetMenuForm();
+            $('#modalTitleText').text('新增子菜单 - ' + parentName);
+            loadParentMenuOptions();
+            // 延迟设置，确保选项加载完毕
+            setTimeout(() => $('#parentId').val(parentId), 200);
+            $('#menuModal').modal('show');
+        }
+        
+        function renderMenuTable(menus) {
+            var tbody = $('#menuTableBody');
+            tbody.empty();
+            
+            var globalIndex = 0;
+            
+            function renderItems(list, level) {
+                $.each(list, function(i, menu) {
+                    globalIndex++;
+                    var indent = level * 28;
+                    var typePill = '';
+                    var typeIcon = '';
+                    switch(menu.menuType) {
+                        case 0: typePill = BC.getTag('info', '目录'); typeIcon = 'bi-folder'; break;
+                        case 1: typePill = BC.getTag('success', '菜单'); typeIcon = 'bi-file-earmark'; break;
+                        case 2: typePill = BC.getTag('success', '按钮'); typeIcon = 'bi-lightning'; break;
+                    }
+                    
+                    var levelTag = '';
+                    if (level === 0) {
+                        levelTag = BC.getTag('info', '顶级菜单');
+                    } else if (level === 1) {
+                        levelTag = BC.getTag('success', '子菜单');
+                    } else {
+                        levelTag = BC.getTag('success', '功能项');
+                    }
+                    
+                    var statusTag = BC.getTag(menu.status === 1 ? 'success' : 'danger', menu.status === 1 ? '启用' : '禁用');
+                    var menuIcon = menu.icon || 'bi-circle-small';
+                    
+                    var actionsConfig = [];
+                    if (menu.menuType === 0 && hasPermission('menu:add')) {
+                        actionsConfig.push({ icon: 'bi-plus-lg', title: '添加子菜单', onclick: "addSubMenu('" + menu.id + "', '" + menu.menuName + "')" });
+                    }
+                    if (hasPermission('menu:edit')) {
+                        actionsConfig.push({ icon: 'bi-pencil', title: '编辑菜单', onclick: "editMenu('" + menu.id + "')" });
+                    }
+                    if (hasPermission('menu:delete')) {
+                        actionsConfig.push({ icon: 'bi-trash', title: '注销菜单', onclick: "deleteMenu('" + menu.id + "')" });
+                    }
+                    
+                    var actions = BC.getTableActions(actionsConfig);
+
+                    var row = '<tr>' +
+                        '<td><span class="text-muted small">' + globalIndex + '</span></td>' +
+                        '<td style="padding-left: ' + (indent + 12) + 'px">' +
+                            '<i class="bi ' + typeIcon + ' me-2 text-muted"></i>' +
+                            '<span class="fw-bold text-main">' + menu.menuName + '</span>' +
+                        '</td>' +
+                        '<td>' + levelTag + '</td>' +
+                        '<td><i class="bi ' + menuIcon + ' fs-5 text-secondary"></i></td>' +
+                        '<td>' + typePill + '</td>' +
+                        '<td><code class="small text-muted">' + (menu.path || '-') + '</code></td>' +
+                        '<td><span class="bc-tag">' + (menu.permission || '-') + '</span></td>' +
+                        '<td><span class="small">' + (menu.sort || 0) + '</span></td>' +
+                        '<td>' + statusTag + '</td>' +
+                        '<td class="text-end">' + actions + '</td>' +
+                        '</tr>';
+                    
+                    tbody.append(row);
+                    if (menu.children && menu.children.length > 0) {
+                        renderItems(menu.children, level + 1);
+                    }
+                });
+            }
+            renderItems(menus, 0);
+        }
+        
+        function loadParentMenuOptions() {
+            $.ajax({
+                url: '/api/menu/tree',
+                type: 'GET',
+                success: function(response) {
+                    if (response.code === 200) {
+                        var select = $('#parentId');
+                        select.empty().append('<option value="0">顶级菜单</option>');
+                        function addOptions(list, level) {
+                            $.each(list, function(i, menu) {
+                                var prefix = '　'.repeat(level);
+                                select.append('<option value="' + menu.id + '">' + prefix + menu.menuName + '</option>');
+                                if (menu.children && menu.children.length > 0) addOptions(menu.children, level + 1);
+                            });
+                        }
+                        addOptions(response.data, 0);
+                    }
+                }
+            });
+        }
+        
+        function resetMenuForm() {
+            $('#menuForm')[0].reset();
+            $('#menuId').val('');
+            $('#iconPreview').attr('class', 'bi bi-display');
+        }
+        
+        function editMenu(id) {
+            $.ajax({
+                url: '/api/menu/' + id,
+                type: 'GET',
+                success: function(res) {
+                    if (res.code === 200) {
+                        var m = res.data;
+                        $('#menuId').val(m.id);
+                        $('#menuName').val(m.menuName);
+                        $('#icon').val(m.icon).trigger('input');
+                        $('#menuType').val(m.menuType);
+                        $('#path').val(m.path);
+                        $('#permission').val(m.permission);
+                        $('#sort').val(m.sort);
+                        $('#status').val(m.status);
+                        $('#visible').val(m.visible);
+                        
+                        loadParentMenuOptions();
+                        setTimeout(() => $('#parentId').val(m.parentId), 300);
+                        
+                        $('#modalTitleText').text('编辑菜单配置');
+                        $('#menuModal').modal('show');
+                    }
+                }
+            });
+        }
+        
+        function saveMenu() {
+            var data = {
+                parentId: $('#parentId').val(),
+                menuName: $('#menuName').val(),
+                icon: $('#icon').val(),
+                menuType: parseInt($('#menuType').val()),
+                path: $('#path').val(),
+                permission: $('#permission').val(),
+                sort: parseInt($('#sort').val()),
+                status: parseInt($('#status').val()),
+                visible: parseInt($('#visible').val())
+            };
+            
+            var id = $('#menuId').val();
+            var url = id ? '/api/menu/' + id : '/api/menu';
+            var type = id ? 'PUT' : 'POST';
+            
+            $.ajax({
+                url: url,
+                type: type,
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                success: function(res) {
+                    if (res.code === 200) {
+                        $('#menuModal').modal('hide');
+                        // 延迟弹出成功提示，确保背景遮罩已完全销毁
+                        setTimeout(function() {
+                            BC.alert({
+                                title: '配置已同步',
+                                message: '此菜单架构配置已更新并实时生效',
+                                type: 'success'
+                            }, function() {
+                                loadMenuData();
+                                sessionStorage.removeItem('cachedMenus');
+                            });
+                        }, 300);
+                    } else {
+                        BC.toast(res.message || '操作失败', 'error');
+                    }
+                }
+            });
+        }
+        
+        function deleteMenu(id) {
+            BC.confirm({
+                title: '确认架构变更',
+                message: '确定要移除此菜单索引吗？级联下属菜单也将一并失效且不可恢复。',
+                type: 'danger',
+                confirmText: '确认移除',
+                cancelText: '取消'
+            }, function(confirmed) {
+                if (confirmed) {
+                    $.ajax({
+                        url: '/api/menu/' + id,
+                        type: 'DELETE',
+                        success: function(res) {
+                            if (res.code === 200) {
+                                BC.toast('菜单架构项已成功移除', 'success');
+                                loadMenuData();
+                                sessionStorage.removeItem('cachedMenus');
+                            } else {
+                                BC.toast(res.message || '移除失败', 'error');
+                            }
+                        }
+                    });
+                }
+            });
+        }
+    </script>
+</body>
+</html>

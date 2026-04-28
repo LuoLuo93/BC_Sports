@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>品牌管理 - BC体育后台管理系统</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- 自定义CSS -->
+    <link rel="stylesheet" th:href="@{/css/layout.css}">
+    <style>
+        .brand-logo-preview {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            object-fit: contain;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+        }
+    </style>
+</head>
+<body>
+    <!-- 侧边栏 -->
+    <div th:replace="~{common/fragments :: sidebar}"></div>
+
+    <!-- 主内容区 -->
+    <div class="main-content">
+        <!-- 顶部导航 -->
+        <nav th:replace="~{common/fragments :: top-navbar}"></nav>
+
+        <!-- 内容区域 -->
+        <div class="content-wrapper">
+            <div class="bc-card">
+                <div class="bc-card-body">
+                    <!-- 搜索与操作栏 -->
+                    <form class="row g-3 bc-toolbar align-items-center" id="searchForm">
+                        <div class="col-auto">
+                            <div class="bc-input-group">
+                                <i class="bi bi-tag"></i>
+                                <input type="text" class="bc-input" id="searchBrandName" placeholder="搜索品牌名称...">
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <select class="bc-select" id="searchStatus">
+                                <option value="">全部状态</option>
+                                <option value="1">正常</option>
+                                <option value="0">禁用</option>
+                            </select>
+                        </div>
+                        <div class="col-auto">
+                            <button type="button" class="btn bc-btn-primary" id="searchBtn">
+                                <i class="bi bi-search"></i> 查询
+                            </button>
+                            <button type="button" class="btn bc-btn-secondary" id="resetBtn">
+                                <i class="bi bi-arrow-counterclockwise"></i> 重置
+                            </button>
+                        </div>
+                        <div class="col-auto ms-auto" th:if="${#lists.contains(permissions, '*') or #lists.contains(permissions, 'bi:brand:add')}">
+                            <button type="button" class="btn bc-btn-success" id="addBtn">
+                                <i class="bi bi-plus-lg"></i> 新增品牌
+                            </button>
+                        </div>
+                    </form>
+
+                    <div class="bc-table-container">
+                        <table class="bc-table bc-table-hover" id="brandTable">
+                            <thead>
+                                <tr>
+                                    <th style="width: 80px;">序号</th>
+                                    <th style="width: 100px;">LOGO</th>
+                                    <th>品牌名称</th>
+                                    <th>品牌描述</th>
+                                    <th style="width: 80px;">排序</th>
+                                    <th style="width: 100px;">状态</th>
+                                    <th style="width: 120px;" class="text-end">管理操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dataTableBody">
+                                <!-- 动态加载数据 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 底部: 分页 -->
+            <div th:replace="~{common/fragments :: pagination}"></div>
+        </div>
+
+        <!-- 底部页脚 -->
+        <div th:replace="~{common/fragments :: footer}"></div>
+    </div>
+
+    <!-- 品牌编辑模态框 -->
+    <div class="modal fade" id="dataModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content bc-modal-content">
+                <div class="modal-header bc-modal-header">
+                    <h5 class="modal-title bc-modal-title">
+                        <i class="bi bi-tags"></i> <span>新增品牌</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body bc-modal-body">
+                    <form id="dataForm">
+                        <input type="hidden" id="dataId">
+                        <div class="bc-form-grid">
+                            <div class="bc-form-group">
+                                <label class="bc-form-label">品牌名称 <span class="text-danger">*</span></label>
+                                <input type="text" class="bc-input" id="brandName" placeholder="示例：Nike" required>
+                            </div>
+                            <div class="bc-form-group">
+                                <label class="bc-form-label">品牌LOGO URL</label>
+                                <input type="text" class="bc-input" id="brandLogo" placeholder="https://...">
+                            </div>
+                            <div class="bc-form-group">
+                                <label class="bc-form-label">状态</label>
+                                <select class="bc-select" id="status">
+                                    <option value="1">启用</option>
+                                    <option value="0">禁用</option>
+                                </select>
+                            </div>
+                            <div class="bc-form-group">
+                                <label class="bc-form-label">排序</label>
+                                <input type="number" class="bc-input" id="sort" value="0">
+                            </div>
+                            <div class="bc-form-group bc-form-group-full">
+                                <label class="bc-form-label">品牌描述</label>
+                                <textarea class="bc-textarea" id="description" rows="3" placeholder="请输入品牌背景及职能描述"></textarea>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer bc-modal-footer">
+                    <button type="button" class="btn bc-btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn bc-btn-primary" id="saveBtn">保存信息</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 通用确认弹窗 -->
+    <div th:replace="~{common/fragments :: confirm-modal}"></div>
+
+    <!-- JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script th:inline="javascript">
+           // 将后端注入的权限列表同步到前端 JS 作用域
+        window.userPermissions = /*[[${permissions}]]*/ [];
+        
+        function hasPermission(p) {
+            if (!window.userPermissions) return false;
+            return window.userPermissions.includes('*') || window.userPermissions.includes(p);
+        }
+    </script>
+    <script src="/js/common.js"></script>
+
+    <script>
+        let currentPage = 1;
+        let pageSize = 10;
+
+        $(document).ready(function() {
+            loadDataList();
+
+            $('#searchBtn').click(() => { currentPage = 1; loadDataList(); });
+            $('#resetBtn').click(() => {
+                $('#searchForm')[0].reset();
+                currentPage = 1;
+                loadDataList();
+            });
+            $('#addBtn').click(() => openModal('add'));
+            $('#saveBtn').click(() => saveData());
+        });
+
+        function loadDataList() {
+            $.ajax({
+                url: '/api/brand/page',
+                type: 'GET',
+                data: {
+                    pageNum: currentPage,
+                    pageSize: pageSize,
+                    brandName: $('#searchBrandName').val(),
+                    status: $('#searchStatus').val()
+                },
+                success: function(res) {
+                    if (res.code === 200) {
+                        renderTable(res.data.records);
+                        renderPagination(res.data);
+                    } else {
+                        BC.toast(res.message, 'error');
+                    }
+                }
+            });
+        }
+
+        function renderTable(data) {
+            const tbody = $('#dataTableBody');
+            tbody.empty();
+            if (!data || data.length === 0) {
+                tbody.append('<tr><td colspan="7" class="text-center py-5 text-muted">未找到匹配的品牌数据</td></tr>');
+                return;
+            }
+            data.forEach((item, i) => {
+                const seq = (currentPage - 1) * pageSize + i + 1;
+                const statusTag = BC.getTag(item.status === 1 ? 'success' : 'danger', item.status === 1 ? '启用' : '禁用');
+                const logo = BC.getMedia(item.brandLogo, 'logo');
+                const safeId = String(item.id);
+
+                const btnGroup = [];
+                if (hasPermission('bi:brand:edit')) {
+                    btnGroup.push({ icon: 'bi-pencil', title: '修改信息', onclick: `editData('${safeId}')` });
+                }
+                if (hasPermission('bi:brand:delete')) {
+                    btnGroup.push({ icon: 'bi-trash', title: '彻底移除', onclick: `deleteData('${safeId}')` });
+                }
+
+                const actions = BC.getTableActions(btnGroup);
+                
+                tbody.append(`
+                    <tr>
+                        <td><span class="text-muted small">${seq}</span></td>
+                        <td>${logo}</td>
+                        <td><span class="fw-bold text-main">${item.brandName}</span></td>
+                        <td><span class="small text-secondary">${item.description || '-'}</span></td>
+                        <td><span class="small">${item.sort}</span></td>
+                        <td>${statusTag}</td>
+                        <td class="text-end">${actions}</td>
+                    </tr>
+                `);
+            });
+        }
+
+        function renderPagination(pageData) {
+            BC.renderPagination({
+                total: pageData.total,
+                pages: pageData.pages,
+                current: pageData.pageNum,
+                limit: pageData.pageSize,
+                callback: (page) => {
+                    currentPage = page;
+                    loadDataList();
+                }
+            });
+        }
+
+        function openModal(mode, id) {
+            const modal = $('#dataModal');
+            $('#dataForm')[0].reset();
+            $('#dataId').val('');
+            
+            if (mode === 'add') {
+                modal.find('.modal-title span').text('新增品牌资产');
+                modal.modal('show');
+            } else {
+                modal.find('.modal-title span').text('编辑品牌信息');
+                $.get(`/api/brand/${id}`, res => {
+                    if (res.code === 200) {
+                        const d = res.data;
+                        $('#dataId').val(d.id);
+                        $('#brandName').val(d.brandName);
+                        $('#brandLogo').val(d.brandLogo);
+                        $('#status').val(d.status);
+                        $('#sort').val(d.sort);
+                        $('#description').val(d.description);
+                        modal.modal('show');
+                    }
+                });
+            }
+        }
+
+        function editData(id) { openModal('edit', id); }
+
+        function saveData() {
+            const id = $('#dataId').val();
+            const data = {
+                brandName: $('#brandName').val(),
+                brandLogo: $('#brandLogo').val(),
+                status: $('#status').val(),
+                sort: $('#sort').val(),
+                description: $('#description').val()
+            };
+            
+            $.ajax({
+                url: id ? `/api/brand/${id}` : '/api/brand',
+                type: id ? 'PUT' : 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                success: res => {
+                    if (res.code === 200) {
+                        $('#dataModal').modal('hide');
+                        BC.toast(id ? '品牌资料已成功更新' : '新品牌已成功收录', 'success');
+                        loadDataList();
+                    } else {
+                        BC.toast(res.message, 'error');
+                    }
+                }
+            });
+        }
+
+        function deleteData(id) {
+            BC.confirm({
+                title: '确认移除',
+                message: '确定要将该品牌从系统中移除吗？此操作不可撤销。',
+                type: 'danger'
+            }, (ok) => {
+                if (ok) {
+                    $.ajax({
+                        url: `/api/brand/${id}`,
+                        type: 'DELETE',
+                        success: res => {
+                            if (res.code === 200) {
+                                BC.toast('品牌已被安全移除', 'success');
+                                loadDataList();
+                            }
+                        }
+                    });
+                }
+            });
+        }
+    </script>
+</body>
+</html>

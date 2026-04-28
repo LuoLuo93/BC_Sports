@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bcsport.admin.qywxmapper.VxCustomerBaseDetailsMapper">
+
+    <delete id="deleteAllDetails">
+        DELETE FROM VX_CustomerBaseDetails
+    </delete>
+
+    <delete id="deleteAllGroupMembers">
+        DELETE FROM VX_CustomerBaseDetails_GroupMembers
+    </delete>
+
+    <insert id="insertDetail">
+        INSERT INTO VX_CustomerBaseDetails (chatId, name, owner, createTime, member_list, createTime2)
+        VALUES (#{chatId}, #{name}, #{owner}, #{createTime}, #{memberList}, GETDATE())
+    </insert>
+
+    <insert id="insertGroupMembersBatch">
+        INSERT INTO VX_CustomerBaseDetails_GroupMembers (chatId, userid, type, join_time, join_scene, invitor, name, unionId, createTime)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.chatId}, #{item.userid}, #{item.type}, #{item.joinTime}, #{item.joinScene}, #{item.invitor}, #{item.name}, #{item.unionId}, GETDATE())
+        </foreach>
+    </insert>
+
+</mapper>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bcsport.admin.ihrmapper.IhrEmployeeAdditionMapper">
+    <delete id="deleteBySyncDate">
+        DELETE FROM employee_additions WHERE CONVERT(DATE, sync_date) = CONVERT(DATE, #{syncDate})
+    </delete>
+    <insert id="insertBatch">
+        INSERT INTO employee_additions(employees_id, sync_date, create_time)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.employeesId}, #{item.syncDate}, GETDATE())
+        </foreach>
+    </insert>
+</mapper>

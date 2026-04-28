@@ -4,7 +4,7 @@ import cn.hutool.core.date.DateUtil;
 import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import com.bcsport.admin.entity.qywx.VxGroupchatYesterday;
-import com.bcsport.admin.qywxmapper.QywxDepartmentMemberMapper;
+import com.bcsport.admin.qywxmapper.QywxFollowUserMapper;
 import com.bcsport.admin.qywxmapper.VxGroupchatYesterdayMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,7 +31,7 @@ public class QywxGroupChatStatTask {
     private QywxApiClient apiClient;
 
     @Autowired
-    private QywxDepartmentMemberMapper departmentMemberMapper;
+    private QywxFollowUserMapper followUserMapper;
 
     @Autowired
     private VxGroupchatYesterdayMapper groupchatYesterdayMapper;
@@ -47,8 +47,8 @@ public class QywxGroupChatStatTask {
         long totalStartTime = System.currentTimeMillis();
 
         try {
-            // 获取所有成员
-            List<String> userIds = departmentMemberMapper.selectAllUserIds();
+            // 获取所有配置了客户联系功能的成员
+            List<String> userIds = followUserMapper.selectAllUserIds();
             if (userIds == null || userIds.isEmpty()) {
                 log.info("No members found, skipping group chat statistic sync");
                 return;

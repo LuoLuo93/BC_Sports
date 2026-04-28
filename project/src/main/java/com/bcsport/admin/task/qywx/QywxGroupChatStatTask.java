@@ -69,10 +69,10 @@ public class QywxGroupChatStatTask {
 
             log.info("Syncing data for date: {}", yesterdayDateStr);
 
-            // 先清空表
+            // 增量同步：只删除昨天的数据（避免重复插入）
             TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
             txTemplate.execute(status -> {
-                groupchatYesterdayMapper.deleteAll();
+                groupchatYesterdayMapper.deleteByDate(yesterdayDateStr);
                 return null;
             });
 

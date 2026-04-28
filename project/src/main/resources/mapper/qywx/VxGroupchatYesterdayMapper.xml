@@ -6,6 +6,10 @@
         DELETE FROM VX_GroupChat_Yesterday
     </delete>
 
+    <delete id="deleteByDate">
+        DELETE FROM VX_GroupChat_Yesterday WHERE starttime = #{dateStr}
+    </delete>
+
     <insert id="insertBatch">
         INSERT INTO VX_GroupChat_Yesterday (owner, new_chat_cnt, chat_total, chat_has_msg, new_member_cnt, member_total, member_has_msg, msg_total, starttime, createtime)
         VALUES

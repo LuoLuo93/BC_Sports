@@ -41,6 +41,7 @@ public class ScheduleTaskRegistry {
         register("qywx.group.chat.sync", "QW-同步企微群", "qywxGroupChatTask", "sync", "同步企业微信群列表和群成员", MODULE_QYWX, 10);
         register("qywx.group.chat.stat", "QW-同步群聊统计", "qywxGroupChatStatTask", "sync", "同步企业微信群聊统计数据", MODULE_QYWX, 11);
         register("qywx.mass.message", "QW-同步群发消息", "qywxMassMessageTask", "sync", "同步企业微信群发消息记录", MODULE_QYWX, 12);
+        register("qywx.group.chat.and.stat.sync", "QW-一键同步群聊相关", "qywxGroupChatAndStatSyncTask", "syncAll", "一键同步：客户联系成员→群聊列表→群聊统计→群发消息", MODULE_QYWX, 13);
 
 
 

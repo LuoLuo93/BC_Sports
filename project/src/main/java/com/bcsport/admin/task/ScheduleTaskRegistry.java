@@ -34,14 +34,15 @@ public class ScheduleTaskRegistry {
         //register("qywx.attrs.sync", "QW-同步成员扩展属性", "qywxAttrsBaseTask", "sync", "同步企业微信成员的extattr.attrs到VX_attrsBase表", MODULE_QYWX, 5);
 
         // === QW 企业微信开通客户联系成员 ===
-        register("qywx.follow.user.detail.sync", "QW-同步客户联系成员及详情", "qywxFollowUserDetailSyncTask", "syncAll", "一键同步：客户联系成员→成员详情", MODULE_QYWX, 6);
+        register("qywx.follow.user.detail.sync", "QW-一键同步客户联系成员及详情", "qywxFollowUserDetailSyncTask", "syncAll", "一键同步：客户联系成员→成员详情", MODULE_QYWX, 6);
         //register("qywx.follow.user.sync", "QW-同步客户联系成员", "qywxFollowUserTask", "sync", "同步配置了客户联系功能的成员列表", MODULE_QYWX, 7);
         //register("qywx.department.member.detail.sync.follow", "QW-同步成员详情[仅客户联系]", "qywxDepartmentMemberDetailTask", "syncFromFollowUser", "仅同步配置了客户联系功能的成员详情", MODULE_QYWX, 8);
         //register("qywx.customer.detail.sync", "QW-同步客户详情", "qywxCustomerDetailTask", "sync", "同步企业微信外部联系人详情", MODULE_QYWX, 9);
         register("qywx.group.chat.sync", "QW-同步企微群", "qywxGroupChatTask", "sync", "同步企业微信群列表和群成员", MODULE_QYWX, 10);
         register("qywx.group.chat.stat", "QW-同步群聊统计", "qywxGroupChatStatTask", "sync", "同步企业微信群聊统计数据", MODULE_QYWX, 11);
         register("qywx.mass.message", "QW-同步群发消息", "qywxMassMessageTask", "sync", "同步企业微信群发消息记录", MODULE_QYWX, 12);
-        register("qywx.group.chat.and.stat.sync", "QW-一键同步群聊相关", "qywxGroupChatAndStatSyncTask", "syncAll", "一键同步：客户联系成员→群聊列表→群聊统计→群发消息", MODULE_QYWX, 13);
+        register("qywx.moment", "QW-同步朋友圈", "qywxMomentTask", "sync", "同步企业微信朋友圈", MODULE_QYWX, 14);
+        register("qywx.group.chat.and.stat.sync", "QW-一键同步群聊相关", "qywxGroupChatAndStatSyncTask", "syncAll", "一键同步：客户联系成员→群聊列表→群聊统计→群发消息→朋友圈", MODULE_QYWX, 13);
 
 
 

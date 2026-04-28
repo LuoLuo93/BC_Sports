@@ -528,6 +528,40 @@ public class QywxApiClient {
         });
     }
 
+    /**
+     * 获取朋友圈列表
+     */
+    public JSONObject getMomentList(long startTime, long endTime, String cursor) {
+        return executeWithRetry(() -> {
+            String url = apiBaseUrl + "/cgi-bin/externalcontact/get_moment_list?access_token=" + getAccessToken();
+
+            JSONObject requestBody = new JSONObject();
+            requestBody.set("start_time", startTime);
+            requestBody.set("end_time", endTime);
+            requestBody.set("filter_type", 2);
+            requestBody.set("cursor", cursor != null ? cursor : "");
+            requestBody.set("limit", 100);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            org.springframework.http.HttpEntity<String> entity = new org.springframework.http.HttpEntity<>(requestBody.toString(), headers);
+
+            log.info("Fetching moment list from {} to {}", startTime, endTime);
+            org.springframework.http.ResponseEntity<String> response = restTemplate.exchange(url, org.springframework.http.HttpMethod.POST, entity, String.class);
+
+            if (response.getStatusCode() == org.springframework.http.HttpStatus.OK && response.getBody() != null) {
+                JSONObject body = JSONUtil.parseObj(response.getBody());
+                Integer errcode = body.getInt("errcode");
+                if (errcode != null && errcode != 0) {
+                    throw new RuntimeException("Failed to get moment list, errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
+                }
+                return body;
+            } else {
+                throw new RuntimeException("Failed to get moment list");
+            }
+        });
+    }
+
     @FunctionalInterface
     private interface QywxApiCallback<T> {
         T execute() throws Exception;

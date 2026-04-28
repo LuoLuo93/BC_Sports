@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
  * 2. 同步群聊列表和群成员
  * 3. 同步群聊统计数据
  * 4. 同步群发消息记录
+ * 5. 同步朋友圈
  */
 @Slf4j
 @Component("qywxGroupChatAndStatSyncTask")
@@ -28,6 +29,9 @@ public class QywxGroupChatAndStatSyncTask {
 
     @Autowired
     private QywxMassMessageTask massMessageTask;
+
+    @Autowired
+    private QywxMomentTask momentTask;
 
     /**
      * 一键同步所有群聊相关数据
@@ -76,14 +80,25 @@ public class QywxGroupChatAndStatSyncTask {
             }
 
             // 步骤4：同步群发消息记录
-            log.info("--- 步骤 4/4：同步群发消息 ---");
+            log.info("--- 步骤 4/5：同步群发消息 ---");
             try {
                 massMessageTask.sync();
                 successCount++;
-                log.info("--- 步骤 4/4：同步群发消息 完成 ---");
+                log.info("--- 步骤 4/5：同步群发消息 完成 ---");
             } catch (Exception e) {
                 failCount++;
-                log.error("--- 步骤 4/4：同步群发消息 失败 ---", e);
+                log.error("--- 步骤 4/5：同步群发消息 失败 ---", e);
+            }
+
+            // 步骤5：同步朋友圈
+            log.info("--- 步骤 5/5：同步朋友圈 ---");
+            try {
+                momentTask.sync();
+                successCount++;
+                log.info("--- 步骤 5/5：同步朋友圈 完成 ---");
+            } catch (Exception e) {
+                failCount++;
+                log.error("--- 步骤 5/5：同步朋友圈 失败 ---", e);
             }
 
             long totalTime = System.currentTimeMillis() - totalStartTime;

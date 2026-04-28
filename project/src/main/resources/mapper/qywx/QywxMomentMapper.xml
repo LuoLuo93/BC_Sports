@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bcsport.admin.qywxmapper.QywxMomentMapper">
+
+    <delete id="deleteYesterdayData">
+        DELETE FROM VX_Moment_friendCircle WHERE create_time &gt; CONVERT(varchar(45), GETDATE()-1, 23)
+    </delete>
+
+    <insert id="insertBatch">
+        INSERT INTO VX_Moment_friendCircle (moment_id, creator, create_time, create_type, createtime, content)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.momentId}, #{item.creator}, #{item.createTime}, #{item.createType}, GETDATE(), #{item.content})
+        </foreach>
+    </insert>
+
+</mapper>

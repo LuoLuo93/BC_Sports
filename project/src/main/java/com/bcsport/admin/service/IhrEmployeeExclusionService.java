@@ -9,36 +9,23 @@ import com.bcsport.admin.dto.IhrEmployeeExclusionQueryDTO;
 import com.bcsport.admin.entity.qywx.IhrEmployeeExclusion;
 import com.bcsport.admin.vo.IhrEmployeeExclusionVO;
 
+import java.util.List;
+
 public interface IhrEmployeeExclusionService extends IService<IhrEmployeeExclusion> {
 
-    /**
-     * 分页查询
-     */
     PageResult<IhrEmployeeExclusionVO> pageExclusions(PageQuery pageQuery, IhrEmployeeExclusionQueryDTO queryDTO);
 
-    /**
-     * 根据ID查询
-     */
     IhrEmployeeExclusionVO getExclusionVOById(String id);
 
-    /**
-     * 新增
-     */
     boolean addExclusion(IhrEmployeeExclusionDTO dto);
 
-    /**
-     * 更新
-     */
     boolean updateExclusion(IhrEmployeeExclusionDTO dto);
 
-    /**
-     * 删除
-     */
     boolean deleteExclusion(String id);
 
-    /**
-     * 检查是否在排除列表中
-     */
+    boolean batchDelete(List<String> ids);
+
+    boolean batchUpdateStatus(List<String> ids, Integer targetStatus);
+
     boolean checkExcluded(String staffName, String staffNo, Integer exclusionType);
 }
-

@@ -241,16 +241,20 @@ public class AuthController {
      * IHR入职排除页面
      */
     @GetMapping("/ihr/onboarding-exclusion")
-    public String onboardingExclusionPage() {
-        return "ihr/onboarding-exclusion";
+    public String onboardingExclusionPage(org.springframework.ui.Model model) {
+        model.addAttribute("exclusionType", 1);
+        model.addAttribute("pageTitle", "入职排除");
+        return "ihr/exclusion";
     }
 
     /**
      * IHR离职排除页面
      */
     @GetMapping("/ihr/leaving-exclusion")
-    public String leavingExclusionPage() {
-        return "ihr/leaving-exclusion";
+    public String leavingExclusionPage(org.springframework.ui.Model model) {
+        model.addAttribute("exclusionType", 2);
+        model.addAttribute("pageTitle", "离职排除");
+        return "ihr/exclusion";
     }
 
 }

@@ -1,0 +1,462 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="'IHR' + ${pageTitle} + ' - BC体育后台管理系统'">IHR排除管理</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/layout.css}">
+</head>
+<body>
+    <div th:replace="~{common/fragments :: sidebar}"></div>
+
+    <div class="main-content">
+        <nav th:replace="~{common/fragments :: top-navbar}"></nav>
+
+        <div class="content-wrapper">
+            <div class="bc-card">
+                <div class="bc-card-body">
+                    <form class="row g-3 bc-toolbar align-items-center" id="searchForm">
+                        <div class="col-auto">
+                            <div class="bc-input-group">
+                                <i class="bi bi-person"></i>
+                                <input type="text" class="bc-input" id="searchStaffName" placeholder="搜索员工姓名">
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <div class="bc-input-group">
+                                <i class="bi bi-card-text"></i>
+                                <input type="text" class="bc-input" id="searchStaffNo" placeholder="搜索工号">
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <select class="bc-select" id="searchStatus">
+                                <option value="">全部状态</option>
+                                <option value="1">启用</option>
+                                <option value="0">禁用</option>
+                            </select>
+                        </div>
+                        <div class="col-auto">
+                            <button type="button" class="btn bc-btn-primary" id="searchBtn">
+                                <i class="bi bi-search"></i> 查询
+                            </button>
+                            <button type="button" class="btn bc-btn-secondary" id="resetBtn">
+                                <i class="bi bi-arrow-counterclockwise"></i> 重置
+                            </button>
+                        </div>
+                        <div class="col-auto ms-auto">
+                            <div class="btn-group" role="group" th:if="${#lists.contains(permissions, '*') or #lists.contains(permissions, 'ihr:exclusion:edit')}">
+                                <button type="button" class="btn bc-btn-success btn-sm" id="batchEnableBtn" title="批量启用" disabled>
+                                    <i class="bi bi-check-circle"></i> 批量启用
+                                </button>
+                                <button type="button" class="btn btn-warning btn-sm" id="batchDisableBtn" title="批量禁用" disabled>
+                                    <i class="bi bi-x-circle"></i> 批量禁用
+                                </button>
+                            </div>
+                            <button type="button" class="btn bc-btn-danger btn-sm ms-1" id="batchDeleteBtn" title="批量删除" disabled
+                                    th:if="${#lists.contains(permissions, '*') or #lists.contains(permissions, 'ihr:exclusion:delete')}">
+                                <i class="bi bi-trash"></i> 批量删除
+                            </button>
+                            <button type="button" class="btn bc-btn-success ms-1" id="addBtn"
+                                    th:if="${#lists.contains(permissions, '*') or #lists.contains(permissions, 'ihr:exclusion:add')}">
+                                <i class="bi bi-plus-lg"></i> 新增
+                            </button>
+                        </div>
+                    </form>
+
+                    <div class="bc-table-container">
+                        <table class="bc-table bc-table-hover" id="exclusionTable">
+                            <thead>
+                                <tr>
+                                    <th style="width: 40px;"><input type="checkbox" id="checkAll"></th>
+                                    <th style="width: 80px;">序号</th>
+                                    <th>员工姓名</th>
+                                    <th>工号</th>
+                                    <th>排除原因</th>
+                                    <th style="width: 100px;">状态</th>
+                                    <th style="width: 160px;">创建时间</th>
+                                    <th style="width: 160px;" class="text-end">管理操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dataTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div th:replace="~{common/fragments :: pagination}"></div>
+        </div>
+
+        <div th:replace="~{common/fragments :: footer}"></div>
+    </div>
+
+    <div class="modal fade" id="dataModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content bc-modal-content">
+                <div class="modal-header bc-modal-header">
+                    <h5 class="modal-title bc-modal-title">
+                        <i class="bi bi-person-slash"></i> <span id="modalTitle">新增排除记录</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body bc-modal-body">
+                    <form id="dataForm">
+                        <input type="hidden" id="dataId">
+                        <div class="bc-form-grid">
+                            <div class="bc-form-group">
+                                <label class="bc-form-label">员工姓名 <span class="text-danger">*</span></label>
+                                <input type="text" class="bc-input" id="staffName" placeholder="请输入员工姓名" required>
+                            </div>
+                            <div class="bc-form-group">
+                                <label class="bc-form-label">工号 <span class="text-danger">*</span></label>
+                                <input type="text" class="bc-input" id="staffNo" placeholder="请输入工号" required>
+                            </div>
+                            <div class="bc-form-group">
+                                <label class="bc-form-label">状态</label>
+                                <select class="bc-select" id="status">
+                                    <option value="1">启用</option>
+                                    <option value="0">禁用</option>
+                                </select>
+                            </div>
+                            <div class="bc-form-group bc-form-group-full">
+                                <label class="bc-form-label">排除原因</label>
+                                <textarea class="bc-textarea" id="reason" rows="3" placeholder="请输入排除原因"></textarea>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer bc-modal-footer">
+                    <button type="button" class="btn bc-btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn bc-btn-primary" id="saveBtn">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div th:replace="~{common/fragments :: confirm-modal}"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script th:inline="javascript">
+        window.userPermissions = /*[[${permissions}]]*/ [];
+        const EXCLUSION_TYPE = /*[[${exclusionType}]]*/ 1;
+        const PAGE_TITLE = /*[[${pageTitle}]]*/ '排除';
+
+        function hasPermission(p) {
+            if (!window.userPermissions) return false;
+            return window.userPermissions.includes('*') || window.userPermissions.includes(p);
+        }
+    </script>
+    <script src="/js/common.js"></script>
+
+    <script>
+        let currentPage = 1;
+        let pageSize = 10;
+        let selectedIds = new Set();
+
+        $(document).ready(function() {
+            loadDataList();
+
+            $('#searchBtn').click(function() {
+                currentPage = 1;
+                loadDataList();
+            });
+
+            $('#resetBtn').click(function() {
+                $('#searchStaffName').val('');
+                $('#searchStaffNo').val('');
+                $('#searchStatus').val('');
+                currentPage = 1;
+                loadDataList();
+            });
+
+            $('#addBtn').click(function() {
+                openModal('add');
+            });
+
+            $('#saveBtn').click(function() {
+                saveData();
+            });
+
+            $('#checkAll').change(function() {
+                const checked = $(this).prop('checked');
+                $('.row-check').prop('checked', checked);
+                updateSelectedIds();
+            });
+
+            $('#batchDeleteBtn').click(function() {
+                batchDelete();
+            });
+
+            $('#batchEnableBtn').click(function() {
+                batchUpdateStatus(1);
+            });
+
+            $('#batchDisableBtn').click(function() {
+                batchUpdateStatus(0);
+            });
+        });
+
+        function updateSelectedIds() {
+            selectedIds.clear();
+            $('.row-check:checked').each(function() {
+                selectedIds.add($(this).val());
+            });
+            const hasSelected = selectedIds.size > 0;
+            $('#batchDeleteBtn').prop('disabled', !hasSelected);
+            $('#batchEnableBtn').prop('disabled', !hasSelected);
+            $('#batchDisableBtn').prop('disabled', !hasSelected);
+        }
+
+        function loadDataList() {
+            $.ajax({
+                url: '/api/ihr-exclusion/page',
+                type: 'GET',
+                data: {
+                    pageNum: currentPage,
+                    pageSize: pageSize,
+                    staffName: $('#searchStaffName').val(),
+                    staffNo: $('#searchStaffNo').val(),
+                    exclusionType: EXCLUSION_TYPE,
+                    status: $('#searchStatus').val()
+                },
+                success: function(res) {
+                    if (res.code === 200) {
+                        renderTable(res.data.records);
+                        renderPagination(res.data);
+                    } else {
+                        BC.toast(res.message, 'error');
+                    }
+                },
+                error: function(xhr) {
+                    BC.toast('请求失败，请检查网络连接', 'error');
+                }
+            });
+        }
+
+        function renderTable(data) {
+            const tbody = $('#dataTableBody');
+            tbody.empty();
+            selectedIds.clear();
+            $('#checkAll').prop('checked', false);
+            updateBatchButtons();
+
+            if (!data || data.length === 0) {
+                tbody.append('<tr><td colspan="8" class="text-center py-5 text-muted">暂无数据</td></tr>');
+                return;
+            }
+            data.forEach(function(item, i) {
+                const seq = (currentPage - 1) * pageSize + i + 1;
+                const statusTag = BC.getTag(item.status === 1 ? 'success' : 'danger', item.status === 1 ? '启用' : '禁用');
+
+                const btnGroup = [];
+                if (hasPermission('ihr:exclusion:edit')) {
+                    btnGroup.push({ icon: 'bi-pencil', title: '修改', onclick: 'editData(\'' + item.id + '\')' });
+                }
+                if (hasPermission('ihr:exclusion:delete')) {
+                    btnGroup.push({ icon: 'bi-trash', title: '删除', onclick: 'deleteData(\'' + item.id + '\')' });
+                }
+                const actions = BC.getTableActions(btnGroup);
+
+                tbody.append('<tr>' +
+                    '<td><input type="checkbox" class="row-check" value="' + item.id + '" onchange="updateSelectedIds()"></td>' +
+                    '<td><span class="text-muted small">' + seq + '</span></td>' +
+                    '<td><span class="fw-bold text-main">' + escapeHtml(item.staffName || '') + '</span></td>' +
+                    '<td>' + escapeHtml(item.staffNo || '') + '</td>' +
+                    '<td><span class="small text-secondary">' + escapeHtml(item.reason || '-') + '</span></td>' +
+                    '<td>' + statusTag + '</td>' +
+                    '<td><span class="small text-secondary">' + (item.createTime || '') + '</span></td>' +
+                    '<td class="text-end">' + actions + '</td>' +
+                    '</tr>');
+            });
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function renderPagination(pageData) {
+            BC.renderPagination({
+                total: pageData.total,
+                pages: pageData.pages,
+                current: pageData.pageNum,
+                limit: pageData.pageSize,
+                callback: function(page) {
+                    currentPage = page;
+                    loadDataList();
+                }
+            });
+        }
+
+        function openModal(mode, id) {
+            const modal = $('#dataModal');
+            $('#dataForm')[0].reset();
+            $('#dataId').val('');
+
+            if (mode === 'add') {
+                $('#modalTitle').text('新增' + PAGE_TITLE);
+                $('#status').val('1');
+                modal.modal('show');
+            } else {
+                $('#modalTitle').text('编辑' + PAGE_TITLE);
+                $.get('/api/ihr-exclusion/' + id, function(res) {
+                    if (res.code === 200) {
+                        const d = res.data;
+                        $('#dataId').val(d.id);
+                        $('#staffName').val(d.staffName);
+                        $('#staffNo').val(d.staffNo);
+                        $('#status').val(d.status);
+                        $('#reason').val(d.reason);
+                        modal.modal('show');
+                    }
+                }).fail(function() {
+                    BC.toast('获取记录信息失败', 'error');
+                });
+            }
+        }
+
+        function editData(id) {
+            openModal('edit', id);
+        }
+
+        function saveData() {
+            const staffName = $('#staffName').val().trim();
+            const staffNo = $('#staffNo').val().trim();
+            if (!staffName || !staffNo) {
+                BC.toast('员工姓名和工号不能为空', 'warning');
+                return;
+            }
+
+            const id = $('#dataId').val();
+            const data = {
+                staffName: staffName,
+                staffNo: staffNo,
+                exclusionType: EXCLUSION_TYPE,
+                status: parseInt($('#status').val()),
+                reason: $('#reason').val().trim()
+            };
+
+            $.ajax({
+                url: id ? '/api/ihr-exclusion/' + id : '/api/ihr-exclusion',
+                type: id ? 'PUT' : 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                success: function(res) {
+                    if (res.code === 200) {
+                        $('#dataModal').modal('hide');
+                        BC.toast(id ? '修改成功' : '新增成功', 'success');
+                        loadDataList();
+                    } else {
+                        BC.toast(res.message, 'error');
+                    }
+                },
+                error: function(xhr) {
+                    if (xhr.status === 400 && xhr.responseJSON && xhr.responseJSON.message) {
+                        BC.toast(xhr.responseJSON.message, 'error');
+                    } else {
+                        BC.toast('操作失败，请稍后重试', 'error');
+                    }
+                }
+            });
+        }
+
+        function deleteData(id) {
+            BC.confirm({
+                title: '确认删除',
+                message: '确定要删除该记录吗？此操作不可撤销。',
+                type: 'danger'
+            }, function(ok) {
+                if (ok) {
+                    $.ajax({
+                        url: '/api/ihr-exclusion/' + id,
+                        type: 'DELETE',
+                        success: function(res) {
+                            if (res.code === 200) {
+                                BC.toast('删除成功', 'success');
+                                loadDataList();
+                            }
+                        },
+                        error: function() {
+                            BC.toast('删除失败', 'error');
+                        }
+                    });
+                }
+            });
+        }
+
+        function batchDelete() {
+            const ids = Array.from(selectedIds);
+            if (ids.length === 0) {
+                BC.toast('请先选择要删除的记录', 'warning');
+                return;
+            }
+            BC.confirm({
+                title: '批量删除确认',
+                message: '确定要删除选中的 ' + ids.length + ' 条记录吗？此操作不可撤销。',
+                type: 'danger'
+            }, function(ok) {
+                if (ok) {
+                    $.ajax({
+                        url: '/api/ihr-exclusion/batch',
+                        type: 'DELETE',
+                        contentType: 'application/json',
+                        data: JSON.stringify({ ids: ids }),
+                        success: function(res) {
+                            if (res.code === 200) {
+                                BC.toast('批量删除成功', 'success');
+                                loadDataList();
+                            } else {
+                                BC.toast(res.message, 'error');
+                            }
+                        },
+                        error: function() {
+                            BC.toast('批量删除请求失败', 'error');
+                        }
+                    });
+                }
+            });
+        }
+
+        function batchUpdateStatus(targetStatus) {
+            if (selectedIds.size === 0) return;
+            const label = targetStatus === 1 ? '启用' : '禁用';
+            BC.confirm({
+                title: '批量' + label,
+                message: '确定要批量' + label + '选中的 ' + selectedIds.size + ' 条记录吗？',
+                type: targetStatus === 1 ? 'success' : 'warning'
+            }, function(ok) {
+                if (ok) {
+                    $.ajax({
+                        url: '/api/ihr-exclusion/batch/status',
+                        type: 'PUT',
+                        contentType: 'application/json',
+                        data: JSON.stringify({ ids: Array.from(selectedIds), targetStatus: targetStatus }),
+                        success: function(res) {
+                            if (res.code === 200) {
+                                BC.toast('批量' + label + '成功', 'success');
+                                loadDataList();
+                            } else {
+                                BC.toast(res.message, 'error');
+                            }
+                        },
+                        error: function() {
+                            BC.toast('操作失败', 'error');
+                        }
+                    });
+                }
+            });
+        }
+
+        function updateBatchButtons() {
+            const hasSelected = selectedIds.size > 0;
+            $('#batchDeleteBtn').prop('disabled', !hasSelected);
+            $('#batchEnableBtn').prop('disabled', !hasSelected);
+            $('#batchDisableBtn').prop('disabled', !hasSelected);
+        }
+    </script>
+</body>
+</html>

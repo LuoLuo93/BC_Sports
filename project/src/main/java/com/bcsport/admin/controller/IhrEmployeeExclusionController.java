@@ -6,6 +6,7 @@ import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.common.Result;
 import com.bcsport.admin.dto.IhrEmployeeExclusionDTO;
 import com.bcsport.admin.dto.IhrEmployeeExclusionQueryDTO;
+import com.bcsport.admin.dto.IhrExclusionBatchDTO;
 import com.bcsport.admin.service.IhrEmployeeExclusionService;
 import com.bcsport.admin.vo.IhrEmployeeExclusionVO;
 import io.swagger.annotations.Api;
@@ -74,5 +75,22 @@ public class IhrEmployeeExclusionController {
         boolean success = exclusionService.deleteExclusion(id);
         return success ? Result.success("删除成功") : Result.error("删除失败");
     }
-}
 
+    @DeleteMapping("/batch")
+    @ApiOperation("批量删除排除记录")
+    @RequiresPermissions("ihr:exclusion:delete")
+    public Result<?> batchDelete(@Valid @RequestBody IhrExclusionBatchDTO dto) {
+        log.info("批量删除IHR排除记录, count={}", dto.getIds().size());
+        boolean success = exclusionService.batchDelete(dto.getIds());
+        return success ? Result.success("批量删除成功") : Result.error("批量删除失败");
+    }
+
+    @PutMapping("/batch/status")
+    @ApiOperation("批量更新状态")
+    @RequiresPermissions("ihr:exclusion:edit")
+    public Result<?> batchUpdateStatus(@Valid @RequestBody IhrExclusionBatchDTO dto) {
+        log.info("批量更新IHR排除记录状态, count={}, targetStatus={}", dto.getIds().size(), dto.getTargetStatus());
+        boolean success = exclusionService.batchUpdateStatus(dto.getIds(), dto.getTargetStatus());
+        return success ? Result.success("批量更新成功") : Result.error("批量更新失败");
+    }
+}

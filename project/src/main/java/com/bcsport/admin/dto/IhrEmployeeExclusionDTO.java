@@ -5,6 +5,8 @@ import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
+import javax.validation.constraints.Max;
+import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 
@@ -24,6 +26,8 @@ public class IhrEmployeeExclusionDTO {
     private String staffNo;
 
     @NotNull(message = "排除类型不能为空")
+    @Min(value = 1, message = "排除类型：1-入职排除，2-离职排除")
+    @Max(value = 2, message = "排除类型：1-入职排除，2-离职排除")
     @ApiModelProperty("排除类型：1-入职排除，2-离职排除")
     private Integer exclusionType;
 
@@ -33,4 +37,3 @@ public class IhrEmployeeExclusionDTO {
     @ApiModelProperty("排除原因")
     private String reason;
 }
-

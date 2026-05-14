@@ -9,7 +9,7 @@
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <!-- 自定义CSS -->
-    <link rel="stylesheet" th:href="@{/css/layout.css}">
+    <link rel="stylesheet" th:href="@{/css/main.css}">
 </head>
 <body>
     <!-- 侧边栏 -->
@@ -30,26 +30,8 @@
                             <i class="bi bi-plus-lg"></i> 新增根菜单
                         </button>
                     </div>
-                    <div class="bc-table-container">
-                        <table class="bc-table bc-table-hover" id="menuTable">
-                            <thead>
-                                <tr>
-                                    <th style="width: 80px;">序号</th>
-                                    <th>菜单名称</th>
-                                    <th style="width: 150px;">级别</th>
-                                    <th style="width: 80px;">图标</th>
-                                    <th style="width: 100px;">类型</th>
-                                    <th>展示路径</th>
-                                    <th>权限标识</th>
-                                    <th style="width: 80px;">排序</th>
-                                    <th style="width: 100px;">状态</th>
-                                    <th style="width: 120px;">操作</th>
-                                </tr>
-                            </thead>
-                            <tbody id="menuTableBody">
-                                <!-- 动态加载菜单数据 -->
-                            </tbody>
-                        </table>
+                    <div class="bc-table-container" id="menuTreeContainer">
+                        <!-- 折叠式菜单树动态渲染 -->
                     </div>
                 </div>
             </div>
@@ -157,6 +139,9 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <!-- jQuery -->
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script th:inline="javascript">
+        window.userPermissions = /*[[${permissions}]]*/ [];
+    </script>
     <!-- 公共JavaScript -->
     <script src="/js/common.js"></script>
     
@@ -174,22 +159,18 @@
                 resetMenuForm();
                 $('#modalTitleText').text('新增菜单');
                 loadParentMenuOptions();
-                $('#menuModal').modal('show');
+                BC.showModal('#menuModal');
             });
             
             $('#saveMenuBtn').click(saveMenu);
         });
         
         function loadMenuData() {
-            $.ajax({
+            BC.ajax({
                 url: '/api/menu/tree',
                 type: 'GET',
                 success: function(response) {
-                    if (response.code === 200) {
-                        renderMenuTable(response.data);
-                    } else {
-                        BC.toast(response.message || '加载菜单树失败', 'error');
-                    }
+                    renderMenuTable(response);
                 }
             });
         }
@@ -197,97 +178,154 @@
         function addSubMenu(parentId, parentName) {
             resetMenuForm();
             $('#modalTitleText').text('新增子菜单 - ' + parentName);
-            loadParentMenuOptions();
-            // 延迟设置，确保选项加载完毕
-            setTimeout(() => $('#parentId').val(parentId), 200);
-            $('#menuModal').modal('show');
+            loadParentMenuOptions(function() {
+                $('#parentId').val(parentId);
+                BC.showModal('#menuModal');
+            });
         }
         
-        function renderMenuTable(menus) {
-            var tbody = $('#menuTableBody');
-            tbody.empty();
-            
-            var globalIndex = 0;
-            
-            function renderItems(list, level) {
-                $.each(list, function(i, menu) {
-                    globalIndex++;
-                    var indent = level * 28;
-                    var typePill = '';
-                    var typeIcon = '';
-                    switch(menu.menuType) {
-                        case 0: typePill = BC.getTag('info', '目录'); typeIcon = 'bi-folder'; break;
-                        case 1: typePill = BC.getTag('success', '菜单'); typeIcon = 'bi-file-earmark'; break;
-                        case 2: typePill = BC.getTag('success', '按钮'); typeIcon = 'bi-lightning'; break;
-                    }
-                    
-                    var levelTag = '';
-                    if (level === 0) {
-                        levelTag = BC.getTag('info', '顶级菜单');
-                    } else if (level === 1) {
-                        levelTag = BC.getTag('success', '子菜单');
-                    } else {
-                        levelTag = BC.getTag('success', '功能项');
-                    }
-                    
-                    var statusTag = BC.getTag(menu.status === 1 ? 'success' : 'danger', menu.status === 1 ? '启用' : '禁用');
-                    var menuIcon = menu.icon || 'bi-circle-small';
-                    
-                    var actionsConfig = [];
-                    if (menu.menuType === 0 && hasPermission('menu:add')) {
-                        actionsConfig.push({ icon: 'bi-plus-lg', title: '添加子菜单', onclick: "addSubMenu('" + menu.id + "', '" + menu.menuName + "')" });
-                    }
-                    if (hasPermission('menu:edit')) {
-                        actionsConfig.push({ icon: 'bi-pencil', title: '编辑菜单', onclick: "editMenu('" + menu.id + "')" });
-                    }
-                    if (hasPermission('menu:delete')) {
-                        actionsConfig.push({ icon: 'bi-trash', title: '注销菜单', onclick: "deleteMenu('" + menu.id + "')" });
-                    }
-                    
-                    var actions = BC.getTableActions(actionsConfig);
+        var _menuUid = 0;
 
-                    var row = '<tr>' +
-                        '<td><span class="text-muted small">' + globalIndex + '</span></td>' +
-                        '<td style="padding-left: ' + (indent + 12) + 'px">' +
-                            '<i class="bi ' + typeIcon + ' me-2 text-muted"></i>' +
-                            '<span class="fw-bold text-main">' + menu.menuName + '</span>' +
-                        '</td>' +
-                        '<td>' + levelTag + '</td>' +
-                        '<td><i class="bi ' + menuIcon + ' fs-5 text-secondary"></i></td>' +
-                        '<td>' + typePill + '</td>' +
-                        '<td><code class="small text-muted">' + (menu.path || '-') + '</code></td>' +
-                        '<td><span class="bc-tag">' + (menu.permission || '-') + '</span></td>' +
-                        '<td><span class="small">' + (menu.sort || 0) + '</span></td>' +
-                        '<td>' + statusTag + '</td>' +
-                        '<td class="text-end">' + actions + '</td>' +
-                        '</tr>';
-                    
-                    tbody.append(row);
-                    if (menu.children && menu.children.length > 0) {
-                        renderItems(menu.children, level + 1);
-                    }
-                });
+        function renderMenuTable(menus) {
+            var container = $('#menuTreeContainer');
+            container.empty();
+            _menuUid = 0;
+
+            if (!menus || menus.length === 0) {
+                container.html('<div class="text-center py-5"><i class="bi bi-list-nested" style="font-size:2rem;color:#cbd5e1;"></i><p class="text-muted mt-2 mb-0">暂无菜单数据</p></div>');
+                return;
             }
-            renderItems(menus, 0);
+
+            menus.forEach(function(menu) {
+                container.append(buildCollapseCard(menu, 0));
+            });
+
+            container.off('click', '.bc-collapse-header').on('click', '.bc-collapse-header', function(e) {
+                if ($(e.target).closest('.bc-collapse-actions').length) return;
+                var target = $(this).data('target');
+                var body = $('#' + target);
+                var arrow = $(this).find('.bc-collapse-arrow');
+                body.toggleClass('open');
+                arrow.toggleClass('open');
+                $(this).toggleClass('expanded');
+            });
+        }
+
+        function makeTypeTag(type) {
+            switch(type) {
+                case 0: return BC.getTag('info', '目录');
+                case 1: return BC.getTag('success', '菜单');
+                case 2: return BC.getTag('warning', '按钮');
+                default: return '';
+            }
+        }
+        function makeTypeIcon(type) {
+            switch(type) {
+                case 0: return 'bi-folder';
+                case 1: return 'bi-file-earmark';
+                case 2: return 'bi-lightning';
+                default: return 'bi-circle-small';
+            }
+        }
+        function makeActions(menu) {
+            var cfg = [];
+            if (menu.menuType !== 2 && BC.hasPermission('menu:add')) {
+                cfg.push({ icon: 'bi-plus-lg', title: '添加子菜单', onclick: "addSubMenu('" + menu.id + "', " + JSON.stringify(menu.menuName) + ")" });
+            }
+            if (BC.hasPermission('menu:edit')) {
+                cfg.push({ icon: 'bi-pencil', title: '编辑', onclick: "editMenu('" + menu.id + "')" });
+            }
+            if (BC.hasPermission('menu:delete')) {
+                cfg.push({ icon: 'bi-trash', title: '删除', onclick: "deleteMenu('" + menu.id + "')" });
+            }
+            return '<div class="bc-collapse-actions">' + BC.getTableActions(cfg) + '</div>';
+        }
+
+        function buildCollapseCard(menu, depth) {
+            var typeTag = makeTypeTag(menu.menuType);
+            var iconCls = menu.icon || makeTypeIcon(menu.menuType);
+            var statusTag = BC.getTag(menu.status === 1 ? 'success' : 'danger', menu.status === 1 ? '启用' : '禁用');
+            var hasChildren = menu.children && menu.children.length > 0;
+            var uid = 'menu-' + (_menuUid++);
+            var childCount = hasChildren ? menu.children.length : 0;
+
+            // 有子菜单：渲染为折叠卡片
+            if (hasChildren) {
+                var h = '<div class="bc-collapse-card" style="--tree-depth:' + depth + '">';
+                h += '<div class="bc-collapse-header" data-target="' + uid + '">';
+                h +=   '<div class="bc-collapse-title">';
+                h +=     '<i class="bi bi-chevron-right bc-collapse-arrow"></i>';
+                h +=     '<i class="bi ' + BC.escapeHtml(iconCls) + '" style="color:var(--bc-primary);font-size:var(--bc-text-lg);"></i>';
+                h +=     '<span>' + BC.escapeHtml(menu.menuName) + '</span>';
+                h +=     typeTag + statusTag;
+                h +=     '<span style="font-size:var(--bc-text-xs);color:var(--bc-text-muted);">' + childCount + '项</span>';
+                h +=   '</div>';
+                h +=   '<div class="bc-collapse-meta">';
+                if (menu.path) h += '<code>' + BC.escapeHtml(menu.path) + '</code>';
+                if (menu.sort) h += '<span>排序 ' + menu.sort + '</span>';
+                h +=   '</div>';
+                h +=   makeActions(menu);
+                h += '</div>';
+
+                h += '<div class="bc-collapse-body" id="' + uid + '">';
+                if (childCount === 0) {
+                    h += '<div class="bc-collapse-empty"><i class="bi bi-inbox me-1"></i>暂无子菜单</div>';
+                } else {
+                    menu.children.forEach(function(child) {
+                        if (child.children && child.children.length > 0) {
+                            h += buildCollapseCard(child, depth + 1);
+                        } else {
+                            h += buildLeafItem(child, depth + 1);
+                        }
+                    });
+                }
+                h += '</div></div>';
+                return h;
+            }
+
+            // 无子菜单：单行展示
+            return buildLeafItem(menu, depth, iconCls, typeTag);
+        }
+
+        function buildLeafItem(menu, depth, iconCls, typeTag) {
+            depth = depth || 0;
+            typeTag = typeTag || makeTypeTag(menu.menuType);
+            iconCls = iconCls || menu.icon || makeTypeIcon(menu.menuType);
+            var statusTag = BC.getTag(menu.status === 1 ? 'success' : 'danger', menu.status === 1 ? '启用' : '禁用');
+
+            var h = '<div class="bc-collapse-item" style="--tree-depth:' + depth + '">';
+            h +=   '<div class="bc-collapse-item-info">';
+            h +=     '<span class="bc-collapse-item-dot"></span>';
+            h +=     '<i class="bi ' + BC.escapeHtml(iconCls) + '" style="color:var(--bc-text-muted);"></i>';
+            h +=     '<span>' + BC.escapeHtml(menu.menuName) + '</span>';
+            h +=     typeTag + statusTag;
+            h +=   '</div>';
+            h +=   '<div class="bc-collapse-item-detail">';
+            if (menu.path) h += '<code>' + BC.escapeHtml(menu.path) + '</code>';
+            if (menu.permission) h += '<span>' + BC.escapeHtml(menu.permission) + '</span>';
+            if (menu.sort) h += '<span>排序 ' + menu.sort + '</span>';
+            h +=   '</div>';
+            h +=   makeActions(menu);
+            h += '</div>';
+            return h;
         }
         
-        function loadParentMenuOptions() {
-            $.ajax({
+        function loadParentMenuOptions(callback) {
+            BC.ajax({
                 url: '/api/menu/tree',
                 type: 'GET',
                 success: function(response) {
-                    if (response.code === 200) {
-                        var select = $('#parentId');
-                        select.empty().append('<option value="0">顶级菜单</option>');
-                        function addOptions(list, level) {
-                            $.each(list, function(i, menu) {
-                                var prefix = '　'.repeat(level);
-                                select.append('<option value="' + menu.id + '">' + prefix + menu.menuName + '</option>');
-                                if (menu.children && menu.children.length > 0) addOptions(menu.children, level + 1);
-                            });
-                        }
-                        addOptions(response.data, 0);
+                    var select = $('#parentId');
+                    select.empty().append('<option value="0">顶级菜单</option>');
+                    function addOptions(list, level) {
+                        $.each(list, function(i, menu) {
+                            var prefix = '　'.repeat(level);
+                            select.append('<option value="' + BC.escapeHtml(menu.id) + '">' + prefix + BC.escapeHtml(menu.menuName) + '</option>');
+                            if (menu.children && menu.children.length > 0) addOptions(menu.children, level + 1);
+                        });
                     }
+                    addOptions(response, 0);
+                    if (callback) callback();
                 }
             });
         }
@@ -299,28 +337,26 @@
         }
         
         function editMenu(id) {
-            $.ajax({
+            BC.ajax({
                 url: '/api/menu/' + id,
                 type: 'GET',
                 success: function(res) {
-                    if (res.code === 200) {
-                        var m = res.data;
-                        $('#menuId').val(m.id);
-                        $('#menuName').val(m.menuName);
-                        $('#icon').val(m.icon).trigger('input');
-                        $('#menuType').val(m.menuType);
-                        $('#path').val(m.path);
-                        $('#permission').val(m.permission);
-                        $('#sort').val(m.sort);
-                        $('#status').val(m.status);
-                        $('#visible').val(m.visible);
-                        
-                        loadParentMenuOptions();
-                        setTimeout(() => $('#parentId').val(m.parentId), 300);
-                        
-                        $('#modalTitleText').text('编辑菜单配置');
-                        $('#menuModal').modal('show');
-                    }
+                    var m = res;
+                    $('#menuId').val(m.id);
+                    $('#menuName').val(m.menuName);
+                    $('#icon').val(m.icon).trigger('input');
+                    $('#menuType').val(m.menuType);
+                    $('#path').val(m.path);
+                    $('#permission').val(m.permission);
+                    $('#sort').val(m.sort);
+                    $('#status').val(m.status);
+                    $('#visible').val(m.visible);
+
+                    loadParentMenuOptions();
+                    setTimeout(() => $('#parentId').val(m.parentId), 300);
+
+                    $('#modalTitleText').text('编辑菜单配置');
+                    BC.showModal('#menuModal');
                 }
             });
         }
@@ -342,28 +378,22 @@
             var url = id ? '/api/menu/' + id : '/api/menu';
             var type = id ? 'PUT' : 'POST';
             
-            $.ajax({
+            BC.ajax({
                 url: url,
                 type: type,
-                contentType: 'application/json',
-                data: JSON.stringify(data),
+                data: data,
                 success: function(res) {
-                    if (res.code === 200) {
-                        $('#menuModal').modal('hide');
-                        // 延迟弹出成功提示，确保背景遮罩已完全销毁
-                        setTimeout(function() {
-                            BC.alert({
-                                title: '配置已同步',
-                                message: '此菜单架构配置已更新并实时生效',
-                                type: 'success'
-                            }, function() {
-                                loadMenuData();
-                                sessionStorage.removeItem('cachedMenus');
-                            });
-                        }, 300);
-                    } else {
-                        BC.toast(res.message || '操作失败', 'error');
-                    }
+                    BC.hideModal('#menuModal');
+                    setTimeout(function() {
+                        BC.alert({
+                            title: '配置已同步',
+                            message: '此菜单架构配置已更新并实时生效',
+                            type: 'success'
+                        }, function() {
+                            loadMenuData();
+                            sessionStorage.removeItem('cachedMenus');
+                        });
+                    }, 300);
                 }
             });
         }
@@ -377,17 +407,13 @@
                 cancelText: '取消'
             }, function(confirmed) {
                 if (confirmed) {
-                    $.ajax({
+                    BC.ajax({
                         url: '/api/menu/' + id,
                         type: 'DELETE',
                         success: function(res) {
-                            if (res.code === 200) {
-                                BC.toast('菜单架构项已成功移除', 'success');
-                                loadMenuData();
-                                sessionStorage.removeItem('cachedMenus');
-                            } else {
-                                BC.toast(res.message || '移除失败', 'error');
-                            }
+                            BC.toast('菜单架构项已成功移除', 'success');
+                            loadMenuData();
+                            sessionStorage.removeItem('cachedMenus');
                         }
                     });
                 }

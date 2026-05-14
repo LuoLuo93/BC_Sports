@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bcsport.admin.ihrmapper.IhrEmployeeLeavingStatusMapper">
+
+    <sql id="leavingJoin">
+        FROM employee_information ei
+        LEFT JOIN ihr_employee_leaving_status ls ON ei.id = ls.employee_id
+        <where>
+            ei.leave_date IS NOT NULL
+            <if test="startDate != null and startDate != '' and endDate != null and endDate != ''">
+                AND CONVERT(DATE, ei.leave_date) BETWEEN CONVERT(DATE, #{startDate}) AND CONVERT(DATE, #{endDate})
+            </if>
+            <if test="staffName != null and staffName != ''">
+                AND ei.staff_name LIKE '%' + #{staffName} + '%'
+            </if>
+            <if test="staffNo != null and staffNo != ''">
+                AND ei.staff_no LIKE '%' + #{staffNo} + '%'
+            </if>
+            <if test="syncStatus != null">
+                AND ISNULL(ls.sync_status, 0) = #{syncStatus}
+            </if>
+            <if test="excludedStaffNos != null and excludedStaffNos.size() > 0">
+                AND ei.staff_no NOT IN
+                <foreach collection="excludedStaffNos" item="sno" open="(" separator="," close=")">
+                    #{sno}
+                </foreach>
+            </if>
+        </where>
+    </sql>
+
+    <select id="selectLeavingPage" resultType="com.bcsport.admin.vo.IhrEmployeeLeavingVO">
+        SELECT
+            ei.id AS employeeId,
+            ei.staff_name AS staffName,
+            ei.staff_no AS staffNo,
+            ei.mobile_no AS mobileNo,
+            ei.department_name AS departmentName,
+            ei.leave_date AS leaveDate,
+            ei.staff_status AS staffStatus,
+            ISNULL(ls.sync_status, 0) AS syncStatus,
+            ls.sync_time AS syncTime,
+            ls.error_message AS errorMessage
+        <include refid="leavingJoin" />
+        ORDER BY ei.leave_date DESC, ei.staff_name
+        OFFSET #{offset} ROWS FETCH NEXT #{limit} ROWS ONLY
+    </select>
+
+    <select id="countLeaving" resultType="long">
+        SELECT COUNT(1)
+        <include refid="leavingJoin" />
+    </select>
+
+    <insert id="upsertByEmployeeId">
+        MERGE ihr_employee_leaving_status AS target
+        USING (SELECT #{entity.employeeId} AS employee_id) AS source
+        ON target.employee_id = source.employee_id
+        WHEN MATCHED THEN
+            UPDATE SET
+                staff_name = #{entity.staffName},
+                staff_no = #{entity.staffNo},
+                sync_status = #{entity.syncStatus},
+                sync_time = #{entity.syncTime},
+                error_message = #{entity.errorMessage},
+                update_time = GETDATE()
+        WHEN NOT MATCHED THEN
+            INSERT (employee_id, staff_name, staff_no, sync_status, sync_time, error_message, create_time, update_time)
+            VALUES (#{entity.employeeId}, #{entity.staffName}, #{entity.staffNo}, #{entity.syncStatus}, #{entity.syncTime}, #{entity.errorMessage}, GETDATE(), GETDATE());
+    </insert>
+
+</mapper>

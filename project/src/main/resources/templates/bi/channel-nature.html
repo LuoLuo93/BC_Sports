@@ -10,7 +10,7 @@
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <!-- 自定义CSS -->
-    <link rel="stylesheet" th:href="@{/css/layout.css}">
+    <link rel="stylesheet" th:href="@{/css/main.css}">
 </head>
 
 <body>
@@ -67,31 +67,19 @@
                         </div>
                     </form>
 
-                    <div class="bc-table-container">
-                        <table class="bc-table bc-table-hover">
-                            <thead>
-                                <tr>
-                                    <th style="width: 80px;">序号</th>
-                                    <th>性质名称</th>
-                                    <th style="width: 150px;">性质编码</th>
-                                    <th style="width: 150px;">级别</th>
-                                    <th style="width: 100px;">排序</th>
-                                    <th style="width: 100px;">状态</th>
-                                    <th style="width: 120px;" class="text-end">管理操作</th>
-                                </tr>
-                            </thead>
-                            <tbody id="channelNatureTableBody">
-                                <!-- 动态加载数据 -->
-                            </tbody>
-                        </table>
+                    <div class="bc-table-container" id="channelNatureTreeContainer">
+                        <!-- 折叠面板动态加载 -->
                     </div>
 
-                    <!-- 分页组件 -->
-                    <div th:replace="~{common/fragments :: pagination}"></div>
                 </div>
             </div>
 
+            <!-- 分页组件 -->
+            <div th:replace="~{common/fragments :: pagination}"></div>
+
         </div>
+
+        <div th:replace="~{common/fragments :: footer}"></div>
     </div>
 
     <!-- 添加/编辑模态框 -->
@@ -165,10 +153,6 @@
         // 将后端注入的权限列表同步到前端 JS 作用域
         window.userPermissions = /*[[${permissions}]]*/[];
 
-        function hasPermission(p) {
-            if (!window.userPermissions) return false;
-            return window.userPermissions.includes('*') || window.userPermissions.includes(p);
-        }
     </script>
     <script src="/js/common.js"></script>
 
@@ -201,11 +185,13 @@
         });
 
         function loadSearchDropdowns() {
-            $.get('/api/channel-nature/tree?parentId=0', function (res) {
-                if (res.code === 200) {
+            BC.ajax({
+                url: '/api/channel-nature/tree?parentId=0',
+                type: 'GET',
+                success: function (res) {
                     var html = '<option value="">所有渠道性质</option>';
-                    res.data.forEach(item => {
-                        html += `<option value="${item.id}">${item.natureName}</option>`;
+                    res.forEach(item => {
+                        html += `<option value="${BC.escapeHtml(item.id)}">${BC.escapeHtml(item.natureName)}</option>`;
                     });
                     $('#searchLevel1').html(html);
                 }
@@ -218,11 +204,13 @@
                 select2.html('<option value="">所有经营类型</option>');
                 return;
             }
-            $.get('/api/channel-nature/tree?parentId=' + parentId, function (res) {
-                if (res.code === 200) {
+            BC.ajax({
+                url: '/api/channel-nature/tree?parentId=' + parentId,
+                type: 'GET',
+                success: function (res) {
                     var html = '<option value="">所有经营类型</option>';
-                    res.data.forEach(item => {
-                        html += `<option value="${item.id}">${item.natureName}</option>`;
+                    res.forEach(item => {
+                        html += `<option value="${BC.escapeHtml(item.id)}">${BC.escapeHtml(item.natureName)}</option>`;
                     });
                     select2.html(html);
                 }
@@ -240,12 +228,13 @@
                 pageSize: pageSize
             };
 
-            $.get('/api/channel-nature/page', params, function (res) {
-                if (res.code === 200) {
-                    renderTable(res.data.records);
-                    renderPagination(res.data);
-                } else {
-                    BC.toast(res.message, 'error');
+            BC.ajax({
+                url: '/api/channel-nature/page',
+                type: 'GET',
+                data: params,
+                success: function (res) {
+                    renderTable(res.records);
+                    renderPagination(res);
                 }
             });
         }
@@ -254,162 +243,185 @@
             BC.renderPagination({
                 total: data.total,
                 pages: data.pages,
-                current: data.current,
+                current: data.pageNum,
                 callback: function (p) {
                     loadChannelNatureData(p);
                 }
             });
         }
 
+        function makeNatureTag(item) {
+            return item.parentId === '0' ? BC.getTag('info', '渠道性质') : BC.getTag('success', '经营类型');
+        }
+        function makeNatureActions(item) {
+            var btn = [];
+            if (BC.hasPermission('bi:channelNature:add') && item.parentId === '0') {
+                btn.push({ icon: 'bi-plus-lg', title: '添加下级', onclick: 'addChannelNatureSub(\'' + item.id + '\', ' + JSON.stringify(item.natureName || '') + ')' });
+            }
+            if (BC.hasPermission('bi:channelNature:edit')) {
+                btn.push({ icon: 'bi-pencil', title: '编辑', onclick: 'openModal(\'' + item.id + '\')' });
+            }
+            if (BC.hasPermission('bi:channelNature:delete')) {
+                btn.push({ icon: 'bi-trash', title: '删除', onclick: 'deleteChannelNature(\'' + item.id + '\')' });
+            }
+            return '<div class="bc-collapse-actions">' + BC.getTableActions(btn) + '</div>';
+        }
+        var _cnatureUid = 0;
+
         function renderTable(data) {
-            var tbody = $('#channelNatureTableBody');
-            tbody.empty();
+            var container = $('#channelNatureTreeContainer');
+            container.empty();
+            _cnatureUid = 0;
 
             if (!data || data.length === 0) {
-                tbody.append('<tr><td colspan="7" class="text-center py-4">暂无渠道性质数据</td></tr>');
+                container.html('<div class="text-center py-5"><i class="bi bi-layers" style="font-size:2rem;color:#cbd5e1;"></i><p class="text-muted mt-2 mb-0">暂无渠道性质数据</p></div>');
                 return;
             }
 
-            // 判断是否处于搜索模式
-            var isSearchMode = $('#searchName').val() || $('#searchLevel1').val() || $('#searchLevel2').val();
+            data.forEach(function(item) {
+                container.append(buildNatureCard(item));
+            });
 
-            var globalIndex = (currentPage - 1) * pageSize;
-            data.forEach(function (item) {
-                globalIndex++;
-                tbody.append(renderRow(item, 0, globalIndex, isSearchMode));
+            container.off('click', '.bc-collapse-header').on('click', '.bc-collapse-header', function(e) {
+                if ($(e.target).closest('.bc-collapse-actions').length) return;
+                var $hdr = $(this);
+                var target = $hdr.data('target');
+                var $body = $('#' + target);
+                if (!$body.data('loaded')) {
+                    var parentId = $hdr.data('parent-id');
+                    loadSubNatures(parentId, target);
+                }
+                $body.toggleClass('open');
+                $hdr.find('.bc-collapse-arrow').toggleClass('open');
+                $hdr.toggleClass('expanded');
             });
         }
 
-        function renderRow(item, level, index, isSearchMode) {
-            var indent = level * 24;
+        function buildNatureCard(item) {
+            var typeTag = makeNatureTag(item);
             var statusTag = BC.getTag(item.status === 1 ? 'success' : 'danger', item.status === 1 ? '启用' : '禁用');
+            var hasChildren = item.hasChildren;
+            var uid = 'cnature-' + (_cnatureUid++);
 
-            var btnGroup = [];
-            // 仅对第一级显示添加子项按钮
-            if (hasPermission('bi:channelNature:add') && level === 0 && !isSearchMode) {
-                btnGroup.push({ icon: 'bi-plus-lg', title: '添加下级性质', onclick: `addChannelNatureSub('${item.id}', '${item.natureName}')` });
-            }
-            if (hasPermission('bi:channelNature:edit')) {
-                btnGroup.push({ icon: 'bi-pencil', title: '编辑性质', onclick: `openModal('${item.id}')` });
-            }
-            if (hasPermission('bi:channelNature:delete')) {
-                btnGroup.push({ icon: 'bi-trash', title: '注销性质', onclick: `deleteChannelNature('${item.id}')` });
-            }
-
-            var actions = BC.getTableActions(btnGroup);
-
-            var displayName = isSearchMode ? (item.fullPath || item.natureName) : item.natureName;
-            var displayIndent = isSearchMode ? 0 : indent;
-
-            // 懒加载图标
-            var expandIcon = '';
-            if (!isSearchMode && item.hasChildren) {
-                expandIcon = `<i class="bi bi-chevron-right expand-icon me-2" style="cursor:pointer;" onclick="toggleNature(this, '${item.id}', ${level + 1})"></i>`;
-            } else {
-                expandIcon = `<i class="bi bi-layers text-muted me-2"></i>`;
+            if (hasChildren) {
+                var h = '<div class="bc-collapse-card">';
+                h += '<div class="bc-collapse-header" data-target="' + uid + '" data-parent-id="' + item.id + '">';
+                h +=   '<div class="bc-collapse-title">';
+                h +=     '<i class="bi bi-chevron-right bc-collapse-arrow"></i>';
+                h +=     '<i class="bi bi-layers"></i>';
+                h +=     '<span>' + BC.escapeHtml(item.natureName || '') + '</span>';
+                h +=     typeTag + statusTag;
+                h +=   '</div>';
+                h +=   '<div class="bc-collapse-meta">';
+                if (item.natureCode) h += '<code>' + BC.escapeHtml(item.natureCode) + '</code>';
+                if (item.sort) h += '<span>排序 ' + item.sort + '</span>';
+                h +=   '</div>';
+                h +=   makeNatureActions(item);
+                h += '</div>';
+                h += '<div class="bc-collapse-body" id="' + uid + '"></div>';
+                h += '</div>';
+                return h;
             }
 
-            var typeTag = '';
-            if (item.parentId === '0') {
-                typeTag = BC.getTag('info', '渠道性质');
-            } else {
-                typeTag = BC.getTag('success', '经营类型');
-            }
-
-            return `
-                <tr id="row-${item.id}" data-id="${item.id}" data-level="${level}">
-                    <td><span class="text-muted small">${index || '-'}</span></td>
-                    <td style="padding-left: ${displayIndent + 20}px">
-                        ${expandIcon}
-                        <span class="fw-bold text-main">${displayName}</span>
-                    </td>
-                    <td><code class="small text-muted">${item.natureCode || '-'}</code></td>
-                    <td>${typeTag}</td>
-                    <td><span class="small">${item.sort}</span></td>
-                    <td>${statusTag}</td>
-                    <td class="text-end">${actions}</td>
-                </tr>
-            `;
+            var h = '<div class="bc-collapse-item">';
+            h +=   '<div class="bc-collapse-item-info">';
+            h +=     '<span class="bc-collapse-item-dot"></span>';
+            h +=     '<i class="bi bi-layers" style="color:var(--text-muted);"></i>';
+            h +=     '<span>' + BC.escapeHtml(item.natureName || '') + '</span>';
+            h +=     typeTag + statusTag;
+            h +=   '</div>';
+            h +=   '<div class="bc-collapse-item-detail">';
+            if (item.natureCode) h += '<code>' + BC.escapeHtml(item.natureCode) + '</code>';
+            if (item.sort) h += '<span>排序 ' + item.sort + '</span>';
+            h +=   '</div>';
+            h +=   makeNatureActions(item);
+            h += '</div>';
+            return h;
         }
 
-        function toggleNature(icon, parentId, nextLevel) {
-            var $icon = $(icon);
-            var $row = $(`#row-${parentId}`);
-            var isExpanded = $icon.hasClass('bi-chevron-down');
-
-            if (isExpanded) {
-                $icon.removeClass('bi-chevron-down').addClass('bi-chevron-right');
-                loadChannelNatureData(); // 重载当前页以折叠
-            } else {
-                $icon.removeClass('bi-chevron-right').addClass('bi-chevron-down');
-                $.get('/api/channel-nature/tree', { parentId: parentId }, function (res) {
-                    if (res.code === 200 && res.data.length > 0) {
-                        var html = '';
-                        res.data.forEach(item => {
-                            html += renderRow(item, nextLevel, null, false);
+        function loadSubNatures(parentId, bodyId) {
+            var $body = $('#' + bodyId);
+            BC.ajax({
+                url: '/api/channel-nature/tree',
+                type: 'GET',
+                data: { parentId: parentId },
+                success: function(res) {
+                    $body.data('loaded', true);
+                    if (res.length > 0) {
+                        res.forEach(function(child) {
+                            $body.append(buildNatureCard(child));
                         });
-                        $row.after(html);
+                    } else {
+                        $body.append('<div class="bc-collapse-empty"><i class="bi bi-inbox me-1"></i>暂无下级性质</div>');
                     }
-                });
-            }
+                }
+            });
         }
 
         function addChannelNatureSub(parentId, parentName) {
-            openModal(); // 先置空并打开
-            $('#modalTitle').text('新增下级性质 - ' + parentName);
-
-            // 延迟设置，确保 openModal 中的 select 加载完成后能选中
-            setTimeout(function () {
+            openModal(null, function() {
+                $('#modalTitle').text('新增下级性质 - ' + parentName);
                 $('#parentId').val(parentId);
                 $('#natureLevel').val('2');
-                // 二级默认性质名称为"经营类型"
                 $('#natureName').val('经营类型');
-            }, 300);
+            });
         }
 
-        function openModal(id) {
+        function openModal(id, onReady) {
             $('#channelNatureForm')[0].reset();
             $('#channelNatureId').val('');
-            $('#modalTitle').text(id ? '编辑渠道性质' : '新增渠道性质');
+            if (!onReady) $('#modalTitle').text(id ? '编辑渠道性质' : '新增渠道性质');
 
-            // 一级（顶级）新增时，默认性质名称为"渠道性质"
             if (!id) {
                 $('#natureName').val('渠道性质');
-                $('#natureLevel').val('1'); // 默认一级
+                $('#natureLevel').val('1');
             }
 
-            // 加载上级选项
-            $.get('/api/channel-nature/tree', function (res) {
-                var select = $('#parentId');
-                select.empty().append('<option value="0">无（顶级性质）</option>');
+            BC.ajax({
+                url: '/api/channel-nature/tree',
+                type: 'GET',
+                success: function (res) {
+                    var select = $('#parentId');
+                    select.empty().append('<option value="0">无（顶级性质）</option>');
 
-                function addOptions(nodes, level) {
-                    nodes.forEach(function (node) {
-                        if (node.id !== id) { // 不能选自己作为上级
-                            var prefix = '　'.repeat(level);
-                            select.append(`<option value="${node.id}">${prefix}${node.natureName}</option>`);
-                            if (node.children) addOptions(node.children, level + 1);
-                        }
-                    });
-                }
-                addOptions(res.data, 0);
+                    function addOptions(nodes, level) {
+                        nodes.forEach(function (node) {
+                            if (node.id !== id) {
+                                var prefix = '　'.repeat(level);
+                                select.append('<option value="' + node.id + '">' + prefix + node.natureName + '</option>');
+                                if (node.children) addOptions(node.children, level + 1);
+                            }
+                        });
+                    }
+                    addOptions(res, 0);
 
-                if (id) {
-                    $.get('/api/channel-nature/' + id, function (res) {
-                        var d = res.data;
-                        $('#channelNatureId').val(d.id);
-                        $('#parentId').val(d.parentId);
-                        $('#natureLevel').val(d.parentId === '0' ? '1' : '2');
-                        $('#natureName').val(d.natureName);
-                        $('#natureCode').val(d.natureCode);
-                        $('#sort').val(d.sort);
-                        $('#status').val(d.status);
-                        $('#remark').val(d.remark);
-                    });
+                    function done() {
+                        if (onReady) onReady();
+                        BC.showModal('#channelNatureModal');
+                    }
+
+                    if (id) {
+                        BC.ajax({
+                            url: '/api/channel-nature/' + id,
+                            type: 'GET',
+                            success: function (res) {
+                                var d = res;
+                                $('#channelNatureId').val(d.id);
+                                $('#parentId').val(d.parentId);
+                                $('#natureLevel').val(d.parentId === '0' ? '1' : '2');
+                                $('#natureName').val(d.natureName);
+                                $('#natureCode').val(d.natureCode);
+                                $('#sort').val(d.sort);
+                                $('#status').val(d.status);
+                                $('#remark').val(d.remark);
+                                done();
+                            }
+                        });
+                    } else {
+                        done();
+                    }
                 }
             });
-
-            $('#channelNatureModal').modal('show');
         }
 
         function saveChannelNature() {
@@ -431,19 +443,14 @@
             var type = id ? 'PUT' : 'POST';
             var url = '/api/channel-nature' + (id ? '/' + id : '');
 
-            $.ajax({
+            BC.ajax({
                 url: url,
                 type: type,
-                contentType: 'application/json',
-                data: JSON.stringify(data),
+                data: data,
                 success: function (res) {
-                    if (res.code === 200) {
-                        $('#channelNatureModal').modal('hide');
-                        BC.toast(res.message, 'success');
-                        loadChannelNatureData();
-                    } else {
-                        BC.toast(res.message, 'error');
-                    }
+                    BC.hideModal('#channelNatureModal');
+                    BC.toast(res.message, 'success');
+                    loadChannelNatureData();
                 }
             });
         }
@@ -455,14 +462,12 @@
                 type: 'danger'
             }, function (confirmed) {
                 if (confirmed) {
-                    $.ajax({
+                    BC.ajax({
                         url: '/api/channel-nature/' + id,
                         type: 'DELETE',
                         success: function (res) {
-                            if (res.code === 200) {
-                                BC.toast(res.message, 'success');
-                                loadChannelNatureData();
-                            }
+                            BC.toast(res.message, 'success');
+                            loadChannelNatureData();
                         }
                     });
                 }

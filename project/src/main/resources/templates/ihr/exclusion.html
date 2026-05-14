@@ -7,7 +7,7 @@
     <title th:text="'IHR' + ${pageTitle} + ' - BC体育后台管理系统'">IHR排除管理</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
-    <link rel="stylesheet" th:href="@{/css/layout.css}">
+    <link rel="stylesheet" th:href="@{/css/main.css}">
 </head>
 <body>
     <div th:replace="~{common/fragments :: sidebar}"></div>
@@ -51,7 +51,7 @@
                                 <button type="button" class="btn bc-btn-success btn-sm" id="batchEnableBtn" title="批量启用" disabled>
                                     <i class="bi bi-check-circle"></i> 批量启用
                                 </button>
-                                <button type="button" class="btn btn-warning btn-sm" id="batchDisableBtn" title="批量禁用" disabled>
+                                <button type="button" class="btn bc-btn-warning btn-sm" id="batchDisableBtn" title="批量禁用" disabled>
                                     <i class="bi bi-x-circle"></i> 批量禁用
                                 </button>
                             </div>
@@ -144,11 +144,6 @@
         window.userPermissions = /*[[${permissions}]]*/ [];
         const EXCLUSION_TYPE = /*[[${exclusionType}]]*/ 1;
         const PAGE_TITLE = /*[[${pageTitle}]]*/ '排除';
-
-        function hasPermission(p) {
-            if (!window.userPermissions) return false;
-            return window.userPermissions.includes('*') || window.userPermissions.includes(p);
-        }
     </script>
     <script src="/js/common.js"></script>
 
@@ -212,7 +207,7 @@
         }
 
         function loadDataList() {
-            $.ajax({
+            BC.ajax({
                 url: '/api/ihr-exclusion/page',
                 type: 'GET',
                 data: {
@@ -224,15 +219,11 @@
                     status: $('#searchStatus').val()
                 },
                 success: function(res) {
-                    if (res.code === 200) {
-                        renderTable(res.data.records);
-                        renderPagination(res.data);
-                    } else {
-                        BC.toast(res.message, 'error');
-                    }
+                    renderTable(res.records);
+                    renderPagination(res);
                 },
-                error: function(xhr) {
-                    BC.toast('请求失败，请检查网络连接', 'error');
+                error: function(msg) {
+                    BC.toast(msg || '请求失败，请检查网络连接', 'error');
                 }
             });
         }
@@ -253,10 +244,10 @@
                 const statusTag = BC.getTag(item.status === 1 ? 'success' : 'danger', item.status === 1 ? '启用' : '禁用');
 
                 const btnGroup = [];
-                if (hasPermission('ihr:exclusion:edit')) {
+                if (BC.hasPermission('ihr:exclusion:edit')) {
                     btnGroup.push({ icon: 'bi-pencil', title: '修改', onclick: 'editData(\'' + item.id + '\')' });
                 }
-                if (hasPermission('ihr:exclusion:delete')) {
+                if (BC.hasPermission('ihr:exclusion:delete')) {
                     btnGroup.push({ icon: 'bi-trash', title: '删除', onclick: 'deleteData(\'' + item.id + '\')' });
                 }
                 const actions = BC.getTableActions(btnGroup);
@@ -264,19 +255,14 @@
                 tbody.append('<tr>' +
                     '<td><input type="checkbox" class="row-check" value="' + item.id + '" onchange="updateSelectedIds()"></td>' +
                     '<td><span class="text-muted small">' + seq + '</span></td>' +
-                    '<td><span class="fw-bold text-main">' + escapeHtml(item.staffName || '') + '</span></td>' +
-                    '<td>' + escapeHtml(item.staffNo || '') + '</td>' +
-                    '<td><span class="small text-secondary">' + escapeHtml(item.reason || '-') + '</span></td>' +
+                    '<td><span class="fw-bold text-main">' + BC.escapeHtml(item.staffName || '') + '</span></td>' +
+                    '<td>' + BC.escapeHtml(item.staffNo || '') + '</td>' +
+                    '<td><span class="small text-secondary">' + BC.escapeHtml(item.reason || '-') + '</span></td>' +
                     '<td>' + statusTag + '</td>' +
                     '<td><span class="small text-secondary">' + (item.createTime || '') + '</span></td>' +
                     '<td class="text-end">' + actions + '</td>' +
                     '</tr>');
             });
-        }
-
-        function escapeHtml(str) {
-            if (!str) return '';
-            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         }
 
         function renderPagination(pageData) {
@@ -303,18 +289,21 @@
                 modal.modal('show');
             } else {
                 $('#modalTitle').text('编辑' + PAGE_TITLE);
-                $.get('/api/ihr-exclusion/' + id, function(res) {
-                    if (res.code === 200) {
-                        const d = res.data;
+                BC.ajax({
+                    url: '/api/ihr-exclusion/' + id,
+                    type: 'GET',
+                    success: function(res) {
+                        const d = res;
                         $('#dataId').val(d.id);
                         $('#staffName').val(d.staffName);
                         $('#staffNo').val(d.staffNo);
                         $('#status').val(d.status);
                         $('#reason').val(d.reason);
                         modal.modal('show');
+                    },
+                    error: function() {
+                        BC.toast('获取记录信息失败', 'error');
                     }
-                }).fail(function() {
-                    BC.toast('获取记录信息失败', 'error');
                 });
             }
         }
@@ -340,26 +329,17 @@
                 reason: $('#reason').val().trim()
             };
 
-            $.ajax({
+            BC.ajax({
                 url: id ? '/api/ihr-exclusion/' + id : '/api/ihr-exclusion',
                 type: id ? 'PUT' : 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify(data),
+                data: data,
                 success: function(res) {
-                    if (res.code === 200) {
-                        $('#dataModal').modal('hide');
-                        BC.toast(id ? '修改成功' : '新增成功', 'success');
-                        loadDataList();
-                    } else {
-                        BC.toast(res.message, 'error');
-                    }
+                    $('#dataModal').modal('hide');
+                    BC.toast(id ? '修改成功' : '新增成功', 'success');
+                    loadDataList();
                 },
-                error: function(xhr) {
-                    if (xhr.status === 400 && xhr.responseJSON && xhr.responseJSON.message) {
-                        BC.toast(xhr.responseJSON.message, 'error');
-                    } else {
-                        BC.toast('操作失败，请稍后重试', 'error');
-                    }
+                error: function(msg) {
+                    BC.toast(msg || '操作失败，请稍后重试', 'error');
                 }
             });
         }
@@ -371,17 +351,12 @@
                 type: 'danger'
             }, function(ok) {
                 if (ok) {
-                    $.ajax({
+                    BC.ajax({
                         url: '/api/ihr-exclusion/' + id,
                         type: 'DELETE',
                         success: function(res) {
-                            if (res.code === 200) {
-                                BC.toast('删除成功', 'success');
-                                loadDataList();
-                            }
-                        },
-                        error: function() {
-                            BC.toast('删除失败', 'error');
+                            BC.toast('删除成功', 'success');
+                            loadDataList();
                         }
                     });
                 }
@@ -400,21 +375,13 @@
                 type: 'danger'
             }, function(ok) {
                 if (ok) {
-                    $.ajax({
+                    BC.ajax({
                         url: '/api/ihr-exclusion/batch',
                         type: 'DELETE',
-                        contentType: 'application/json',
-                        data: JSON.stringify({ ids: ids }),
+                        data: { ids: ids },
                         success: function(res) {
-                            if (res.code === 200) {
-                                BC.toast('批量删除成功', 'success');
-                                loadDataList();
-                            } else {
-                                BC.toast(res.message, 'error');
-                            }
-                        },
-                        error: function() {
-                            BC.toast('批量删除请求失败', 'error');
+                            BC.toast('批量删除成功', 'success');
+                            loadDataList();
                         }
                     });
                 }
@@ -430,21 +397,13 @@
                 type: targetStatus === 1 ? 'success' : 'warning'
             }, function(ok) {
                 if (ok) {
-                    $.ajax({
+                    BC.ajax({
                         url: '/api/ihr-exclusion/batch/status',
                         type: 'PUT',
-                        contentType: 'application/json',
-                        data: JSON.stringify({ ids: Array.from(selectedIds), targetStatus: targetStatus }),
+                        data: { ids: Array.from(selectedIds), targetStatus: targetStatus },
                         success: function(res) {
-                            if (res.code === 200) {
-                                BC.toast('批量' + label + '成功', 'success');
-                                loadDataList();
-                            } else {
-                                BC.toast(res.message, 'error');
-                            }
-                        },
-                        error: function() {
-                            BC.toast('操作失败', 'error');
+                            BC.toast('批量' + label + '成功', 'success');
+                            loadDataList();
                         }
                     });
                 }

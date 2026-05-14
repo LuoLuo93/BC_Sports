@@ -22,4 +22,9 @@ public interface QywxAttrsBaseMapper {
      */
     void insertBatch(@Param("list") List<QywxAttrsBase> list);
 
+    /**
+     * 根据工号查找用户ID
+     */
+    String selectUseridByStaffNo(@Param("staffNo") String staffNo);
+
 }

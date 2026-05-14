@@ -70,7 +70,8 @@ public class ScheduleJobServiceImpl extends ServiceImpl<ScheduleJobMapper, Sched
                 if (Integer.valueOf(1).equals(vo.getStatus()) && StringUtils.hasText(vo.getCronExpression())) {
                     try {
                         vo.setNextExecuteTime(CronUtils.getNextExecution(vo.getCronExpression()));
-                    } catch (Exception ignored) {
+                    } catch (Exception e) {
+                        log.debug("解析Cron表达式失败: {}", vo.getCronExpression());
                     }
                 }
             }

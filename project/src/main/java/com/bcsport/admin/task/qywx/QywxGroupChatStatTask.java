@@ -41,20 +41,18 @@ public class QywxGroupChatStatTask {
     private PlatformTransactionManager transactionManager;
 
     public void sync() {
-        log.info("========================================");
-        log.info("=== Starting: QYWX sync group chat statistic ===");
-        log.info("========================================");
+        log.info("=== 开始执行: 同步企微群聊统计 ===");
         long totalStartTime = System.currentTimeMillis();
 
         try {
             // 获取所有配置了客户联系功能的成员
             List<String> userIds = followUserMapper.selectAllUserIds();
             if (userIds == null || userIds.isEmpty()) {
-                log.info("No members found, skipping group chat statistic sync");
+                log.warn("=== 完成: 无客户联系成员数据 ===");
                 return;
             }
 
-            log.info("Found {} members", userIds.size());
+            log.info("共 {} 个成员", userIds.size());
 
             // 计算昨天的时间戳（开始和结束都是昨天0点）
             Calendar calendar = Calendar.getInstance();
@@ -67,7 +65,7 @@ public class QywxGroupChatStatTask {
             long yesterdayTimestamp = yesterday.getTime() / 1000;
             String yesterdayDateStr = DateUtil.formatDate(yesterday);
 
-            log.info("Syncing data for date: {}", yesterdayDateStr);
+            log.info("同步日期: {}", yesterdayDateStr);
 
             // 增量同步：只删除昨天的数据（避免重复插入）
             TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
@@ -82,8 +80,6 @@ public class QywxGroupChatStatTask {
             for (int i = 0; i < userIds.size(); i += USER_BATCH_SIZE) {
                 int end = Math.min(i + USER_BATCH_SIZE, userIds.size());
                 List<String> batchUserIds = userIds.subList(i, end);
-
-                log.info("Processing batch {}-{} of {}", i + 1, end, userIds.size());
 
                 JSONObject result = apiClient.getGroupChatStatistic(batchUserIds, yesterdayTimestamp, yesterdayTimestamp);
 
@@ -116,18 +112,15 @@ public class QywxGroupChatStatTask {
                             return null;
                         });
                         totalInserted += batchData.size();
-                        log.info("Batch inserted {} records, total {}", batchData.size(), totalInserted);
                     }
                 }
             }
 
-            log.info("Inserted {} group chat statistic records in total", totalInserted);
-
             long totalTime = System.currentTimeMillis() - totalStartTime;
-            log.info("=== QYWX sync group chat statistic completed, total time: {} ms ===", totalTime);
+            log.info("=== 完成: 同步企微群聊统计, 共 {} 条, 耗时: {} ms ===", totalInserted, totalTime);
 
         } catch (Exception e) {
-            log.error("=== QYWX sync group chat statistic failed ===", e);
+            log.error("=== 失败: 同步企微群聊统计 ===", e);
             throw new RuntimeException(e);
         }
     }

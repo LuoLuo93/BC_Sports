@@ -54,25 +54,21 @@ public class QywxGroupChatTask {
     private PlatformTransactionManager transactionManager;
 
     public void sync() {
-        log.info("========================================");
-        log.info("=== Starting: QYWX sync customer group ===");
-        log.info("========================================");
+        log.info("=== 开始执行: 同步企微群聊 ===");
         long totalStartTime = System.currentTimeMillis();
 
         try {
             // 第一步：获取所有成员的群列表（单线程，直接写库）
-            log.info("--- Step 1/2: Get group list ---");
             Set<String> chatIds = syncGroupChatList();
 
             // 第二步：获取所有群详情（多线程，边获取边写库）
-            log.info("--- Step 2/2: Get group details ---");
             syncGroupChatDetails(new ArrayList<>(chatIds));
 
             long totalTime = System.currentTimeMillis() - totalStartTime;
-            log.info("=== QYWX sync customer group completed, total time: {} ms ===", totalTime);
+            log.info("=== 完成: 同步企微群聊, 耗时: {} ms ===", totalTime);
 
         } catch (Exception e) {
-            log.error("=== QYWX sync customer group failed ===", e);
+            log.error("=== 失败: 同步企微群聊 ===", e);
             throw new RuntimeException(e);
         }
     }
@@ -81,7 +77,6 @@ public class QywxGroupChatTask {
      * 第一步：获取所有成员的群列表
      */
     private Set<String> syncGroupChatList() {
-        log.info("开始获取群列表...");
         long startTime = System.currentTimeMillis();
 
         TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
@@ -150,7 +145,7 @@ public class QywxGroupChatTask {
             });
         }
 
-        log.info("群列表获取完成，共 {} 个群，耗时: {} ms", allChatIds.size(), System.currentTimeMillis() - startTime);
+        log.info("群列表获取完成, 共 {} 个群, 耗时: {} ms", allChatIds.size(), System.currentTimeMillis() - startTime);
         return allChatIds;
     }
 
@@ -158,7 +153,6 @@ public class QywxGroupChatTask {
      * 第二步：多线程获取群详情，每个线程获取完直接写库
      */
     private void syncGroupChatDetails(List<String> chatIds) {
-        log.info("开始获取群详情...");
         long startTime = System.currentTimeMillis();
 
         TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
@@ -176,7 +170,7 @@ public class QywxGroupChatTask {
             return;
         }
 
-        log.info("获取到 {} 个群，开始并行查询", chatIds.size());
+        log.info("共 {} 个群，开始并行获取详情", chatIds.size());
 
         AtomicInteger successCount = new AtomicInteger(0);
         AtomicInteger failCount = new AtomicInteger(0);
@@ -239,7 +233,7 @@ public class QywxGroupChatTask {
             Thread.currentThread().interrupt();
         }
 
-        log.info("群详情获取完成，成功: {}, 失败: {}, 总群成员: {}, 耗时: {} ms",
+        log.info("群详情获取完成, 成功: {}, 失败: {}, 总群成员: {}, 耗时: {} ms",
                 successCount.get(), failCount.get(), totalMembers.get(),
                 System.currentTimeMillis() - startTime);
     }

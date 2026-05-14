@@ -131,6 +131,10 @@ public class EntityChannelServiceImpl implements EntityChannelService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean addEntityChannel(EntityChannelDTO dto) {
+        if (isDuplicate(dto, null)) {
+            throw new IllegalArgumentException("该实体渠道配置已存在，请勿重复新增");
+        }
+
         EntityChannel entity = new EntityChannel();
         BeanUtils.copyProperties(dto, entity);
 
@@ -150,9 +154,46 @@ public class EntityChannelServiceImpl implements EntityChannelService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean updateEntityChannel(EntityChannelDTO dto) {
+        if (isDuplicate(dto, dto.getId())) {
+            throw new IllegalArgumentException("该实体渠道配置已存在，请勿重复提交");
+        }
+
         EntityChannel entity = new EntityChannel();
         BeanUtils.copyProperties(dto, entity);
         return entityChannelMapper.updateById(entity) > 0;
+    }
+
+    /**
+     * 检查业务字段组合是否已存在
+     */
+    private boolean isDuplicate(EntityChannelDTO dto, String excludeId) {
+        QueryWrapper<EntityChannel> wrapper = new QueryWrapper<>();
+        wrapper.eq("deleted", 0);
+
+        wrapper.eq("entity_type", dto.getEntityType());
+        wrapper.eq("external_id", dto.getExternalId());
+
+        addEqOrIsNull(wrapper, "brand_id", dto.getBrandId());
+        addEqOrIsNull(wrapper, "channel_type_id", dto.getChannelTypeId());
+        addEqOrIsNull(wrapper, "channel_def_id", dto.getChannelDefId());
+        addEqOrIsNull(wrapper, "channel_nature_id", dto.getChannelNatureId());
+        addEqOrIsNull(wrapper, "business_type_id", dto.getBusinessTypeId());
+        addEqOrIsNull(wrapper, "region_level1_id", dto.getRegionLevel1Id());
+        addEqOrIsNull(wrapper, "region_level2_id", dto.getRegionLevel2Id());
+
+        if (excludeId != null && !excludeId.isEmpty()) {
+            wrapper.ne("id", excludeId);
+        }
+
+        return entityChannelMapper.selectCount(wrapper) > 0;
+    }
+
+    private void addEqOrIsNull(QueryWrapper<EntityChannel> wrapper, String column, String value) {
+        if (value != null && !value.trim().isEmpty()) {
+            wrapper.eq(column, value);
+        } else {
+            wrapper.isNull(column);
+        }
     }
 
     @Override

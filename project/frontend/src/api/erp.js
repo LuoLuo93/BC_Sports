@@ -1,0 +1,76 @@
+import request from './request'
+
+// ERP Shop
+export function getErpShopPage(params) {
+  return request.get('/api/erp-shop/page', { params })
+}
+
+export function getErpShop(id) {
+  return request.get(`/api/erp-shop/${id}`)
+}
+
+export function createErpShop(data) {
+  return request.post('/api/erp-shop', data)
+}
+
+export function updateErpShop(id, data) {
+  return request.put(`/api/erp-shop/${id}`, data)
+}
+
+export function deleteErpShop(id) {
+  return request.delete(`/api/erp-shop/${id}`)
+}
+
+export function getEnabledErpShopList() {
+  return request.get('/api/erp-shop/list-enabled')
+}
+
+// ERP Warehouse
+export function getErpWarehousePage(params) {
+  return request.get('/api/erp-warehouse/page', { params })
+}
+
+export function getErpWarehouse(id) {
+  return request.get(`/api/erp-warehouse/${id}`)
+}
+
+export function createErpWarehouse(data) {
+  return request.post('/api/erp-warehouse', data)
+}
+
+export function updateErpWarehouse(id, data) {
+  return request.put(`/api/erp-warehouse/${id}`, data)
+}
+
+export function deleteErpWarehouse(id) {
+  return request.delete(`/api/erp-warehouse/${id}`)
+}
+
+export function getEnabledErpWarehouseList() {
+  return request.get('/api/erp-warehouse/list-enabled')
+}
+
+// ERP Customer
+export function getErpCustomerPage(params) {
+  return request.get('/api/erp-customer/page', { params })
+}
+
+export function getErpCustomer(id) {
+  return request.get(`/api/erp-customer/${id}`)
+}
+
+export function createErpCustomer(data) {
+  return request.post('/api/erp-customer', data)
+}
+
+export function updateErpCustomer(id, data) {
+  return request.put(`/api/erp-customer/${id}`, data)
+}
+
+export function deleteErpCustomer(id) {
+  return request.delete(`/api/erp-customer/${id}`)
+}
+
+export function getEnabledErpCustomerList() {
+  return request.get('/api/erp-customer/list-enabled')
+}

@@ -7,6 +7,7 @@ import com.bcsport.admin.ihrmapper.IhrEmployeeAdditionMapper;
 import com.bcsport.admin.ihrmapper.IhrEmployeeDetailMapper;
 import com.bcsport.admin.qywxmapper.QywxDepartmentMapper;
 import com.bcsport.admin.service.IhrEmployeeExclusionService;
+import com.bcsport.admin.service.IhrEmployeeOnboardingService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -45,20 +46,22 @@ public class QywxNewEmployeeSyncTask {
     @Autowired
     private IhrEmployeeExclusionService exclusionService;
 
+    @Autowired
+    private IhrEmployeeOnboardingService onboardingService;
+
     public void sync() {
-        log.info("========================================");
-        log.info("=== 开始执行：录入企微新员工 ===");
-        log.info("========================================");
+        log.info("=== 开始执行: 录入企微新员工 ===");
         long startTime = System.currentTimeMillis();
 
         try {
             // 0. 先同步企微部门，确保部门数据最新
-            log.info("--- 步骤 0：同步企微部门 ---");
+            log.info("--- 步骤 0: 同步企微部门 ---");
             try {
                 departmentTask.sync();
             } catch (Exception e) {
                 log.warn("同步部门失败，将使用现有部门数据: {}", e.getMessage());
             }
+
 
             // 1. 获取今日和昨日的新入职员工 ID
             Calendar cal = Calendar.getInstance();
@@ -114,9 +117,18 @@ public class QywxNewEmployeeSyncTask {
                     String staffNo = employee.getStaffNo();
                     String mobile = employee.getMobileNo();
 
+                    // 手机号为空则跳过
+                    if (mobile == null || mobile.isEmpty() || "null".equals(mobile)) {
+                        log.warn("员工 {}({}) 无手机号，跳过", staffName, staffNo);
+                        onboardingService.markSyncSkipped(employee.getId(), staffName, staffNo);
+                        skipCount++;
+                        continue;
+                    }
+
                     // 检查是否在入职排除列表中
                     if (exclusionService.checkExcluded(staffName, staffNo, 1)) {
                         log.info("员工 {}({}) 在入职排除列表中，跳过", staffName, staffNo);
+                        onboardingService.markSyncSkipped(employee.getId(), staffName, staffNo);
                         skipCount++;
                         continue;
                     }
@@ -125,6 +137,7 @@ public class QywxNewEmployeeSyncTask {
                     String existingUserId = apiClient.getUserIdByMobile(mobile);
                     if (existingUserId != null) {
                         log.info("员工 {}({}) 已在企微存在，跳过", employee.getStaffName(), mobile);
+                        onboardingService.markSyncSkipped(employee.getId(), staffName, staffNo);
                         skipCount++;
                         continue;
                     }
@@ -141,34 +154,93 @@ public class QywxNewEmployeeSyncTask {
                     Integer errcode = result.getInt("errcode");
                     if (errcode != null && errcode == 0) {
                         successCount++;
+                        onboardingService.markSyncSuccess(employee.getId(), staffName, staffNo);
                         log.info("创建企微用户成功: {}({})", employee.getStaffName(), mobile);
                     } else {
                         // 60102 表示已存在，不算失败
                         if (errcode != null && errcode == 60102) {
                             skipCount++;
+                            onboardingService.markSyncSkipped(employee.getId(), staffName, staffNo);
                             log.info("员工 {}({}) 创建时发现已存在(errcode=60102)，跳过", employee.getStaffName(), mobile);
                         } else {
                             failCount++;
+                            String errmsg = result.getStr("errmsg");
+                            onboardingService.markSyncFailed(employee.getId(), staffName, staffNo,
+                                    "errcode=" + errcode + ", " + errmsg);
                             log.warn("创建企微用户失败: {}({}), errcode: {}, errmsg: {}",
-                                    employee.getStaffName(), mobile, errcode, result.getStr("errmsg"));
+                                    employee.getStaffName(), mobile, errcode, errmsg);
                         }
                     }
 
                 } catch (Exception e) {
                     failCount++;
+                    onboardingService.markSyncFailed(employee.getId(), employee.getStaffName(), employee.getStaffNo(), e.getMessage());
                     log.error("处理员工失败: {}({}): {}", employee.getStaffName(), employee.getMobileNo(), e.getMessage());
                 }
             }
 
             long totalTime = System.currentTimeMillis() - startTime;
-            log.info("========================================");
-            log.info("=== 录入企微新员工 完成 ===");
-            log.info("=== 成功: {}, 跳过: {}, 失败: {}, 总耗时: {} ms ===", successCount, skipCount, failCount, totalTime);
-            log.info("========================================");
+            log.info("=== 完成: 录入企微新员工, 成功: {}, 跳过: {}, 失败: {}, 耗时: {} ms ===",
+                    successCount, skipCount, failCount, totalTime);
 
         } catch (Exception e) {
-            log.error("=== 录入企微新员工 异常 ===", e);
+            log.error("=== 失败: 录入企微新员工 ===", e);
             throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * 同步单个入职员工到企微（供手动触发使用）
+     */
+    public String syncSingle(String employeesId) {
+        log.info("手动同步单个员工到企微, employeesId={}", employeesId);
+
+        List<IhrEmployeeDetail> details = employeeDetailMapper.selectByStaffIds(Collections.singletonList(employeesId));
+        if (details == null || details.isEmpty()) {
+            return "未找到员工详细信息";
+        }
+
+        IhrEmployeeDetail employee = details.get(0);
+        String staffName = employee.getStaffName();
+        String staffNo = employee.getStaffNo();
+        String mobile = employee.getMobileNo();
+
+        if (mobile == null || mobile.isEmpty() || "null".equals(mobile)) {
+            return "员工无手机号";
+        }
+
+        // 检查排除列表
+        if (exclusionService.checkExcluded(staffName, staffNo, 1)) {
+            onboardingService.markSyncSkipped(employeesId, staffName, staffNo);
+            return "员工在入职排除列表中";
+        }
+
+        // 检查企微是否已存在
+        String existingUserId = apiClient.getUserIdByMobile(mobile);
+        if (existingUserId != null) {
+            onboardingService.markSyncSkipped(employeesId, staffName, staffNo);
+            return "员工已在企微存在";
+        }
+
+        // 匹配部门
+        String departId = resolveDepartId(employee);
+
+        // 创建企微用户
+        JSONObject requestBody = buildCreateUserBody(employee, departId);
+        JSONObject result = apiClient.createUser(requestBody);
+        Integer errcode = result.getInt("errcode");
+
+        if (errcode != null && errcode == 0) {
+            onboardingService.markSyncSuccess(employeesId, staffName, staffNo);
+            return null;
+        } else if (errcode != null && errcode == 60102) {
+            onboardingService.markSyncSkipped(employeesId, staffName, staffNo);
+            return "员工已在企微存在(errcode=60102)";
+        } else {
+            String errmsg = result.getStr("errmsg");
+            onboardingService.markSyncFailed(employeesId, staffName, staffNo,
+                    "errcode=" + errcode + ", " + errmsg);
+            return "创建失败: " + errmsg;
         }
     }
 
@@ -246,7 +318,11 @@ public class QywxNewEmployeeSyncTask {
         }
 
         JSONArray deptArray = new JSONArray();
-        deptArray.add(Integer.parseInt(departId));
+        try {
+            deptArray.add(Integer.parseInt(departId));
+        } catch (NumberFormatException e) {
+            deptArray.add(1);
+        }
         body.set("department", deptArray);
 
         // 扩展属性
@@ -261,11 +337,15 @@ public class QywxNewEmployeeSyncTask {
         if (employee.getEnrollInDate() != null && !"null".equals(employee.getEnrollInDate())) {
             attrs.add(buildAttr("入职日期", employee.getEnrollInDate()));
         }
-        attrs.add(buildAttr("mobile", employee.getMobileNo()));
+        if (employee.getMobileNo() != null && !"null".equals(employee.getMobileNo())) {
+            attrs.add(buildAttr("mobile", employee.getMobileNo()));
+        }
 
-        JSONObject extattr = new JSONObject();
-        extattr.set("attrs", attrs);
-        body.set("extattr", extattr);
+        if (!attrs.isEmpty()) {
+            JSONObject extattr = new JSONObject();
+            extattr.set("attrs", attrs);
+            body.set("extattr", extattr);
+        }
 
         return body;
     }

@@ -35,9 +35,7 @@ public class QywxMassMessageTask {
     private PlatformTransactionManager transactionManager;
 
     public void sync() {
-        log.info("========================================");
-        log.info("=== Starting: QYWX sync mass message ===");
-        log.info("========================================");
+        log.info("=== 开始执行: 同步企微群发消息 ===");
         long totalStartTime = System.currentTimeMillis();
 
         try {
@@ -57,7 +55,7 @@ public class QywxMassMessageTask {
             Date yesterdayEnd = calendar.getTime();
             long yesterdayEndTimestamp = yesterdayEnd.getTime() / 1000;
 
-            log.info("Syncing mass messages from {} to {}",
+            log.info("同步范围: {} ~ {}",
                      DateUtil.formatDateTime(yesterdayStart),
                      DateUtil.formatDateTime(yesterdayEnd));
 
@@ -106,22 +104,18 @@ public class QywxMassMessageTask {
                             return null;
                         });
                         totalInserted += batchMessages.size();
-                        log.info("Batch inserted {} messages, total {}", batchMessages.size(), totalInserted);
                     }
                 }
 
                 cursor = result.getStr("next_cursor", "");
-                log.info("Fetched {} messages, next cursor: {}", groupMsgList != null ? groupMsgList.size() : 0, cursor);
 
             } while (cursor != null && cursor.length() > 0);
 
-            log.info("Inserted {} mass message records in total", totalInserted);
-
             long totalTime = System.currentTimeMillis() - totalStartTime;
-            log.info("=== QYWX sync mass message completed, total time: {} ms ===", totalTime);
+            log.info("=== 完成: 同步企微群发消息, 共 {} 条, 耗时: {} ms ===", totalInserted, totalTime);
 
         } catch (Exception e) {
-            log.error("=== QYWX sync mass message failed ===", e);
+            log.error("=== 失败: 同步企微群发消息 ===", e);
             throw new RuntimeException(e);
         }
     }

@@ -37,9 +37,7 @@ public class QywxGroupChatAndStatSyncTask {
      * 一键同步所有群聊相关数据
      */
     public void syncAll() {
-        log.info("========================================");
         log.info("=== 开始执行：企业微信群聊整合同步 ===");
-        log.info("========================================");
         long totalStartTime = System.currentTimeMillis();
 
         try {
@@ -47,36 +45,33 @@ public class QywxGroupChatAndStatSyncTask {
             int failCount = 0;
 
             // 步骤1：同步配置了客户联系功能的成员列表
-            log.info("--- 步骤 1/4：同步客户联系成员 ---");
+            log.info("--- 步骤 1/5：同步客户联系成员 ---");
             try {
                 followUserTask.sync();
                 successCount++;
-                log.info("--- 步骤 1/4：同步客户联系成员 完成 ---");
             } catch (Exception e) {
                 failCount++;
-                log.error("--- 步骤 1/4：同步客户联系成员 失败 ---", e);
+                log.error("--- 步骤 1/5：同步客户联系成员 失败 ---", e);
             }
 
             // 步骤2：同步群聊列表和群成员
-            log.info("--- 步骤 2/4：同步企微群聊 ---");
+            log.info("--- 步骤 2/5：同步企微群聊 ---");
             try {
                 groupChatTask.sync();
                 successCount++;
-                log.info("--- 步骤 2/4：同步企微群聊 完成 ---");
             } catch (Exception e) {
                 failCount++;
-                log.error("--- 步骤 2/4：同步企微群聊 失败 ---", e);
+                log.error("--- 步骤 2/5：同步企微群聊 失败 ---", e);
             }
 
             // 步骤3：同步群聊统计数据
-            log.info("--- 步骤 3/4：同步群聊统计 ---");
+            log.info("--- 步骤 3/5：同步群聊统计 ---");
             try {
                 groupChatStatTask.sync();
                 successCount++;
-                log.info("--- 步骤 3/4：同步群聊统计 完成 ---");
             } catch (Exception e) {
                 failCount++;
-                log.error("--- 步骤 3/4：同步群聊统计 失败 ---", e);
+                log.error("--- 步骤 3/5：同步群聊统计 失败 ---", e);
             }
 
             // 步骤4：同步群发消息记录
@@ -84,7 +79,6 @@ public class QywxGroupChatAndStatSyncTask {
             try {
                 massMessageTask.sync();
                 successCount++;
-                log.info("--- 步骤 4/5：同步群发消息 完成 ---");
             } catch (Exception e) {
                 failCount++;
                 log.error("--- 步骤 4/5：同步群发消息 失败 ---", e);
@@ -95,23 +89,17 @@ public class QywxGroupChatAndStatSyncTask {
             try {
                 momentTask.sync();
                 successCount++;
-                log.info("--- 步骤 5/5：同步朋友圈 完成 ---");
             } catch (Exception e) {
                 failCount++;
                 log.error("--- 步骤 5/5：同步朋友圈 失败 ---", e);
             }
 
             long totalTime = System.currentTimeMillis() - totalStartTime;
-            log.info("========================================");
-            log.info("=== 企业微信群聊整合同步 完成 ===");
-            log.info("=== 成功：{} 个步骤，失败：{} 个步骤 ===", successCount, failCount);
-            log.info("=== 总耗时：{} ms ===", totalTime);
-            log.info("========================================");
+            log.info("=== 企业微信群聊整合同步 完成, 成功: {}, 失败: {}, 耗时: {} ms ===",
+                    successCount, failCount, totalTime);
 
         } catch (Exception e) {
-            log.error("========================================");
             log.error("=== 企业微信群聊整合同步 异常 ===", e);
-            log.error("========================================");
             throw e;
         }
     }

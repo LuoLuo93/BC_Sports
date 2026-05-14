@@ -25,20 +25,16 @@ public class QywxFollowUserTask {
     @Autowired
     private QywxFollowUserMapper followUserMapper;
 
-    @Transactional(rollbackFor = Exception.class, transactionManager = "qywxTransactionManager")
     public void sync() {
-        log.info("=== Starting: QYWX sync follow user list ===");
+        log.info("=== 开始执行: 同步客户联系成员 ===");
         try {
             List<String> followUserList = apiClient.getFollowUserList();
 
             if (followUserList == null || followUserList.isEmpty()) {
-                log.info("=== Completed: QYWX sync follow user list, no data ===");
+                log.info("=== 完成: 同步客户联系成员, 无数据 ===");
                 return;
             }
 
-            followUserMapper.deleteAll();
-
-            // 转换为实体列表
             List<QywxFollowUser> entityList = new ArrayList<>();
             for (String userId : followUserList) {
                 QywxFollowUser entity = new QywxFollowUser();
@@ -47,16 +43,21 @@ public class QywxFollowUserTask {
                 entityList.add(entity);
             }
 
-            // 批量插入
-            for (int i = 0; i < entityList.size(); i += BATCH_SIZE) {
-                int end = Math.min(i + BATCH_SIZE, entityList.size());
-                followUserMapper.insertBatch(entityList.subList(i, end));
-            }
+            doSync(entityList);
 
-            log.info("=== Completed: QYWX sync follow user list, total {} ===", entityList.size());
+            log.info("=== 完成: 同步客户联系成员, 共 {} 条 ===", entityList.size());
         } catch (Exception e) {
-            log.error("=== Failed: QYWX sync follow user list ===", e);
+            log.error("=== 失败: 同步客户联系成员 ===", e);
             throw e;
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class, transactionManager = "qywxTransactionManager")
+    public void doSync(List<QywxFollowUser> entityList) {
+        followUserMapper.deleteAll();
+        for (int i = 0; i < entityList.size(); i += BATCH_SIZE) {
+            int end = Math.min(i + BATCH_SIZE, entityList.size());
+            followUserMapper.insertBatch(entityList.subList(i, end));
         }
     }
 }

@@ -6,6 +6,7 @@ import com.bcsport.admin.ihrmapper.IhrEmployeeDetailMapper;
 import com.bcsport.admin.qywxmapper.QywxAttrsBaseMapper;
 import com.bcsport.admin.qywxmapper.QywxDepartmentMemberDetailMapper;
 import com.bcsport.admin.service.IhrEmployeeExclusionService;
+import com.bcsport.admin.service.IhrEmployeeLeavingService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -37,10 +38,11 @@ public class QywxEmployeeLeaveSyncTask {
     @Autowired
     private IhrEmployeeExclusionService exclusionService;
 
+    @Autowired
+    private IhrEmployeeLeavingService leavingService;
+
     public void sync() {
-        log.info("========================================");
-        log.info("=== 开始执行：企微员工离职同步 ===");
-        log.info("========================================");
+        log.info("=== 开始执行: 企微员工离职同步 ===");
         long startTime = System.currentTimeMillis();
 
         try {
@@ -70,19 +72,20 @@ public class QywxEmployeeLeaveSyncTask {
             int failCount = 0;
 
             for (IhrEmployeeDetail employee : leavedEmployees) {
-                try {
-                    String staffNo = employee.getStaffNo();
-                    String staffName = employee.getStaffName();
+                String employeeId = employee.getId();
+                String staffName = employee.getStaffName();
+                String staffNo = employee.getStaffNo();
 
+                try {
                     // 检查是否在离职排除列表中
                     if (exclusionService.checkExcluded(staffName, staffNo, 2)) {
-                        log.info("员工 {}({}) 在离职排除列表中，跳过", staffName, staffNo);
+                        leavingService.markSyncSkipped(employeeId, staffName, staffNo);
                         skipCount++;
                         continue;
                     }
 
                     if (staffNo == null || staffNo.isEmpty() || "null".equals(staffNo)) {
-                        log.debug("跳过无效工号: {}", staffName);
+                        leavingService.markSyncSkipped(employeeId, staffName, staffNo);
                         skipCount++;
                         continue;
                     }
@@ -90,7 +93,7 @@ public class QywxEmployeeLeaveSyncTask {
                     // 1. 通过工号查找企微 userid
                     String qywxUserid = attrsBaseMapper.selectUseridByStaffNo(staffNo);
                     if (qywxUserid == null || qywxUserid.isEmpty()) {
-                        log.info("工号 {}({}) 在企微中未找到，跳过", staffNo, staffName);
+                        leavingService.markSyncSkipped(employeeId, staffName, staffNo);
                         skipCount++;
                         continue;
                     }
@@ -100,6 +103,7 @@ public class QywxEmployeeLeaveSyncTask {
                     if (qywxName == null || !qywxName.equals(staffName)) {
                         log.warn("姓名不匹配，跳过: 工号={}, IHR姓名={}, 企微姓名={}, userid={}",
                                 staffNo, staffName, qywxName, qywxUserid);
+                        leavingService.markSyncSkipped(employeeId, staffName, staffNo);
                         skipCount++;
                         continue;
                     }
@@ -109,34 +113,89 @@ public class QywxEmployeeLeaveSyncTask {
                     Integer errcode = result.getInt("errcode");
                     if (errcode != null && errcode == 0) {
                         successCount++;
-                        log.info("删除企微用户成功: {}(工号={}, userid={})", staffName, staffNo, qywxUserid);
+                        leavingService.markSyncSuccess(employeeId, staffName, staffNo);
                     } else {
-                        // 60111 表示用户不存在，不算失败
-                        if (errcode != null && errcode == 60111) {
+                        // 60111/46004 表示用户不存在，不算失败
+                        if (errcode != null && (errcode == 60111 || errcode == 46004)) {
                             skipCount++;
-                            log.info("用户已不存在(errcode=60111): {}(工号={})", staffName, staffNo);
+                            leavingService.markSyncSkipped(employeeId, staffName, staffNo);
                         } else {
                             failCount++;
+                            String errmsg = result.getStr("errmsg");
+                            leavingService.markSyncFailed(employeeId, staffName, staffNo,
+                                    "errcode=" + errcode + ", " + errmsg);
                             log.warn("删除企微用户失败: {}(工号={}), errcode: {}, errmsg: {}",
-                                    staffName, staffNo, errcode, result.getStr("errmsg"));
+                                    staffName, staffNo, errcode, errmsg);
                         }
                     }
 
                 } catch (Exception e) {
                     failCount++;
-                    log.error("处理离职员工失败: {}({}): {}", employee.getStaffName(), employee.getStaffNo(), e.getMessage());
+                    leavingService.markSyncFailed(employeeId, staffName, staffNo, e.getMessage());
+                    log.error("处理离职员工失败: {}({}): {}", staffName, staffNo, e.getMessage());
                 }
             }
 
             long totalTime = System.currentTimeMillis() - startTime;
-            log.info("========================================");
-            log.info("=== 企微员工离职同步 完成 ===");
-            log.info("=== 成功: {}, 跳过: {}, 失败: {}, 总耗时: {} ms ===", successCount, skipCount, failCount, totalTime);
-            log.info("========================================");
+            log.info("=== 完成: 企微员工离职同步, 成功: {}, 跳过: {}, 失败: {}, 耗时: {} ms ===",
+                    successCount, skipCount, failCount, totalTime);
 
         } catch (Exception e) {
-            log.error("=== 企微员工离职同步 异常 ===", e);
+            log.error("=== 失败: 企微员工离职同步 ===", e);
             throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * 同步单个离职员工到企微（供手动触发使用）
+     */
+    public String syncSingle(String employeeId) {
+        log.info("手动同步单个离职员工到企微, employeeId={}", employeeId);
+
+        IhrEmployeeDetail employee = employeeDetailMapper.selectById(employeeId);
+        if (employee == null) {
+            return "未找到员工详细信息";
+        }
+
+        String staffName = employee.getStaffName();
+        String staffNo = employee.getStaffNo();
+
+        if (exclusionService.checkExcluded(staffName, staffNo, 2)) {
+            leavingService.markSyncSkipped(employeeId, staffName, staffNo);
+            return "员工在排除列表中";
+        }
+
+        if (staffNo == null || staffNo.isEmpty() || "null".equals(staffNo)) {
+            leavingService.markSyncSkipped(employeeId, staffName, staffNo);
+            return "工号无效";
+        }
+
+        String qywxUserid = attrsBaseMapper.selectUseridByStaffNo(staffNo);
+        if (qywxUserid == null || qywxUserid.isEmpty()) {
+            leavingService.markSyncSkipped(employeeId, staffName, staffNo);
+            return "未找到企微userid";
+        }
+
+        String qywxName = memberDetailMapper.selectNameByUserid(qywxUserid);
+        if (qywxName == null || !qywxName.equals(staffName)) {
+            leavingService.markSyncSkipped(employeeId, staffName, staffNo);
+            return "姓名不匹配";
+        }
+
+        JSONObject result = apiClient.deleteUser(qywxUserid);
+        Integer errcode = result.getInt("errcode");
+
+        if (errcode != null && errcode == 0) {
+            leavingService.markSyncSuccess(employeeId, staffName, staffNo);
+            return null;
+        } else if (errcode != null && (errcode == 60111 || errcode == 46004)) {
+            leavingService.markSyncSkipped(employeeId, staffName, staffNo);
+            return "用户已不存在";
+        } else {
+            String errmsg = result.getStr("errmsg");
+            leavingService.markSyncFailed(employeeId, staffName, staffNo,
+                    "errcode=" + errcode + ", " + errmsg);
+            return "删除失败: " + errmsg;
         }
     }
 }

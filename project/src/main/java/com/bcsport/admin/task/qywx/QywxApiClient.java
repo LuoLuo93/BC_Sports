@@ -39,6 +39,9 @@ public class QywxApiClient {
     @Value("${qywx.corp-secret}")
     private String corpSecret;
 
+    @Value("${qywx.contacts-secret:}")
+    private String contactsSecret;
+
     @Value("${qywx.api-base-url:https://qyapi.weixin.qq.com}")
     private String apiBaseUrl;
 
@@ -47,11 +50,15 @@ public class QywxApiClient {
     private volatile String accessToken;
     private volatile LocalDateTime tokenExpireTime;
 
+    private volatile String contactsAccessToken;
+    private volatile LocalDateTime contactsTokenExpireTime;
+
     @Autowired
     private QywxAccessTokenMapper accessTokenMapper;
 
     // 锁用于保护token刷新，避免多线程同时刷新
     private final ReentrantLock tokenRefreshLock = new ReentrantLock();
+    private final ReentrantLock contactsTokenRefreshLock = new ReentrantLock();
 
     @PostConstruct
     public void init() {
@@ -136,7 +143,7 @@ public class QywxApiClient {
             } else {
                 throw new RuntimeException("Failed to refresh token");
             }
-        });
+        }, () -> {});
     }
 
     private void saveTokenToDatabase(String token, Integer expiresIn) {
@@ -149,6 +156,71 @@ public class QywxApiClient {
         } catch (Exception e) {
             log.warn("Failed to save token to database: {}", e.getMessage());
         }
+    }
+
+    /**
+     * 获取通讯录管理 access_token（使用独立的 contacts-secret）
+     */
+    public String getContactsAccessToken() {
+        if (contactsSecret == null || contactsSecret.isEmpty()) {
+            return getAccessToken();
+        }
+
+        if (contactsAccessToken != null && contactsTokenExpireTime != null && LocalDateTime.now().isBefore(contactsTokenExpireTime)) {
+            return contactsAccessToken;
+        }
+
+        contactsTokenRefreshLock.lock();
+        try {
+            if (contactsAccessToken != null && contactsTokenExpireTime != null && LocalDateTime.now().isBefore(contactsTokenExpireTime)) {
+                return contactsAccessToken;
+            }
+            return doRefreshContactsToken();
+        } finally {
+            contactsTokenRefreshLock.unlock();
+        }
+    }
+
+    public String refreshContactsToken() {
+        if (contactsSecret == null || contactsSecret.isEmpty()) {
+            return refreshToken();
+        }
+        contactsTokenRefreshLock.lock();
+        try {
+            return doRefreshContactsToken();
+        } finally {
+            contactsTokenRefreshLock.unlock();
+        }
+    }
+
+    private String doRefreshContactsToken() {
+        return executeWithRetry(() -> {
+            String url = apiBaseUrl + "/cgi-bin/gettoken?corpid=" + corpId + "&corpsecret=" + contactsSecret;
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            org.springframework.http.HttpEntity<String> entity = new org.springframework.http.HttpEntity<>(headers);
+
+            log.info("Refreshing QYWX contacts access token...");
+            org.springframework.http.ResponseEntity<String> response = restTemplate.exchange(url, org.springframework.http.HttpMethod.GET, entity, String.class);
+
+            if (response.getStatusCode() == org.springframework.http.HttpStatus.OK && response.getBody() != null) {
+                JSONObject body = JSONUtil.parseObj(response.getBody());
+                Integer errcode = body.getInt("errcode");
+                if (errcode != null && errcode != 0) {
+                    throw new RuntimeException("Failed to get contacts token, errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
+                }
+
+                String newToken = body.getStr("access_token");
+                Integer expiresIn = body.getInt("expires_in", 7200);
+                this.contactsTokenExpireTime = LocalDateTime.now().plusSeconds(expiresIn - 300);
+                this.contactsAccessToken = newToken;
+
+                log.info("QYWX contacts token refreshed successfully");
+                return contactsAccessToken;
+            } else {
+                throw new RuntimeException("Failed to refresh contacts token");
+            }
+        }, () -> {});
     }
 
     private boolean isTokenExpiredException(Exception e) {
@@ -166,6 +238,10 @@ public class QywxApiClient {
     }
 
     private <T> T executeWithRetry(QywxApiCallback<T> callback) {
+        return executeWithRetry(callback, this::refreshToken);
+    }
+
+    private <T> T executeWithRetry(QywxApiCallback<T> callback, Runnable tokenRefresher) {
         int retryCount = 0;
         while (true) {
             try {
@@ -173,7 +249,7 @@ public class QywxApiClient {
             } catch (RuntimeException e) {
                 if (isTokenExpiredException(e) && retryCount < MAX_RETRY) {
                     log.warn("Token may be expired, refreshing... (retry {}/{})", retryCount + 1, MAX_RETRY);
-                    refreshToken();
+                    tokenRefresher.run();
                     retryCount++;
                     continue;
                 }
@@ -198,7 +274,7 @@ public class QywxApiClient {
         return executeWithRetry(() -> {
             String url = apiBaseUrl + "/cgi-bin/department/list?access_token=" + getAccessToken();
 
-            log.info("Fetching QYWX department list...");
+            log.info("API: 获取部门列表...");
             String responseBody = doGet(url);
 
             if (responseBody != null) {
@@ -224,7 +300,7 @@ public class QywxApiClient {
                     }
                 }
 
-                log.info("Fetched {} QYWX departments", result.size());
+                log.info("API: 获取到 {} 个部门", result.size());
                 return result;
             } else {
                 throw new RuntimeException("Failed to get department list");
@@ -236,7 +312,7 @@ public class QywxApiClient {
         return executeWithRetry(() -> {
             String url = apiBaseUrl + "/cgi-bin/user/simplelist?access_token=" + getAccessToken() + "&department_id=1&fetch_child=1";
 
-            log.info("Fetching QYWX department member list...");
+            log.info("API: 获取部门成员列表...");
             String responseBody = doGet(url);
 
             if (responseBody != null) {
@@ -264,7 +340,7 @@ public class QywxApiClient {
                     }
                 }
 
-                log.info("Fetched {} QYWX department members", result.size());
+                log.info("API: 获取到 {} 个部门成员", result.size());
                 return result;
             } else {
                 throw new RuntimeException("Failed to get department member list");
@@ -279,7 +355,7 @@ public class QywxApiClient {
         return executeWithRetry(() -> {
             String url = apiBaseUrl + "/cgi-bin/externalcontact/get_follow_user_list?access_token=" + getAccessToken();
 
-            log.info("Fetching QYWX follow user list...");
+            log.info("API: 获取客户联系成员列表...");
             String responseBody = doGet(url);
 
             if (responseBody != null) {
@@ -297,7 +373,7 @@ public class QywxApiClient {
                     }
                 }
 
-                log.info("Fetched {} QYWX follow users", result.size());
+                log.info("API: 获取到 {} 个客户联系成员", result.size());
                 return result;
             } else {
                 throw new RuntimeException("Failed to get follow user list");
@@ -363,7 +439,6 @@ public class QywxApiClient {
             headers.setContentType(MediaType.APPLICATION_JSON);
             org.springframework.http.HttpEntity<String> entity = new org.springframework.http.HttpEntity<>(requestBody.toString(), headers);
 
-            log.info("Fetching customer details for {} users...", userIds.size());
             org.springframework.http.ResponseEntity<String> response = restTemplate.exchange(url, org.springframework.http.HttpMethod.POST, entity, String.class);
 
             if (response.getStatusCode() == org.springframework.http.HttpStatus.OK && response.getBody() != null) {
@@ -402,7 +477,7 @@ public class QywxApiClient {
             headers.setContentType(MediaType.APPLICATION_JSON);
             org.springframework.http.HttpEntity<String> entity = new org.springframework.http.HttpEntity<>(requestBody.toString(), headers);
 
-            log.info("Fetching group chat list for {} users", userIds.size());
+            log.info("API: 获取 {} 个用户的群聊列表", userIds.size());
             org.springframework.http.ResponseEntity<String> response = restTemplate.exchange(url, org.springframework.http.HttpMethod.POST, entity, String.class);
 
             if (response.getStatusCode() == org.springframework.http.HttpStatus.OK && response.getBody() != null) {
@@ -433,7 +508,6 @@ public class QywxApiClient {
             headers.setContentType(MediaType.APPLICATION_JSON);
             org.springframework.http.HttpEntity<String> entity = new org.springframework.http.HttpEntity<>(requestBody.toString(), headers);
 
-            log.info("Fetching group chat detail for chatId: {}", chatId);
             org.springframework.http.ResponseEntity<String> response = restTemplate.exchange(url, org.springframework.http.HttpMethod.POST, entity, String.class);
 
             if (response.getStatusCode() == org.springframework.http.HttpStatus.OK && response.getBody() != null) {
@@ -477,7 +551,6 @@ public class QywxApiClient {
             headers.setContentType(MediaType.APPLICATION_JSON);
             org.springframework.http.HttpEntity<String> entity = new org.springframework.http.HttpEntity<>(requestBody.toString(), headers);
 
-            log.info("Fetching group chat statistic for {} users", userIds.size());
             org.springframework.http.ResponseEntity<String> response = restTemplate.exchange(url, org.springframework.http.HttpMethod.POST, entity, String.class);
 
             if (response.getStatusCode() == org.springframework.http.HttpStatus.OK && response.getBody() != null) {
@@ -512,7 +585,7 @@ public class QywxApiClient {
             headers.setContentType(MediaType.APPLICATION_JSON);
             org.springframework.http.HttpEntity<String> entity = new org.springframework.http.HttpEntity<>(requestBody.toString(), headers);
 
-            log.info("Fetching mass message list from {} to {}", startTime, endTime);
+            log.info("API: 获取群发消息列表, {} ~ {}", startTime, endTime);
             org.springframework.http.ResponseEntity<String> response = restTemplate.exchange(url, org.springframework.http.HttpMethod.POST, entity, String.class);
 
             if (response.getStatusCode() == org.springframework.http.HttpStatus.OK && response.getBody() != null) {
@@ -546,7 +619,7 @@ public class QywxApiClient {
             headers.setContentType(MediaType.APPLICATION_JSON);
             org.springframework.http.HttpEntity<String> entity = new org.springframework.http.HttpEntity<>(requestBody.toString(), headers);
 
-            log.info("Fetching moment list from {} to {}", startTime, endTime);
+            log.info("API: 获取朋友圈列表, {} ~ {}", startTime, endTime);
             org.springframework.http.ResponseEntity<String> response = restTemplate.exchange(url, org.springframework.http.HttpMethod.POST, entity, String.class);
 
             if (response.getStatusCode() == org.springframework.http.HttpStatus.OK && response.getBody() != null) {
@@ -558,6 +631,298 @@ public class QywxApiClient {
                 return body;
             } else {
                 throw new RuntimeException("Failed to get moment list");
+            }
+        });
+    }
+
+    /**
+     * 根据手机号获取用户ID
+     */
+    public String getUserIdByMobile(String mobile) {
+        return executeWithRetry(() -> {
+            String url = apiBaseUrl + "/cgi-bin/user/getuserid?access_token=" + getAccessToken();
+
+            JSONObject requestBody = new JSONObject();
+            requestBody.set("mobile", mobile);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            org.springframework.http.HttpEntity<String> entity = new org.springframework.http.HttpEntity<>(requestBody.toString(), headers);
+
+            org.springframework.http.ResponseEntity<String> response = restTemplate.exchange(url, org.springframework.http.HttpMethod.POST, entity, String.class);
+
+            if (response.getStatusCode() == org.springframework.http.HttpStatus.OK && response.getBody() != null) {
+                JSONObject body = JSONUtil.parseObj(response.getBody());
+                Integer errcode = body.getInt("errcode");
+                if (errcode != null && errcode != 0) {
+                    // 60111/46004表示用户不存在，返回null而不是抛出异常
+                    if (errcode == 60111 || errcode == 46004) {
+                        return null;
+                    }
+                    throw new RuntimeException("Failed to get userid by mobile, errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
+                }
+                return body.getStr("userid");
+            } else {
+                throw new RuntimeException("Failed to get userid by mobile");
+            }
+        });
+    }
+
+    /**
+     * 创建用户
+     */
+    public JSONObject createUser(JSONObject userInfo) {
+        return executeWithRetry(() -> {
+            String url = apiBaseUrl + "/cgi-bin/user/create?access_token=" + getContactsAccessToken();
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            org.springframework.http.HttpEntity<String> entity = new org.springframework.http.HttpEntity<>(userInfo.toString(), headers);
+
+            org.springframework.http.ResponseEntity<String> response = restTemplate.exchange(url, org.springframework.http.HttpMethod.POST, entity, String.class);
+
+            if (response.getStatusCode() == org.springframework.http.HttpStatus.OK && response.getBody() != null) {
+                JSONObject body = JSONUtil.parseObj(response.getBody());
+                Integer errcode = body.getInt("errcode");
+                if (errcode != null && errcode != 0 && errcode != 60102) {
+                    throw new RuntimeException("Failed to create user, errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
+                }
+                return body;
+            } else {
+                throw new RuntimeException("Failed to create user");
+            }
+        }, this::refreshContactsToken);
+    }
+
+    /**
+     * 删除用户
+     */
+    public JSONObject deleteUser(String userid) {
+        return executeWithRetry(() -> {
+            String url = apiBaseUrl + "/cgi-bin/user/delete?access_token=" + getContactsAccessToken() + "&userid=" + userid;
+
+            String responseBody = doGet(url);
+
+            if (responseBody != null) {
+                JSONObject body = JSONUtil.parseObj(responseBody);
+                Integer errcode = body.getInt("errcode");
+                if (errcode != null && errcode != 0 && errcode != 60111) {
+                    throw new RuntimeException("Failed to delete user " + userid + ", errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
+                }
+                return body;
+            } else {
+                throw new RuntimeException("Failed to delete user");
+            }
+        }, this::refreshContactsToken);
+    }
+
+    /**
+     * 更新用户
+     */
+    public JSONObject updateUser(JSONObject userInfo) {
+        return executeWithRetry(() -> {
+            String url = apiBaseUrl + "/cgi-bin/user/update?access_token=" + getContactsAccessToken();
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            org.springframework.http.HttpEntity<String> entity = new org.springframework.http.HttpEntity<>(userInfo.toString(), headers);
+
+            org.springframework.http.ResponseEntity<String> response = restTemplate.exchange(url, org.springframework.http.HttpMethod.POST, entity, String.class);
+
+            if (response.getStatusCode() == org.springframework.http.HttpStatus.OK && response.getBody() != null) {
+                JSONObject body = JSONUtil.parseObj(response.getBody());
+                Integer errcode = body.getInt("errcode");
+                if (errcode != null && errcode != 0) {
+                    throw new RuntimeException("Failed to update user, errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
+                }
+                return body;
+            } else {
+                throw new RuntimeException("Failed to update user");
+            }
+        }, this::refreshContactsToken);
+    }
+
+    // ==================== 标签管理 API ====================
+
+    /**
+     * 获取企业标签库
+     */
+    public JSONObject getCorpTagList(String tagId, String groupId) {
+        return executeWithRetry(() -> {
+            String url = apiBaseUrl + "/cgi-bin/externalcontact/get_corp_tag_list?access_token=" + getAccessToken();
+
+            JSONObject requestBody = new JSONObject();
+            if (tagId != null || groupId != null) {
+                JSONArray tagIdArr = tagId != null ? new JSONArray().put(tagId) : null;
+                JSONArray groupIdArr = groupId != null ? new JSONArray().put(groupId) : null;
+                if (tagIdArr != null) requestBody.set("tag_id", tagIdArr);
+                if (groupIdArr != null) requestBody.set("group_id", groupIdArr);
+            }
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            org.springframework.http.HttpEntity<String> entity = new org.springframework.http.HttpEntity<>(requestBody.toString(), headers);
+
+            log.info("API: 获取企业标签库...");
+            org.springframework.http.ResponseEntity<String> response = restTemplate.exchange(url, org.springframework.http.HttpMethod.POST, entity, String.class);
+
+            if (response.getStatusCode() == org.springframework.http.HttpStatus.OK && response.getBody() != null) {
+                JSONObject body = JSONUtil.parseObj(response.getBody());
+                Integer errcode = body.getInt("errcode");
+                if (errcode != null && errcode != 0) {
+                    throw new RuntimeException("Failed to get corp tag list, errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
+                }
+                return body;
+            } else {
+                throw new RuntimeException("Failed to get corp tag list");
+            }
+        });
+    }
+
+    /**
+     * 添加企业客户标签
+     */
+    public JSONObject addCorpTag(String groupId, String groupName, List<String> tagNames) {
+        return executeWithRetry(() -> {
+            String url = apiBaseUrl + "/cgi-bin/externalcontact/add_corp_tag?access_token=" + getAccessToken();
+
+            JSONObject requestBody = new JSONObject();
+            if (groupId != null) {
+                requestBody.set("group_id", groupId);
+            }
+            requestBody.set("group_name", groupName);
+
+            JSONArray tagArr = new JSONArray();
+            for (String name : tagNames) {
+                JSONObject tag = new JSONObject();
+                tag.set("name", name);
+                tagArr.add(tag);
+            }
+            requestBody.set("tag", tagArr);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            org.springframework.http.HttpEntity<String> entity = new org.springframework.http.HttpEntity<>(requestBody.toString(), headers);
+
+            log.info("Adding corp tag, group: {}, tags: {}", groupName, tagNames);
+            org.springframework.http.ResponseEntity<String> response = restTemplate.exchange(url, org.springframework.http.HttpMethod.POST, entity, String.class);
+
+            if (response.getStatusCode() == org.springframework.http.HttpStatus.OK && response.getBody() != null) {
+                JSONObject body = JSONUtil.parseObj(response.getBody());
+                Integer errcode = body.getInt("errcode");
+                if (errcode != null && errcode != 0) {
+                    throw new RuntimeException("Failed to add corp tag, errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
+                }
+                return body;
+            } else {
+                throw new RuntimeException("Failed to add corp tag");
+            }
+        });
+    }
+
+    /**
+     * 编辑企业客户标签
+     */
+    public JSONObject editCorpTag(String id, String name, Integer order) {
+        return executeWithRetry(() -> {
+            String url = apiBaseUrl + "/cgi-bin/externalcontact/edit_corp_tag?access_token=" + getAccessToken();
+
+            JSONObject requestBody = new JSONObject();
+            requestBody.set("id", id);
+            if (name != null) requestBody.set("name", name);
+            if (order != null) requestBody.set("order", order);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            org.springframework.http.HttpEntity<String> entity = new org.springframework.http.HttpEntity<>(requestBody.toString(), headers);
+
+            org.springframework.http.ResponseEntity<String> response = restTemplate.exchange(url, org.springframework.http.HttpMethod.POST, entity, String.class);
+
+            if (response.getStatusCode() == org.springframework.http.HttpStatus.OK && response.getBody() != null) {
+                JSONObject body = JSONUtil.parseObj(response.getBody());
+                Integer errcode = body.getInt("errcode");
+                if (errcode != null && errcode != 0) {
+                    throw new RuntimeException("Failed to edit corp tag, errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
+                }
+                return body;
+            } else {
+                throw new RuntimeException("Failed to edit corp tag");
+            }
+        });
+    }
+
+    /**
+     * 删除企业客户标签
+     */
+    public JSONObject delCorpTag(List<String> tagIds, List<String> groupIds) {
+        return executeWithRetry(() -> {
+            String url = apiBaseUrl + "/cgi-bin/externalcontact/del_corp_tag?access_token=" + getAccessToken();
+
+            JSONObject requestBody = new JSONObject();
+            if (tagIds != null && !tagIds.isEmpty()) {
+                requestBody.set("tag_id", new JSONArray(tagIds));
+            }
+            if (groupIds != null && !groupIds.isEmpty()) {
+                requestBody.set("group_id", new JSONArray(groupIds));
+            }
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            org.springframework.http.HttpEntity<String> entity = new org.springframework.http.HttpEntity<>(requestBody.toString(), headers);
+
+            log.info("Deleting corp tags: {}", tagIds);
+            org.springframework.http.ResponseEntity<String> response = restTemplate.exchange(url, org.springframework.http.HttpMethod.POST, entity, String.class);
+
+            if (response.getStatusCode() == org.springframework.http.HttpStatus.OK && response.getBody() != null) {
+                JSONObject body = JSONUtil.parseObj(response.getBody());
+                Integer errcode = body.getInt("errcode");
+                if (errcode != null && errcode != 0) {
+                    throw new RuntimeException("Failed to del corp tag, errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
+                }
+                return body;
+            } else {
+                throw new RuntimeException("Failed to del corp tag");
+            }
+        });
+    }
+
+    /**
+     * 给客户打标/移除标签
+     * markTag API 要求: userid + externalUserid + addTag/removeTag
+     * 每次最多添加/移除50个标签
+     */
+    public JSONObject markTag(String userid, String externalUserid,
+                              List<String> addTag, List<String> removeTag) {
+        return executeWithRetry(() -> {
+            String url = apiBaseUrl + "/cgi-bin/externalcontact/mark_tag?access_token=" + getAccessToken();
+
+            JSONObject requestBody = new JSONObject();
+            requestBody.set("userid", userid);
+            requestBody.set("external_userid", externalUserid);
+            if (addTag != null && !addTag.isEmpty()) {
+                requestBody.set("add_tag", new JSONArray(addTag));
+            }
+            if (removeTag != null && !removeTag.isEmpty()) {
+                requestBody.set("remove_tag", new JSONArray(removeTag));
+            }
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            org.springframework.http.HttpEntity<String> entity = new org.springframework.http.HttpEntity<>(requestBody.toString(), headers);
+
+            org.springframework.http.ResponseEntity<String> response = restTemplate.exchange(url, org.springframework.http.HttpMethod.POST, entity, String.class);
+
+            if (response.getStatusCode() == org.springframework.http.HttpStatus.OK && response.getBody() != null) {
+                JSONObject body = JSONUtil.parseObj(response.getBody());
+                Integer errcode = body.getInt("errcode");
+                if (errcode != null && errcode != 0) {
+                    log.warn("markTag failed for externalUserid: {}, errcode: {}, errmsg: {}",
+                            externalUserid, errcode, body.getStr("errmsg"));
+                    return body;
+                }
+                return body;
+            } else {
+                throw new RuntimeException("Failed to mark tag");
             }
         });
     }

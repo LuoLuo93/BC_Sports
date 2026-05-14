@@ -9,8 +9,8 @@ import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.dto.IhrEmployeeExclusionDTO;
 import com.bcsport.admin.dto.IhrEmployeeExclusionQueryDTO;
-import com.bcsport.admin.entity.qywx.IhrEmployeeExclusion;
-import com.bcsport.admin.qywxmapper.IhrEmployeeExclusionMapper;
+import com.bcsport.admin.entity.ihr.IhrEmployeeExclusion;
+import com.bcsport.admin.ihrmapper.IhrEmployeeExclusionMapper;
 import com.bcsport.admin.service.IhrEmployeeExclusionService;
 import com.bcsport.admin.util.BeanCopyUtils;
 import com.bcsport.admin.vo.IhrEmployeeExclusionVO;
@@ -88,9 +88,9 @@ public class IhrEmployeeExclusionServiceImpl extends ServiceImpl<IhrEmployeeExcl
         }
 
         // 如果修改了关键字段，校验重复
-        boolean nameChanged = !existing.getStaffName().equals(dto.getStaffName());
-        boolean noChanged = !existing.getStaffNo().equals(dto.getStaffNo());
-        boolean typeChanged = !existing.getExclusionType().equals(dto.getExclusionType());
+        boolean nameChanged = !java.util.Objects.equals(existing.getStaffName(), dto.getStaffName());
+        boolean noChanged = !java.util.Objects.equals(existing.getStaffNo(), dto.getStaffNo());
+        boolean typeChanged = !java.util.Objects.equals(existing.getExclusionType(), dto.getExclusionType());
         if (nameChanged || noChanged || typeChanged) {
             LambdaQueryWrapper<IhrEmployeeExclusion> dupCheck = new LambdaQueryWrapper<>();
             dupCheck.eq(IhrEmployeeExclusion::getStaffName, dto.getStaffName())

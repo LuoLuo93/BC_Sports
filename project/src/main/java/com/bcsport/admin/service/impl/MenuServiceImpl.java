@@ -5,10 +5,12 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.bcsport.admin.dto.MenuDTO;
 import com.bcsport.admin.entity.Menu;
 import com.bcsport.admin.mapper.MenuMapper;
+import com.bcsport.admin.service.AuthCacheService;
 import com.bcsport.admin.service.MenuService;
 import com.bcsport.admin.util.BeanCopyUtils;
 import com.bcsport.admin.vo.MenuVO;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +24,9 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 public class MenuServiceImpl extends ServiceImpl<MenuMapper, Menu> implements MenuService {
+
+    @Autowired
+    private AuthCacheService authCacheService;
     
     @Override
     public List<MenuVO> getMenuTree() {
@@ -92,7 +97,11 @@ public class MenuServiceImpl extends ServiceImpl<MenuMapper, Menu> implements Me
         // 设置默认值（审计字段由MybatisPlusAutoFillHandler 自动填充）
         menu.setStatus(1);
         menu.setVisible(1);
-        return baseMapper.insert(menu) > 0;
+        boolean result = baseMapper.insert(menu) > 0;
+        if (result) {
+            authCacheService.evictAll();
+        }
+        return result;
     }
 
     @Override
@@ -100,9 +109,13 @@ public class MenuServiceImpl extends ServiceImpl<MenuMapper, Menu> implements Me
     public boolean updateMenu(MenuDTO menuDTO) {
         Menu menu = BeanCopyUtils.copy(menuDTO, Menu.class);
         // 审计字段由MybatisPlusAutoFillHandler 自动填充
-        return baseMapper.updateById(menu) > 0;
+        boolean result = baseMapper.updateById(menu) > 0;
+        if (result) {
+            authCacheService.evictAll();
+        }
+        return result;
     }
-    
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteMenu(String id) {
@@ -111,7 +124,11 @@ public class MenuServiceImpl extends ServiceImpl<MenuMapper, Menu> implements Me
         }
 
         // 使用 MyBatis-Plus 逻辑删除（@TableLogic 自动处理）
-        return removeById(id);
+        boolean result = removeById(id);
+        if (result) {
+            authCacheService.evictAll();
+        }
+        return result;
     }
 
     @Override
@@ -129,7 +146,15 @@ public class MenuServiceImpl extends ServiceImpl<MenuMapper, Menu> implements Me
             adminPermissions.add("*");
             return adminPermissions;
         }
-        return baseMapper.getPermissionsByUserId(userId);
+
+        List<String> cached = authCacheService.getPermissions(userId);
+        if (cached != null) {
+            return cached;
+        }
+
+        List<String> permissions = baseMapper.getPermissionsByUserId(userId);
+        authCacheService.putPermissions(userId, permissions);
+        return permissions;
     }
 
     @Override

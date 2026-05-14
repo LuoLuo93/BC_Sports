@@ -1,0 +1,230 @@
+/* ============================================
+   BC Sport Design System - Form Components
+   ============================================ */
+
+/* ---------- Form Label ---------- */
+.bc-form-label {
+    font-weight: var(--bc-font-semibold);
+    font-size: var(--bc-text-sm);
+    color: var(--bc-text-muted);
+    margin-bottom: var(--bc-space-1);
+    display: block;
+    letter-spacing: var(--bc-tracking-wide);
+}
+
+.bc-form-label .text-danger {
+    color: var(--bc-danger);
+    font-weight: var(--bc-font-bold);
+    font-size: var(--bc-text-xs);
+}
+
+/* ---------- Input Base ---------- */
+.bc-input,
+.bc-select,
+.bc-textarea {
+    display: block;
+    width: 100%;
+    min-height: var(--bc-input-height-md);
+    padding: var(--bc-space-1) var(--bc-space-3);
+    font-size: var(--bc-text-sm);
+    font-weight: var(--bc-font-normal);
+    line-height: var(--bc-leading-normal);
+    color: var(--bc-text-primary);
+    background-color: var(--bc-bg-surface);
+    background-clip: padding-box;
+    border: 1px solid var(--bc-border);
+    appearance: none;
+    border-radius: var(--bc-radius-input);
+    transition: border-color var(--bc-duration-fast), box-shadow var(--bc-duration-fast);
+}
+
+.bc-input:hover,
+.bc-select:hover,
+.bc-textarea:hover {
+    border-color: var(--bc-gray-300);
+}
+
+.bc-input:focus,
+.bc-select:focus,
+.bc-textarea:focus {
+    color: var(--bc-text-primary);
+    background-color: var(--bc-bg-surface);
+    border-color: var(--bc-primary);
+    outline: 0;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+}
+
+.bc-input::placeholder,
+.bc-textarea::placeholder {
+    color: var(--bc-gray-400);
+    font-weight: var(--bc-font-normal);
+}
+
+/* ---------- Select with Custom Arrow ---------- */
+.bc-select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right var(--bc-space-3) center;
+    background-size: 10px;
+    padding-right: var(--bc-space-8);
+    cursor: pointer;
+}
+
+/* ---------- Disabled & Readonly ---------- */
+.bc-input:disabled,
+.bc-select:disabled,
+.bc-textarea:disabled,
+.bc-input[readonly],
+.bc-textarea[readonly] {
+    background-color: var(--bc-gray-50);
+    color: var(--bc-gray-400);
+    cursor: not-allowed;
+    border-color: var(--bc-gray-100);
+}
+
+/* ---------- Number Input ---------- */
+input[type="number"].bc-input::-webkit-inner-spin-button,
+input[type="number"].bc-input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input[type="number"].bc-input {
+    -moz-appearance: textfield;
+}
+
+/* ---------- Date Input ---------- */
+input[type="date"].bc-input,
+input[type="datetime-local"].bc-input {
+    cursor: pointer;
+}
+
+input[type="date"].bc-input::-webkit-calendar-picker-indicator {
+    opacity: 0.5;
+    cursor: pointer;
+}
+
+input[type="date"].bc-input:hover::-webkit-calendar-picker-indicator {
+    opacity: 0.8;
+}
+
+/* ---------- Input Group with Icon ---------- */
+.bc-input-group {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.bc-input-group i {
+    position: absolute;
+    left: var(--bc-space-3);
+    color: var(--bc-gray-400);
+    pointer-events: none;
+    font-size: var(--bc-text-base);
+    transition: color var(--bc-duration-fast);
+}
+
+.bc-input-group .bc-input {
+    padding-left: var(--bc-space-9);
+}
+
+.bc-input-group:focus-within i {
+    color: var(--bc-primary);
+}
+
+/* ---------- Textarea ---------- */
+textarea.bc-textarea {
+    min-height: 64px;
+    resize: vertical;
+    padding: var(--bc-space-2) var(--bc-space-3);
+    line-height: var(--bc-leading-relaxed);
+}
+
+/* ---------- Form Grid ---------- */
+.bc-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--bc-space-4);
+}
+
+.bc-form-grid-3 {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+@media (max-width: 992px) {
+    .bc-form-grid-3 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .bc-form-grid,
+    .bc-form-grid-3 {
+        grid-template-columns: 1fr;
+    }
+}
+
+.bc-form-group {
+    margin-bottom: 0;
+}
+
+.bc-form-group-full {
+    grid-column: 1 / -1;
+}
+
+.bc-form-text {
+    font-size: var(--bc-text-sm);
+    color: var(--bc-text-muted);
+    margin-top: var(--bc-space-1);
+}
+
+/* ---------- Role Tags (Checkbox Group) ---------- */
+.bc-role-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--bc-space-2);
+    min-height: var(--bc-input-height-lg);
+    align-items: center;
+}
+
+.bc-role-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--bc-space-1);
+    padding: var(--bc-space-1) var(--bc-space-3);
+    border: 1.5px solid var(--bc-border);
+    border-radius: var(--bc-radius-lg);
+    cursor: pointer;
+    font-size: var(--bc-text-sm);
+    font-weight: var(--bc-font-medium);
+    color: var(--bc-text-muted);
+    background: var(--bc-bg-surface);
+    transition: var(--bc-transition-fast);
+    user-select: none;
+    line-height: 1.4;
+}
+
+.bc-role-tag:hover {
+    border-color: var(--bc-gray-300);
+    background: var(--bc-gray-50);
+}
+
+.bc-role-tag input[type="checkbox"] {
+    display: none;
+}
+
+.bc-role-tag.active,
+.bc-role-tag:has(input:checked) {
+    border-color: var(--bc-primary);
+    background: var(--bc-primary-soft);
+    color: var(--bc-primary);
+    font-weight: var(--bc-font-semibold);
+}
+
+.bc-role-tag.active::before,
+.bc-role-tag:has(input:checked)::before {
+    content: '\F272';
+    font-family: 'bootstrap-icons';
+    font-size: var(--bc-text-xs);
+    margin-right: var(--bc-space-1);
+}

@@ -11,4 +11,13 @@
             (#{item.employeesId}, #{item.syncDate}, GETDATE())
         </foreach>
     </insert>
+
+    <select id="selectBySyncDates" resultType="java.lang.String">
+        SELECT DISTINCT employees_id
+        FROM employee_additions
+        WHERE CONVERT(DATE, sync_date) IN
+        <foreach collection="syncDates" item="syncDate" open="(" separator="," close=")">
+            CONVERT(DATE, #{syncDate})
+        </foreach>
+    </select>
 </mapper>

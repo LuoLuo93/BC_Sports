@@ -3,6 +3,7 @@ package com.bcsport.admin.controller;
 import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.common.Result;
+import com.bcsport.admin.dto.PasswordDTO;
 import com.bcsport.admin.dto.UserDTO;
 import com.bcsport.admin.entity.User;
 import com.bcsport.admin.util.ShiroSecurityUtils;
@@ -103,31 +104,36 @@ public class UserController {
     @PutMapping("/{id}/resetPassword")
     @ApiOperation("重置密码")
     @RequiresPermissions("user:resetPassword")
-    public Result<?> resetPassword(@PathVariable String id, @RequestParam String newPassword) {
-        boolean success = userService.resetPassword(id, newPassword);
+    public Result<?> resetPassword(@PathVariable String id, @Validated @RequestBody PasswordDTO dto) {
+        boolean success = userService.resetPassword(id, dto.getNewPassword());
         if (success) {
             return Result.success("重置密码成功", null);
         }
         return Result.error("重置密码失败");
     }
-    
+
     /**
      * 修改密码
      */
     @PutMapping("/{id}/changePassword")
     @ApiOperation("修改密码")
-    public Result<?> changePassword(@PathVariable String id,
-                                   @RequestParam String oldPassword,
-                                   @RequestParam String newPassword) {
+    public Result<?> changePassword(@PathVariable String id, @Validated @RequestBody PasswordDTO dto) {
         // 检查权限：只能修改自己的密码，或者有user:resetPassword权限的管理员可以修改任意密码
         String currentUserId = ShiroSecurityUtils.getCurrentUserId();
         if (currentUserId == null) {
             return Result.error("未登录");
         }
-        if (!id.equals(currentUserId) && !ShiroSecurityUtils.hasPermission("user:resetPassword")) {
+        boolean isAdmin = ShiroSecurityUtils.hasPermission("user:resetPassword");
+        if (!id.equals(currentUserId) && !isAdmin) {
             return Result.error("无权修改该用户的密码");
         }
-        boolean success = userService.changePassword(id, oldPassword, newPassword);
+        // 管理员修改他人密码时，跳过旧密码验证，直接重置
+        if (isAdmin && !id.equals(currentUserId)) {
+            boolean success = userService.resetPassword(id, dto.getNewPassword());
+            return success ? Result.success("修改密码成功", null) : Result.error("修改密码失败");
+        }
+        // 普通用户修改自己的密码，需要验证旧密码
+        boolean success = userService.changePassword(id, dto.getOldPassword(), dto.getNewPassword());
         if (success) {
             return Result.success("修改密码成功", null);
         }

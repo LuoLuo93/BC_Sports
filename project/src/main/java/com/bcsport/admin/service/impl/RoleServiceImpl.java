@@ -12,6 +12,7 @@ import com.bcsport.admin.entity.Role;
 import com.bcsport.admin.entity.RoleMenu;
 import com.bcsport.admin.mapper.RoleMapper;
 import com.bcsport.admin.mapper.RoleMenuMapper;
+import com.bcsport.admin.service.AuthCacheService;
 import com.bcsport.admin.service.RoleService;
 import com.bcsport.admin.util.BeanCopyUtils;
 import com.bcsport.admin.vo.RoleVO;
@@ -34,6 +35,9 @@ public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements Ro
     
     @Autowired
     private RoleMenuMapper roleMenuMapper;
+
+    @Autowired
+    private AuthCacheService authCacheService;
     
     @Override
     public PageResult<RoleVO> pageRoles(PageQuery pageQuery, RoleQueryDTO queryRole) {
@@ -118,13 +122,21 @@ public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements Ro
         }
 
         Role role = BeanCopyUtils.copy(roleDTO, Role.class);
-        return baseMapper.updateById(role) > 0;
+        boolean result = baseMapper.updateById(role) > 0;
+        if (result) {
+            authCacheService.evictAll();
+        }
+        return result;
     }
-    
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteRole(String id) {
-        return baseMapper.deleteById(id) > 0;
+        boolean result = baseMapper.deleteById(id) > 0;
+        if (result) {
+            authCacheService.evictAll();
+        }
+        return result;
     }
     
     @Override
@@ -160,6 +172,7 @@ public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements Ro
             // 使用批量插入（需要RoleMenuMapper继承MyBatis-Plus的批量插入方法）
             roleMenuList.forEach(roleMenuMapper::insert);
         }
+        authCacheService.evictAll();
         return true;
     }
 }

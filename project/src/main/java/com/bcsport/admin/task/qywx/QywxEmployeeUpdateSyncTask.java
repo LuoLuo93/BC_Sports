@@ -8,12 +8,12 @@ import com.bcsport.admin.ihrmapper.IhrEmployeeModificationMapper;
 import com.bcsport.admin.qywxmapper.QywxAttrsBaseMapper;
 import com.bcsport.admin.qywxmapper.QywxDepartmentMapper;
 import com.bcsport.admin.service.IhrEmployeeExclusionService;
+import com.bcsport.admin.service.IhrEmployeeUpdateService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * 更新企微员工信息任务
@@ -46,10 +46,11 @@ public class QywxEmployeeUpdateSyncTask {
     @Autowired
     private IhrEmployeeExclusionService exclusionService;
 
+    @Autowired
+    private IhrEmployeeUpdateService updateService;
+
     public void sync() {
-        log.info("========================================");
-        log.info("=== 开始执行：更新企微员工信息 ===");
-        log.info("========================================");
+        log.info("=== 开始执行: 更新企微员工信息 ===");
         long startTime = System.currentTimeMillis();
 
         try {
@@ -109,20 +110,39 @@ public class QywxEmployeeUpdateSyncTask {
 
                     // 检查是否在排除列表中
                     if (exclusionService.checkExcluded(staffName, staffNo, 1)) {
-                        log.info("员工 {}({}) 在排除列表中，跳过", staffName, staffNo);
+                        updateService.markSyncSkipped(employee.getId(), staffName, staffNo);
                         skipCount++;
                         continue;
                     }
 
                     // 通过工号查企微 userid
                     String userid = attrsBaseMapper.selectUseridByStaffNo(staffNo);
-                    if (userid == null || userid.isEmpty()) {
+                    if ((userid == null || userid.isEmpty()) && mobile != null && !mobile.isEmpty()) {
                         // 兜底：通过手机号查
                         userid = apiClient.getUserIdByMobile(mobile);
                     }
                     if (userid == null || userid.isEmpty()) {
-                        log.warn("员工 {}({}) 未找到企微userid，跳过", staffName, staffNo);
-                        skipCount++;
+                        try {
+                            String departId = resolveDepartId(employee);
+                            JSONObject createBody = buildCreateUserBody(employee, departId);
+                            JSONObject createResult = apiClient.createUser(createBody);
+                            Integer createErrcode = createResult.getInt("errcode");
+                            if (createErrcode != null && (createErrcode == 0 || createErrcode == 60102)) {
+                                successCount++;
+                                updateService.markSyncSuccess(employee.getId(), staffName, staffNo);
+                            } else {
+                                failCount++;
+                                String errmsg = createResult.getStr("errmsg");
+                                updateService.markSyncFailed(employee.getId(), staffName, staffNo,
+                                        "自动入职失败: errcode=" + createErrcode + ", " + errmsg);
+                                log.warn("调整同步自动入职失败: {}({}), errcode: {}, errmsg: {}",
+                                        staffName, mobile, createErrcode, errmsg);
+                            }
+                        } catch (Exception ex) {
+                            failCount++;
+                            updateService.markSyncFailed(employee.getId(), staffName, staffNo, "自动入职异常: " + ex.getMessage());
+                            log.error("调整同步自动入职异常: {}({}): {}", staffName, mobile, ex.getMessage());
+                        }
                         continue;
                     }
 
@@ -137,28 +157,89 @@ public class QywxEmployeeUpdateSyncTask {
                     Integer errcode = result.getInt("errcode");
                     if (errcode != null && errcode == 0) {
                         successCount++;
-                        log.info("更新企微用户成功: {}({}) -> userid: {}", staffName, mobile, userid);
+                        updateService.markSyncSuccess(employee.getId(), staffName, staffNo);
                     } else {
                         failCount++;
+                        String errmsg = result.getStr("errmsg");
+                        updateService.markSyncFailed(employee.getId(), staffName, staffNo,
+                                "errcode=" + errcode + ", " + errmsg);
                         log.warn("更新企微用户失败: {}({}), errcode: {}, errmsg: {}",
-                                staffName, mobile, errcode, result.getStr("errmsg"));
+                                staffName, mobile, errcode, errmsg);
                     }
 
                 } catch (Exception e) {
                     failCount++;
+                    updateService.markSyncFailed(employee.getId(), employee.getStaffName(), employee.getStaffNo(), e.getMessage());
                     log.error("处理员工失败: {}({}): {}", employee.getStaffName(), employee.getMobileNo(), e.getMessage());
                 }
             }
 
             long totalTime = System.currentTimeMillis() - startTime;
-            log.info("========================================");
-            log.info("=== 更新企微员工信息 完成 ===");
-            log.info("=== 成功: {}, 跳过: {}, 失败: {}, 总耗时: {} ms ===", successCount, skipCount, failCount, totalTime);
-            log.info("========================================");
+            log.info("=== 完成: 更新企微员工信息, 成功: {}, 跳过: {}, 失败: {}, 耗时: {} ms ===",
+                    successCount, skipCount, failCount, totalTime);
 
         } catch (Exception e) {
-            log.error("=== 更新企微员工信息 异常 ===", e);
+            log.error("=== 失败: 更新企微员工信息 ===", e);
             throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * 同步单个调整员工到企微（供手动触发使用）
+     */
+    public String syncSingle(String staffId) {
+        log.info("手动同步单个调整员工到企微, staffId={}", staffId);
+
+        List<IhrEmployeeDetail> details = employeeDetailMapper.selectByStaffIds(Collections.singletonList(staffId));
+        if (details == null || details.isEmpty()) {
+            return "未找到员工详细信息";
+        }
+
+        IhrEmployeeDetail employee = details.get(0);
+        String staffName = employee.getStaffName();
+        String staffNo = employee.getStaffNo();
+        String mobile = employee.getMobileNo();
+
+        if (exclusionService.checkExcluded(staffName, staffNo, 1)) {
+            updateService.markSyncSkipped(staffId, staffName, staffNo);
+            return "员工在排除列表中";
+        }
+
+        String userid = attrsBaseMapper.selectUseridByStaffNo(staffNo);
+        if ((userid == null || userid.isEmpty()) && mobile != null && !mobile.isEmpty()) {
+            userid = apiClient.getUserIdByMobile(mobile);
+        }
+        if (userid == null || userid.isEmpty()) {
+            // 员工不在企微通讯录，走入职流程
+            log.info("员工 {}({}) 不在企微，尝试入职创建", staffName, staffNo);
+            String departId = resolveDepartId(employee);
+            JSONObject createBody = buildCreateUserBody(employee, departId);
+            JSONObject createResult = apiClient.createUser(createBody);
+            Integer createErrcode = createResult.getInt("errcode");
+            if (createErrcode != null && (createErrcode == 0 || createErrcode == 60102)) {
+                updateService.markSyncSuccess(staffId, staffName, staffNo);
+                return null;
+            } else {
+                String errmsg = createResult.getStr("errmsg");
+                updateService.markSyncFailed(staffId, staffName, staffNo,
+                        "自动入职失败: errcode=" + createErrcode + ", " + errmsg);
+                return "自动入职失败: " + errmsg;
+            }
+        }
+
+        String departId = resolveDepartId(employee);
+        JSONObject requestBody = buildUpdateUserBody(userid, employee, departId);
+        JSONObject result = apiClient.updateUser(requestBody);
+        Integer errcode = result.getInt("errcode");
+
+        if (errcode != null && errcode == 0) {
+            updateService.markSyncSuccess(staffId, staffName, staffNo);
+            return null;
+        } else {
+            String errmsg = result.getStr("errmsg");
+            updateService.markSyncFailed(staffId, staffName, staffNo,
+                    "errcode=" + errcode + ", " + errmsg);
+            return "更新失败: " + errmsg;
         }
     }
 
@@ -215,6 +296,55 @@ public class QywxEmployeeUpdateSyncTask {
     }
 
     /**
+     * 构建创建企微用户的请求体（入职流程）
+     */
+    private JSONObject buildCreateUserBody(IhrEmployeeDetail employee, String departId) {
+        JSONObject body = new JSONObject();
+        body.set("userid", employee.getMobileNo());
+        body.set("name", employee.getStaffName());
+        body.set("mobile", employee.getMobileNo());
+
+        if (employee.getPositionName() != null && !"null".equals(employee.getPositionName())) {
+            body.set("position", employee.getPositionName());
+        }
+
+        if (employee.getWorkEmail() != null && !"null".equals(employee.getWorkEmail()) && !employee.getWorkEmail().isEmpty()) {
+            body.set("email", employee.getWorkEmail());
+        }
+
+        JSONArray deptArray = new JSONArray();
+        try {
+            deptArray.add(Integer.parseInt(departId));
+        } catch (NumberFormatException e) {
+            deptArray.add(1);
+        }
+        body.set("department", deptArray);
+
+        // 扩展属性
+        JSONArray attrs = new JSONArray();
+        if (employee.getStaffNo() != null && !"null".equals(employee.getStaffNo())) {
+            attrs.add(buildAttr("工号", employee.getStaffNo()));
+        }
+        if (employee.getPositionLevelName() != null && !"null".equals(employee.getPositionLevelName())) {
+            attrs.add(buildAttr("职级", employee.getPositionLevelName()));
+        }
+        if (employee.getEnrollInDate() != null && !"null".equals(employee.getEnrollInDate())) {
+            attrs.add(buildAttr("入职日期", employee.getEnrollInDate()));
+        }
+        if (employee.getMobileNo() != null && !"null".equals(employee.getMobileNo())) {
+            attrs.add(buildAttr("mobile", employee.getMobileNo()));
+        }
+
+        if (!attrs.isEmpty()) {
+            JSONObject extattr = new JSONObject();
+            extattr.set("attrs", attrs);
+            body.set("extattr", extattr);
+        }
+
+        return body;
+    }
+
+    /**
      * 构建更新企微用户的请求体
      */
     private JSONObject buildUpdateUserBody(String userid, IhrEmployeeDetail employee, String departId) {
@@ -238,7 +368,11 @@ public class QywxEmployeeUpdateSyncTask {
         }
 
         JSONArray deptArray = new JSONArray();
-        deptArray.add(Integer.parseInt(departId));
+        try {
+            deptArray.add(Integer.parseInt(departId));
+        } catch (NumberFormatException e) {
+            deptArray.add(1);
+        }
         body.set("department", deptArray);
 
         // 扩展属性

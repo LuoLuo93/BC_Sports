@@ -10,7 +10,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -33,7 +34,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class QywxAttrsBaseTask {
 
     private static final int CONCURRENT_THREADS = 10;
-    private static final int PROGRESS_REPORT_INTERVAL = 20;
     private static final long THREAD_POOL_TIMEOUT_SECONDS = 300;
 
     /**
@@ -58,6 +58,10 @@ public class QywxAttrsBaseTask {
     @Autowired
     @Qualifier("taskThreadPool")
     private ThreadPoolExecutor taskThreadPool;
+
+    @Autowired
+    @Qualifier("qywxTransactionManager")
+    private PlatformTransactionManager transactionManager;
 
     /**
      * 用户扩展属性处理结果
@@ -84,77 +88,59 @@ public class QywxAttrsBaseTask {
     /**
      * 同步成员扩展属性
      *
-     * 优化版：先清空表，然后分批处理用户，每批处理完立即写入数据库
-     * 避免所有数据堆积在内存中导致 OOM
+     * 优化版：先获取所有数据（API调用在事务外），再在短事务中写入数据库
      */
-    @Transactional(rollbackFor = Exception.class, transactionManager = "qywxTransactionManager")
     public void sync() {
-        log.info("=== Starting: QYWX sync member attrs (VX_attrsBase) ===");
+        log.info("=== 开始执行: 同步企微成员扩展属性 ===");
         long startTime = System.currentTimeMillis();
 
         try {
-            // 1. 获取所有需要同步的userid
+            // 1. 获取所有需要同步的userid（API调用：事务外）
             List<String> userIds = getUserIdsForSync();
 
             if (userIds == null || userIds.isEmpty()) {
-                log.error("=== Completed: No user ids found! ===");
+                log.warn("=== 完成: 无成员数据 ===");
                 return;
             }
 
-            log.info("Found {} user ids to sync, will process in batches of {}",
-                    userIds.size(), USER_BATCH_SIZE);
+            log.info("共 {} 个成员需要同步扩展属性", userIds.size());
 
-            // 2. 清空旧数据
-            attrsBaseMapper.deleteAll();
-            log.info("Cleared old VX_attrsBase data");
-
-            // 3. 分批处理用户
+            // 2. 并发获取所有属性数据（API调用：事务外）
+            List<QywxAttrsBase> allAttrsList = new ArrayList<>();
             int totalSuccessCount = 0;
             int totalFailCount = 0;
-            int totalAttrsCount = 0;
 
-            // 将用户列表分批
             List<List<String>> userBatches = partitionList(userIds, USER_BATCH_SIZE);
-            log.info("Split into {} batches", userBatches.size());
 
             for (int batchIndex = 0; batchIndex < userBatches.size(); batchIndex++) {
                 List<String> batchUserIds = userBatches.get(batchIndex);
 
-                log.info("Processing batch {}/{} ({} users)...",
-                        batchIndex + 1, userBatches.size(), batchUserIds.size());
-
-                long batchStartTime = System.currentTimeMillis();
-
-                // 处理当前批次
+                // 处理当前批次（API调用，不含DB写入）
                 BatchResult batchResult = processBatch(batchUserIds, batchIndex, userBatches.size());
 
-                // 累加统计
+                // 收集属性数据
+                allAttrsList.addAll(batchResult.attrsList);
+
                 totalSuccessCount += batchResult.successCount;
                 totalFailCount += batchResult.failCount;
-                totalAttrsCount += batchResult.attrsCount;
-
-                long batchTime = System.currentTimeMillis() - batchStartTime;
-                log.info("Batch {}/{} completed: {} success, {} failed, {} attrs in {}ms",
-                        batchIndex + 1, userBatches.size(),
-                        batchResult.successCount, batchResult.failCount,
-                        batchResult.attrsCount, batchTime);
-
-                // 主动提示 GC，帮助回收已处理批次的内存
-                if (batchIndex % 5 == 0) {
-                    log.debug("Suggesting GC after batch {}", batchIndex + 1);
-                    System.gc();
-                }
             }
 
+            // 3. DB writes: short transaction
+            new TransactionTemplate(transactionManager).execute(status -> {
+                attrsBaseMapper.deleteAll();
+
+                if (!allAttrsList.isEmpty()) {
+                    batchInsertAttrs(allAttrsList);
+                }
+                return null;
+            });
+
             long totalTime = System.currentTimeMillis() - startTime;
-            log.info("=== Completed: QYWX sync member attrs ===");
-            log.info("  Total users: {} ({} success, {} failed)",
-                    userIds.size(), totalSuccessCount, totalFailCount);
-            log.info("  Total attrs: {}", totalAttrsCount);
-            log.info("  Total time: {}ms", totalTime);
+            log.info("=== 完成: 同步企微成员扩展属性, 成功: {}, 失败: {}, 属性: {}, 耗时: {} ms ===",
+                    totalSuccessCount, totalFailCount, allAttrsList.size(), totalTime);
 
         } catch (Exception e) {
-            log.error("=== Failed: QYWX sync member attrs ===", e);
+            log.error("=== 失败: 同步企微成员扩展属性 ===", e);
             throw e;
         }
     }
@@ -166,16 +152,18 @@ public class QywxAttrsBaseTask {
         int successCount;
         int failCount;
         int attrsCount;
+        List<QywxAttrsBase> attrsList;
 
-        BatchResult(int successCount, int failCount, int attrsCount) {
+        BatchResult(int successCount, int failCount, int attrsCount, List<QywxAttrsBase> attrsList) {
             this.successCount = successCount;
             this.failCount = failCount;
             this.attrsCount = attrsCount;
+            this.attrsList = attrsList;
         }
     }
 
     /**
-     * 处理一个用户批次
+     * 处理一个用户批次（仅API调用，不写DB）
      */
     private BatchResult processBatch(List<String> userIds, int batchIndex, int totalBatches) {
         // 并发获取当前批次用户的扩展属性
@@ -195,12 +183,7 @@ public class QywxAttrsBaseTask {
             }
         }
 
-        // 立即写入当前批次的数据
-        if (!batchAttrsList.isEmpty()) {
-            batchInsertAttrs(batchAttrsList);
-        }
-
-        return new BatchResult(successCount, failCount, batchAttrsList.size());
+        return new BatchResult(successCount, failCount, batchAttrsList.size(), batchAttrsList);
     }
 
     /**
@@ -223,7 +206,7 @@ public class QywxAttrsBaseTask {
         List<String> userIds = departmentMemberMapper.selectAllUserIds();
 
         if (userIds == null || userIds.isEmpty()) {
-            log.warn("No department members in local DB, fetching from API...");
+            log.info("本地无部门成员数据, 从API获取...");
             List<QywxDepartmentMember> members = apiClient.getDepartmentListAll();
             if (members != null && !members.isEmpty()) {
                 userIds = new ArrayList<>();
@@ -251,7 +234,6 @@ public class QywxAttrsBaseTask {
         long fetchStart = System.currentTimeMillis();
 
         List<Future<AttrsResult>> futures = new ArrayList<>();
-        AtomicInteger progressCounter = new AtomicInteger(0);
         CountDownLatch countDownLatch = new CountDownLatch(userIds.size());
         List<AttrsResult> results = Collections.synchronizedList(new ArrayList<>());
 
@@ -259,7 +241,7 @@ public class QywxAttrsBaseTask {
             for (String userid : userIds) {
                 taskThreadPool.submit(() -> {
                     try {
-                        AttrsResult result = fetchSingleUserAttrs(userid, progressCounter, userIds.size());
+                        AttrsResult result = fetchSingleUserAttrs(userid);
                         results.add(result);
                     } finally {
                         countDownLatch.countDown();
@@ -289,7 +271,7 @@ public class QywxAttrsBaseTask {
     /**
      * 获取单个用户的扩展属性
      */
-    private AttrsResult fetchSingleUserAttrs(String userid, AtomicInteger progressCounter, int batchSize) {
+    private AttrsResult fetchSingleUserAttrs(String userid) {
         try {
             JSONObject userDetail = apiClient.getUserDetail(userid);
             if (userDetail == null) {
@@ -305,12 +287,6 @@ public class QywxAttrsBaseTask {
 
             // 提取 extattr.attrs
             List<QywxAttrsBase> attrsList = extractAttrs(userid, userDetail);
-
-            // 报告进度
-            int current = progressCounter.incrementAndGet();
-            if (current % PROGRESS_REPORT_INTERVAL == 0 || current == batchSize) {
-                log.debug("Batch progress: {}/{} ({}%)", current, batchSize, (current * 100 / batchSize));
-            }
 
             return new AttrsResult(userid, attrsList);
 
@@ -371,9 +347,6 @@ public class QywxAttrsBaseTask {
         for (int i = 0; i < attrsList.size(); i += ATTRS_BATCH_SIZE) {
             int end = Math.min(i + ATTRS_BATCH_SIZE, attrsList.size());
             attrsBaseMapper.insertBatch(attrsList.subList(i, end));
-            if ((i + ATTRS_BATCH_SIZE) % (ATTRS_BATCH_SIZE * 5) == 0 || end == attrsList.size()) {
-                log.debug("Inserted {}/{} attrs", Math.min(end, attrsList.size()), attrsList.size());
-            }
         }
 
         log.debug("Attrs inserted in {}ms", System.currentTimeMillis() - insertStart);

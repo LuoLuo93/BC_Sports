@@ -9,7 +9,7 @@
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <!-- 自定义CSS -->
-    <link rel="stylesheet" th:href="@{/css/layout.css}">
+    <link rel="stylesheet" th:href="@{/css/main.css}">
 </head>
 <body>
     <!-- 侧边栏 -->
@@ -198,11 +198,6 @@
     <script th:inline="javascript">
         // 将后端注入的权限列表同步到前端 JS 作用域
         window.userPermissions = /*[[${permissions}]]*/ [];
-
-        function hasPermission(p) {
-            if (!window.userPermissions) return false;
-            return window.userPermissions.includes('*') || window.userPermissions.includes(p);
-        }
     </script>
     <script src="/js/common.js"></script>
 
@@ -224,7 +219,7 @@
         });
 
         function loadDataList() {
-            $.ajax({
+            BC.ajax({
                 url: '/api/erp-warehouse/page',
                 type: 'GET',
                 data: {
@@ -236,12 +231,8 @@
                     status: $('#searchStatus').val()
                 },
                 success: function(res) {
-                    if (res.code === 200) {
-                        renderTable(res.data.records);
-                        renderPagination(res.data);
-                    } else {
-                        BC.toast(res.message, 'error');
-                    }
+                    renderTable(res.records);
+                    renderPagination(res);
                 }
             });
         }
@@ -277,10 +268,10 @@
                     : '-';
 
                 const btnGroup = [];
-                if (hasPermission('bi:erpWarehouse:edit')) {
+                if (BC.hasPermission('bi:erpWarehouse:edit')) {
                     btnGroup.push({ icon: 'bi-pencil', title: '修改信息', onclick: `editData('${safeId}')` });
                 }
-                if (hasPermission('bi:erpWarehouse:delete')) {
+                if (BC.hasPermission('bi:erpWarehouse:delete')) {
                     btnGroup.push({ icon: 'bi-trash', title: '彻底移除', onclick: `deleteData('${safeId}')` });
                 }
 
@@ -289,12 +280,12 @@
                 tbody.append(`
                     <tr>
                         <td><span class="text-muted small">${seq}</span></td>
-                        <td><span class="font-monospace small">${item.warehouseCode || '-'}</span></td>
-                        <td><span class="fw-bold text-main">${item.warehouseName || '-'}</span></td>
+                        <td><span class="font-monospace small">${BC.escapeHtml(item.warehouseCode || '-')}</span></td>
+                        <td><span class="fw-bold text-main">${BC.escapeHtml(item.warehouseName || '-')}</span></td>
                         <td>${typeTag}</td>
-                        <td><span class="small text-secondary">${location}</span></td>
-                        <td><span class="small">${item.manager || '-'}</span></td>
-                        <td><span class="small">${item.contactPhone || '-'}</span></td>
+                        <td><span class="small text-secondary">${BC.escapeHtml(location)}</span></td>
+                        <td><span class="small">${BC.escapeHtml(item.manager || '-')}</span></td>
+                        <td><span class="small">${BC.escapeHtml(item.contactPhone || '-')}</span></td>
                         <td><span class="small">${capacityText}</span></td>
                         <td>${statusTag}</td>
                         <td class="text-end">${actions}</td>
@@ -327,9 +318,11 @@
                 modal.modal('show');
             } else {
                 modal.find('.modal-title span').text('编辑仓库信息');
-                $.get(`/api/erp-warehouse/${id}`, res => {
-                    if (res.code === 200) {
-                        const d = res.data;
+                BC.ajax({
+                    url: `/api/erp-warehouse/${id}`,
+                    type: 'GET',
+                    success: res => {
+                        const d = res;
                         $('#dataId').val(d.id);
                         $('#warehouseCode').val(d.warehouseCode);
                         $('#warehouseName').val(d.warehouseName);
@@ -376,19 +369,14 @@
             if (!data.warehouseName) { BC.toast('请输入仓库名称', 'warning'); return; }
             if (!data.warehouseType) { BC.toast('请选择仓库类型', 'warning'); return; }
 
-            $.ajax({
+            BC.ajax({
                 url: id ? `/api/erp-warehouse/${id}` : '/api/erp-warehouse',
                 type: id ? 'PUT' : 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify(data),
+                data: data,
                 success: res => {
-                    if (res.code === 200) {
-                        $('#dataModal').modal('hide');
-                        BC.toast(id ? '仓库资料已成功更新' : '新仓库已成功收录', 'success');
-                        loadDataList();
-                    } else {
-                        BC.toast(res.message, 'error');
-                    }
+                    $('#dataModal').modal('hide');
+                    BC.toast(id ? '仓库资料已成功更新' : '新仓库已成功收录', 'success');
+                    loadDataList();
                 }
             });
         }
@@ -400,14 +388,12 @@
                 type: 'danger'
             }, (ok) => {
                 if (ok) {
-                    $.ajax({
+                    BC.ajax({
                         url: `/api/erp-warehouse/${id}`,
                         type: 'DELETE',
                         success: res => {
-                            if (res.code === 200) {
-                                BC.toast('仓库已被安全移除', 'success');
-                                loadDataList();
-                            }
+                            BC.toast('仓库已被安全移除', 'success');
+                            loadDataList();
                         }
                     });
                 }

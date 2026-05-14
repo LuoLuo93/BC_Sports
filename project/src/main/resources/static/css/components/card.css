@@ -1,0 +1,339 @@
+/* ============================================
+   BC Sport Design System - Card Components
+   ============================================ */
+
+/* ---------- Base Card ---------- */
+.bc-card {
+    background: var(--bc-bg-surface);
+    border: 1px solid var(--bc-border);
+    border-radius: var(--bc-radius-card);
+    box-shadow: var(--bc-shadow-card);
+    overflow: hidden;
+    transition: box-shadow var(--bc-duration-normal) ease;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.bc-card:hover {
+    box-shadow: var(--bc-shadow-card-hover);
+}
+
+/* Card + Pagination Integration */
+.content-wrapper:has(> .bc-pagination-container) > .bc-card {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+/* ---------- Card Header ---------- */
+.bc-card-header {
+    padding: var(--bc-card-header-padding);
+    border-bottom: 1px solid var(--bc-gray-100);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--bc-space-4);
+}
+
+.bc-card-title {
+    font-size: var(--bc-text-lg);
+    font-weight: var(--bc-font-semibold);
+    color: var(--bc-text-main);
+    margin: 0;
+}
+
+/* ---------- Card Body ---------- */
+.bc-card-body {
+    padding: var(--bc-card-body-padding);
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+}
+
+/* 确保工具栏在卡片主体内能正常横向布局 */
+.bc-card-body .bc-toolbar {
+    flex-shrink: 0;
+}
+
+/* ---------- Dashboard Card ---------- */
+.dashboard-card {
+    border: 1px solid var(--bc-border);
+    border-radius: var(--bc-radius-card);
+    background: var(--bc-bg-surface);
+    transition: var(--bc-transition-fast);
+}
+
+.dashboard-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--bc-shadow-lg);
+}
+
+.dashboard-card .card-title {
+    font-size: var(--bc-text-base);
+    font-weight: var(--bc-font-medium);
+    color: var(--bc-text-muted);
+    margin-bottom: var(--bc-space-2);
+}
+
+.dashboard-card .card-text {
+    font-size: var(--bc-text-2xl);
+    font-weight: var(--bc-font-bold);
+    color: var(--bc-text-main);
+    margin: 0;
+}
+
+.card-icon {
+    width: var(--bc-size-12);
+    height: var(--bc-size-12);
+    border-radius: var(--bc-radius-xl);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--bc-text-xl);
+}
+
+/* Soft Icon Backgrounds */
+.card-icon.bg-primary { background-color: var(--bc-primary-soft) !important; color: var(--bc-primary) !important; }
+.card-icon.bg-success { background-color: var(--bc-success-soft) !important; color: var(--bc-success) !important; }
+.card-icon.bg-warning { background-color: var(--bc-warning-soft) !important; color: var(--bc-warning) !important; }
+.card-icon.bg-info { background-color: var(--bc-info-soft) !important; color: var(--bc-info) !important; }
+
+/* ---------- Collapsible Card ---------- */
+.bc-collapse-card {
+    border: 1px solid var(--bc-border);
+    border-radius: var(--bc-radius-card);
+    margin-bottom: var(--bc-space-2);
+    overflow: hidden;
+    background: var(--bc-bg-surface);
+    box-shadow: var(--bc-shadow-sm);
+    transition: box-shadow var(--bc-duration-normal) ease, border-color var(--bc-duration-normal) ease;
+}
+
+.bc-collapse-card:hover {
+    border-color: var(--bc-gray-300);
+    box-shadow: var(--bc-shadow-md);
+}
+
+.bc-collapse-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--bc-space-3) var(--bc-space-5);
+    background: linear-gradient(135deg, var(--bc-gray-50) 0%, var(--bc-bg-body) 100%);
+    cursor: pointer;
+    user-select: none;
+    transition: background var(--bc-duration-normal) ease, border-color var(--bc-duration-normal) ease;
+    border-bottom: 1px solid transparent;
+    gap: var(--bc-space-4);
+}
+
+.bc-collapse-header:hover {
+    background: var(--bc-gray-100);
+}
+
+.bc-collapse-header.expanded {
+    background: var(--bc-primary-50);
+    border-bottom-color: var(--bc-primary-100);
+}
+
+.bc-collapse-arrow {
+    transition: transform var(--bc-duration-slow) var(--bc-ease-bounce);
+    font-size: 0.625rem;
+    color: var(--bc-primary);
+    width: 22px;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--bc-primary-soft);
+    flex-shrink: 0;
+}
+
+.bc-collapse-header.expanded .bc-collapse-arrow {
+    transform: rotate(90deg);
+    background: var(--bc-primary-100);
+}
+
+.bc-collapse-title {
+    display: flex;
+    align-items: center;
+    gap: var(--bc-space-2);
+    font-size: var(--bc-text-base);
+    font-weight: var(--bc-font-semibold);
+    color: var(--bc-text-main);
+    flex: 1;
+    min-width: 0;
+}
+
+.bc-collapse-title > i:not(.bc-collapse-arrow) {
+    font-size: var(--bc-text-lg);
+    color: var(--bc-primary);
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bc-primary-soft);
+    border-radius: var(--bc-radius-lg);
+    flex-shrink: 0;
+}
+
+.bc-collapse-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--bc-space-2);
+    font-size: var(--bc-text-xs);
+    color: var(--bc-text-muted);
+    flex-shrink: 0;
+}
+
+.bc-collapse-meta code {
+    font-size: var(--bc-text-xs);
+    color: var(--bc-primary-600);
+    background: var(--bc-primary-50);
+    padding: 2px var(--bc-space-2);
+    border-radius: var(--bc-radius-md);
+    font-weight: var(--bc-font-medium);
+}
+
+.bc-collapse-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+.bc-collapse-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height var(--bc-duration-slower) ease;
+    background: var(--bc-gray-50);
+}
+
+.bc-collapse-body.open {
+    max-height: 3000px;
+}
+
+.bc-collapse-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--bc-space-2) var(--bc-space-4) var(--bc-space-2) var(--bc-space-9);
+    border-left: 3px solid transparent;
+    font-size: var(--bc-text-sm);
+    color: var(--bc-gray-600);
+    transition: background var(--bc-duration-fast), border-color var(--bc-duration-fast), color var(--bc-duration-fast);
+    gap: var(--bc-space-3);
+}
+
+.bc-collapse-item:hover {
+    background: var(--bc-bg-surface);
+    border-left-color: var(--bc-primary);
+    color: var(--bc-text-main);
+}
+
+.bc-collapse-item-info {
+    display: flex;
+    align-items: center;
+    gap: var(--bc-space-2);
+    min-width: 0;
+    flex: 1;
+}
+
+.bc-collapse-item-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--bc-gray-300);
+    flex-shrink: 0;
+}
+
+.bc-collapse-item:hover .bc-collapse-item-dot {
+    background: var(--bc-primary);
+}
+
+.bc-collapse-item-detail {
+    display: flex;
+    align-items: center;
+    gap: var(--bc-space-2);
+    flex-shrink: 0;
+    font-size: var(--bc-text-xs);
+    color: var(--bc-text-muted);
+}
+
+.bc-collapse-item-detail code {
+    font-size: var(--bc-text-xs);
+    color: var(--bc-primary-600);
+    background: var(--bc-primary-50);
+    padding: 2px var(--bc-space-2);
+    border-radius: var(--bc-radius-md);
+    font-weight: var(--bc-font-medium);
+}
+
+.bc-collapse-empty {
+    padding: var(--bc-space-6) var(--bc-space-4) var(--bc-space-6) var(--bc-space-9);
+    font-size: var(--bc-text-sm);
+    color: var(--bc-text-muted);
+    text-align: center;
+}
+
+/* ---------- Nested Tree Indentation ---------- */
+.bc-collapse-body {
+    --tree-indent: var(--bc-space-5);
+}
+
+/* Nested Collapsible Cards */
+.bc-collapse-body .bc-collapse-card {
+    margin: 0;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    margin-left: var(--tree-indent);
+    border-left: 2px solid var(--bc-primary-100);
+}
+
+.bc-collapse-body .bc-collapse-card .bc-collapse-header {
+    padding: var(--bc-space-2) var(--bc-space-4);
+    background: transparent;
+}
+
+.bc-collapse-body .bc-collapse-card .bc-collapse-header:hover {
+    background: var(--bc-gray-50);
+}
+
+.bc-collapse-body .bc-collapse-card .bc-collapse-header.expanded {
+    background: var(--bc-primary-50);
+}
+
+.bc-collapse-body .bc-collapse-card .bc-collapse-title {
+    font-size: var(--bc-text-sm);
+    font-weight: var(--bc-font-medium);
+}
+
+.bc-collapse-body .bc-collapse-card .bc-collapse-title > i:not(.bc-collapse-arrow) {
+    width: 24px;
+    height: 24px;
+    font-size: var(--bc-text-base);
+}
+
+.bc-collapse-body .bc-collapse-card .bc-collapse-arrow {
+    width: 18px;
+    height: 18px;
+    font-size: 0.5rem;
+}
+
+.bc-collapse-body .bc-collapse-card:not(:last-child) {
+    border-bottom: 1px solid var(--bc-gray-100);
+}
+
+.bc-collapse-body > .bc-collapse-item {
+    padding-left: calc(var(--bc-space-9) + var(--tree-indent));
+}
+
+.bc-collapse-body > .bc-collapse-empty {
+    padding-left: calc(var(--bc-space-9) + var(--tree-indent));
+}

@@ -46,4 +46,18 @@
              #{item.isProbation}, #{item.probationStatus}, GETDATE(), GETDATE())
         </foreach>
     </insert>
+
+    <select id="selectRecentLeaved" resultType="com.bcsport.admin.entity.ihr.IhrEmployeeDetail">
+        SELECT * FROM employee_information
+        WHERE leave_date IS NOT NULL
+        AND CONVERT(DATE, leave_date) BETWEEN CONVERT(DATE, #{startDate}) AND CONVERT(DATE, #{endDate})
+    </select>
+
+    <select id="selectByStaffIds" resultType="com.bcsport.admin.entity.ihr.IhrEmployeeDetail">
+        SELECT * FROM employee_information
+        WHERE id IN
+        <foreach collection="staffIds" item="staffId" open="(" separator="," close=")">
+            #{staffId}
+        </foreach>
+    </select>
 </mapper>

@@ -21,4 +21,9 @@ public interface QywxDepartmentMemberDetailMapper {
      * 批量插入
      */
     void insertBatch(@Param("list") List<QywxDepartmentMemberDetail> list);
+
+    /**
+     * 根据用户ID查找姓名
+     */
+    String selectNameByUserid(@Param("userid") String userid);
 }

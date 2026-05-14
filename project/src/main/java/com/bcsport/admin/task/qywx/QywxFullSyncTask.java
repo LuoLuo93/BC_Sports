@@ -3,7 +3,6 @@ package com.bcsport.admin.task.qywx;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 企业微信一键同步任务
@@ -13,6 +12,9 @@ import org.springframework.transaction.annotation.Transactional;
  * 2. 同步部门成员
  * 3. 同步成员详情（API直连方式）
  * 4. 同步成员扩展属性
+ *
+ * 注意：编排方法不加@Transactional，每个子步骤有独立事务，
+ * 单步失败不影响其他步骤，避免嵌套事务导致UnexpectedRollbackException
  */
 @Slf4j
 @Component("qywxFullSyncTask")
@@ -33,11 +35,8 @@ public class QywxFullSyncTask {
     /**
      * 一键同步所有企业微信数据
      */
-    @Transactional(rollbackFor = Exception.class, transactionManager = "qywxTransactionManager")
     public void syncAll() {
-        log.info("========================================");
         log.info("=== 开始执行：企业微信一键同步 ===");
-        log.info("========================================");
         long totalStartTime = System.currentTimeMillis();
 
         try {
@@ -49,7 +48,6 @@ public class QywxFullSyncTask {
             try {
                 departmentTask.sync();
                 successCount++;
-                log.info("--- 步骤 1/4：同步部门 完成 ---");
             } catch (Exception e) {
                 failCount++;
                 log.error("--- 步骤 1/4：同步部门 失败 ---", e);
@@ -60,7 +58,6 @@ public class QywxFullSyncTask {
             try {
                 departmentMemberTask.sync();
                 successCount++;
-                log.info("--- 步骤 2/4：同步部门成员 完成 ---");
             } catch (Exception e) {
                 failCount++;
                 log.error("--- 步骤 2/4：同步部门成员 失败 ---", e);
@@ -71,7 +68,6 @@ public class QywxFullSyncTask {
             try {
                 detailTask.syncFromApi();
                 successCount++;
-                log.info("--- 步骤 3/4：同步成员详情 完成 ---");
             } catch (Exception e) {
                 failCount++;
                 log.error("--- 步骤 3/4：同步成员详情 失败 ---", e);
@@ -82,23 +78,17 @@ public class QywxFullSyncTask {
             try {
                 attrsBaseTask.sync();
                 successCount++;
-                log.info("--- 步骤 4/4：同步成员扩展属性 完成 ---");
             } catch (Exception e) {
                 failCount++;
                 log.error("--- 步骤 4/4：同步成员扩展属性 失败 ---", e);
             }
 
             long totalTime = System.currentTimeMillis() - totalStartTime;
-            log.info("========================================");
-            log.info("=== 企业微信一键同步 完成 ===");
-            log.info("=== 成功：{} 个步骤，失败：{} 个步骤 ===", successCount, failCount);
-            log.info("=== 总耗时：{} ms ===", totalTime);
-            log.info("========================================");
+            log.info("=== 企业微信一键同步 完成, 成功: {}, 失败: {}, 耗时: {} ms ===",
+                    successCount, failCount, totalTime);
 
         } catch (Exception e) {
-            log.error("========================================");
             log.error("=== 企业微信一键同步 异常 ===", e);
-            log.error("========================================");
             throw e;
         }
     }

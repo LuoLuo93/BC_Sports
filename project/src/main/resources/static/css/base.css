@@ -1,0 +1,199 @@
+/* ============================================
+   BC Sport Design System - Base Styles
+   ============================================ */
+
+/* ---------- CSS Reset & Normalization ---------- */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    line-height: 1.5;
+    -webkit-text-size-adjust: 100%;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+html, body {
+    height: 100%;
+}
+
+body {
+    font-family: var(--bc-font-sans);
+    font-size: var(--bc-text-base);
+    font-weight: var(--bc-font-normal);
+    line-height: var(--bc-leading-normal);
+    color: var(--bc-text-main);
+    background-color: var(--bc-bg-body);
+    overflow: hidden;
+}
+
+img, picture, video, canvas, svg {
+    display: block;
+    max-width: 100%;
+}
+
+input, button, textarea, select {
+    font: inherit;
+}
+
+p, h1, h2, h3, h4, h5, h6 {
+    overflow-wrap: break-word;
+}
+
+a {
+    color: var(--bc-primary);
+    text-decoration: none;
+    transition: var(--bc-transition-fast);
+}
+
+a:hover {
+    color: var(--bc-primary-hover);
+}
+
+button {
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+/* ---------- Typography Utilities ---------- */
+h1, h2, h3, h4, h5, h6 {
+    font-weight: var(--bc-font-semibold);
+    line-height: var(--bc-leading-tight);
+    color: var(--bc-text-primary);
+}
+
+h1 { font-size: var(--bc-text-4xl); }
+h2 { font-size: var(--bc-text-3xl); }
+h3 { font-size: var(--bc-text-2xl); }
+h4 { font-size: var(--bc-text-xl); }
+h5 { font-size: var(--bc-text-lg); }
+h6 { font-size: var(--bc-text-base); }
+
+.text-xs { font-size: var(--bc-text-xs); }
+.text-sm { font-size: var(--bc-text-sm); }
+.text-base { font-size: var(--bc-text-base); }
+.text-lg { font-size: var(--bc-text-lg); }
+.text-xl { font-size: var(--bc-text-xl); }
+.text-2xl { font-size: var(--bc-text-2xl); }
+
+.font-normal { font-weight: var(--bc-font-normal); }
+.font-medium { font-weight: var(--bc-font-medium); }
+.font-semibold { font-weight: var(--bc-font-semibold); }
+.font-bold { font-weight: var(--bc-font-bold); }
+
+.text-primary { color: var(--bc-primary) !important; }
+.text-secondary { color: var(--bc-text-secondary) !important; }
+.text-muted { color: var(--bc-text-muted) !important; }
+.text-success { color: var(--bc-success) !important; }
+.text-warning { color: var(--bc-warning) !important; }
+.text-danger { color: var(--bc-danger) !important; }
+.text-info { color: var(--bc-info) !important; }
+.text-main { color: var(--bc-text-main) !important; }
+
+/* ---------- Background Utilities ---------- */
+.bg-primary { background-color: var(--bc-primary) !important; }
+.bg-primary-soft { background-color: var(--bc-primary-soft) !important; }
+.bg-success { background-color: var(--bc-success) !important; }
+.bg-success-soft { background-color: var(--bc-success-soft) !important; }
+.bg-warning { background-color: var(--bc-warning) !important; }
+.bg-warning-soft { background-color: var(--bc-warning-soft) !important; }
+.bg-danger { background-color: var(--bc-danger) !important; }
+.bg-danger-soft { background-color: var(--bc-danger-soft) !important; }
+.bg-info { background-color: var(--bc-info) !important; }
+.bg-info-soft { background-color: var(--bc-info-soft) !important; }
+.bg-light-soft { background-color: var(--bc-gray-50) !important; }
+.bg-body { background-color: var(--bc-bg-body) !important; }
+.bg-surface { background-color: var(--bc-bg-surface) !important; }
+
+/* ---------- Scrollbar Styling ---------- */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--bc-gray-300);
+    border-radius: var(--bc-radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--bc-gray-400);
+}
+
+/* Firefox scrollbar */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--bc-gray-300) transparent;
+}
+
+/* ---------- Selection ---------- */
+::selection {
+    background-color: var(--bc-primary-soft);
+    color: var(--bc-primary);
+}
+
+/* ---------- Focus Styles ---------- */
+:focus-visible {
+    outline: 2px solid var(--bc-primary);
+    outline-offset: 2px;
+}
+
+/* ---------- Accessibility ---------- */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+/* ---------- Disabled State ---------- */
+.disabled,
+[disabled],
+:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+/* ---------- Loading Animation ---------- */
+@keyframes bc-spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.bc-animate-spin {
+    animation: bc-spin 1s linear infinite;
+}
+
+@keyframes bc-pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.bc-animate-pulse {
+    animation: bc-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}

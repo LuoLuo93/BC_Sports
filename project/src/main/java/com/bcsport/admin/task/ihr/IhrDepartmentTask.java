@@ -8,7 +8,9 @@ import com.bcsport.admin.ihrmapper.IhrDepartmentMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.transaction.PlatformTransactionManager;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -28,14 +30,17 @@ public class IhrDepartmentTask {
     @Autowired
     private IhrDepartmentMapper departmentMapper;
 
+    @Autowired
+    @Qualifier("ihrTransactionManager")
+    private PlatformTransactionManager transactionManager;
+
     /**
      * 同步部门组织架构
      */
-    @Transactional(rollbackFor = Exception.class, transactionManager = "ihrTransactionManager")
     public void sync() {
         log.info("=== 开始执行: IHR同步部门信息 ===");
         try {
-            // 先获取所有数据到内存
+            // API调用在事务外执行
             JSONArray data = apiClient.getDataArray(
                     "/openapi/thirdparty/api/v1/companies/organizations/basic");
 
@@ -44,6 +49,7 @@ public class IhrDepartmentTask {
                 return;
             }
 
+            // 数据准备在事务外完成
             List<IhrDepartment> list = new ArrayList<>();
             for (int i = 0; i < data.size(); i++) {
                 JSONObject obj = data.getJSONObject(i);
@@ -56,17 +62,25 @@ public class IhrDepartmentTask {
                 list.add(dept);
             }
 
-            // 再在事务中删除并插入
-            departmentMapper.deleteAll();
-            // 分批插入
-            for (int i = 0; i < list.size(); i += BATCH_SIZE) {
-                int end = Math.min(i + BATCH_SIZE, list.size());
-                departmentMapper.insertBatch(list.subList(i, end));
-            }
+            // 短事务仅用于DB写入
+            doSync(list);
+
             log.info("=== 完成: IHR同步部门信息, 共{}条 ===", list.size());
         } catch (Exception e) {
             log.error("=== 失败: IHR同步部门信息: {} ===", e.getMessage());
             throw e;
         }
+    }
+
+    void doSync(List<IhrDepartment> list) {
+        TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
+        txTemplate.execute(status -> {
+            departmentMapper.deleteAll();
+            for (int i = 0; i < list.size(); i += BATCH_SIZE) {
+                int end = Math.min(i + BATCH_SIZE, list.size());
+                departmentMapper.insertBatch(list.subList(i, end));
+            }
+            return null;
+        });
     }
 }

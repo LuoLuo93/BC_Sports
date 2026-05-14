@@ -35,9 +35,7 @@ public class QywxMomentTask {
     private PlatformTransactionManager transactionManager;
 
     public void sync() {
-        log.info("========================================");
-        log.info("=== Starting: QYWX sync moment ===");
-        log.info("========================================");
+        log.info("=== 开始执行: 同步企微朋友圈 ===");
         long totalStartTime = System.currentTimeMillis();
 
         try {
@@ -57,7 +55,7 @@ public class QywxMomentTask {
             Date yesterdayEnd = calendar.getTime();
             long yesterdayEndTimestamp = yesterdayEnd.getTime() / 1000;
 
-            log.info("Syncing moments from {} to {}",
+            log.info("同步范围: {} ~ {}",
                     DateUtil.formatDateTime(yesterdayStart),
                     DateUtil.formatDateTime(yesterdayEnd));
 
@@ -110,22 +108,18 @@ public class QywxMomentTask {
                             return null;
                         });
                         totalInserted += batchMoments.size();
-                        log.info("Batch inserted {} moments, total {}", batchMoments.size(), totalInserted);
                     }
                 }
 
                 cursor = result.getStr("next_cursor", "");
-                log.info("Fetched {} moments, next cursor: {}", momentList != null ? momentList.size() : 0, cursor);
 
             } while (cursor != null && cursor.length() > 0);
 
-            log.info("Inserted {} moment records in total", totalInserted);
-
             long totalTime = System.currentTimeMillis() - totalStartTime;
-            log.info("=== QYWX sync moment completed, total time: {} ms ===", totalTime);
+            log.info("=== 完成: 同步企微朋友圈, 共 {} 条, 耗时: {} ms ===", totalInserted, totalTime);
 
         } catch (Exception e) {
-            log.error("=== QYWX sync moment failed ===", e);
+            log.error("=== 失败: 同步企微朋友圈 ===", e);
             throw new RuntimeException(e);
         }
     }

@@ -10,7 +10,7 @@
 <div th:fragment="sidebar" class="sidebar" id="sidebar">
     <div class="sidebar-header">
         <i class="bi bi-compass"></i>
-        <span>BC SPÖRT</span>
+        <span>B.C.SPORTS</span>
     </div>
     <div class="sidebar-menu" id="menuContainer">
         <!-- 菜单将通过JavaScript动态加载 -->
@@ -76,6 +76,19 @@
     </div>
 </footer>
 
+<!-- 页面标题片段 -->
+<!-- 用法: <div th:replace="~{common/fragments :: page-header('页面标题', 'bi-icon-class')}"></div> -->
+<div th:fragment="page-header(title, icon)">
+    <div class="bc-page-header">
+        <div class="bc-page-header-icon">
+            <i th:class="${icon}"></i>
+        </div>
+        <div>
+            <h2 class="bc-page-header-title" th:text="${title}">页面标题</h2>
+        </div>
+    </div>
+</div>
+
 <!-- 通用分页组件片段 -->
 <div th:fragment="pagination" class="bc-pagination-container mt-4">
     <div class="pagination-info">
@@ -92,10 +105,10 @@
 <div th:fragment="confirm-modal" id="bcConfirmModal" class="modal fade" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" style="max-width: 400px;">
         <div class="modal-content bc-modal-content p-4 text-center">
-            <div class="bc-modal-icon mb-3 mx-auto" id="bcModalIcon" style="width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #f0fdf4; color: #16a34a; font-size: 2rem;">
+            <div class="bc-modal-icon mb-3 mx-auto" id="bcModalIcon">
                 <i class="bi bi-question-circle"></i>
             </div>
-            <h5 class="fw-bold mb-2" id="bcModalTitle" style="color: var(--text-main); font-size: 1.25rem;">确认操作</h5>
+            <h5 class="fw-bold mb-2" id="bcModalTitle">确认操作</h5>
             <p class="text-secondary mb-4" id="bcModalMessage">您确定要执行此操作吗？</p>
             <div class="d-flex gap-3 mt-2">
                 <button class="btn bc-btn-secondary flex-fill py-2" id="bcModalCancel" data-bs-dismiss="modal">取消</button>
@@ -105,16 +118,11 @@
     </div>
     <script th:inline="javascript">
         /*<![CDATA[*/
-        window.userPermissions = /*[[${permissions}]]*/ [];
-        window.hasPermission = function(perm) {
-            if (!window.userPermissions || !Array.isArray(window.userPermissions)) return false;
-            // 管理员拥有的最高权限
-            if (window.userPermissions.includes('*') || window.userPermissions.includes('*:*:*')) return true;
-            // 为了兼顾可能的系统级别前缀和纯模块级别权限
-            let systemPerm = perm.startsWith('system:') ? perm : 'system:' + perm;
-            let purePerm = perm.replace(/^system:/, '');
-            return window.userPermissions.includes(perm) || window.userPermissions.includes(systemPerm) || window.userPermissions.includes(purePerm);
-        };
+        // 权限列表由各页面 th:inline script 初始化，common.js 的 BC.hasPermission 负责判断
+        // 此处仅兜底初始化 userPermissions（防止 confirm-modal 所在页面未定义时出错）
+        if (!window.userPermissions) {
+            window.userPermissions = /*[[${permissions}]]*/ [];
+        }
         /*]]>*/
     </script>
 </div>

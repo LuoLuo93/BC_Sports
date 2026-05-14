@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bcsport.admin.ihrmapper.IhrEmployeeOnboardingStatusMapper">
+
+    <sql id="effectiveSyncStatus">
+        CASE
+            WHEN os.sync_time IS NULL THEN 0
+            WHEN CONVERT(DATE, os.sync_time) &lt; CONVERT(DATE, ea_latest.sync_date) THEN 0
+            ELSE os.sync_status
+        END
+    </sql>
+
+    <sql id="onboardingJoin">
+        FROM (
+            SELECT employees_id, MAX(sync_date) AS sync_date
+            FROM employee_additions
+            <where>
+                <if test="startDate != null and startDate != '' and endDate != null and endDate != ''">
+                    CONVERT(DATE, sync_date) BETWEEN CONVERT(DATE, #{startDate}) AND CONVERT(DATE, #{endDate})
+                </if>
+            </where>
+            GROUP BY employees_id
+        ) ea_latest
+        INNER JOIN employee_information ei ON ea_latest.employees_id = ei.id
+        LEFT JOIN ihr_employee_onboarding_status os ON ea_latest.employees_id = os.employees_id
+        <where>
+            <if test="staffName != null and staffName != ''">
+                AND ei.staff_name LIKE '%' + #{staffName} + '%'
+            </if>
+            <if test="staffNo != null and staffNo != ''">
+                AND ei.staff_no LIKE '%' + #{staffNo} + '%'
+            </if>
+            <if test="syncStatus != null">
+                AND <include refid="effectiveSyncStatus"/> = #{syncStatus}
+            </if>
+            <if test="excludedStaffNos != null and excludedStaffNos.size() > 0">
+                AND ei.staff_no NOT IN
+                <foreach collection="excludedStaffNos" item="sno" open="(" separator="," close=")">
+                    #{sno}
+                </foreach>
+            </if>
+        </where>
+    </sql>
+
+    <select id="selectOnboardingPage" resultType="com.bcsport.admin.vo.IhrEmployeeOnboardingVO">
+        SELECT
+            ea_latest.employees_id AS employeesId,
+            ei.staff_name AS staffName,
+            ei.staff_no AS staffNo,
+            ei.mobile_no AS mobileNo,
+            ei.department_name AS departmentName,
+            ei.enroll_in_date AS enrollInDate,
+            ei.staff_status AS staffStatus,
+            <include refid="effectiveSyncStatus"/> AS syncStatus,
+            os.sync_time AS syncTime,
+            os.error_message AS errorMessage
+        <include refid="onboardingJoin" />
+        ORDER BY ea_latest.sync_date DESC, ei.staff_name
+        OFFSET #{offset} ROWS FETCH NEXT #{limit} ROWS ONLY
+    </select>
+
+    <select id="countOnboarding" resultType="long">
+        SELECT COUNT(1)
+        <include refid="onboardingJoin" />
+    </select>
+
+    <insert id="upsertByEmployeesId">
+        MERGE ihr_employee_onboarding_status AS target
+        USING (SELECT #{entity.employeesId} AS employees_id) AS source
+        ON target.employees_id = source.employees_id
+        WHEN MATCHED THEN
+            UPDATE SET
+                staff_name = #{entity.staffName},
+                staff_no = #{entity.staffNo},
+                sync_status = #{entity.syncStatus},
+                sync_time = #{entity.syncTime},
+                error_message = #{entity.errorMessage},
+                update_time = GETDATE()
+        WHEN NOT MATCHED THEN
+            INSERT (employees_id, staff_name, staff_no, sync_status, sync_time, error_message, create_time, update_time)
+            VALUES (#{entity.employeesId}, #{entity.staffName}, #{entity.staffNo}, #{entity.syncStatus}, #{entity.syncTime}, #{entity.errorMessage}, GETDATE(), GETDATE());
+    </insert>
+
+</mapper>

@@ -1,38 +1,32 @@
 <!DOCTYPE html>
-<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org" xmlns:shiro="http://www.pollix.at/thymeleaf/shiro">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>数据字典 - BC体育后台中心</title>
+    <title>数据字典 - BC体育后台管理系统</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
-    <link rel="stylesheet" th:href="@{/css/layout.css}">
+    <link rel="stylesheet" th:href="@{/css/main.css}">
     <style>
-        .dict-split-container {
+        .dict-split {
             display: grid;
-            grid-template-columns: 350px 1fr;
-            gap: 24px;
-            height: calc(100vh - 220px);
+            grid-template-columns: 340px 1fr;
+            gap: 20px;
+            flex: 1;
+            min-height: 0;
+            overflow: hidden;
         }
-        .dict-list-scroll {
+        .dict-type-list {
             overflow-y: auto;
-            max-height: calc(100% - 100px);
-            padding-right: 4px;
+            flex: 1;
         }
         .dict-type-item {
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.15s ease;
             border: 1px solid transparent;
         }
-        .dict-type-item:hover {
-            background: var(--bg-light-soft);
-            border-color: var(--primary-light);
-        }
-        .dict-type-item.active {
-            background: var(--primary-soft);
-            border-color: var(--primary-color);
-            color: var(--primary-color);
-        }
+        .dict-type-item:hover { background: #f8fafc; border-color: #e2e8f0; }
+        .dict-type-item.active { background: var(--primary-soft); border-color: var(--primary-color); }
     </style>
 </head>
 <body>
@@ -40,115 +34,55 @@
     <div class="main-content">
         <nav th:replace="~{common/fragments :: top-navbar}"></nav>
         <div class="content-wrapper">
-            <div class="dict-split-container">
+            <div class="dict-split">
                 <!-- 左侧：字典类型 -->
                 <div class="bc-card mb-0 d-flex flex-column">
                     <div class="p-3">
                         <div class="d-flex align-items-center gap-2 mb-3">
                             <div class="bc-input-group flex-grow-1">
                                 <i class="bi bi-search"></i>
-                                <input type="text" class="bc-input" placeholder="检索字典类型...">
+                                <input type="text" class="bc-input" id="searchType" placeholder="检索字典类型...">
                             </div>
-                            <button class="btn bc-btn-success btn-sm px-2" onclick="BC.toast('新增类型功能已准备就绪', 'success')" title="新增类型">
+                            <button class="btn bc-btn-success btn-sm px-2" id="addTypeBtn" title="新增类型">
                                 <i class="bi bi-plus-lg"></i>
                             </button>
                         </div>
                     </div>
-                    <div class="dict-list-scroll px-3 pb-3 flex-grow-1">
-                        <div class="list-group list-group-flush gap-2">
-                            <div class="list-group-item dict-type-item rounded-3 p-3 active border">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <span class="fw-bold">用户性别</span>
-                                    <span class="bc-tag bc-tag-info">sys_user_sex</span>
-                                </div>
-                                <div class="small text-muted mt-1 text-truncate">系统用户性别属性标识</div>
-                            </div>
-                            <div class="list-group-item dict-type-item rounded-3 p-3 border">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <span class="fw-bold">菜单状态</span>
-                                    <span class="bc-tag bc-tag-secondary">sys_show_hide</span>
-                                </div>
-                                <div class="small text-muted mt-1 text-truncate">控制导航菜单显示或隐藏</div>
-                            </div>
-                            <div class="list-group-item dict-type-item rounded-3 p-3 border">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <span class="fw-bold">运维通知类型</span>
-                                    <span class="bc-tag bc-tag-secondary">sys_notice_type</span>
-                                </div>
-                                <div class="small text-muted mt-1 text-truncate">公告、通知、运维警示等</div>
-                            </div>
-                        </div>
+                    <div class="dict-type-list px-3 pb-3">
+                        <div class="list-group list-group-flush gap-2" id="typeList"></div>
                     </div>
                 </div>
 
-                <!-- 右侧：字典内容数据 -->
-                <div class="bc-card mb-0">
-                    <div class="bc-card-body">
-                        <div class="d-flex align-items-center bc-toolbar">
-                            <div class="d-flex align-items-center">
-                                <i class="bi bi-collection me-2 text-primary fs-5"></i>
-                                <h6 class="mb-0 fw-bold">字段明细数据</h6>
-                                <span class="ms-3 text-muted small">当前选中：<span class="text-primary fw-bold">用户性别</span></span>
-                            </div>
-                            <div class="ms-auto">
-                                <button class="btn bc-btn-success btn-sm" onclick="BC.toast('新增字段模态框加载中', 'info')">
-                                    <i class="bi bi-plus-lg"></i> 新增键值对
-                                </button>
-                            </div>
+                <!-- 右侧：字典数据 -->
+                <div class="bc-card mb-0 d-flex flex-column">
+                    <div class="bc-card-header">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-collection text-primary"></i>
+                            <h5 class="bc-card-title mb-0">字典明细数据</h5>
+                            <span class="ms-2 text-muted small" id="currentTypeLabel"></span>
                         </div>
-                        <div class="bc-table-container">
+                        <div class="d-flex gap-2">
+                            <button class="btn bc-btn-success btn-sm" id="addDataBtn">
+                                <i class="bi bi-plus-lg"></i> 新增键值对
+                            </button>
+                        </div>
+                    </div>
+                    <div class="bc-card-body p-0 flex-grow-1 d-flex flex-column">
+                        <div class="bc-table-container flex-grow-1">
                             <table class="bc-table bc-table-hover">
                                 <thead>
                                     <tr>
                                         <th style="width: 60px;">#</th>
                                         <th>字典标签</th>
                                         <th>字典键值</th>
-                                        <th>显示状态</th>
-                                        <th>排序</th>
-                                        <th>创建时间</th>
-                                        <th class="text-end" style="padding-right: 24px;">操作</th>
+                                        <th style="width: 80px;">排序</th>
+                                        <th style="width: 80px;">状态</th>
+                                        <th style="width: 160px;">创建时间</th>
+                                        <th style="width: 100px;" class="text-end">操作</th>
                                     </tr>
                                 </thead>
-                                <tbody>
-                                    <tr>
-                                        <td><span class="text-muted small">1</span></td>
-                                        <td><span class="fw-bold text-main">男</span></td>
-                                        <td><code class="small text-muted">male</code></td>
-                                        <td>1</td>
-                                        <td><span class="bc-tag bc-tag-success">启用</span></td>
-                                        <td>
-                                            <div class="bc-table-actions">
-                                                <button class="bc-btn-icon bc-btn-icon-primary" title="编辑"><i class="bi bi-pencil"></i></button>
-                                                <button class="bc-btn-icon bc-btn-icon-danger" title="删除"><i class="bi bi-trash"></i></button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <tr class="bg-light-soft">
-                                        <td><span class="text-muted small">2</span></td>
-                                        <td><span class="fw-bold text-main">女</span></td>
-                                        <td><code class="small text-muted">female</code></td>
-                                        <td>2</td>
-                                        <td><span class="bc-tag bc-tag-success">启用</span></td>
-                                        <td>
-                                            <div class="bc-table-actions">
-                                                <button class="bc-btn-icon bc-btn-icon-primary" title="编辑"><i class="bi bi-pencil"></i></button>
-                                                <button class="bc-btn-icon bc-btn-icon-danger" title="删除"><i class="bi bi-trash"></i></button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td><span class="text-muted small">3</span></td>
-                                        <td><span class="fw-bold text-main">未知</span></td>
-                                        <td><code class="small text-muted">unknown</code></td>
-                                        <td>3</td>
-                                        <td><span class="bc-tag bc-tag-secondary">禁用</span></td>
-                                        <td>
-                                            <div class="bc-table-actions">
-                                                <button class="bc-btn-icon bc-btn-icon-primary" title="编辑"><i class="bi bi-pencil"></i></button>
-                                                <button class="bc-btn-icon bc-btn-icon-danger" title="删除"><i class="bi bi-trash"></i></button>
-                                            </div>
-                                        </td>
-                                    </tr>
+                                <tbody id="dataTableBody">
+                                    <tr><td colspan="7" class="text-center py-5 text-muted">请选择左侧字典类型</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -158,19 +92,321 @@
         </div>
         <div th:replace="~{common/fragments :: footer}"></div>
     </div>
+
+    <!-- 字典类型弹窗 -->
+    <div class="modal fade" id="typeModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content bc-modal-content">
+                <div class="modal-header bc-modal-header">
+                    <h5 class="modal-title bc-modal-title"><i class="bi bi-bookmark"></i> <span id="typeModalTitle">新增字典类型</span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body bc-modal-body">
+                    <form id="typeForm">
+                        <input type="hidden" id="typeId">
+                        <div class="bc-form-grid">
+                            <div class="bc-form-group">
+                                <label class="bc-form-label">字典名称 <span class="text-danger">*</span></label>
+                                <input type="text" class="bc-input" id="dictName" placeholder="如：用户性别" required>
+                            </div>
+                            <div class="bc-form-group">
+                                <label class="bc-form-label">字典编码 <span class="text-danger">*</span></label>
+                                <input type="text" class="bc-input" id="dictTypeCode" placeholder="如：sys_user_sex" required>
+                            </div>
+                            <div class="bc-form-group bc-form-group-full">
+                                <label class="bc-form-label">备注</label>
+                                <textarea class="bc-textarea" id="typeRemark" rows="2" placeholder="可选"></textarea>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer bc-modal-footer">
+                    <button type="button" class="btn bc-btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn bc-btn-primary" id="saveTypeBtn">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 字典数据弹窗 -->
+    <div class="modal fade" id="dataModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content bc-modal-content">
+                <div class="modal-header bc-modal-header">
+                    <h5 class="modal-title bc-modal-title"><i class="bi bi-list-ul"></i> <span id="dataModalTitle">新增字典数据</span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body bc-modal-body">
+                    <form id="dataForm">
+                        <input type="hidden" id="dataId">
+                        <div class="bc-form-grid">
+                            <div class="bc-form-group">
+                                <label class="bc-form-label">字典标签 <span class="text-danger">*</span></label>
+                                <input type="text" class="bc-input" id="dictLabel" placeholder="如：男" required>
+                            </div>
+                            <div class="bc-form-group">
+                                <label class="bc-form-label">字典键值 <span class="text-danger">*</span></label>
+                                <input type="text" class="bc-input" id="dictValue" placeholder="如：male" required>
+                            </div>
+                            <div class="bc-form-group">
+                                <label class="bc-form-label">排序</label>
+                                <input type="number" class="bc-input" id="dataSort" value="0">
+                            </div>
+                            <div class="bc-form-group">
+                                <label class="bc-form-label">状态</label>
+                                <select class="bc-select" id="dataStatus">
+                                    <option value="1">启用</option>
+                                    <option value="0">禁用</option>
+                                </select>
+                            </div>
+                            <div class="bc-form-group bc-form-group-full">
+                                <label class="bc-form-label">备注</label>
+                                <textarea class="bc-textarea" id="dataRemark" rows="2" placeholder="可选"></textarea>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer bc-modal-footer">
+                    <button type="button" class="btn bc-btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn bc-btn-primary" id="saveDataBtn">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div th:replace="~{common/fragments :: confirm-modal}"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script th:inline="javascript">
+        window.userPermissions = /*[[${permissions}]]*/ [];
+    </script>
     <script src="/js/common.js"></script>
+
     <script>
+        var currentDictType = null;
+
         $(document).ready(function() {
-            $('.dict-type-item').click(function() {
-                $('.dict-type-item').removeClass('active');
-                $(this).addClass('active');
-                BC.toast('正在切换字典集：' + $(this).find('.fw-bold').text(), 'info');
+            loadTypes();
+
+            $('#searchType').on('input', function() {
+                var keyword = $(this).val().toLowerCase();
+                $('#typeList .dict-type-item').each(function() {
+                    var text = $(this).text().toLowerCase();
+                    $(this).toggle(text.indexOf(keyword) > -1);
+                });
             });
+
+            $('#addTypeBtn').click(function() { openTypeModal(); });
+            $('#saveTypeBtn').click(function() { saveType(); });
+            $('#addDataBtn').click(function() {
+                if (!currentDictType) { BC.toast('请先选择字典类型', 'warning'); return; }
+                openDataModal();
+            });
+            $('#saveDataBtn').click(function() { saveData(); });
         });
+
+        function loadTypes() {
+            BC.ajax({
+                url: '/api/dict/type/list',
+                type: 'GET',
+                success: function(res) {
+                    var list = res || [];
+                    var html = '';
+                    if (list.length === 0) {
+                        html = '<div class="text-center py-4 text-muted">暂无字典类型</div>';
+                    } else {
+                        list.forEach(function(item) {
+                            html += '<div class="list-group-item dict-type-item rounded-3 p-3 border" data-id="' + item.id + '" data-code="' + BC.escapeHtml(item.dictType) + '" onclick="selectType(this)">';
+                            html += '  <div class="d-flex justify-content-between align-items-center">';
+                            html += '    <span class="fw-bold">' + BC.escapeHtml(item.dictName) + '</span>';
+                            html += '    <span class="bc-tag bc-tag-info">' + BC.escapeHtml(item.dictType) + '</span>';
+                            html += '  </div>';
+                            if (item.remark) {
+                                html += '  <div class="small text-muted mt-1 text-truncate">' + BC.escapeHtml(item.remark) + '</div>';
+                            }
+                            html += '</div>';
+                        });
+                    }
+                    $('#typeList').html(html);
+                }
+            });
+        }
+
+        function selectType(el) {
+            $('#typeList .dict-type-item').removeClass('active');
+            $(el).addClass('active');
+            currentDictType = $(el).data('code');
+            var name = $(el).find('.fw-bold').text();
+            $('#currentTypeLabel').html('当前：<span class="text-primary fw-bold">' + BC.escapeHtml(name) + '</span>');
+            loadData(currentDictType);
+        }
+
+        function loadData(dictType) {
+            BC.ajax({
+                url: '/api/dict/data/list',
+                type: 'GET',
+                data: { dictType: dictType },
+                success: function(res) {
+                    var list = res || [];
+                    var html = '';
+                    if (list.length === 0) {
+                        html = '<tr><td colspan="7" class="text-center py-4 text-muted">暂无数据</td></tr>';
+                    } else {
+                        list.forEach(function(item, i) {
+                            var statusTag = item.status === 1 ? BC.getTag('success', '启用') : BC.getTag('secondary', '禁用');
+                            var actions = [];
+                            if (BC.hasPermission('system:dict:edit')) {
+                                actions.push({ icon: 'bi-pencil', title: '编辑', onclick: "editData('" + item.id + "')" });
+                            }
+                            if (BC.hasPermission('system:dict:delete')) {
+                                actions.push({ icon: 'bi-trash', title: '删除', onclick: "deleteData('" + item.id + "')" });
+                            }
+                            html += '<tr>';
+                            html += '<td><span class="text-muted small">' + (i + 1) + '</span></td>';
+                            html += '<td><span class="fw-bold text-main">' + BC.escapeHtml(item.dictLabel) + '</span></td>';
+                            html += '<td><code class="small">' + BC.escapeHtml(item.dictValue) + '</code></td>';
+                            html += '<td>' + (item.sort || 0) + '</td>';
+                            html += '<td>' + statusTag + '</td>';
+                            html += '<td><span class="small text-muted">' + (item.createTime || '-') + '</span></td>';
+                            html += '<td class="text-end">' + BC.getTableActions(actions) + '</td>';
+                            html += '</tr>';
+                        });
+                    }
+                    $('#dataTableBody').html(html);
+                }
+            });
+        }
+
+        // ==================== 类型 CRUD ====================
+
+        function openTypeModal(id) {
+            var modal = $('#typeModal');
+            $('#typeForm')[0].reset();
+            $('#typeId').val('');
+            if (id) {
+                $('#typeModalTitle').text('编辑字典类型');
+                BC.ajax({
+                    url: '/api/dict/type/' + id,
+                    type: 'GET',
+                    success: function(res) {
+                        var d = res;
+                        $('#typeId').val(d.id);
+                        $('#dictName').val(d.dictName);
+                        $('#dictTypeCode').val(d.dictType);
+                        $('#typeRemark').val(d.remark || '');
+                        modal.modal('show');
+                    }
+                });
+            } else {
+                $('#typeModalTitle').text('新增字典类型');
+                modal.modal('show');
+            }
+        }
+
+        function saveType() {
+            var id = $('#typeId').val();
+            var data = {
+                dictName: $('#dictName').val(),
+                dictType: $('#dictTypeCode').val(),
+                remark: $('#typeRemark').val()
+            };
+            if (!data.dictName || !data.dictType) { BC.toast('请填写必填项', 'warning'); return; }
+
+            var url = id ? '/api/dict/type' : '/api/dict/type';
+            var type = id ? 'PUT' : 'POST';
+            if (id) data.id = id;
+
+            BC.ajax({
+                url: url, type: type, data: data,
+                success: function(res) {
+                    BC.toast(id ? '修改成功' : '新增成功', 'success');
+                    $('#typeModal').modal('hide');
+                    loadTypes();
+                }
+            });
+        }
+
+        function editType(id) { openTypeModal(id); }
+
+        function deleteType(id) {
+            BC.confirm({ title: '确认删除', message: '删除字典类型将同时清空其下所有数据，确定继续？', type: 'danger' }, function(ok) {
+                if (ok) {
+                    BC.ajax({ url: '/api/dict/type/' + id, type: 'DELETE',
+                        success: function(res) {
+                            BC.toast('删除成功', 'success'); loadTypes(); $('#dataTableBody').html('<tr><td colspan="7" class="text-center py-4 text-muted">请选择左侧字典类型</td></tr>'); currentDictType = null; $('#currentTypeLabel').text('');
+                        }
+                    });
+                }
+            });
+        }
+
+        // ==================== 数据 CRUD ====================
+
+        function openDataModal(id) {
+            var modal = $('#dataModal');
+            $('#dataForm')[0].reset();
+            $('#dataId').val('');
+            $('#dataSort').val(0);
+            if (id) {
+                $('#dataModalTitle').text('编辑字典数据');
+                BC.ajax({
+                    url: '/api/dict/data/' + id,
+                    type: 'GET',
+                    success: function(res) {
+                        var d = res;
+                        $('#dataId').val(d.id);
+                        $('#dictLabel').val(d.dictLabel);
+                        $('#dictValue').val(d.dictValue);
+                        $('#dataSort').val(d.sort || 0);
+                        $('#dataStatus').val(d.status);
+                        $('#dataRemark').val(d.remark || '');
+                        modal.modal('show');
+                    }
+                });
+            } else {
+                $('#dataModalTitle').text('新增字典数据');
+                modal.modal('show');
+            }
+        }
+
+        function saveData() {
+            var id = $('#dataId').val();
+            var data = {
+                dictType: currentDictType,
+                dictLabel: $('#dictLabel').val(),
+                dictValue: $('#dictValue').val(),
+                sort: parseInt($('#dataSort').val()) || 0,
+                status: $('#dataStatus').val(),
+                remark: $('#dataRemark').val()
+            };
+            if (!data.dictLabel || !data.dictValue) { BC.toast('请填写必填项', 'warning'); return; }
+
+            if (id) data.id = id;
+            var type = id ? 'PUT' : 'POST';
+
+            BC.ajax({ url: '/api/dict/data', type: type, data: data,
+                success: function(res) {
+                    BC.toast(id ? '修改成功' : '新增成功', 'success');
+                    $('#dataModal').modal('hide');
+                    loadData(currentDictType);
+                }
+            });
+        }
+
+        function editData(id) { openDataModal(id); }
+
+        function deleteData(id) {
+            BC.confirm({ title: '确认删除', message: '确定删除该字典数据？', type: 'danger' }, function(ok) {
+                if (ok) {
+                    BC.ajax({ url: '/api/dict/data/' + id, type: 'DELETE',
+                        success: function(res) {
+                            BC.toast('删除成功', 'success'); loadData(currentDictType);
+                        }
+                    });
+                }
+            });
+        }
     </script>
 </body>
 </html>

@@ -10,7 +10,7 @@
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <!-- 自定义CSS -->
-    <link rel="stylesheet" th:href="@{/css/layout.css}">
+    <link rel="stylesheet" th:href="@{/css/main.css}">
 </head>
 
 <body>
@@ -88,14 +88,11 @@
                             </tbody>
                         </table>
                     </div>
-                    <!-- 分页控件 -->
-                    <nav aria-label="Page navigation">
-                        <ul class="pagination justify-content-center" id="pagination">
-                            <!-- 动态生成分页 -->
-                        </ul>
-                    </nav>
                 </div>
             </div>
+
+            <!-- 分页控件 -->
+            <div th:replace="~{common/fragments :: pagination}"></div>
         </div>
 
         <!-- 底部页脚 -->
@@ -109,6 +106,9 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <!-- jQuery -->
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script th:inline="javascript">
+        window.userPermissions = /*[[${permissions}]]*/ [];
+    </script>
 
     <!-- 公共JavaScript -->
     <script src="/js/common.js"></script>
@@ -125,21 +125,25 @@
         });
 
         function loadRoles() {
-            // 加载所有角色
-            $.ajax({
+            BC.ajax({
                 url: '/api/role/list',
                 type: 'GET',
-                success: function (response) {
-                    if (response.code === 200) {
-                        var roles = response.data;
-                        var rolesSelect = $('#roles');
-                        rolesSelect.empty();
-                        roles.forEach(function (role) {
-                            rolesSelect.append('<option value=\"' + role.id + '\">' + role.roleName + '</option>');
-                        });
-                    } else {
-                        console.error('加载角色数据失败: ' + response.message);
-                    }
+                success: function (res) {
+                    var roles = res;
+                    var container = $('#roles');
+                    container.empty();
+                    roles.forEach(function (role) {
+                        container.append(
+                            '<label class="bc-role-tag">' +
+                            '<input type="checkbox" value="' + BC.escapeHtml(role.id) + '">' +
+                            '<span>' + BC.escapeHtml(role.roleName) + '</span>' +
+                            '</label>'
+                        );
+                    });
+                    // 点击切换选中样式
+                    container.on('change', 'input[type="checkbox"]', function () {
+                        $(this).closest('.bc-role-tag').toggleClass('active', this.checked);
+                    });
                 },
                 error: function () {
                     console.error('网络错误，无法加载角色数据');
@@ -149,30 +153,28 @@
 
         function loadDepts() {
             // 加载部门树
-            $.ajax({
+            BC.ajax({
                 url: '/api/dept/list',
                 type: 'GET',
-                success: function (response) {
-                    if (response.code === 200) {
-                        var depts = response.data;
-                        var deptSelect = $('#deptId');
-                        deptSelect.empty();
-                        deptSelect.append('<option value="">-- 请选择部门 --</option>');
-                        
-                        function addOptions(deptList, level) {
-                            $.each(deptList, function (index, dept) {
-                                var indent = '';
-                                for (var i = 0; i < level; i++) {
-                                    indent += '　';
-                                }
-                                deptSelect.append('<option value="' + dept.id + '">' + indent + dept.deptName + '</option>');
-                                if (dept.children && dept.children.length > 0) {
-                                    addOptions(dept.children, level + 1);
-                                }
-                            });
-                        }
-                        addOptions(depts, 0);
+                success: function (res) {
+                    var depts = res;
+                    var deptSelect = $('#deptId');
+                    deptSelect.empty();
+                    deptSelect.append('<option value="">-- 请选择部门 --</option>');
+
+                    function addOptions(deptList, level) {
+                        $.each(deptList, function (index, dept) {
+                            var indent = '';
+                            for (var i = 0; i < level; i++) {
+                                indent += '　';
+                            }
+                            deptSelect.append('<option value="' + BC.escapeHtml(dept.id) + '">' + indent + BC.escapeHtml(dept.deptName) + '</option>');
+                            if (dept.children && dept.children.length > 0) {
+                                addOptions(dept.children, level + 1);
+                            }
+                        });
                     }
+                    addOptions(depts, 0);
                 }
             });
         }
@@ -193,67 +195,66 @@
             if (phone) searchData.phone = phone;
             if (status) searchData.status = status;
 
-            $.ajax({
+            BC.ajax({
                 url: '/api/user/page',
                 type: 'GET',
                 data: searchData,
-                success: function (response) {
-                    if (response.code === 200) {
-                        var users = response.data.records;
-                        var tbody = $('#userTableBody');
-                        tbody.empty();
+                success: function (res) {
+                    var pageResult = res;
+                    var users = pageResult.records;
+                    var tbody = $('#userTableBody');
+                    tbody.empty();
 
-                        var pageNum = response.data.pageNum;
-                        var pageSize = response.data.pageSize;
-                        
-                        users.forEach(function (user, i) {
-                            var seq = (pageNum - 1) * pageSize + i + 1;
-                            var statusTag = BC.getTag(user.status === 1 ? 'success' : 'danger', user.status === 1 ? '启用' : '禁用');
-                            
-                            var roleTags = '';
-                            if (user.roleNames) {
-                                user.roleNames.split(',').forEach(function(role) {
-                                    roleTags += BC.getTag('info', role) + ' ';
-                                });
-                            }
+                    var pageNum = pageResult.pageNum;
+                    var pageSize = pageResult.pageSize;
 
-                            var actionsConfig = [];
-                            if (hasPermission('system:user:edit')) {
-                                actionsConfig.push({ icon: 'bi-pencil', title: '编辑用户', onclick: 'editUser("' + user.id + '")' });
-                            }
-                            if (hasPermission('system:user:reset')) {
-                                actionsConfig.push({ icon: 'bi-key', title: '重置密码', onclick: 'resetPassword("' + user.id + '", "' + user.username + '")' });
-                            }
-                            if (hasPermission('system:user:delete')) {
-                                actionsConfig.push({ icon: 'bi-trash', title: '注销用户', onclick: 'deleteUser("' + user.id + '")' });
-                            }
-                            
-                            var actions = BC.getTableActions(actionsConfig);
+                    users.forEach(function (user, i) {
+                        var seq = (pageNum - 1) * pageSize + i + 1;
+                        var statusTag = BC.getTag(user.status === 1 ? 'success' : 'danger', user.status === 1 ? '启用' : '禁用');
 
-                            var row = '<tr>' +
-                                '<td><span class="text-muted small">' + seq + '</span></td>' +
-                                '<td><span class="fw-bold text-main">' + user.username + '</span></td>' +
-                                '<td>' + (user.nickname || '-') + '</td>' +
-                                '<td><span class="small text-muted">' + (user.phone || '-') + '</span></td>' +
-                                '<td><span class="bc-tag bc-tag-secondary">' + (user.deptName || '未分配') + '</span></td>' +
-                                '<td>' + (roleTags || '-') + '</td>' +
-                                '<td><span class="small">' + (user.sort || 0) + '</span></td>' +
-                                '<td>' + statusTag + '</td>' +
-                                '<td class="text-end">' + actions + '</td>' +
-                                '</tr>';
-                            tbody.append(row);
-                        });
+                        var roleTags = '';
+                        if (user.roleNames) {
+                            user.roleNames.split(',').forEach(function(role) {
+                                roleTags += BC.getTag('info', role) + ' ';
+                            });
+                        }
 
-                        BC.renderPagination({
-                            total: response.data.total,
-                            pages: response.data.pages,
-                            current: currentPage,
-                            callback: function (pageNum) {
-                                currentPage = pageNum;
-                                loadUsers();
-                            }
-                        });
-                    }
+                        var actionsConfig = [];
+                        if (BC.hasPermission('system:user:edit')) {
+                            actionsConfig.push({ icon: 'bi-pencil', title: '编辑用户', onclick: 'editUser("' + user.id + '")' });
+                        }
+                        if (BC.hasPermission('system:user:reset')) {
+                            actionsConfig.push({ icon: 'bi-key', title: '重置密码', onclick: 'resetPassword("' + user.id + '", ' + JSON.stringify(user.username || '') + ')' });
+                        }
+                        if (BC.hasPermission('system:user:delete')) {
+                            actionsConfig.push({ icon: 'bi-trash', title: '注销用户', onclick: 'deleteUser("' + user.id + '")' });
+                        }
+
+                        var actions = BC.getTableActions(actionsConfig);
+
+                        var row = '<tr>' +
+                            '<td><span class="text-muted small">' + seq + '</span></td>' +
+                            '<td><span class="fw-bold text-main">' + BC.escapeHtml(user.username) + '</span></td>' +
+                            '<td>' + BC.escapeHtml(user.nickname || '-') + '</td>' +
+                            '<td><span class="small text-muted">' + BC.escapeHtml(user.phone || '-') + '</span></td>' +
+                            '<td><span class="bc-tag bc-tag-secondary">' + BC.escapeHtml(user.deptName || '未分配') + '</span></td>' +
+                            '<td>' + (roleTags || '-') + '</td>' +
+                            '<td><span class="small">' + (user.sort || 0) + '</span></td>' +
+                            '<td>' + statusTag + '</td>' +
+                            '<td class="text-end">' + actions + '</td>' +
+                            '</tr>';
+                        tbody.append(row);
+                    });
+
+                    BC.renderPagination({
+                        total: pageResult.total,
+                        pages: pageResult.pages,
+                        current: currentPage,
+                        callback: function (pageNum) {
+                            currentPage = pageNum;
+                            loadUsers();
+                        }
+                    });
                 }
             });
         }
@@ -278,47 +279,43 @@
             $('#passwordGroup').show();
             $('#password').attr('required', true);
             $('#userModalLabel').text('新增用户');
-            $('#userModal').modal('show');
+            BC.showModal('#userModal');
         }
 
         function editUser(id) {
-            $.ajax({
+            BC.ajax({
                 url: '/api/user/' + id,
                 type: 'GET',
-                success: function (response) {
-                    if (response.code === 200) {
-                        var user = response.data;
-                        $('#userId').val(user.id);
-                        $('#username').val(user.username);
-                        $('#passwordGroup').hide();
-                        $('#password').removeAttr('required');
-                        $('#nickname').val(user.nickname);
-                        $('#email').val(user.email);
-                        $('#phone').val(user.phone);
-                        $('#deptId').val(user.deptId || '');
-                        $('#sort').val(user.sort || 0);
-                        $('#status').val(user.status);
-                        $('#remark').val(user.remark);
-                        loadUserRoles(user.id);
-                        $('#userModalLabel').text('编辑用户');
-                        $('#userModal').modal('show');
-                    }
+                success: function (res) {
+                    var user = res;
+                    $('#userId').val(user.id);
+                    $('#username').val(user.username);
+                    $('#passwordGroup').hide();
+                    $('#password').removeAttr('required');
+                    $('#nickname').val(user.nickname);
+                    $('#email').val(user.email);
+                    $('#phone').val(user.phone);
+                    $('#deptId').val(user.deptId || '');
+                    $('#sort').val(user.sort || 0);
+                    $('#status').val(user.status);
+                    $('#remark').val(user.remark);
+                    loadUserRoles(user.id);
+                    $('#userModalLabel').text('编辑用户');
+                    BC.showModal('#userModal');
                 }
             });
         }
 
         function loadUserRoles(userId) {
-            $('#roles option').prop('selected', false);
-            $.ajax({
+            $('#roles input[type="checkbox"]').prop('checked', false).closest('.bc-role-tag').removeClass('active');
+            BC.ajax({
                 url: '/api/user/' + userId + '/roles',
                 type: 'GET',
-                success: function (response) {
-                    if (response.code === 200) {
-                        var roleIds = response.data;
-                        roleIds.forEach(function (roleId) {
-                            $('#roles option[value=\"' + roleId + '\"]').prop('selected', true);
-                        });
-                    }
+                success: function (res) {
+                    var roleIds = res;
+                    roleIds.forEach(function (roleId) {
+                        $('#roles input[value="' + roleId + '"]').prop('checked', true).closest('.bc-role-tag').addClass('active');
+                    });
                 }
             });
         }
@@ -344,7 +341,7 @@
 
             if (!userId) userData.password = $('#password').val();
             var roleIds = [];
-            $('#roles option:selected').each(function () {
+            $('#roles input[type="checkbox"]:checked').each(function () {
                 roleIds.push($(this).val());
             });
             userData.roleIds = roleIds;
@@ -352,35 +349,19 @@
             var url = userId ? '/api/user/' + userId : '/api/user';
             var type = userId ? 'PUT' : 'POST';
 
-            $.ajax({
+            BC.ajax({
                 url: url,
                 type: type,
-                contentType: 'application/json',
-                data: JSON.stringify(userData),
-                success: function (response) {
-                    if (response.code === 200) {
-                        // 使用原生 Bootstrap 5 API 确保更可靠的隐藏
-                        var modalEl = document.getElementById('userModal');
-                        var modalInstance = bootstrap.Modal.getInstance(modalEl);
-                        if (modalInstance) {
-                            modalInstance.hide();
-                        } else {
-                            $(modalEl).modal('hide');
-                        }
-                        
-                        BC.toast('用户记录保存成功', 'success');
-                        loadUsers();
-                    } else {
-                        BC.toast(response.message || '操作失败', 'error');
-                    }
+                data: userData,
+                success: function () {
+                    // 使用原生 Bootstrap 5 API 确保更可靠的隐藏
+                    BC.hideModal('#userModal');
+
+                    BC.toast('用户记录保存成功', 'success');
+                    loadUsers();
                 },
-                error: function (xhr) {
-                    var msg = '系统同步失败';
-                    if (xhr.responseJSON && xhr.responseJSON.message) {
-                        msg = xhr.responseJSON.message;
-                    }
-                    BC.toast(msg, 'error');
-                    console.error('Save user error:', xhr);
+                error: function (msg) {
+                    BC.toast(msg || '系统同步失败', 'error');
                 }
             });
         }
@@ -389,7 +370,7 @@
             $('#resetUserId').val(id);
             $('#resetUsernameDisp').text(username);
             $('#newRawPassword').val('');
-            $('#resetModal').modal('show');
+            BC.showModal('#resetModal');
         }
 
         function saveResetPassword() {
@@ -401,17 +382,13 @@
                 return;
             }
 
-            $.ajax({
+            BC.ajax({
                 url: '/api/user/' + userId + '/resetPassword',
                 type: 'PUT',
                 data: { newPassword: newPassword },
-                success: function (response) {
-                    if (response.code === 200) {
-                        $('#resetModal').modal('hide');
-                        BC.toast('系统已重置该用户密码', 'success');
-                    } else {
-                        BC.toast(response.message || '重置失败', 'error');
-                    }
+                success: function () {
+                    BC.hideModal('#resetModal');
+                    BC.toast('系统已重置该用户密码', 'success');
                 }
             });
         }
@@ -425,16 +402,12 @@
                 cancelText: '取消'
             }, function (confirmed) {
                 if (confirmed) {
-                    $.ajax({
+                    BC.ajax({
                         url: '/api/user/' + id,
                         type: 'DELETE',
-                        success: function (response) {
-                            if (response.code === 200) {
-                                BC.toast('指定用户已从系统移除', 'success');
-                                loadUsers();
-                            } else {
-                                BC.toast(response.message || '销毁失败', 'error');
-                            }
+                        success: function () {
+                            BC.toast('指定用户已从系统移除', 'success');
+                            loadUsers();
                         }
                     });
                 }
@@ -494,8 +467,8 @@
                                 </select>
                             </div>
                             <div class="bc-form-group bc-form-group-full">
-                                <label for="roles" class="bc-form-label">分配角色 <span class="text-danger">*</span></label>
-                                <select class="bc-select" id="roles" multiple size="4" required></select>
+                                <label class="bc-form-label">分配角色 <span class="text-danger">*</span></label>
+                                <div id="roles" class="bc-role-tags"></div>
                             </div>
                             <div class="bc-form-group bc-form-group-full">
                                 <label for="remark" class="bc-form-label">备注</label>

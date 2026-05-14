@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bcsport.admin.ydklmapper.YdWeatherMapper">
+
+    <delete id="deleteTodayData">
+        DELETE FROM yd_weather
+        WHERE DATEDIFF(DAY, insertDate, GETDATE()) = 0
+    </delete>
+
+    <insert id="insertBatch">
+        INSERT INTO yd_weather
+        (id, storeIdUuid, storeCode, storeName, realTime, province, city,
+         weather, minTemp, maxTemp, wind, insertDate)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.id}, #{item.storeIdUuid}, #{item.storeCode}, #{item.storename},
+             #{item.realTime}, #{item.province}, #{item.city}, #{item.weather},
+             #{item.minTemp}, #{item.maxTemp}, #{item.wind}, GETDATE())
+        </foreach>
+    </insert>
+
+</mapper>

@@ -50,7 +50,7 @@ public class GlobalControllerAdvice {
                     model.addAttribute("user", user);
                     model.addAttribute("loginUser", user);
 
-                    log.debug("成功为用户{} 注入全局 Model 属性", username);
+     //               log.debug("成功为用户{} 注入全局 Model 属性", username);
                 }
             }
         }

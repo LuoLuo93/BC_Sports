@@ -63,7 +63,8 @@ public class MainDataSourceConfig {
         // MyBatis 配置
         com.baomidou.mybatisplus.core.MybatisConfiguration configuration = new com.baomidou.mybatisplus.core.MybatisConfiguration();
         configuration.setMapUnderscoreToCamelCase(true);
-        configuration.setLogImpl(org.apache.ibatis.logging.stdout.StdOutImpl.class);
+        configuration.setLogImpl(org.apache.ibatis.logging.slf4j.Slf4jImpl.class);
+        configuration.setDefaultStatementTimeout(300);
         // 添加分页插件
         configuration.addInterceptor(mybatisPlusInterceptor);
         factory.setConfiguration(configuration);

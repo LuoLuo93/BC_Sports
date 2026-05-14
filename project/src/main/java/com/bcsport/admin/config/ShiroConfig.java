@@ -2,12 +2,15 @@ package com.bcsport.admin.config;
 
 import com.bcsport.admin.shiro.UserRealm;
 import org.apache.shiro.authc.credential.HashedCredentialsMatcher;
-import org.apache.shiro.mgt.DefaultSessionStorageEvaluator;
-import org.apache.shiro.mgt.DefaultSubjectDAO;
 import org.apache.shiro.mgt.SecurityManager;
-import org.apache.shiro.realm.Realm;
 import org.apache.shiro.spring.security.interceptor.AuthorizationAttributeSourceAdvisor;
 import org.apache.shiro.spring.web.ShiroFilterFactoryBean;
+import org.apache.shiro.session.Session;
+import org.apache.shiro.session.SessionException;
+import org.apache.shiro.session.UnknownSessionException;
+import org.apache.shiro.session.mgt.SessionKey;
+import org.apache.shiro.web.servlet.SimpleCookie;
+import org.apache.shiro.web.session.mgt.DefaultWebSessionManager;
 import org.apache.shiro.web.mgt.DefaultWebSecurityManager;
 import org.springframework.aop.framework.autoproxy.DefaultAdvisorAutoProxyCreator;
 import org.springframework.context.annotation.Bean;
@@ -30,13 +33,49 @@ public class ShiroConfig {
     @Bean
     public DefaultWebSecurityManager securityManager(UserRealm userRealm) {
         DefaultWebSecurityManager securityManager = new DefaultWebSecurityManager();
-        
+
         // 设置哈希凭证匹配器（MD5 + 2次迭代）
         userRealm.setCredentialsMatcher(hashedCredentialsMatcher());
-        
+
         // 设置Realm
         securityManager.setRealm(userRealm);
+
+        // 配置 SessionManager
+        securityManager.setSessionManager(sessionManager());
+
         return securityManager;
+    }
+
+    /**
+     * 配置 SessionManager（重写getSession，session不存在时返回null而非抛异常）
+     */
+    @Bean
+    public DefaultWebSessionManager sessionManager() {
+        DefaultWebSessionManager sessionManager = new DefaultWebSessionManager() {
+            @Override
+            public Session getSession(SessionKey key) throws SessionException {
+                try {
+                    return super.getSession(key);
+                } catch (UnknownSessionException e) {
+                    return null;
+                }
+            }
+        };
+        sessionManager.setSessionIdCookie(sessionIdCookie());
+        sessionManager.setGlobalSessionTimeout(1800000);
+        sessionManager.setDeleteInvalidSessions(true);
+        return sessionManager;
+    }
+
+    /**
+     * 配置 Session Cookie
+     */
+    @Bean
+    public SimpleCookie sessionIdCookie() {
+        SimpleCookie cookie = new SimpleCookie("JSESSIONID");
+        cookie.setHttpOnly(true);
+        cookie.setMaxAge(-1); // 浏览器关闭即失效
+        return cookie;
     }
     
     /**

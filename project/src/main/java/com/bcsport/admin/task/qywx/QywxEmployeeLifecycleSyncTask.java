@@ -23,8 +23,8 @@ public class QywxEmployeeLifecycleSyncTask {
     @Autowired
     private QywxNewEmployeeSyncTask newEmployeeSyncTask;
 
-    // @Autowired
-    // private QywxEmployeeUpdateSyncTask employeeUpdateSyncTask;
+    @Autowired
+    private QywxEmployeeUpdateSyncTask employeeUpdateSyncTask;
 
     @Autowired
     private QywxEmployeeLeaveSyncTask employeeLeaveSyncTask;
@@ -33,9 +33,7 @@ public class QywxEmployeeLifecycleSyncTask {
      * 一键同步员工生命周期所有数据
      */
     public void syncAll() {
-        log.info("========================================");
         log.info("=== 开始执行：企业微信员工生命周期整合同步 ===");
-        log.info("========================================");
         long totalStartTime = System.currentTimeMillis();
 
         try {
@@ -47,7 +45,6 @@ public class QywxEmployeeLifecycleSyncTask {
             try {
                 qywxFullSyncTask.syncAll();
                 successCount++;
-                log.info("--- 步骤 1/4：同步企微基础信息 完成 ---");
             } catch (Exception e) {
                 failCount++;
                 log.error("--- 步骤 1/4：同步企微基础信息 失败 ---", e);
@@ -58,45 +55,37 @@ public class QywxEmployeeLifecycleSyncTask {
             try {
                 newEmployeeSyncTask.sync();
                 successCount++;
-                log.info("--- 步骤 2/4：录入企微新员工 完成 ---");
             } catch (Exception e) {
                 failCount++;
                 log.error("--- 步骤 2/4：录入企微新员工 失败 ---", e);
             }
 
             // 步骤3：更新企微员工信息
-            // log.info("--- 步骤 3/4：更新企微员工信息 ---");
-            // try {
-            //     employeeUpdateSyncTask.sync();
-            //     successCount++;
-            //     log.info("--- 步骤 3/4：更新企微员工信息 完成 ---");
-            // } catch (Exception e) {
-            //     failCount++;
-            //     log.error("--- 步骤 3/4：更新企微员工信息 失败 ---", e);
-            // }
+            log.info("--- 步骤 3/4：更新企微员工信息 ---");
+            try {
+                employeeUpdateSyncTask.sync();
+                successCount++;
+            } catch (Exception e) {
+                failCount++;
+                log.error("--- 步骤 3/4：更新企微员工信息 失败 ---", e);
+            }
 
             // 步骤4：企微员工离职同步
             log.info("--- 步骤 4/4：企微员工离职同步 ---");
             try {
                 employeeLeaveSyncTask.sync();
                 successCount++;
-                log.info("--- 步骤 4/4：企微员工离职同步 完成 ---");
             } catch (Exception e) {
                 failCount++;
                 log.error("--- 步骤 4/4：企微员工离职同步 失败 ---", e);
             }
 
             long totalTime = System.currentTimeMillis() - totalStartTime;
-            log.info("========================================");
-            log.info("=== 企业微信员工生命周期整合同步 完成 ===");
-            log.info("=== 成功：{} 个步骤，失败：{} 个步骤 ===", successCount, failCount);
-            log.info("=== 总耗时：{} ms ===", totalTime);
-            log.info("========================================");
+            log.info("=== 企业微信员工生命周期整合同步 完成, 成功: {}, 失败: {}, 耗时: {} ms ===",
+                    successCount, failCount, totalTime);
 
         } catch (Exception e) {
-            log.error("========================================");
             log.error("=== 企业微信员工生命周期整合同步 异常 ===", e);
-            log.error("========================================");
             throw e;
         }
     }

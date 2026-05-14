@@ -148,10 +148,31 @@
             letter-spacing: -0.03em;
         }
 
-        .login-header p {
+        .login-header h2 {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 800;
+            font-size: 1.75rem;
+            color: var(--text-main);
+            letter-spacing: -0.02em;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, var(--summit-blue), #7c3aed);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .login-header .login-subtitle {
             color: var(--text-muted);
-            font-size: 1rem;
+            font-size: 0.9375rem;
             font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .login-header .login-subtitle i {
+            font-size: 0.75rem;
+            color: var(--summit-blue);
         }
 
         /* 运动品牌风格表单 */
@@ -334,7 +355,7 @@
             <div class="brand-text">
                 <p>PRO ATHLETIC GEAR</p>
                 <h2>Touch the<br>Highest Peak</h2>
-                <p>BC SPÖRT 巅峰数字化中心，为每一场远征保驾护航。</p>
+                <p>B.C.SPORTS 巅峰数字化中心，为每一场远征保驾护航。</p>
             </div>
         </div>
 
@@ -344,10 +365,10 @@
                 <div class="login-header">
                     <div class="logo-badge">
                         <i class="bi bi-geo-alt-fill"></i>
-                        BC-SPÖRT HQ
+                        B.C.SPORTS
                     </div>
-                    <h1>巅峰·再出发</h1>
-                    <p>请通过您的专业凭据访问系统中心</p>
+                    <h2>让人人尽享户外运动的快乐</h2>
+                    <p class="login-subtitle"><i class="bi bi-shield-check"></i> 请通过您的专业凭据访问系统中心</p>
                 </div>
 
                 <form id="loginForm">
@@ -404,9 +425,16 @@
 
     <!-- jQuery -->
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
-    
+    <!-- 公共JavaScript -->
+    <script src="/js/common.js"></script>
     <script>
         $(document).ready(function() {
+            // 被踢出时显示提示
+            if (window.location.search.indexOf('kicked=1') >= 0) {
+                $('#loginError').text('您的账号已在其他设备登录，请重新登录').fadeIn();
+                // 清理URL参数
+                window.history.replaceState({}, '', '/login');
+            }
             $('#loginForm').on('submit', function(e) {
                 e.preventDefault();
                 
@@ -419,7 +447,7 @@
                 $icon.attr('class', 'bi bi-arrow-repeat spin-anim');
                 $('#loginError').fadeOut();
                 
-                $.ajax({
+                BC.ajax({
                     url: '/doLogin',
                     type: 'POST',
                     data: {
@@ -428,17 +456,15 @@
                         rememberMe: $('#rememberMe').is(':checked')
                     },
                     success: function(res) {
-                        if (res.code === 200) {
-                            $text.text('认证成功，同步中');
-                            $icon.attr('class', 'bi bi-check-lg');
-                            $btn.css('background-color', 'var(--success-green)');
-                            setTimeout(() => window.location.href = '/index', 600);
-                        } else {
-                            showError(res.message || '凭据检验未通过，请核对后重试');
-                        }
+                        $text.text('认证成功，同步中');
+                        $icon.attr('class', 'bi bi-check-lg');
+                        $btn.css('background-color', 'var(--success-green)');
+                        // 清除旧页签，确保首次进入显示干净的仪表盘
+                        sessionStorage.removeItem('bcTabBarTabs');
+                        setTimeout(() => window.location.href = '/index', 600);
                     },
-                    error: function() {
-                        showError('系统网关通信超时，请检查信道');
+                    error: function(msg) {
+                        showError(msg || '凭据检验未通过，请核对后重试');
                     }
                 });
 

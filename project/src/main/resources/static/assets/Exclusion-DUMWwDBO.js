@@ -1,0 +1,1 @@
+import{B as e,I as t,_ as n,_t as r,p as i}from"./runtime-core.esm-bundler-Dx8HoZQV.js";import{o as a}from"./index-C7fLUN7x.js";var o={class:`page-placeholder`},s={__name:`Exclusion`,setup(s){let c=a();return(a,s)=>{let l=e(`el-empty`);return t(),i(`div`,o,[n(l,{description:(r(c).meta.pageTitle||`排除管理`)+` - 开发中`},null,8,[`description`])])}}};export{s as default};

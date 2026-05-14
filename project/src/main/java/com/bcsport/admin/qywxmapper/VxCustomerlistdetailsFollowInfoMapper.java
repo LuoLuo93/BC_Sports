@@ -22,4 +22,11 @@ public interface VxCustomerlistdetailsFollowInfoMapper {
      */
     void insertBatch(@Param("list") List<VxCustomerlistdetailsFollowInfo> list);
 
+    /**
+     * 查询所有数据
+     */
+    List<VxCustomerlistdetailsFollowInfo> selectAll();
+
+    List<VxCustomerlistdetailsFollowInfo> selectByExternalUserids(@Param("externalUserids") List<String> externalUserids);
+
 }

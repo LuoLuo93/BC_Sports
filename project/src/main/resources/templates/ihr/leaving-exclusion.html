@@ -1,142 +1,137 @@
 
-&lt;!DOCTYPE html&gt;
-&lt;html lang="zh-CN" xmlns:th="http://www.thymeleaf.org"&gt;
-&lt;head&gt;
-    &lt;meta charset="UTF-8"&gt;
-    &lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;
-    &lt;title&gt;IHR离职排除 - BC体育后台管理系统&lt;/title&gt;
-    &lt;link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"&gt;
-    &lt;link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet"&gt;
-    &lt;link rel="stylesheet" th:href="@{/css/layout.css}"&gt;
-&lt;/head&gt;
-&lt;body&gt;
-    &lt;div th:replace="~{common/fragments :: sidebar}"&gt;&lt;/div&gt;
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IHR离职排除 - BC体育后台管理系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/main.css}">
+</head>
+<body>
+    <div th:replace="~{common/fragments :: sidebar}"></div>
 
-    &lt;div class="main-content"&gt;
-        &lt;nav th:replace="~{common/fragments :: top-navbar}"&gt;&lt;/nav&gt;
+    <div class="main-content">
+        <nav th:replace="~{common/fragments :: top-navbar}"></nav>
 
-        &lt;div class="content-wrapper"&gt;
-            &lt;div class="bc-card"&gt;
-                &lt;div class="bc-card-body"&gt;
-                    &lt;form class="row g-3 bc-toolbar align-items-center" id="searchForm"&gt;
-                        &lt;div class="col-auto"&gt;
-                            &lt;div class="bc-input-group"&gt;
-                                &lt;i class="bi bi-person"&gt;&lt;/i&gt;
-                                &lt;input type="text" class="bc-input" id="searchStaffName" placeholder="搜索员工姓名"&gt;
-                            &lt;/div&gt;
-                        &lt;/div&gt;
-                        &lt;div class="col-auto"&gt;
-                            &lt;div class="bc-input-group"&gt;
-                                &lt;i class="bi bi-card-text"&gt;&lt;/i&gt;
-                                &lt;input type="text" class="bc-input" id="searchStaffNo" placeholder="搜索工号"&gt;
-                            &lt;/div&gt;
-                        &lt;/div&gt;
-                        &lt;div class="col-auto"&gt;
-                            &lt;select class="bc-select" id="searchStatus"&gt;
-                                &lt;option value=""&gt;全部状态&lt;/option&gt;
-                                &lt;option value="1"&gt;启用&lt;/option&gt;
-                                &lt;option value="0"&gt;禁用&lt;/option&gt;
-                            &lt;/select&gt;
-                        &lt;/div&gt;
-                        &lt;div class="col-auto"&gt;
-                            &lt;button type="button" class="btn bc-btn-primary" id="searchBtn"&gt;
-                                &lt;i class="bi bi-search"&gt;&lt;/i&gt; 查询
-                            &lt;/button&gt;
-                            &lt;button type="button" class="btn bc-btn-secondary" id="resetBtn"&gt;
-                                &lt;i class="bi bi-arrow-counterclockwise"&gt;&lt;/i&gt; 重置
-                            &lt;/button&gt;
-                        &lt;/div&gt;
-                        &lt;div class="col-auto ms-auto" th:if="${#lists.contains(permissions, '*') or #lists.contains(permissions, 'ihr:exclusion:add')}"&gt;
-                            &lt;button type="button" class="btn bc-btn-success" id="addBtn"&gt;
-                                &lt;i class="bi bi-plus-lg"&gt;&lt;/i&gt; 新增
-                            &lt;/button&gt;
-                        &lt;/div&gt;
-                    &lt;/form&gt;
+        <div class="content-wrapper">
+            <div class="bc-card">
+                <div class="bc-card-body">
+                    <form class="row g-3 bc-toolbar align-items-center" id="searchForm">
+                        <div class="col-auto">
+                            <div class="bc-input-group">
+                                <i class="bi bi-person"></i>
+                                <input type="text" class="bc-input" id="searchStaffName" placeholder="搜索员工姓名">
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <div class="bc-input-group">
+                                <i class="bi bi-card-text"></i>
+                                <input type="text" class="bc-input" id="searchStaffNo" placeholder="搜索工号">
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <select class="bc-select" id="searchStatus">
+                                <option value="">全部状态</option>
+                                <option value="1">启用</option>
+                                <option value="0">禁用</option>
+                            </select>
+                        </div>
+                        <div class="col-auto">
+                            <button type="button" class="btn bc-btn-primary" id="searchBtn">
+                                <i class="bi bi-search"></i> 查询
+                            </button>
+                            <button type="button" class="btn bc-btn-secondary" id="resetBtn">
+                                <i class="bi bi-arrow-counterclockwise"></i> 重置
+                            </button>
+                        </div>
+                        <div class="col-auto ms-auto" th:if="${#lists.contains(permissions, '*') or #lists.contains(permissions, 'ihr:exclusion:add')}">
+                            <button type="button" class="btn bc-btn-success" id="addBtn">
+                                <i class="bi bi-plus-lg"></i> 新增
+                            </button>
+                        </div>
+                    </form>
 
-                    &lt;div class="bc-table-container"&gt;
-                        &lt;table class="bc-table bc-table-hover" id="exclusionTable"&gt;
-                            &lt;thead&gt;
-                                &lt;tr&gt;
-                                    &lt;th style="width: 80px;"&gt;序号&lt;/th&gt;
-                                    &lt;th&gt;员工姓名&lt;/th&gt;
-                                    &lt;th&gt;工号&lt;/th&gt;
-                                    &lt;th&gt;排除原因&lt;/th&gt;
-                                    &lt;th style="width: 100px;"&gt;状态&lt;/th&gt;
-                                    &lt;th style="width: 160px;"&gt;创建时间&lt;/th&gt;
-                                    &lt;th style="width: 160px;" class="text-end"&gt;管理操作&lt;/th&gt;
-                                &lt;/tr&gt;
-                            &lt;/thead&gt;
-                            &lt;tbody id="dataTableBody"&gt;
-                            &lt;/tbody&gt;
-                        &lt;/table&gt;
-                    &lt;/div&gt;
-                &lt;/div&gt;
-            &lt;/div&gt;
+                    <div class="bc-table-container">
+                        <table class="bc-table bc-table-hover" id="exclusionTable">
+                            <thead>
+                                <tr>
+                                    <th style="width: 80px;">序号</th>
+                                    <th>员工姓名</th>
+                                    <th>工号</th>
+                                    <th>排除原因</th>
+                                    <th style="width: 100px;">状态</th>
+                                    <th style="width: 160px;">创建时间</th>
+                                    <th style="width: 160px;" class="text-end">管理操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dataTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
 
-            &lt;div th:replace="~{common/fragments :: pagination}"&gt;&lt;/div&gt;
-        &lt;/div&gt;
+            <div th:replace="~{common/fragments :: pagination}"></div>
+        </div>
 
-        &lt;div th:replace="~{common/fragments :: footer}"&gt;&lt;/div&gt;
-    &lt;/div&gt;
+        <div th:replace="~{common/fragments :: footer}"></div>
+    </div>
 
-    &lt;div class="modal fade" id="dataModal" tabindex="-1" aria-hidden="true"&gt;
-        &lt;div class="modal-dialog modal-lg"&gt;
-            &lt;div class="modal-content bc-modal-content"&gt;
-                &lt;div class="modal-header bc-modal-header"&gt;
-                    &lt;h5 class="modal-title bc-modal-title"&gt;
-                        &lt;i class="bi bi-person-slash"&gt;&lt;/i&gt; &lt;span id="modalTitle"&gt;新增离职排除&lt;/span&gt;
-                    &lt;/h5&gt;
-                    &lt;button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"&gt;&lt;/button&gt;
-                &lt;/div&gt;
-                &lt;div class="modal-body bc-modal-body"&gt;
-                    &lt;form id="dataForm"&gt;
-                        &lt;input type="hidden" id="dataId"&gt;
-                        &lt;div class="bc-form-grid"&gt;
-                            &lt;div class="bc-form-group"&gt;
-                                &lt;label class="bc-form-label"&gt;员工姓名 &lt;span class="text-danger"&gt;*&lt;/span&gt;&lt;/label&gt;
-                                &lt;input type="text" class="bc-input" id="staffName" placeholder="请输入员工姓名" required&gt;
-                            &lt;/div&gt;
-                            &lt;div class="bc-form-group"&gt;
-                                &lt;label class="bc-form-label"&gt;工号 &lt;span class="text-danger"&gt;*&lt;/span&gt;&lt;/label&gt;
-                                &lt;input type="text" class="bc-input" id="staffNo" placeholder="请输入工号" required&gt;
-                            &lt;/div&gt;
-                            &lt;div class="bc-form-group"&gt;
-                                &lt;label class="bc-form-label"&gt;状态&lt;/label&gt;
-                                &lt;select class="bc-select" id="status"&gt;
-                                    &lt;option value="1"&gt;启用&lt;/option&gt;
-                                    &lt;option value="0"&gt;禁用&lt;/option&gt;
-                                &lt;/select&gt;
-                            &lt;/div&gt;
-                            &lt;div class="bc-form-group bc-form-group-full"&gt;
-                                &lt;label class="bc-form-label"&gt;排除原因&lt;/label&gt;
-                                &lt;textarea class="bc-textarea" id="reason" rows="3" placeholder="请输入排除原因"&gt;&lt;/textarea&gt;
-                            &lt;/div&gt;
-                        &lt;/div&gt;
-                    &lt;/form&gt;
-                &lt;/div&gt;
-                &lt;div class="modal-footer bc-modal-footer"&gt;
-                    &lt;button type="button" class="btn bc-btn-secondary" data-bs-dismiss="modal"&gt;取消&lt;/button&gt;
-                    &lt;button type="button" class="btn bc-btn-primary" id="saveBtn"&gt;保存&lt;/button&gt;
-                &lt;/div&gt;
-            &lt;/div&gt;
-        &lt;/div&gt;
-    &lt;/div&gt;
+    <div class="modal fade" id="dataModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content bc-modal-content">
+                <div class="modal-header bc-modal-header">
+                    <h5 class="modal-title bc-modal-title">
+                        <i class="bi bi-person-slash"></i> <span id="modalTitle">新增离职排除</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body bc-modal-body">
+                    <form id="dataForm">
+                        <input type="hidden" id="dataId">
+                        <div class="bc-form-grid">
+                            <div class="bc-form-group">
+                                <label class="bc-form-label">员工姓名 <span class="text-danger">*</span></label>
+                                <input type="text" class="bc-input" id="staffName" placeholder="请输入员工姓名" required>
+                            </div>
+                            <div class="bc-form-group">
+                                <label class="bc-form-label">工号 <span class="text-danger">*</span></label>
+                                <input type="text" class="bc-input" id="staffNo" placeholder="请输入工号" required>
+                            </div>
+                            <div class="bc-form-group">
+                                <label class="bc-form-label">状态</label>
+                                <select class="bc-select" id="status">
+                                    <option value="1">启用</option>
+                                    <option value="0">禁用</option>
+                                </select>
+                            </div>
+                            <div class="bc-form-group bc-form-group-full">
+                                <label class="bc-form-label">排除原因</label>
+                                <textarea class="bc-textarea" id="reason" rows="3" placeholder="请输入排除原因"></textarea>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer bc-modal-footer">
+                    <button type="button" class="btn bc-btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn bc-btn-primary" id="saveBtn">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-    &lt;div th:replace="~{common/fragments :: confirm-modal}"&gt;&lt;/div&gt;
+    <div th:replace="~{common/fragments :: confirm-modal}"></div>
 
-    &lt;script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"&gt;&lt;/script&gt;
-    &lt;script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"&gt;&lt;/script&gt;
-    &lt;script th:inline="javascript"&gt;
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script th:inline="javascript">
         window.userPermissions = /*[[${permissions}]]*/ [];
+    </script>
+    <script src="/js/common.js"></script>
 
-        function hasPermission(p) {
-            if (!window.userPermissions) return false;
-            return window.userPermissions.includes('*') || window.userPermissions.includes(p);
-        }
-    &lt;/script&gt;
-    &lt;script src="/js/common.js"&gt;&lt;/script&gt;
-
-    &lt;script&gt;
+    <script>
         let currentPage = 1;
         let pageSize = 10;
         const EXCLUSION_TYPE = 2;
@@ -165,7 +160,7 @@
         });
 
         function loadDataList() {
-            $.ajax({
+            BC.ajax({
                 url: '/api/ihr-exclusion/page',
                 type: 'GET',
                 data: {
@@ -177,12 +172,8 @@
                     status: $('#searchStatus').val()
                 },
                 success: function(res) {
-                    if (res.code === 200) {
-                        renderTable(res.data.records);
-                        renderPagination(res.data);
-                    } else {
-                        BC.toast(res.message, 'error');
-                    }
+                    renderTable(res.records);
+                    renderPagination(res);
                 }
             });
         }
@@ -191,7 +182,7 @@
             const tbody = $('#dataTableBody');
             tbody.empty();
             if (!data || data.length === 0) {
-                tbody.append('&lt;tr&gt;&lt;td colspan="7" class="text-center py-5 text-muted"&gt;暂无数据&lt;/td&gt;&lt;/tr&gt;');
+                tbody.append('<tr><td colspan="7" class="text-center py-5 text-muted">暂无数据</td></tr>');
                 return;
             }
             data.forEach(function(item, i) {
@@ -199,23 +190,23 @@
                 const statusTag = BC.getTag(item.status === 1 ? 'success' : 'danger', item.status === 1 ? '启用' : '禁用');
 
                 const btnGroup = [];
-                if (hasPermission('ihr:exclusion:edit')) {
+                if (BC.hasPermission('ihr:exclusion:edit')) {
                     btnGroup.push({ icon: 'bi-pencil', title: '修改', onclick: 'editData(\'' + item.id + '\')' });
                 }
-                if (hasPermission('ihr:exclusion:delete')) {
+                if (BC.hasPermission('ihr:exclusion:delete')) {
                     btnGroup.push({ icon: 'bi-trash', title: '删除', onclick: 'deleteData(\'' + item.id + '\')' });
                 }
                 const actions = BC.getTableActions(btnGroup);
 
-                tbody.append('&lt;tr&gt;' +
-                    '&lt;td&gt;&lt;span class="text-muted small"&gt;' + seq + '&lt;/span&gt;&lt;/td&gt;' +
-                    '&lt;td&gt;&lt;span class="fw-bold text-main"&gt;' + (item.staffName || '') + '&lt;/span&gt;&lt;/td&gt;' +
-                    '&lt;td&gt;' + (item.staffNo || '') + '&lt;/td&gt;' +
-                    '&lt;td&gt;&lt;span class="small text-secondary"&gt;' + (item.reason || '-') + '&lt;/span&gt;&lt;/td&gt;' +
-                    '&lt;td&gt;' + statusTag + '&lt;/td&gt;' +
-                    '&lt;td&gt;&lt;span class="small text-secondary"&gt;' + (item.createTime || '') + '&lt;/span&gt;&lt;/td&gt;' +
-                    '&lt;td class="text-end"&gt;' + actions + '&lt;/td&gt;' +
-                    '&lt;/tr&gt;');
+                tbody.append('<tr>' +
+                    '<td><span class="text-muted small">' + seq + '</span></td>' +
+                    '<td><span class="fw-bold text-main">' + BC.escapeHtml(item.staffName || '') + '</span></td>' +
+                    '<td>' + BC.escapeHtml(item.staffNo || '') + '</td>' +
+                    '<td><span class="small text-secondary">' + BC.escapeHtml(item.reason || '-') + '</span></td>' +
+                    '<td>' + statusTag + '</td>' +
+                    '<td><span class="small text-secondary">' + (item.createTime || '') + '</span></td>' +
+                    '<td class="text-end">' + actions + '</td>' +
+                    '</tr>');
             });
         }
 
@@ -243,9 +234,11 @@
                 modal.modal('show');
             } else {
                 $('#modalTitle').text('编辑离职排除');
-                $.get('/api/ihr-exclusion/' + id, function(res) {
-                    if (res.code === 200) {
-                        const d = res.data;
+                BC.ajax({
+                    url: '/api/ihr-exclusion/' + id,
+                    type: 'GET',
+                    success: function(res) {
+                        const d = res;
                         $('#dataId').val(d.id);
                         $('#staffName').val(d.staffName);
                         $('#staffNo').val(d.staffNo);
@@ -271,19 +264,14 @@
                 reason: $('#reason').val()
             };
 
-            $.ajax({
+            BC.ajax({
                 url: id ? '/api/ihr-exclusion/' + id : '/api/ihr-exclusion',
                 type: id ? 'PUT' : 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify(data),
+                data: data,
                 success: function(res) {
-                    if (res.code === 200) {
-                        $('#dataModal').modal('hide');
-                        BC.toast(id ? '修改成功' : '新增成功', 'success');
-                        loadDataList();
-                    } else {
-                        BC.toast(res.message, 'error');
-                    }
+                    $('#dataModal').modal('hide');
+                    BC.toast(id ? '修改成功' : '新增成功', 'success');
+                    loadDataList();
                 }
             });
         }
@@ -295,19 +283,17 @@
                 type: 'danger'
             }, function(ok) {
                 if (ok) {
-                    $.ajax({
+                    BC.ajax({
                         url: '/api/ihr-exclusion/' + id,
                         type: 'DELETE',
                         success: function(res) {
-                            if (res.code === 200) {
-                                BC.toast('删除成功', 'success');
-                                loadDataList();
-                            }
+                            BC.toast('删除成功', 'success');
+                            loadDataList();
                         }
                     });
                 }
             });
         }
-    &lt;/script&gt;
-&lt;/body&gt;
-&lt;/html&gt;
+    </script>
+</body>
+</html>

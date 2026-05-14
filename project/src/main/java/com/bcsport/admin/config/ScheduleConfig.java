@@ -15,11 +15,15 @@ import org.springframework.scheduling.support.CronTrigger;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import java.lang.reflect.Method;
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.locks.ReentrantLock;
 
 @Slf4j
 @Component
@@ -27,6 +31,12 @@ import java.util.concurrent.ScheduledFuture;
 public class ScheduleConfig {
 
     private final Map<String, ScheduledFuture<?>> scheduledFutures = new ConcurrentHashMap<>();
+    private final Map<String, ReentrantLock> runningLocks = new ConcurrentHashMap<>();
+
+    // 手动执行任务状态跟踪（按 jobId 管理，防同任务重复触发，不阻塞其他任务）
+    private static final Set<String> runningJobIds = ConcurrentHashMap.newKeySet();
+    private static final Map<String, String> runningJobNames = new ConcurrentHashMap<>();
+    private static final Map<String, Long> runningJobStartTimes = new ConcurrentHashMap<>();
 
     @Autowired
     private ApplicationContext applicationContext;
@@ -93,7 +103,71 @@ public class ScheduleConfig {
             log.warn("预设任务不存在 {}", job.getTaskKey());
             return;
         }
+
+        // 防止同一任务重复触发（不同任务互不影响）
+        if (!runningJobIds.add(job.getId())) {
+            log.warn("任务[{}]正在执行中，拒绝重复触发", job.getJobName());
+            throw new IllegalStateException("任务「" + job.getJobName() + "」正在执行中，请等待完成后再试");
+        }
+
+        runningJobNames.put(job.getId(), job.getJobName());
+        runningJobStartTimes.put(job.getId(), System.currentTimeMillis());
+
         taskScheduler.execute(createRunnable(job, option, "MANUAL"));
+    }
+
+    @PreDestroy
+    public void shutdown() {
+        scheduledFutures.values().forEach(future -> future.cancel(false));
+        scheduledFutures.clear();
+        runningLocks.clear();
+        if (taskScheduler != null) {
+            taskScheduler.shutdown();
+        }
+    }
+
+    /**
+     * 判断指定任务是否正在手动执行
+     */
+    public static boolean isJobRunning(String jobId) {
+        return runningJobIds.contains(jobId);
+    }
+
+    /**
+     * 是否有任意手动任务正在执行
+     */
+    public static boolean isAnyManualRunning() {
+        return !runningJobIds.isEmpty();
+    }
+
+    /**
+     * 获取当前执行中任务的名称（第一个）
+     */
+    public static String getFirstRunningJobName() {
+        return runningJobNames.isEmpty() ? null : runningJobNames.values().iterator().next();
+    }
+
+    /**
+     * 获取指定任务已运行秒数
+     */
+    public static long getJobElapsedSeconds(String jobId) {
+        Long startTime = runningJobStartTimes.get(jobId);
+        if (startTime == null) return 0;
+        return (System.currentTimeMillis() - startTime) / 1000;
+    }
+
+    /**
+     * 获取所有正在执行的任务ID集合
+     */
+    public static Set<String> getRunningJobIds() {
+        return new HashSet<>(runningJobIds);
+    }
+
+    /**
+     * 获取任务名称
+     */
+    public static String getJobName(String jobId) {
+        return runningJobNames.get(jobId);
     }
 
     private Runnable createRunnable(ScheduleJob job, ScheduleTaskRegistry.TaskOption option, String triggerType) {
@@ -107,7 +181,18 @@ public class ScheduleConfig {
             scheduleLog.setExecuteTime(LocalDateTime.now());
             scheduleLog.setCreateBy("system");
 
+            String lockKey = getLockKey(option);
+            ReentrantLock runningLock = runningLocks.computeIfAbsent(lockKey, key -> new ReentrantLock());
+            boolean locked = false;
             try {
+                locked = runningLock.tryLock();
+                if (!locked) {
+                    scheduleLog.setStatus(0);
+                    scheduleLog.setErrorMsg("Task skipped because module is already running: " + lockKey);
+                    log.warn("定时任务跳过: [{}] {}, lockKey={}", job.getId(), job.getJobName(), lockKey);
+                    return;
+                }
+
                 Object bean = applicationContext.getBean(option.getBeanName());
                 Method method = findMethod(bean.getClass(), option.getMethodName());
                 method.setAccessible(true);
@@ -121,9 +206,28 @@ public class ScheduleConfig {
             } finally {
                 scheduleLog.setFinishTime(LocalDateTime.now());
                 scheduleLog.setDuration(System.currentTimeMillis() - startTime);
-                logService.saveLog(scheduleLog);
+                try {
+                    logService.saveLog(scheduleLog);
+                } finally {
+                    if (locked) {
+                        runningLock.unlock();
+                    }
+                    if ("MANUAL".equals(triggerType)) {
+                        runningJobIds.remove(job.getId());
+                        runningJobNames.remove(job.getId());
+                        runningJobStartTimes.remove(job.getId());
+                    }
+                }
             }
         };
+    }
+
+    private String getLockKey(ScheduleTaskRegistry.TaskOption option) {
+        String module = option.getModule();
+        if (module != null && !module.trim().isEmpty()) {
+            return "module:" + module;
+        }
+        return "task:" + option.getTaskKey();
     }
 
     private Method findMethod(Class<?> clazz, String methodName) throws NoSuchMethodException {

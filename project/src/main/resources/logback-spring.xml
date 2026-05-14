@@ -38,6 +38,8 @@
     <!-- 开发环境 -->
     <springProfile name="dev">
         <logger name="com.bcsport.admin" level="DEBUG"/>
+        <logger name="com.bcsport.admin.ihrmapper" level="WARN"/>
+        <logger name="com.bcsport.admin.qywxmapper" level="WARN"/>
         <logger name="org.springframework" level="INFO"/>
         <logger name="org.apache.shiro" level="DEBUG"/>
         <root level="INFO">
@@ -45,7 +47,7 @@
             <appender-ref ref="ASYNC_FILE"/>
         </root>
     </springProfile>
-    
+
     <!-- 生产环境 -->
     <springProfile name="prod">
         <logger name="com.bcsport.admin" level="INFO"/>
@@ -55,10 +57,12 @@
             <appender-ref ref="ASYNC_FILE"/>
         </root>
     </springProfile>
-    
+
     <!-- 测试环境 -->
     <springProfile name="test">
         <logger name="com.bcsport.admin" level="DEBUG"/>
+        <logger name="com.bcsport.admin.ihrmapper" level="WARN"/>
+        <logger name="com.bcsport.admin.qywxmapper" level="WARN"/>
         <logger name="org.springframework" level="INFO"/>
         <logger name="org.apache.shiro" level="DEBUG"/>
         <root level="INFO">

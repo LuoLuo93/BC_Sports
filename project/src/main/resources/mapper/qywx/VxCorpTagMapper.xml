@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bcsport.admin.qywxmapper.VxCorpTagMapper">
+
+    <delete id="deleteAll">DELETE FROM VX_CorpTag</delete>
+
+    <select id="selectAllActive" resultType="com.bcsport.admin.entity.qywx.VxCorpTag">
+        SELECT * FROM VX_CorpTag WHERE deleted = 0 ORDER BY sortOrder
+    </select>
+
+    <insert id="insertBatch">
+        INSERT INTO VX_CorpTag (id, tagId, tagName, groupId, groupName, sortOrder, deleted, createTime, updateTime)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.id}, #{item.tagId}, #{item.tagName}, #{item.groupId}, #{item.groupName},
+             #{item.sortOrder}, 0, GETDATE(), GETDATE())
+        </foreach>
+    </insert>
+
+    <select id="selectPageGroups" resultType="com.bcsport.admin.entity.qywx.VxCorpTag">
+        SELECT * FROM VX_CorpTag
+        WHERE deleted = 0 AND groupId IS NULL
+        <if test="tagName != null and tagName != ''">
+            AND (
+                tagName LIKE '%' + #{tagName} + '%'
+                OR tagId IN (
+                    SELECT groupId FROM VX_CorpTag
+                    WHERE deleted = 0 AND groupId IS NOT NULL
+                    AND tagName LIKE '%' + #{tagName} + '%'
+                )
+            )
+        </if>
+        ORDER BY sortOrder, id
+        OFFSET #{offset} ROWS FETCH NEXT #{size} ROWS ONLY
+    </select>
+
+    <select id="selectGroupCount" resultType="long">
+        SELECT COUNT(*) FROM VX_CorpTag
+        WHERE deleted = 0 AND groupId IS NULL
+        <if test="tagName != null and tagName != ''">
+            AND (
+                tagName LIKE '%' + #{tagName} + '%'
+                OR tagId IN (
+                    SELECT groupId FROM VX_CorpTag
+                    WHERE deleted = 0 AND groupId IS NOT NULL
+                    AND tagName LIKE '%' + #{tagName} + '%'
+                )
+            )
+        </if>
+    </select>
+
+    <select id="selectChildrenByGroupIds" resultType="com.bcsport.admin.entity.qywx.VxCorpTag">
+        SELECT * FROM VX_CorpTag
+        WHERE deleted = 0 AND groupId IN
+        <foreach collection="groupIds" item="gid" open="(" separator="," close=")">
+            #{gid}
+        </foreach>
+        ORDER BY sortOrder, id
+    </select>
+
+</mapper>

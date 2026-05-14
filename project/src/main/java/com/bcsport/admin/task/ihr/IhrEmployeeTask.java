@@ -9,8 +9,11 @@ import com.bcsport.admin.entity.ihr.*;
 import com.bcsport.admin.ihrmapper.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -46,32 +49,52 @@ public class IhrEmployeeTask {
     @Autowired
     private IhrEmployeeModificationMapper modificationMapper;
 
+    @Autowired
+    @Qualifier("taskThreadPool")
+    private ThreadPoolExecutor taskThreadPool;
+
+    @Autowired
+    @Qualifier("ihrTransactionManager")
+    private PlatformTransactionManager transactionManager;
+
     private static final int BATCH_SIZE = 10;  // 减少批量大小，避免超过 SQL Server 2100 参数限制
     private static final int EMPLOYEE_BATCH_SIZE = 100;
+    private static final int DETAIL_SUBMIT_BATCH_SIZE = 500;
+
+    // 同步状态跟踪
+    private static volatile boolean isSyncing = false;
+    private static Date syncStartTime = null;
 
     /**
      * 同步员工ID列表
      */
-    @Transactional(rollbackFor = Exception.class, transactionManager = "ihrTransactionManager")
     public void syncIds() {
         log.info("=== 开始执行: IHR同步员工ID ===");
         try {
-            // 先获取所有数据到内存
+            // API调用在事务外执行
             List<IhrEmployeesAuxiliary> allIds = new ArrayList<>();
             fetchEmployeeIds("", 1, allIds);
 
-            // 再在事务中删除并插入
-            auxiliaryMapper.deleteAll();
-            // 分批插入
-            for (int i = 0; i < allIds.size(); i += BATCH_SIZE) {
-                int end = Math.min(i + BATCH_SIZE, allIds.size());
-                auxiliaryMapper.insertBatch(allIds.subList(i, end));
-            }
+            // 短事务仅用于DB写入
+            doSyncIds(allIds);
+
             log.info("=== 完成: IHR同步员工ID, 共{}条 ===", allIds.size());
         } catch (Exception e) {
             log.error("=== 失败: IHR同步员工ID: {} ===", e.getMessage());
             throw e;
         }
+    }
+
+    void doSyncIds(List<IhrEmployeesAuxiliary> allIds) {
+        TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
+        txTemplate.execute(status -> {
+            auxiliaryMapper.deleteAll();
+            for (int i = 0; i < allIds.size(); i += BATCH_SIZE) {
+                int end = Math.min(i + BATCH_SIZE, allIds.size());
+                auxiliaryMapper.insertBatch(allIds.subList(i, end));
+            }
+            return null;
+        });
     }
 
     private void fetchEmployeeIds(String staffStatus, int pageNo, List<IhrEmployeesAuxiliary> allIds) {
@@ -103,12 +126,10 @@ public class IhrEmployeeTask {
     /**
      * 同步员工基本信息
      */
-    @Transactional(rollbackFor = Exception.class, transactionManager = "ihrTransactionManager")
     public void syncBasic() {
         log.info("=== 开始执行: IHR同步员工基本信息 ===");
         try {
-            // 先获取所有数据到内存
-            // 获取所有员工ID
+            // DB读取和API调用在事务外执行
             List<IhrEmployeesAuxiliary> auxiliaries = auxiliaryMapper.selectList(null);
             List<String> staffIds = new ArrayList<>();
             for (IhrEmployeesAuxiliary a : auxiliaries) {
@@ -123,18 +144,26 @@ public class IhrEmployeeTask {
                 allEmployees.addAll(fetchBasicInfoList(batch));
             }
 
-            // 再在事务中删除并插入
-            employeeMapper.deleteAll();
-            // 分批插入
-            for (int i = 0; i < allEmployees.size(); i += BATCH_SIZE) {
-                int end = Math.min(i + BATCH_SIZE, allEmployees.size());
-                employeeMapper.insertBatch(allEmployees.subList(i, end));
-            }
+            // 短事务仅用于DB写入
+            doSyncBasic(allEmployees);
+
             log.info("=== 完成: IHR同步员工基本信息, 共{}人 ===", staffIds.size());
         } catch (Exception e) {
             log.error("=== 失败: IHR同步员工基本信息: {} ===", e.getMessage());
             throw e;
         }
+    }
+
+    void doSyncBasic(List<IhrEmployee> allEmployees) {
+        TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
+        txTemplate.execute(status -> {
+            employeeMapper.deleteAll();
+            for (int i = 0; i < allEmployees.size(); i += BATCH_SIZE) {
+                int end = Math.min(i + BATCH_SIZE, allEmployees.size());
+                employeeMapper.insertBatch(allEmployees.subList(i, end));
+            }
+            return null;
+        });
     }
 
     private List<IhrEmployee> fetchBasicInfoList(List<String> staffIdList) {
@@ -165,12 +194,13 @@ public class IhrEmployeeTask {
     }
 
     /**
-     * 同步员工详细信息
+     * 同步员工详细信息（多线程，边取边写）
+     * 每个线程独立完成 API调用 → 立即入库 → 释放内存，避免数据堆积OOM
      */
-    @Transactional(rollbackFor = Exception.class, transactionManager = "ihrTransactionManager")
     public void syncDetail() {
         log.info("=== 开始执行: IHR同步员工详细信息 ===");
         long startTime = System.currentTimeMillis();
+
         try {
             // 获取所有员工ID
             List<IhrEmployeesAuxiliary> auxiliaries = auxiliaryMapper.selectList(null);
@@ -180,78 +210,143 @@ public class IhrEmployeeTask {
             }
             log.info("共 {} 名员工需要同步详情", staffIds.size());
 
-            // 多线程并发获取员工详情
-            List<IhrEmployeeDetail> allDetailList = Collections.synchronizedList(new ArrayList<>());
-            List<IhrEmployeeFlexAttr> allFlexList = Collections.synchronizedList(new ArrayList<>());
-            AtomicInteger successCount = new AtomicInteger(0);
-            AtomicInteger failCount = new AtomicInteger(0);
-
-            // 创建线程池，10个并发线程
-            ExecutorService executorService = Executors.newFixedThreadPool(10);
-            List<Future<?>> futures = new ArrayList<>();
-
-            for (String staffId : staffIds) {
-                Future<?> future = executorService.submit(() -> {
-                    try {
-                        List<IhrEmployeeDetail> tempDetailList = new ArrayList<>();
-                        List<IhrEmployeeFlexAttr> tempFlexList = new ArrayList<>();
-                        fetchEmployeeDetail(staffId, tempDetailList, tempFlexList);
-                        allDetailList.addAll(tempDetailList);
-                        allFlexList.addAll(tempFlexList);
-                        successCount.incrementAndGet();
-                        if (successCount.get() % 100 == 0) {
-                            log.info("已处理 {}/{} 名员工", successCount.get(), staffIds.size());
-                        }
-                    } catch (Exception e) {
-                        failCount.incrementAndGet();
-                        log.warn("获取员工详情失败, staffId: {}, 错误: {}", staffId, e.getMessage());
-                    }
-                });
-                futures.add(future);
-            }
-
-            // 等待所有任务完成
-            for (Future<?> future : futures) {
-                try {
-                    future.get();
-                } catch (Exception e) {
-                    log.error("等待任务完成时出错", e);
-                }
-            }
-            executorService.shutdown();
-
-            // 批量获取自定义子集（这个是批量接口，不需要多线程）
-            List<IhrEmployeeSubset04> allSubset04List = fetchSubset04List(staffIds);
-
-            long endTime = System.currentTimeMillis();
-            log.info("数据获取完成，耗时 {} ms，成功 {} 个，失败 {} 个",
-                    (endTime - startTime), successCount.get(), failCount.get());
-
-            // 再在事务中删除并插入
-            log.info("开始写入数据库...");
+            // 1. 先清空旧数据
             detailMapper.deleteAll();
             flexAttrMapper.deleteAll();
-            subset04Mapper.deleteAll();
 
-            // 分批插入
-            for (int i = 0; i < allDetailList.size(); i += BATCH_SIZE) {
-                int end = Math.min(i + BATCH_SIZE, allDetailList.size());
-                detailMapper.insertBatch(allDetailList.subList(i, end));
-            }
-            for (int i = 0; i < allFlexList.size(); i += BATCH_SIZE) {
-                int end = Math.min(i + BATCH_SIZE, allFlexList.size());
-                flexAttrMapper.insertBatch(allFlexList.subList(i, end));
-            }
-            for (int i = 0; i < allSubset04List.size(); i += BATCH_SIZE) {
-                int end = Math.min(i + BATCH_SIZE, allSubset04List.size());
-                subset04Mapper.insertBatch(allSubset04List.subList(i, end));
+            TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
+
+            // 2. 多线程并发：每个线程独立完成 拉取→写库→释放
+            AtomicInteger successCount = new AtomicInteger(0);
+            AtomicInteger failCount = new AtomicInteger(0);
+            int concurrent = 5;
+            Semaphore semaphore = new Semaphore(concurrent);
+
+            for (int i = 0; i < staffIds.size(); i += DETAIL_SUBMIT_BATCH_SIZE) {
+                int end = Math.min(i + DETAIL_SUBMIT_BATCH_SIZE, staffIds.size());
+                List<String> batch = staffIds.subList(i, end);
+                CountDownLatch latch = new CountDownLatch(batch.size());
+                List<Future<?>> futures = new ArrayList<>(batch.size());
+
+                for (String staffId : batch) {
+                    Future<?> future = taskThreadPool.submit(() -> {
+                        try {
+                            semaphore.acquire();
+                            try {
+                                // 拉取API
+                                List<IhrEmployeeDetail> tempDetailList = new ArrayList<>();
+                                List<IhrEmployeeFlexAttr> tempFlexList = new ArrayList<>();
+                                fetchEmployeeDetail(staffId, tempDetailList, tempFlexList);
+
+                                // 立即写库（独立短事务）
+                                txTemplate.execute(status -> {
+                                    if (!tempDetailList.isEmpty()) {
+                                        detailMapper.insertBatch(tempDetailList);
+                                    }
+                                    if (!tempFlexList.isEmpty()) {
+                                        flexAttrMapper.insertBatch(tempFlexList);
+                                    }
+                                    return null;
+                                });
+
+                                successCount.incrementAndGet();
+                            } finally {
+                                semaphore.release();
+                            }
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            failCount.incrementAndGet();
+                        } catch (Exception e) {
+                            failCount.incrementAndGet();
+                        } finally {
+                            latch.countDown();
+                        }
+                    });
+                    futures.add(future);
+                }
+
+                try {
+                    boolean completed = latch.await(30, TimeUnit.MINUTES);
+                    if (!completed) {
+                        futures.forEach(future -> future.cancel(true));
+                        log.warn("等待超时，部分任务可能未完成，当前批次: {}-{}", i + 1, end);
+                        break;
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    futures.forEach(future -> future.cancel(true));
+                    throw e;
+                }
             }
 
-            log.info("=== 完成: IHR同步员工详细信息, 共{}人 ===", successCount.get());
+            long fetchTime = System.currentTimeMillis() - startTime;
+            log.info("员工详情拉取完成, 成功: {}, 失败: {}, 耗时: {} ms",
+                    successCount.get(), failCount.get(), fetchTime);
+
+            // 3. 批量获取并写入自定义子集（批量API，逐批写入）
+            // log.info("开始同步子集数据...");
+            // syncSubset04InBatches(staffIds, txTemplate);
+
+            long totalTime = System.currentTimeMillis() - startTime;
+            log.info("=== 完成: IHR同步员工详细信息, 总耗时: {} ms ===", totalTime);
         } catch (Exception e) {
             log.error("=== 失败: IHR同步员工详细信息: {} ===", e.getMessage());
-            throw e;
+            throw new RuntimeException(e);
         }
+    }
+
+    /**
+     * 分批获取子集数据并写入，避免一次性加载到内存
+     */
+    private void syncSubset04InBatches(List<String> staffIds, TransactionTemplate txTemplate) {
+        for (int i = 0; i < staffIds.size(); i += EMPLOYEE_BATCH_SIZE) {
+            int end = Math.min(i + EMPLOYEE_BATCH_SIZE, staffIds.size());
+            List<String> batch = staffIds.subList(i, end);
+
+            try {
+                List<IhrEmployeeSubset04> subsetList = fetchSubset04Batch(batch);
+                if (!subsetList.isEmpty()) {
+                    txTemplate.execute(status -> {
+                        for (int j = 0; j < subsetList.size(); j += BATCH_SIZE) {
+                            int subEnd = Math.min(j + BATCH_SIZE, subsetList.size());
+                            subset04Mapper.insertBatch(subsetList.subList(j, subEnd));
+                        }
+                        return null;
+                    });
+                }
+            } catch (Exception e) {
+                log.error("子集数据批次写入失败, staffId范围 {}-{}: {}", i + 1, end, e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * 获取一批员工的子集数据（每批100个ID）
+     */
+    private List<IhrEmployeeSubset04> fetchSubset04Batch(List<String> staffIdBatch) {
+        List<IhrEmployeeSubset04> result = new ArrayList<>();
+        String body = JSONUtil.toJsonStr(staffIdBatch);
+
+        JSONObject response = apiClient.postJsonObject(
+                "/openapi/thirdparty/api/staff/v1/subset?metaCode=tab_staff_subset04", body);
+        JSONArray data = response.getJSONArray("data");
+        if (data == null || data.isEmpty()) return result;
+
+        Map<String, IhrEmployeeSubset04DTO> staffIdMap = new HashMap<>();
+        for (int j = 0; j < data.size(); j++) {
+            JSONObject obj = data.getJSONObject(j);
+            IhrEmployeeSubset04DTO dto = JSONUtil.toBean(obj, IhrEmployeeSubset04DTO.class);
+            String staffId = dto.getStaffId();
+
+            if (!staffIdMap.containsKey(staffId)) {
+                staffIdMap.put(staffId, dto);
+            }
+        }
+
+        for (IhrEmployeeSubset04DTO dto : staffIdMap.values()) {
+            result.add(IhrEntityConverter.toSubset04Entity(dto));
+        }
+        return result;
     }
 
     private void fetchEmployeeDetail(String staffId, List<IhrEmployeeDetail> detailList, List<IhrEmployeeFlexAttr> flexList) {
@@ -271,55 +366,9 @@ public class IhrEmployeeTask {
         }
     }
 
-    private List<IhrEmployeeSubset04> fetchSubset04List(List<String> staffIds) {
-        List<IhrEmployeeSubset04> result = new ArrayList<>();
-        Map<String, List<IhrEmployeeSubset04DTO>> staffIdDataMap = new HashMap<>();
-
-        // 每批100个员工ID
-        for (int i = 0; i < staffIds.size(); i += EMPLOYEE_BATCH_SIZE) {
-            int end = Math.min(i + EMPLOYEE_BATCH_SIZE, staffIds.size());
-            List<String> batch = staffIds.subList(i, end);
-            String body = JSONUtil.toJsonStr(batch);
-
-            JSONObject response = apiClient.postJsonObject(
-                    "/openapi/thirdparty/api/staff/v1/subset?metaCode=tab_staff_subset04", body);
-            JSONArray data = response.getJSONArray("data");
-            if (data == null || data.isEmpty()) continue;
-
-            for (int j = 0; j < data.size(); j++) {
-                JSONObject obj = data.getJSONObject(j);
-                IhrEmployeeSubset04DTO dto = JSONUtil.toBean(obj, IhrEmployeeSubset04DTO.class);
-                String staffId = dto.getStaffId();
-
-                // 先收集数据，看看重复情况
-                staffIdDataMap.computeIfAbsent(staffId, k -> new ArrayList<>()).add(dto);
-            }
-        }
-
-        // 检查并打印重复数据
-        for (Map.Entry<String, List<IhrEmployeeSubset04DTO>> entry : staffIdDataMap.entrySet()) {
-            String staffId = entry.getKey();
-            List<IhrEmployeeSubset04DTO> list = entry.getValue();
-
-            if (list.size() > 1) {
-                log.warn("staffId {} 有 {} 条数据:", staffId, list.size());
-                for (int k = 0; k < list.size(); k++) {
-                    log.warn("  第 {} 条: {}", k + 1, JSONUtil.toJsonStr(list.get(k)));
-                }
-            }
-
-            // 只取第一条并转换为实体
-            IhrEmployeeSubset04 entity = IhrEntityConverter.toSubset04Entity(list.get(0));
-            result.add(entity);
-        }
-
-        return result;
-    }
-
     /**
      * 同步今日和昨日新增员工ID
      */
-    @Transactional(rollbackFor = Exception.class, transactionManager = "ihrTransactionManager")
     public void syncAdditions() {
         log.info("=== 开始执行: IHR同步今日和昨日新增员工ID ===");
         try {
@@ -336,29 +385,17 @@ public class IhrEmployeeTask {
 
             List<IhrEmployeeAddition> allAdditions = new ArrayList<>();
 
-            // 获取昨天的数据
+            // API调用在事务外执行
             log.info("正在获取昨日({})新增员工...", formatDate(yesterday));
             List<IhrEmployeeAddition> yesterdayAdditions = fetchAdditions(yesterday);
             allAdditions.addAll(yesterdayAdditions);
 
-            // 获取今天的数据
             log.info("正在获取今日({})新增员工...", formatDate(today));
             List<IhrEmployeeAddition> todayAdditions = fetchAdditions(today);
             allAdditions.addAll(todayAdditions);
 
-            // 删除这两天已存在的数据
-            log.info("正在删除数据库中昨日和今日的旧数据...");
-            additionMapper.deleteBySyncDate(yesterday);
-            additionMapper.deleteBySyncDate(today);
-
-            // 分批插入新数据
-            if (!allAdditions.isEmpty()) {
-                log.info("正在插入{}条新增员工数据...", allAdditions.size());
-                for (int i = 0; i < allAdditions.size(); i += BATCH_SIZE) {
-                    int end = Math.min(i + BATCH_SIZE, allAdditions.size());
-                    additionMapper.insertBatch(allAdditions.subList(i, end));
-                }
-            }
+            // 短事务仅用于DB写入
+            doSyncAdditions(yesterday, today, allAdditions);
 
             log.info("=== 完成: IHR同步新增员工ID, 昨日{}条, 今日{}条, 共{}条 ===",
                     yesterdayAdditions.size(), todayAdditions.size(), allAdditions.size());
@@ -366,6 +403,22 @@ public class IhrEmployeeTask {
             log.error("=== 失败: IHR同步新增员工ID: {} ===", e.getMessage());
             throw e;
         }
+    }
+
+    void doSyncAdditions(Date yesterday, Date today, List<IhrEmployeeAddition> allAdditions) {
+        TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
+        txTemplate.execute(status -> {
+            additionMapper.deleteBySyncDate(yesterday);
+            additionMapper.deleteBySyncDate(today);
+
+            if (!allAdditions.isEmpty()) {
+                for (int i = 0; i < allAdditions.size(); i += BATCH_SIZE) {
+                    int end = Math.min(i + BATCH_SIZE, allAdditions.size());
+                    additionMapper.insertBatch(allAdditions.subList(i, end));
+                }
+            }
+            return null;
+        });
     }
 
     private String formatDate(Date date) {
@@ -436,7 +489,6 @@ public class IhrEmployeeTask {
     /**
      * 同步今日和昨日调整员工ID
      */
-    @Transactional(rollbackFor = Exception.class, transactionManager = "ihrTransactionManager")
     public void syncAdjustments() {
         log.info("=== 开始执行: IHR同步今日和昨日调整员工ID ===");
         try {
@@ -453,29 +505,17 @@ public class IhrEmployeeTask {
 
             List<IhrEmployeeModification> allModifications = new ArrayList<>();
 
-            // 获取昨天的数据
+            // API调用在事务外执行
             log.info("正在获取昨日({})调整员工...", formatDate(yesterday));
             List<IhrEmployeeModification> yesterdayModifications = fetchAdjustments(yesterday);
             allModifications.addAll(yesterdayModifications);
 
-            // 获取今天的数据
             log.info("正在获取今日({})调整员工...", formatDate(today));
             List<IhrEmployeeModification> todayModifications = fetchAdjustments(today);
             allModifications.addAll(todayModifications);
 
-            // 删除这两天已存在的数据
-            log.info("正在删除数据库中昨日和今日的旧数据...");
-            modificationMapper.deleteBySyncDate(yesterday);
-            modificationMapper.deleteBySyncDate(today);
-
-            // 分批插入新数据
-            if (!allModifications.isEmpty()) {
-                log.info("正在插入{}条调整员工数据...", allModifications.size());
-                for (int i = 0; i < allModifications.size(); i += BATCH_SIZE) {
-                    int end = Math.min(i + BATCH_SIZE, allModifications.size());
-                    modificationMapper.insertBatch(allModifications.subList(i, end));
-                }
-            }
+            // 短事务仅用于DB写入
+            doSyncAdjustments(yesterday, today, allModifications);
 
             log.info("=== 完成: IHR同步调整员工ID, 昨日{}条, 今日{}条, 共{}条 ===",
                     yesterdayModifications.size(), todayModifications.size(), allModifications.size());
@@ -483,6 +523,22 @@ public class IhrEmployeeTask {
             log.error("=== 失败: IHR同步调整员工ID: {} ===", e.getMessage());
             throw e;
         }
+    }
+
+    void doSyncAdjustments(Date yesterday, Date today, List<IhrEmployeeModification> allModifications) {
+        TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
+        txTemplate.execute(status -> {
+            modificationMapper.deleteBySyncDate(yesterday);
+            modificationMapper.deleteBySyncDate(today);
+
+            if (!allModifications.isEmpty()) {
+                for (int i = 0; i < allModifications.size(); i += BATCH_SIZE) {
+                    int end = Math.min(i + BATCH_SIZE, allModifications.size());
+                    modificationMapper.insertBatch(allModifications.subList(i, end));
+                }
+            }
+            return null;
+        });
     }
 
     private List<IhrEmployeeModification> fetchAdjustments(Date syncDate) {
@@ -556,6 +612,16 @@ public class IhrEmployeeTask {
      * 同步全部员工数据（按顺序）
      */
     public void syncAll() {
+        // 检查并设置同步状态（双重检查，防止重复调用）
+        synchronized (IhrEmployeeTask.class) {
+            if (isSyncing) {
+                log.warn("同步正在进行中，请勿重复操作");
+                return;
+            }
+            isSyncing = true;
+            syncStartTime = new Date();
+        }
+
         log.info("=== 开始执行: IHR同步全部员工数据 ===");
         try {
             // 1. 同步员工ID
@@ -577,6 +643,56 @@ public class IhrEmployeeTask {
         } catch (Exception e) {
             log.error("=== 失败: IHR同步全部员工数据: {} ===", e.getMessage());
             throw e;
+        } finally {
+            // 清除同步状态
+            synchronized (IhrEmployeeTask.class) {
+                isSyncing = false;
+                syncStartTime = null;
+            }
+        }
+    }
+
+    /**
+     * 获取同步状态
+     */
+    public static boolean isSyncing() {
+        return isSyncing;
+    }
+
+    /**
+     * 获取同步开始时间
+     */
+    public static Date getSyncStartTime() {
+        return syncStartTime;
+    }
+
+    public static void setSyncing(boolean syncing) {
+        isSyncing = syncing;
+    }
+
+    public static void setSyncStartTime(Date startTime) {
+        syncStartTime = startTime;
+    }
+
+    /**
+     * 手动触发专用：跳过内部状态设置（Controller已设置），直接执行同步步骤
+     */
+    public void syncAllFromManual() {
+        log.info("=== 开始执行: IHR同步全部员工数据(手动触发) ===");
+        try {
+            syncIds();
+            syncAdditions();
+            syncAdjustments();
+            syncBasic();
+            syncDetail();
+            log.info("=== 完成: IHR同步全部员工数据 ===");
+        } catch (Exception e) {
+            log.error("=== 失败: IHR同步全部员工数据: {} ===", e.getMessage());
+        } finally {
+            synchronized (IhrEmployeeTask.class) {
+                isSyncing = false;
+                syncStartTime = null;
+            }
         }
     }
 }

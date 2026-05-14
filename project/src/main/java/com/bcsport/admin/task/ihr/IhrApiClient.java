@@ -18,6 +18,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.List;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * IHR360 API 统一客户端
@@ -44,6 +45,7 @@ public class IhrApiClient {
 
     private RestTemplate restTemplate;
 
+    private final ReentrantLock tokenLock = new ReentrantLock();
     private volatile String accessToken;
     private volatile LocalDateTime tokenExpireTime;
 
@@ -89,17 +91,33 @@ public class IhrApiClient {
      * 获取有效的 Access Token（自动刷新）
      */
     public String getAccessToken() {
+        // 快速路径：token未过期直接返回
         if (accessToken != null && tokenExpireTime != null && LocalDateTime.now().isBefore(tokenExpireTime)) {
             return accessToken;
         }
-        return refreshToken();
+        // 需要刷新时加锁，避免并发重复刷新
+        tokenLock.lock();
+        try {
+            // double-check：锁内再检查一次，防止多个线程排队后重复刷新
+            if (accessToken != null && tokenExpireTime != null && LocalDateTime.now().isBefore(tokenExpireTime)) {
+                return accessToken;
+            }
+            return doRefreshToken();
+        } finally {
+            tokenLock.unlock();
+        }
     }
 
     /**
      * 强制刷新 Token
      */
     public String refreshToken() {
-        return doRefreshToken();
+        tokenLock.lock();
+        try {
+            return doRefreshToken();
+        } finally {
+            tokenLock.unlock();
+        }
     }
 
     private String doRefreshToken() {
@@ -121,8 +139,10 @@ public class IhrApiClient {
                 JSONObject body = JSONUtil.parseObj(response.getBody());
                 String newToken = body.getStr("access_token");
                 int expiresIn = body.getInt("expires_in", 7200);
-                // 提前5分钟过期，避免边界情况
-                this.tokenExpireTime = LocalDateTime.now().plusSeconds(expiresIn - 300);
+                log.info("IHR360 Token API返回 expires_in={} 秒", expiresIn);
+                // 提前5分钟过期，但不低于60秒，避免短有效期token刷新后立即过期
+                int effectiveSeconds = Math.max(expiresIn - 300, 60);
+                this.tokenExpireTime = LocalDateTime.now().plusSeconds(effectiveSeconds);
                 this.accessToken = newToken;
 
                 // 保存到数据库
@@ -174,7 +194,6 @@ public class IhrApiClient {
     public String get(String path) {
         return executeWithRetry(() -> {
             String url = baseUrl + path;
-            log.debug("IHR GET: {}", url);
             ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, buildAuthEntity(), String.class);
             return response.getBody();
         });
@@ -186,7 +205,6 @@ public class IhrApiClient {
     public String post(String path, String body) {
         return executeWithRetry(() -> {
             String url = baseUrl + path;
-            log.debug("IHR POST: {}", url);
             ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, buildAuthEntity(body), String.class);
             return response.getBody();
         });

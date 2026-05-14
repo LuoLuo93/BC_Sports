@@ -3,6 +3,7 @@ package com.bcsport.admin.shiro;
 import com.bcsport.admin.entity.User;
 import com.bcsport.admin.mapper.MenuMapper;
 import com.bcsport.admin.mapper.UserRoleMapper;
+import com.bcsport.admin.service.AuthCacheService;
 import com.bcsport.admin.service.UserService;
 import org.apache.shiro.authc.*;
 import org.apache.shiro.authz.AuthorizationInfo;
@@ -32,6 +33,9 @@ public class UserRealm extends AuthorizingRealm {
     
     @Autowired
     private MenuMapper menuMapper;
+
+    @Autowired
+    private AuthCacheService authCacheService;
     
     /**
      * 授权（获取用户角色和权限）
@@ -48,12 +52,20 @@ public class UserRealm extends AuthorizingRealm {
             authorizationInfo.addRole("admin");
             authorizationInfo.addStringPermission("*");
         } else {
-            // 查询用户角色
-            List<String> roleCodes = userRoleMapper.getRoleCodesByUserId(user.getId());
+            // 查询用户角色（优先缓存）
+            List<String> roleCodes = authCacheService.getRoles(user.getId());
+            if (roleCodes == null) {
+                roleCodes = userRoleMapper.getRoleCodesByUserId(user.getId());
+                authCacheService.putRoles(user.getId(), roleCodes);
+            }
             authorizationInfo.addRoles(roleCodes);
-            
-            // 查询用户权限标识
-            List<String> permissions = menuMapper.getPermissionsByUserId(user.getId());
+
+            // 查询用户权限标识（优先缓存）
+            List<String> permissions = authCacheService.getPermissions(user.getId());
+            if (permissions == null) {
+                permissions = menuMapper.getPermissionsByUserId(user.getId());
+                authCacheService.putPermissions(user.getId(), permissions);
+            }
             Set<String> permissionSet = permissions.stream()
                     .filter(p -> p != null && !p.trim().isEmpty())
                     .collect(Collectors.toSet());

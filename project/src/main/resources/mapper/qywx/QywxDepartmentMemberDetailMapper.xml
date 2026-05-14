@@ -9,4 +9,8 @@
             (#{item.id}, #{item.userid}, #{item.name}, #{item.openUserid}, #{item.mainDepartment}, #{item.position}, #{item.mobile}, #{item.status}, GETDATE(), GETDATE())
         </foreach>
     </insert>
+
+    <select id="selectNameByUserid" resultType="java.lang.String">
+        SELECT name FROM VX_DepartmentMembersList WHERE userid = #{userid}
+    </select>
 </mapper>

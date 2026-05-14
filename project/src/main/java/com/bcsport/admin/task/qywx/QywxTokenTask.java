@@ -3,7 +3,6 @@ package com.bcsport.admin.task.qywx;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 企业微信任务：刷新AccessToken
@@ -18,7 +17,6 @@ public class QywxTokenTask {
     /**
      * 刷新AccessToken
      */
-    @Transactional(rollbackFor = Exception.class, transactionManager = "qywxTransactionManager")
     public void refresh() {
         log.info("=== 开始执行: QYWX刷新Token ===");
         try {

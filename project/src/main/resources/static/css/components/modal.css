@@ -1,0 +1,218 @@
+/* ============================================
+   BC Sport Design System - Modal Components
+   ============================================ */
+
+/* ---------- Bootstrap Modal Overrides ---------- */
+.modal-content.bc-modal-content {
+    border-radius: var(--bc-radius-modal);
+    border: none;
+    box-shadow: var(--bc-shadow-modal);
+    overflow: hidden;
+}
+
+.modal.fade .modal-content.bc-modal-content {
+    transform: translateY(20px) scale(0.97);
+    opacity: 0;
+    transition: transform var(--bc-duration-medium) var(--bc-ease-bounce), opacity var(--bc-duration-fast) ease;
+}
+
+.modal.show .modal-content.bc-modal-content {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+}
+
+.modal-backdrop.show {
+    backdrop-filter: blur(6px) saturate(120%);
+    -webkit-backdrop-filter: blur(6px) saturate(120%);
+    background: rgba(15, 23, 42, 0.45) !important;
+}
+
+/* ---------- Modal Header ---------- */
+.modal-header.bc-modal-header {
+    background: linear-gradient(180deg, var(--bc-gray-50) 0%, var(--bc-gray-100) 100%);
+    padding: var(--bc-space-4) var(--bc-space-6);
+    border-bottom: 1px solid var(--bc-border);
+}
+
+.modal-title.bc-modal-title {
+    font-size: var(--bc-text-base);
+    font-weight: var(--bc-font-bold);
+    color: var(--bc-text-main);
+    display: flex;
+    align-items: center;
+    gap: var(--bc-space-2);
+}
+
+.modal-title.bc-modal-title i {
+    color: var(--bc-bg-surface);
+    font-size: var(--bc-text-base);
+    background: var(--bc-primary);
+    width: var(--bc-size-8);
+    height: var(--bc-size-8);
+    border-radius: var(--bc-radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-header .btn-close {
+    width: var(--bc-size-8);
+    height: var(--bc-size-8);
+    border-radius: var(--bc-radius-md);
+    opacity: 0.3;
+    transition: var(--bc-transition-fast);
+    padding: 0;
+}
+
+.modal-header .btn-close:hover {
+    opacity: 0.7;
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* ---------- Modal Body ---------- */
+.modal-body.bc-modal-body {
+    padding: var(--bc-space-5) var(--bc-space-6);
+}
+
+/* Form Section Divider */
+.modal-body .bc-form-grid + .bc-form-grid,
+.modal-body .bc-form-grid + .row.g-3,
+.modal-body .row.g-3 + .bc-form-grid,
+.modal-body .row.g-3 + .row.g-3 {
+    margin-top: var(--bc-space-5);
+    padding-top: var(--bc-space-5);
+    border-top: 1px dashed var(--bc-border);
+}
+
+.modal-body .bc-form-grid {
+    row-gap: var(--bc-space-3);
+    column-gap: var(--bc-space-3);
+}
+
+.modal-body .row.g-3 {
+    --bs-gutter-x: var(--bc-space-3);
+    --bs-gutter-y: var(--bc-space-3);
+}
+
+.modal-body .row.g-3 .bc-input,
+.modal-body .row.g-3 .bc-select,
+.modal-body .row.g-3 .bc-textarea {
+    width: 100%;
+}
+
+/* ---------- Modal Footer ---------- */
+.modal-footer.bc-modal-footer {
+    padding: var(--bc-space-3) var(--bc-space-6);
+    background: var(--bc-gray-50);
+    border-top: 1px solid var(--bc-gray-100);
+}
+
+.modal-footer.bc-modal-footer .btn {
+    min-width: 96px;
+    border-radius: var(--bc-radius-button);
+    font-weight: var(--bc-font-semibold);
+    font-size: var(--bc-text-sm);
+    padding: var(--bc-space-2) var(--bc-space-5);
+    letter-spacing: var(--bc-tracking-normal);
+}
+
+/* Small Modal Adjustments */
+.modal-sm .modal-header.bc-modal-header {
+    padding: var(--bc-space-3) var(--bc-space-5);
+}
+
+.modal-sm .modal-body.bc-modal-body {
+    padding: var(--bc-space-4) var(--bc-space-5);
+}
+
+.modal-sm .modal-footer.bc-modal-footer {
+    padding: var(--bc-space-3) var(--bc-space-5);
+}
+
+/* ---------- Custom Confirm Modal (BC.confirm) ---------- */
+.bc-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(15, 23, 42, 0.4);
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: var(--bc-z-modal);
+    opacity: 0;
+    visibility: hidden;
+    transition: var(--bc-transition-slow);
+}
+
+.bc-modal-overlay.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.bc-modal {
+    background: var(--bc-bg-surface);
+    border: 1px solid var(--bc-border);
+    border-radius: var(--bc-radius-modal);
+    width: 90%;
+    max-width: 440px;
+    padding: var(--bc-space-10);
+    box-shadow: var(--bc-shadow-modal);
+    transform: translateY(10px);
+    transition: var(--bc-transition-medium);
+    text-align: center;
+}
+
+.bc-modal-overlay.show .bc-modal {
+    transform: translateY(0) scale(1);
+}
+
+.bc-modal-icon {
+    width: 80px;
+    height: 80px;
+    background: var(--bc-gray-100);
+    border-radius: var(--bc-radius-3xl);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--bc-text-2xl);
+    margin: 0 auto var(--bc-space-6);
+}
+
+.bc-modal-title {
+    font-size: var(--bc-text-2xl);
+    font-weight: var(--bc-font-bold);
+    color: var(--bc-gray-900);
+    margin-bottom: var(--bc-space-3);
+}
+
+.bc-modal-message {
+    color: var(--bc-text-muted);
+    margin-bottom: var(--bc-space-8);
+    line-height: var(--bc-leading-relaxed);
+}
+
+.bc-modal-footer {
+    display: flex;
+    gap: var(--bc-space-3);
+}
+
+.bc-modal-footer .bc-btn {
+    flex: 1;
+    padding: var(--bc-space-3);
+    border-radius: var(--bc-radius-xl);
+    font-weight: var(--bc-font-semibold);
+    border: none;
+    cursor: pointer;
+    transition: var(--bc-transition-fast);
+}
+
+.bc-modal-danger .bc-modal-icon {
+    color: var(--bc-danger);
+    background: var(--bc-danger-soft);
+}

@@ -2,6 +2,137 @@
 
 // 全局BC工具类
 window.BC = {
+
+    /**
+     * HTML转义，防止XSS
+     */
+    escapeHtml: function(str) {
+        if (str == null) return '';
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    },
+
+    /**
+     * 权限判断（需页面通过 th:inline 注入 window.userPermissions）
+     */
+    hasPermission: function(p) {
+        if (!Array.isArray(window.userPermissions)) return false;
+        return window.userPermissions.indexOf('*') > -1 || window.userPermissions.indexOf(p) > -1;
+    },
+
+    /**
+     * 统一 AJAX 请求封装
+     * 内置错误处理、code 校验、JSON 序列化
+     * @param {Object} options 配置项
+     * @param {String} options.url 请求地址
+     * @param {String} [options.type='GET'] 请求方法
+     * @param {Object} [options.data] 请求数据 (GET 时作 query params, 其他方法自动 JSON.stringify)
+     * @param {Function} [options.success] 成功回调 (res) — 完整响应对象
+     * @param {Function} [options.error] 错误回调 (errMessage) — 不传则自动 toast
+     * @param {Boolean} [options.loading=false] 是否显示全局 loading
+     */
+    ajax: function(options) {
+        var that = this;
+        var opts = $.extend({
+            type: 'GET',
+            loading: false
+        }, options);
+
+        if (opts.loading) that.showLoading();
+
+        var isBodyMethod = opts.type && opts.type !== 'GET';
+        var ajaxConfig = {
+            url: opts.url,
+            type: opts.type,
+            success: function(res) {
+                if (opts.loading) that.hideLoading();
+                if (res.code === 200) {
+                    if (opts.success) opts.success(res.data !== undefined ? res.data : res);
+                } else {
+                    var msg = res.message || '操作失败';
+                    if (opts.error) {
+                        opts.error(msg);
+                    } else {
+                        that.toast(msg, 'error');
+                    }
+                }
+            },
+            error: function(xhr, status) {
+                if (opts.loading) that.hideLoading();
+                var msg = '网络请求失败';
+                if (xhr.status === 401) {
+                    msg = '登录已过期，请重新登录';
+                } else if (xhr.status === 403) {
+                    msg = '没有操作权限';
+                }
+                if (opts.error) {
+                    opts.error(msg);
+                } else {
+                    that.toast(msg, 'error');
+                }
+            }
+        };
+
+        if (isBodyMethod && opts.data && typeof opts.data === 'object') {
+            ajaxConfig.contentType = 'application/json';
+            ajaxConfig.data = JSON.stringify(opts.data);
+        } else {
+            ajaxConfig.data = opts.data;
+        }
+
+        $.ajax(ajaxConfig);
+    },
+
+    showModal: function(selector) {
+        var el = typeof selector === 'string' ? document.querySelector(selector) : selector;
+        if (!el) return;
+        var instance = bootstrap.Modal.getInstance(el) || new bootstrap.Modal(el);
+        instance.show();
+    },
+
+    hideModal: function(selector) {
+        var el = typeof selector === 'string' ? document.querySelector(selector) : selector;
+        if (!el) return;
+        var instance = bootstrap.Modal.getInstance(el);
+        if (instance) instance.hide();
+    },
+
+    /**
+     * 渲染表格空数据状态
+     * @param {String|jQuery} target tbody元素或选择器
+     * @param {Number} cols 列数
+     * @param {String} msg 提示文字
+     */
+    emptyState: function(target, cols, msg) {
+        var tbody = typeof target === 'string' ? $(target) : target;
+        if (!msg) msg = '暂无数据';
+        tbody.html('<tr><td colspan="' + (cols || 10) + '" class="bc-empty-state"><i class="bi bi-inbox"></i><p>' + this.escapeHtml(msg) + '</p></td></tr>');
+    },
+
+    /**
+     * 显示全局加载遮罩
+     * @param {String} msg 提示文字
+     */
+    showLoading: function(msg) {
+        // 统一使用 #global-loading，与 showLoadingOverlay 共享同一遮罩
+        this.hideLoadingOverlay();
+        var overlay = $(
+            '<div id="global-loading" class="bc-global-loading">' +
+            '  <div class="spinner-box">' +
+            '    <div class="spinner-border text-primary" role="status"></div>' +
+            '    <p class="loading-text">' + this.escapeHtml(msg || '加载中...') + '</p>' +
+            '  </div>' +
+            '</div>'
+        );
+        $('body').append(overlay);
+    },
+
+    /**
+     * 隐藏全局加载遮罩
+     */
+    hideLoading: function() {
+        $('#global-loading').remove();
+    },
+
     /**
      * 自定义确认弹窗
      * @param {Object|String} options 配置对象或消息字符串
@@ -158,8 +289,7 @@ window.BC = {
             return;
         }
 
-        var pagination = $('<ul class="pagination pagination-sm mb-0"></ul>');
-        container.append(pagination);
+        var pagination = container;
 
         // Previous page
         var prevClass = settings.current === 1 ? 'disabled' : '';
@@ -208,7 +338,7 @@ window.BC = {
      * @param {String} text 显示文本
      */
     getTag: function(type, text) {
-        return '<span class="bc-tag bc-tag-' + (type || 'secondary') + '">' + (text || '-') + '</span>';
+        return '<span class="bc-tag bc-tag-' + (type || 'secondary') + '">' + this.escapeHtml(text || '-') + '</span>';
     },
 
     /**
@@ -253,9 +383,8 @@ window.BC = {
             if (type) btnClass += ' bc-btn-icon-' + type;
             if (action.class) btnClass += ' ' + action.class;
             
-            // 安全处理 onclick 字符串中的双引号，防止 HTML 属性提前截断
-            var safeOnclick = (action.onclick || '').replace(/"/g, '&quot;');
-            var safeTitle = (action.title || '').replace(/"/g, '&quot;');
+            var safeOnclick = (action.onclick || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            var safeTitle = (action.title || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
             
             html += '<button class="' + btnClass + '" onclick="' + safeOnclick + '" title="' + safeTitle + '">' +
                     '<i class="bi ' + (action.icon || '') + '"></i>' +
@@ -278,7 +407,7 @@ window.BC = {
                    '<i class="bi ' + (type === 'logo' ? 'bi-image' : 'bi-person') + '"></i>' +
                    '</div>';
         }
-        return '<img src="' + url + '" class="' + className + '" alt="media">';
+        return '<img src="' + this.escapeHtml(url) + '" class="' + className + '" alt="media">';
     },
 
     /**
@@ -310,7 +439,7 @@ window.BC = {
             style += 'width: ' + size + '; height: ' + size + ';';
         }
         
-        return '<div class="bc-avatar" style="' + style + '">' + firstChar + '</div>';
+        return '<div class="bc-avatar" style="' + style + '">' + this.escapeHtml(firstChar) + '</div>';
     },
 
     /**
@@ -331,9 +460,10 @@ window.BC = {
         if (!tagsStr) return '';
         var tags = tagsStr.split(',');
         var html = '';
+        var that = this;
         tags.forEach(function(tag) {
             if (tag.trim()) {
-                html += '<span class="bc-tag">' + tag.trim() + '</span>';
+                html += '<span class="bc-tag">' + that.escapeHtml(tag.trim()) + '</span>';
             }
         });
         return html;
@@ -348,35 +478,416 @@ window.BC = {
     toast: function(message, type, duration) {
         type = type || 'success';
         duration = duration || 3000;
-        
+
         var container = $('#bc-toast-container');
         if (container.length === 0) {
             container = $('<div id="bc-toast-container" class="bc-toast-container"></div>');
             $('body').append(container);
         }
-        
+
         var iconMap = {
             'success': 'bi-check-circle-fill',
             'error': 'bi-x-circle-fill',
             'warning': 'bi-exclamation-triangle-fill',
             'info': 'bi-info-circle-fill'
         };
-        
+
         var toast = $('<div class="bc-toast bc-toast-' + type + '">' +
             '<i class="bi ' + iconMap[type] + '"></i>' +
-            '<span class="bc-toast-message">' + message + '</span>' +
+            '<span class="bc-toast-message">' + this.escapeHtml(message) + '</span>' +
             '</div>');
-        
+
         container.append(toast);
-        
+
         // 触发进场动画
         setTimeout(function() { toast.addClass('show'); }, 10);
-        
+
         // 自动移除
         setTimeout(function() {
             toast.removeClass('show');
             setTimeout(function() { toast.remove(); }, 500);
         }, duration);
+    },
+
+    /**
+     * 锁定页面交互
+     */
+    lockPageInteractions: function() {
+        // 只禁用内容区域的按钮（不包括侧边栏菜单、退出登录等）
+        $('.main-content button, .content-wrapper button').prop('disabled', true);
+        // 禁用内容区域的输入框
+        $('.main-content input, .main-content select, .main-content textarea').prop('disabled', true);
+        // 添加锁定标记
+        $('body').addClass('page-locked');
+    },
+
+    /**
+     * 解锁页面交互
+     */
+    unlockPageInteractions: function() {
+        // 启用内容区域的按钮
+        $('.main-content button, .content-wrapper button').prop('disabled', false);
+        // 启用内容区域的输入框
+        $('.main-content input, .main-content select, .main-content textarea').prop('disabled', false);
+        // 移除锁定标记
+        $('body').removeClass('page-locked');
+    },
+
+    /**
+     * 显示加载遮罩（带计时器，用于同步任务）
+     */
+    showLoadingOverlay: function(name) {
+        // 先移除已有遮罩
+        $('#global-loading').remove();
+
+        var overlay = $(
+            '<div id="global-loading" class="bc-loading-overlay">' +
+            '  <div class="bc-loading-box">' +
+            '    <div class="spinner-border" role="status"></div>' +
+            '    <p class="loading-text">' + this.escapeHtml(name) + '执行中，请稍候...</p>' +
+            '    <p class="loading-timer" style="margin-top: 8px; font-size: 12px; color: #94a3b8;">已运行: 0秒</p>' +
+            '  </div>' +
+            '</div>'
+        );
+        $('body').append(overlay);
+    },
+
+    /**
+     * 隐藏加载遮罩
+     */
+    hideLoadingOverlay: function() {
+        $('#global-loading').remove();
+    },
+
+    /**
+     * 更新计时器显示
+     */
+    updateLoadingTimer: function(seconds) {
+        var timerEl = $('#global-loading .loading-timer');
+        if (timerEl.length > 0) {
+            timerEl.text('已运行: ' + seconds + '秒');
+        }
+    },
+
+    /**
+     * 触发全局同步（带锁定和轮询）
+     */
+    triggerGlobalSyncWithLock: function(url, name, refreshCallback) {
+        var that = this;
+        this.confirm({
+            title: '确认执行',
+            message: '确定要执行"' + name + '"吗？任务将在后台执行，同步期间您无法进行其他操作。',
+            type: 'primary'
+        }, function(ok) {
+            if (ok) {
+                // 1. 显示遮罩
+                that.showLoadingOverlay(name);
+
+                // 2. 锁定所有交互
+                that.lockPageInteractions();
+
+                // 3. 发送同步请求
+                $.ajax({
+                    url: url,
+                    type: 'POST',
+                    success: function(res) {
+                        if (res.code === 200) {
+                            that.toast(res.message || name + '已触发', 'success');
+                            // 4. 开始轮询检查状态
+                            that.pollSyncStatus(name, refreshCallback);
+                        } else {
+                            that.toast(res.message || '触发失败', 'error');
+                            that.unlockPageInteractions();
+                            that.hideLoadingOverlay();
+                        }
+                    },
+                    error: function() {
+                        that.toast(name + '触发失败', 'error');
+                        that.unlockPageInteractions();
+                        that.hideLoadingOverlay();
+                    }
+                });
+            }
+        });
+    },
+
+    /**
+     * 轮询检查同步状态
+     */
+    pollSyncStatus: function(name, refreshCallback) {
+        var that = this;
+        var pollCount = 0;
+        var maxPolls = 900; // 最多轮询75分钟（5秒一次）
+        var syncStartTime = Date.now();
+
+        function check() {
+            $.ajax({
+                url: '/api/ihr/sync-status',
+                type: 'GET',
+                success: function(res) {
+                    if (res.code === 200 && res.data) {
+                        var syncing = res.data.syncing;
+
+                        // 更新已运行时间（优先用后端返回的，如果没有则自己计算）
+                        if (res.data.elapsedSeconds !== undefined) {
+                            that.updateLoadingTimer(res.data.elapsedSeconds);
+                        } else {
+                            var elapsed = Math.floor((Date.now() - syncStartTime) / 1000);
+                            that.updateLoadingTimer(elapsed);
+                        }
+
+                        if (syncing) {
+                            // 还在同步中
+                            pollCount++;
+                            if (pollCount < maxPolls) {
+                                setTimeout(check, 5000); // 5秒后再次检查
+                            } else {
+                                // 超时处理
+                                that.handleSyncTimeout(name, refreshCallback);
+                            }
+                        } else {
+                            // 同步完成
+                            that.syncCompleted(name, refreshCallback);
+                        }
+                    } else {
+                        // 接口返回异常，继续轮询
+                        pollCount++;
+                        if (pollCount < maxPolls) {
+                            setTimeout(check, 5000);
+                        } else {
+                            that.handleSyncTimeout(name, refreshCallback);
+                        }
+                    }
+                },
+                error: function() {
+                    // 请求失败，继续轮询
+                    pollCount++;
+                    if (pollCount < maxPolls) {
+                        setTimeout(check, 5000);
+                    } else {
+                        that.handleSyncTimeout(name, refreshCallback);
+                    }
+                }
+            });
+        }
+
+        check();
+    },
+
+    /**
+     * 处理同步超时
+     */
+    handleSyncTimeout: function(name, refreshCallback) {
+        this.toast(name + '执行时间过长，请稍后刷新页面查看结果', 'warning');
+        this.unlockPageInteractions();
+        this.hideLoadingOverlay();
+        if (refreshCallback && typeof refreshCallback === 'function') {
+            refreshCallback();
+        }
+    },
+
+    /**
+     * 同步完成处理
+     */
+    syncCompleted: function(name, refreshCallback) {
+        this.toast(name + '执行完成', 'success');
+        this.unlockPageInteractions();
+        this.hideLoadingOverlay();
+        if (refreshCallback && typeof refreshCallback === 'function') {
+            refreshCallback();
+        }
+    },
+
+    /**
+     * 页签栏管理模块
+     */
+    TabBar: {
+        STORAGE_KEY: 'bcTabBarTabs',
+
+        getTabs: function() {
+            try {
+                var data = sessionStorage.getItem(this.STORAGE_KEY);
+                return data ? JSON.parse(data) : [];
+            } catch (e) {
+                return [];
+            }
+        },
+
+        saveTabs: function(tabs) {
+            sessionStorage.setItem(this.STORAGE_KEY, JSON.stringify(tabs));
+        },
+
+        addTab: function(path, title, icon, reorder) {
+            if (!path || path === '#') return;
+            var tabs = this.getTabs();
+            var existing = tabs.find(function(t) { return t.path === path; });
+            if (existing) {
+                // 已存在：只更新标题/图标，不改变位置（除非明确要求重排）
+                existing.title = title || existing.title;
+                existing.icon = icon || existing.icon;
+                if (reorder) {
+                    tabs = tabs.filter(function(t) { return t.path !== path; });
+                    tabs.push(existing);
+                }
+            } else {
+                tabs.push({ path: path, title: title || path, icon: icon || '' });
+            }
+            if (tabs.length > 20) {
+                tabs.shift();
+            }
+            this.saveTabs(tabs);
+        },
+
+        removeTab: function(path) {
+            var tabs = this.getTabs();
+            var removed = null;
+            var wasActive = false;
+            var currentPath = window.location.pathname;
+
+            tabs = tabs.filter(function(t) {
+                if (t.path === path) {
+                    removed = t;
+                    wasActive = (path === currentPath);
+                    return false;
+                }
+                return true;
+            });
+
+            this.saveTabs(tabs);
+            return { removed: removed, tabs: tabs, wasActive: wasActive };
+        },
+
+        ensureDOM: function() {
+            if (!$('#tabBar').length) {
+                $('.top-navbar').after(
+                    '<div class="tab-bar" id="tabBar">' +
+                    '  <div class="tab-bar-scroll" id="tabBarScroll">' +
+                    '    <div class="tab-bar-items" id="tabBarItems"></div>' +
+                    '  </div>' +
+                    '</div>'
+                );
+            }
+        },
+
+        renderTabs: function() {
+            this.ensureDOM();
+            var container = $('#tabBarItems');
+            if (!container.length) return;
+
+            var tabs = this.getTabs();
+            var currentPath = window.location.pathname;
+            container.empty();
+
+            if (tabs.length === 0) {
+                $('#tabBar').removeClass('tab-bar-visible');
+                $('.content-wrapper').css('margin-top', 'var(--header-height)');
+                return;
+            }
+
+            $('#tabBar').addClass('tab-bar-visible');
+            $('.content-wrapper').css('margin-top', 'calc(var(--header-height) + var(--tab-bar-height))');
+
+            var that = this;
+            tabs.forEach(function(tab) {
+                var isActive = (tab.path === currentPath) ||
+                    (currentPath === '/' && tab.path === '/') ||
+                    (currentPath === '/index' && tab.path === '/') ||
+                    (tab.path !== '/' && currentPath.startsWith(tab.path + '/'));
+                var isDashboard = (tab.path === '/');
+
+                var item = $(
+                    '<div class="tab-bar-item' + (isActive ? ' active' : '') + (isDashboard ? ' tab-bar-pinned' : '') + '" data-path="' +
+                    BC.escapeHtml(tab.path) + '">' +
+                    (tab.icon ? '<i class="bi ' + BC.escapeHtml(tab.icon) + ' tab-icon"></i>' : '') +
+                    '<span class="tab-title">' + BC.escapeHtml(tab.title) + '</span>' +
+                    (isDashboard ? '' : '<span class="tab-bar-close" title="关闭"><i class="bi bi-x"></i></span>') +
+                    '</div>'
+                );
+
+                item.on('click', function(e) {
+                    if ($(e.target).closest('.tab-bar-close').length) return;
+                    var targetPath = $(this).attr('data-path');
+                    if (targetPath && targetPath !== currentPath) {
+                        window.location.href = targetPath;
+                    }
+                });
+
+                item.find('.tab-bar-close').on('click', function(e) {
+                    e.stopPropagation();
+                    var targetPath = $(this).closest('.tab-bar-item').attr('data-path');
+                    that.handleClose(targetPath);
+                });
+
+                container.append(item);
+            });
+
+            var activeTab = container.find('.tab-bar-item.active');
+            if (activeTab.length) {
+                var scrollContainer = $('#tabBarScroll')[0];
+                var tabEl = activeTab[0];
+                scrollContainer.scrollLeft = tabEl.offsetLeft - scrollContainer.offsetLeft - 20;
+            }
+        },
+
+        handleClose: function(path) {
+            // 仪表盘页签不可关闭
+            if (path === '/') return;
+
+            var result = this.removeTab(path);
+
+            if (result.wasActive) {
+                var remaining = result.tabs;
+                if (remaining.length > 0) {
+                    window.location.href = remaining[remaining.length - 1].path;
+                } else {
+                    window.location.href = '/';
+                }
+            } else {
+                this.renderTabs();
+            }
+        },
+
+        init: function() {
+            var currentPath = window.location.pathname;
+
+            // 主页/仪表盘：始终作为第一个固定页签
+            if (currentPath === '/' || currentPath === '/index') {
+                this.addTab('/', '仪表盘', 'bi-speedometer2');
+                this.renderTabs();
+                return;
+            }
+
+            var title = '';
+            var icon = '';
+
+            var activeMenu = $('.menu-item.active');
+            if (activeMenu.length > 0) {
+                var fullText = activeMenu.contents().filter(function() {
+                    return this.nodeType === 3;
+                }).text().trim();
+                title = fullText || document.title.replace(' - BC体育后台管理系统', '').replace(' - BC体育巅峰后台', '');
+
+                var menuIcon = activeMenu.find('i.bi').first();
+                if (menuIcon.length > 0) {
+                    var classes = menuIcon.attr('class').split(' ');
+                    var biClass = classes.find(function(c) {
+                        return c.startsWith('bi-') && c !== 'bi-chevron-down';
+                    });
+                    if (biClass) icon = biClass;
+                }
+            } else {
+                title = document.title.replace(' - BC体育后台管理系统', '').replace(' - BC体育巅峰后台', '');
+            }
+
+            this.addTab(currentPath, title, icon);
+            // 确保仪表盘页签始终存在
+            var tabs = this.getTabs();
+            var hasDashboard = tabs.some(function(t) { return t.path === '/'; });
+            if (!hasDashboard) {
+                this.addTab('/', '仪表盘', 'bi-speedometer2');
+            }
+            this.renderTabs();
+        }
     }
 };
 
@@ -466,42 +977,42 @@ function renderMenuItems(menus, container, level) {
             // 有可见子菜单（目录）
             menuItem.attr('data-bs-toggle', 'collapse');
             menuItem.attr('data-bs-target', '#menu' + menu.id);
-            
+
             // 动态生成图标和文本
-            var iconClass = menu.icon || 'bi-folder';
-            var menuText = menu.menuName;
-            
+            var iconClass = BC.escapeHtml(menu.icon || 'bi-folder');
+            var menuText = BC.escapeHtml(menu.menuName);
+
             // 如果配置了颜色，添加到图标
             if (menu.iconColor) {
-                iconClass += ' text-' + menu.iconColor;
+                iconClass += ' text-' + BC.escapeHtml(menu.iconColor);
             }
-            
+
             menuItem.html('<i class="bi ' + iconClass + '"></i> ' + menuText + '<i class="bi bi-chevron-down ms-auto"></i>');
-            
+
             var subMenu = $('<div class="collapse submenu" id="menu' + menu.id + '"></div>');
             renderMenuItems(visibleChildren, subMenu, level + 1);
-            
+
             container.append(menuItem);
             container.append(subMenu);
         } else {
             // 无子菜单（菜单项）
             var href = menu.path || '#';
             menuItem.attr('href', href);
-            
+
             // 动态生成图标和文本
-            var iconClass = menu.icon || 'bi-file-earmark';
-            var menuText = menu.menuName;
-            
+            var iconClass = BC.escapeHtml(menu.icon || 'bi-file-earmark');
+            var menuText = BC.escapeHtml(menu.menuName);
+
             // 如果配置了颜色，添加到图标
             if (menu.iconColor) {
-                iconClass += ' text-' + menu.iconColor;
+                iconClass += ' text-' + BC.escapeHtml(menu.iconColor);
             }
-            
+
             // 如果配置了徽章
             if (menu.badge) {
-                menuText += ' <span class="badge bg-' + (menu.badgeColor || 'primary') + ' ms-1">' + menu.badge + '</span>';
+                menuText += ' <span class="badge bg-' + BC.escapeHtml(menu.badgeColor || 'primary') + ' ms-1">' + BC.escapeHtml(menu.badge) + '</span>';
             }
-            
+
             menuItem.html('<i class="bi ' + iconClass + '"></i> ' + menuText);
             container.append(menuItem);
         }
@@ -686,7 +1197,12 @@ $(document).ready(function() {
     
     // 初始化导航栏标题
     updateNavbarTitle();
-    
+
+    // 初始化页签栏（延迟等待菜单渲染完成）
+    setTimeout(function() {
+        BC.TabBar.init();
+    }, 150);
+
     // 侧边栏切换
     $('#sidebarToggle').click(function() {
         $('#sidebar').toggleClass('show');
@@ -697,15 +1213,29 @@ $(document).ready(function() {
         if (!$(this).attr('data-bs-toggle')) {
             $('.menu-item').removeClass('active');
             $(this).addClass('active');
-            
+
             // 触发导航栏交互与标题同步
             triggerNavbarExpansion();
             updateNavbarTitle();
-            
+
             // 保存当前选中的菜单路径
             var href = $(this).attr('href');
             if (href && href !== '#') {
                 saveCurrentMenuPath(href);
+
+                // 添加页签到页签栏
+                var menuText = $(this).contents().filter(function() {
+                    return this.nodeType === 3;
+                }).text().trim();
+                var menuIconEl = $(this).find('i.bi').first();
+                var iconClass = '';
+                if (menuIconEl.length > 0) {
+                    var cls = menuIconEl.attr('class').split(' ');
+                    iconClass = cls.find(function(c) {
+                        return c.startsWith('bi-') && c !== 'bi-chevron-down';
+                    }) || '';
+                }
+                BC.TabBar.addTab(href, menuText, iconClass);
             }
         }
     });
@@ -724,6 +1254,7 @@ $(document).ready(function() {
                 // 清除菜单缓存
                 sessionStorage.removeItem('cachedMenus');
                 sessionStorage.removeItem('currentMenuPath');
+                sessionStorage.removeItem('bcTabBarTabs');
                 
                 $.ajax({
                     url: '/doLogout',
@@ -743,6 +1274,59 @@ $(document).ready(function() {
     $(window).resize(function() {
         if ($(window).width() > 768) {
             $('#sidebar').removeClass('show');
+        }
+    });
+
+    // 被踢出跳转登录页（防止重复弹窗）
+    var _kickedOut = false;
+    function handleKickedOut(msg) {
+        if (_kickedOut) return;
+        _kickedOut = true;
+        BC.alert({
+            title: '登录提示',
+            message: msg || '您的账号已在其他设备登录',
+            type: 'warning',
+            confirmText: '重新登录'
+        }, function() {
+            window.location.href = '/login?kicked=1';
+        });
+    }
+
+    // 轮询检测账号被踢出（每10秒检查一次）
+    var _sessionFailCount = 0;
+    if (window.location.pathname !== '/login') {
+        setInterval(function() {
+            $.ajax({
+                url: '/api/session/check',
+                type: 'GET',
+                success: function(res) {
+                    _sessionFailCount = 0;
+                    if (res.code !== 200) {
+                        handleKickedOut(res.message);
+                    }
+                },
+                error: function() {
+                    _sessionFailCount++;
+                    if (_sessionFailCount >= 3) {
+                        handleKickedOut('网络连接异常，请重新登录');
+                    }
+                }
+            });
+        }, 10000);
+    }
+
+    // 全局AJAX会话失效检测（兜底）
+    $(document).ajaxComplete(function(event, xhr, settings) {
+        if (window.location.pathname === '/login') return;
+        if (settings && settings.url && settings.url.indexOf('/api/session/check') >= 0) return;
+
+        if (xhr.status === 200) {
+            var ct = xhr.getResponseHeader('Content-Type');
+            if (ct && ct.indexOf('text/html') >= 0 && xhr.responseText) {
+                if (xhr.responseText.indexOf('id="loginForm"') >= 0) {
+                    handleKickedOut('您的账号已在其他设备登录，请重新登录');
+                }
+            }
         }
     });
 });

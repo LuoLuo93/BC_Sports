@@ -14,4 +14,10 @@
         </foreach>
     </insert>
 
+    <select id="selectUseridByStaffNo" resultType="java.lang.String">
+        SELECT userid
+        FROM VX_attrsBase
+        WHERE name = '工号' AND enrollInDate = #{staffNo}
+    </select>
+
 </mapper>

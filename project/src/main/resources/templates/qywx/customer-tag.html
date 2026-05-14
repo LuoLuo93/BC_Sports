@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>客户标签管理 - BC体育后台管理系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/main.css}">
+    <style>
+        /* 外层容器始终可滚动 */
+        #tagTableContainer {
+            scrollbar-width: thin !important;
+            scrollbar-color: #94a3b8 #f1f5f9 !important;
+            overflow-y: auto !important;
+        }
+        #tagTableContainer::-webkit-scrollbar { width: 6px !important; display: block !important; }
+        #tagTableContainer::-webkit-scrollbar-track { background: #f1f5f9 !important; border-radius: 3px; }
+        #tagTableContainer::-webkit-scrollbar-thumb { background: #94a3b8 !important; border-radius: 3px; }
+        #tagTableContainer::-webkit-scrollbar-thumb:hover { background: #64748b !important; }
+        /* 面板参与flex布局，约束高度让中间区域可滚动 */
+        #tagsPanel, #recordsPanel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+    <div th:replace="~{common/fragments :: sidebar}"></div>
+
+    <div class="main-content">
+        <nav th:replace="~{common/fragments :: top-navbar}"></nav>
+
+        <div class="content-wrapper">
+            <div class="bc-card">
+                <div class="bc-card-body">
+                    <ul class="nav nav-tabs mb-3" id="mainTabs">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="#" data-tab="upload" id="tabUpload">
+                                <i class="bi bi-upload"></i> 批量打标
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-tab="tags" id="tabTags">
+                                <i class="bi bi-tags"></i> 标签库
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-tab="records" id="tabRecords">
+                                <i class="bi bi-journal-check"></i> 打标记录
+                            </a>
+                        </li>
+                    </ul>
+
+                    <!-- 批量打标 -->
+                    <div id="uploadPanel">
+                        <div class="row">
+                            <div class="col-md-5">
+                                <div class="bc-card" style="border: 2px dashed #dee2e6; border-radius: 12px;">
+                                    <div class="bc-card-body text-center py-5">
+                                        <i class="bi bi-cloud-arrow-up" style="font-size: 3rem; color: #6c757d;"></i>
+                                        <h6 class="mt-3">上传 Excel 文件</h6>
+                                        <p class="text-muted small">第一列: externalUserid (客户ID)<br>后续列: 标签名称，一个客户可打多个标签</p>
+                                        <input type="file" class="form-control" id="excelFile" accept=".xlsx,.xls" style="max-width: 300px; margin: 0 auto;">
+                                        <div class="d-flex gap-2 justify-content-center mt-3">
+                                            <a href="/api/qywx/tag/template" class="btn bc-btn-secondary">
+                                                <i class="bi bi-download"></i> 下载模板
+                                            </a>
+                                            <button type="button" class="btn bc-btn-primary" id="uploadBtn">
+                                                <i class="bi bi-send"></i> 开始打标
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-7">
+                                <div id="uploadResult" style="display:none;">
+                                    <div class="bc-card">
+                                        <div class="bc-card-body">
+                                            <h6><i class="bi bi-check-circle text-success"></i> 打标结果</h6>
+                                            <div id="resultSummary"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 标签库 -->
+                    <div id="tagsPanel" style="display:none;">
+                        <form class="row g-3 bc-toolbar align-items-center">
+                            <div class="col-auto">
+                                <div class="bc-input-group">
+                                    <i class="bi bi-search"></i>
+                                    <input type="text" class="bc-input" id="tagSearchName" placeholder="标签名称...">
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <button type="button" class="btn bc-btn-primary" id="tagSearchBtn">
+                                    <i class="bi bi-search"></i> 查询
+                                </button>
+                            </div>
+                            <div class="col-auto ms-auto">
+                                <button type="button" class="btn bc-btn-primary" id="syncTagsBtn">
+                                    <i class="bi bi-arrow-repeat"></i> 同步标签库
+                                </button>
+                            </div>
+                        </form>
+                        <div class="bc-table-container mt-3" id="tagTableContainer">
+                            <div id="tagGroupList"></div>
+                        </div>
+                    </div>
+
+                    <!-- 打标记录 -->
+                    <div id="recordsPanel" style="display:none;">
+                        <form class="row g-3 bc-toolbar align-items-center" id="recordSearchForm">
+                            <div class="col-auto">
+                                <div class="bc-input-group">
+                                    <i class="bi bi-person"></i>
+                                    <input type="text" class="bc-input" id="searchExternalUserid" placeholder="客户ID...">
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <div class="bc-input-group">
+                                    <i class="bi bi-tag"></i>
+                                    <input type="text" class="bc-input" id="recordSearchTagName" placeholder="标签名称...">
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <div class="bc-input-group">
+                                    <i class="bi bi-hash"></i>
+                                    <input type="text" class="bc-input" id="searchBatchNo" placeholder="批次号...">
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <button type="button" class="btn bc-btn-primary" id="recordSearchBtn">
+                                    <i class="bi bi-search"></i> 查询
+                                </button>
+                            </div>
+                        </form>
+                        <div class="bc-table-container mt-3">
+                            <table class="bc-table bc-table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>客户ID</th>
+                                        <th>跟进员工</th>
+                                        <th>标签名称</th>
+                                        <th>来源</th>
+                                        <th>批次号</th>
+                                        <th>打标时间</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recordsTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 共用标准分页片段（与IHR排除页面一致） -->
+            <div th:replace="~{common/fragments :: pagination}"></div>
+        </div>
+
+        <div th:replace="~{common/fragments :: footer}"></div>
+    </div>
+
+    <!-- 确认弹窗片段（退出登录依赖此片段） -->
+    <div th:replace="~{common/fragments :: confirm-modal}"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script th:inline="javascript">
+        window.userPermissions = /*[[${permissions}]]*/ [];
+    </script>
+    <script src="/js/common.js"></script>
+
+    <script>
+        function esc(str) {
+            if (!str) return '';
+            var d = document.createElement('div');
+            d.appendChild(document.createTextNode(str));
+            return d.innerHTML;
+        }
+
+        var tagsPage = 1, tagsSize = 10;
+        var recordsPage = 1, recordsSize = 20;
+        var currentTab = 'upload';
+
+        $(document).ready(function() {
+            $('#tabUpload').click(function(e) { e.preventDefault(); switchTab('upload'); });
+            $('#tabTags').click(function(e) { e.preventDefault(); switchTab('tags'); });
+            $('#tabRecords').click(function(e) { e.preventDefault(); switchTab('records'); });
+
+            $('#uploadBtn').click(uploadExcel);
+            $('#syncTagsBtn').click(syncTags);
+            $('#tagSearchBtn').click(function() { tagsPage = 1; loadTags(); });
+            $('#recordSearchBtn').click(function() { recordsPage = 1; loadRecords(); });
+
+            $('#tagSearchName').on('keypress', function(e) {
+                if (e.which === 13) { e.preventDefault(); tagsPage = 1; loadTags(); }
+            });
+            $('#searchExternalUserid, #recordSearchTagName, #searchBatchNo').on('keypress', function(e) {
+                if (e.which === 13) { e.preventDefault(); recordsPage = 1; loadRecords(); }
+            });
+        });
+
+        function switchTab(tab) {
+            currentTab = tab;
+            $('#mainTabs .nav-link').removeClass('active');
+            $('#uploadPanel, #tagsPanel, #recordsPanel').hide();
+
+            if (tab === 'upload') {
+                $('#tabUpload').addClass('active');
+                $('#uploadPanel').show();
+                $('.bc-pagination-container').hide();
+            } else if (tab === 'tags') {
+                $('#tabTags').addClass('active');
+                $('#tagsPanel').css('display', 'flex');
+                $('.bc-pagination-container').show();
+                loadTags();
+            } else {
+                $('#tabRecords').addClass('active');
+                $('#recordsPanel').css('display', 'flex');
+                $('.bc-pagination-container').show();
+                loadRecords();
+            }
+        }
+
+        function uploadExcel() {
+            var fileInput = $('#excelFile')[0];
+            if (!fileInput.files || !fileInput.files[0]) {
+                BC.toast('请选择Excel文件', 'warning');
+                return;
+            }
+            var formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            var btn = $('#uploadBtn');
+            btn.prop('disabled', true).html('<i class="bi bi-hourglass-split"></i> 打标中...');
+
+            $.ajax({
+                url: '/api/qywx/tag/upload',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(res) {
+                    btn.prop('disabled', false).html('<i class="bi bi-send"></i> 开始打标');
+                    if (res.code === 200) {
+                        var d = res.data;
+                        $('#uploadResult').show();
+                        var html = '<div class="row text-center">';
+                        html += '<div class="col-3"><div class="fw-bold text-primary fs-4">' + d.total + '</div><small class="text-muted">总条数</small></div>';
+                        html += '<div class="col-3"><div class="fw-bold text-success fs-4">' + d.success + '</div><small class="text-muted">打标成功</small></div>';
+                        html += '<div class="col-3"><div class="fw-bold text-danger fs-4">' + d.fail + '</div><small class="text-muted">打标失败</small></div>';
+                        html += '<div class="col-3"><div class="fw-bold text-warning fs-4">' + esc(d.batchNo) + '</div><small class="text-muted">批次号</small></div>';
+                        html += '</div>';
+
+                        if (d.unmatchedTags && d.unmatchedTags.length > 0) {
+                            html += '<div class="mt-3"><small class="text-warning"><i class="bi bi-exclamation-triangle"></i> 未匹配标签: ' + d.unmatchedTags.map(esc).join(', ') + '</small></div>';
+                        }
+                        if (d.unmatchedCustomers && d.unmatchedCustomers.length > 0) {
+                            html += '<div class="mt-1"><small class="text-warning"><i class="bi bi-exclamation-triangle"></i> 未匹配客户: ' + d.unmatchedCustomers.length + '个</small></div>';
+                        }
+                        $('#resultSummary').html(html);
+                        BC.toast('打标完成', 'success');
+                    } else {
+                        BC.toast(res.message, 'error');
+                    }
+                },
+                error: function() {
+                    btn.prop('disabled', false).html('<i class="bi bi-send"></i> 开始打标');
+                    BC.toast('上传失败', 'error');
+                }
+            });
+        }
+
+        function loadTags(page) {
+            if (page) tagsPage = page;
+            BC.ajax({
+                url: '/api/qywx/tag/corp-tags',
+                type: 'GET',
+                data: {
+                    tagName: $('#tagSearchName').val(),
+                    page: tagsPage,
+                    size: tagsSize
+                },
+                success: function(res) {
+                    var d = res;
+                    var container = $('#tagGroupList');
+                container.empty();
+
+                if (!d.records || d.records.length === 0) {
+                    container.append(
+                        '<div class="text-center py-5">' +
+                            '<i class="bi bi-tags" style="font-size:2rem;color:#cbd5e1;"></i>' +
+                            '<p class="text-muted mt-2 mb-0">暂无标签，请先同步标签库</p>' +
+                        '</div>'
+                    );
+                } else {
+                    var groups = [];
+                    var currentGroup = null;
+                    d.records.forEach(function(tag) {
+                        if (!tag.groupId) {
+                            currentGroup = { head: tag, children: [] };
+                            groups.push(currentGroup);
+                        } else if (currentGroup) {
+                            currentGroup.children.push(tag);
+                        }
+                    });
+
+                    groups.forEach(function(g, idx) {
+                        var childCount = g.children.length;
+                        var h = '<div class="bc-collapse-card">';
+                        h += '<div class="bc-collapse-header" data-target="tag-body-' + idx + '">';
+                        h +=   '<div class="bc-collapse-title">';
+                        h +=     '<i class="bi bi-chevron-right bc-collapse-arrow"></i>';
+                        h +=     '<span>' + esc(g.head.tagName) + '</span>';
+                        h +=     BC.getTag('primary', '标签组');
+                        h +=     '<span class="text-muted" style="font-size:var(--text-xs);">(' + childCount + '个标签)</span>';
+                        h +=   '</div>';
+                        h +=   '<div class="bc-collapse-meta">';
+                        h +=     '<code>' + esc(g.head.tagId) + '</code>';
+                        h +=     '<span>排序 ' + (g.head.sortOrder || 0) + '</span>';
+                        h +=   '</div>';
+                        h += '</div>';
+                        h += '<div class="bc-collapse-body" id="tag-body-' + idx + '">';
+                        if (childCount === 0) {
+                            h += '<div class="bc-collapse-empty"><i class="bi bi-inbox me-1"></i>该组暂无子标签</div>';
+                        } else {
+                            g.children.forEach(function(child) {
+                                h += '<div class="bc-collapse-item">';
+                                h +=   '<div class="bc-collapse-item-info">';
+                                h +=     '<span class="bc-collapse-item-dot"></span>';
+                                h +=     '<span>' + esc(child.tagName) + '</span>';
+                                h +=     BC.getTag('info', '子标签');
+                                h +=   '</div>';
+                                h +=   '<div class="bc-collapse-item-detail">';
+                                h +=     '<code>' + esc(child.tagId) + '</code>';
+                                h +=     '<span>排序 ' + (child.sortOrder || 0) + '</span>';
+                                h +=   '</div>';
+                                h += '</div>';
+                            });
+                        }
+                        h += '</div></div>';
+                        container.append(h);
+                    });
+
+                    // 事件委托：折叠/展开
+                    container.off('click', '.bc-collapse-header').on('click', '.bc-collapse-header', function(e) {
+                        if ($(e.target).closest('.bc-collapse-actions').length) return;
+                        var target = $(this).data('target');
+                        var body = $('#' + target);
+                        var arrow = $(this).find('.bc-collapse-arrow');
+                        body.toggleClass('open');
+                        arrow.toggleClass('open');
+                        $(this).toggleClass('expanded');
+                    });
+                }
+
+                BC.renderPagination({
+                    total: d.total,
+                    pages: d.pages,
+                    current: d.current,
+                    callback: function(p) { loadTags(p); }
+                });
+                }
+            });
+        }
+
+        function syncTags() {
+            var btn = $('#syncTagsBtn');
+            btn.prop('disabled', true).html('<i class="bi bi-hourglass-split"></i> 同步中...');
+            BC.ajax({
+                url: '/api/qywx/tag/sync',
+                type: 'POST',
+                success: function(res) {
+                    btn.prop('disabled', false).html('<i class="bi bi-arrow-repeat"></i> 同步标签库');
+                    BC.toast('标签库同步成功', 'success');
+                    tagsPage = 1;
+                    loadTags();
+                },
+                error: function() {
+                    btn.prop('disabled', false).html('<i class="bi bi-arrow-repeat"></i> 同步标签库');
+                }
+            });
+        }
+
+        function loadRecords(page) {
+            if (page) recordsPage = page;
+            BC.ajax({
+                url: '/api/qywx/tag/records',
+                type: 'GET',
+                data: {
+                    externalUserid: $('#searchExternalUserid').val(),
+                    tagName: $('#recordSearchTagName').val(),
+                    batchNo: $('#searchBatchNo').val(),
+                    page: recordsPage,
+                    size: recordsSize
+                },
+                success: function(res) {
+                    var d = res;
+                    var tbody = $('#recordsTableBody');
+                    tbody.empty();
+
+                    if (!d.records || d.records.length === 0) {
+                        tbody.append('<tr><td colspan="6" class="text-center py-4 text-muted">暂无打标记录</td></tr>');
+                    } else {
+                        d.records.forEach(function(r) {
+                            var sourceTag = r.source === 'IMPORT' ? BC.getTag('primary', 'Excel导入') : BC.getTag('secondary', r.source);
+                            tbody.append('<tr>' +
+                                '<td><code class="small">' + esc(r.externalUserid) + '</code></td>' +
+                                '<td><span class="small">' + esc(r.userid) + '</span></td>' +
+                                '<td>' + BC.getTag('info', r.tagName || r.tagId) + '</td>' +
+                                '<td>' + sourceTag + '</td>' +
+                                '<td><code class="small">' + esc(r.batchNo || '-') + '</code></td>' +
+                                '<td><span class="small">' + esc(r.createTime || '-') + '</span></td>' +
+                                '</tr>');
+                        });
+                    }
+
+                    BC.renderPagination({
+                        total: d.total,
+                        pages: d.pages,
+                        current: d.current,
+                        callback: function(p) { loadRecords(p); }
+                    });
+                }
+            });
+        }
+    </script>
+</body>
+</html>

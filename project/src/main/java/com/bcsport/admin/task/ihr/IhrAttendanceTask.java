@@ -7,7 +7,9 @@ import com.bcsport.admin.ihrmapper.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.transaction.PlatformTransactionManager;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -22,6 +24,7 @@ public class IhrAttendanceTask {
 
     private static final int ATTENDANCE_PAGE = 0;
     private static final int ATTENDANCE_SIZE = 100;
+    private static final int BATCH_SIZE = 10;
 
     @Autowired
     private IhrApiClient apiClient;
@@ -35,14 +38,17 @@ public class IhrAttendanceTask {
     @Autowired
     private IhrEmployeesAuxiliaryMapper auxiliaryMapper;
 
+    @Autowired
+    @Qualifier("ihrTransactionManager")
+    private PlatformTransactionManager transactionManager;
+
     /**
      * 同步考勤周期设置
      */
-    @Transactional(rollbackFor = Exception.class, transactionManager = "ihrTransactionManager")
     public void syncSettings() {
         log.info("=== 开始执行: IHR同步考勤设置 ===");
         try {
-            // 先获取所有数据到内存
+            // API调用在事务外执行
             JSONArray data = apiClient.getDataArray(
                     "/openapi/thirdparty/api/tm/v1/attendance/periods/settings/search");
 
@@ -51,6 +57,7 @@ public class IhrAttendanceTask {
                 return;
             }
 
+            // 数据准备在事务外完成
             List<IhrAttendanceSettings> list = new ArrayList<>();
             for (int i = 0; i < data.size(); i++) {
                 JSONObject obj = data.getJSONObject(i);
@@ -66,9 +73,9 @@ public class IhrAttendanceTask {
                 list.add(s);
             }
 
-            // 再在事务中删除并插入
-            settingsMapper.deleteAll();
-            settingsMapper.insertBatch(list);
+            // 短事务仅用于DB写入
+            doSyncSettings(list);
+
             log.info("=== 完成: IHR同步考勤设置, 共{}条 ===", list.size());
         } catch (Exception e) {
             log.error("=== 失败: IHR同步考勤设置: {} ===", e.getMessage());
@@ -76,14 +83,25 @@ public class IhrAttendanceTask {
         }
     }
 
+    void doSyncSettings(List<IhrAttendanceSettings> list) {
+        TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
+        txTemplate.execute(status -> {
+            settingsMapper.deleteAll();
+            for (int i = 0; i < list.size(); i += BATCH_SIZE) {
+                int end = Math.min(i + BATCH_SIZE, list.size());
+                settingsMapper.insertBatch(list.subList(i, end));
+            }
+            return null;
+        });
+    }
+
     /**
      * 同步月度考勤数据
      */
-    @Transactional(rollbackFor = Exception.class, transactionManager = "ihrTransactionManager")
     public void syncData() {
         log.info("=== 开始执行: IHR同步考勤数据 ===");
         try {
-            // 获取员工ID列表
+            // DB读取（只读操作，无需长事务）
             List<IhrEmployeesAuxiliary> auxiliaries = auxiliaryMapper.selectList(null);
             if (auxiliaries.isEmpty()) {
                 log.warn("=== 完成: IHR同步考勤数据, 无员工ID ===");
@@ -101,7 +119,7 @@ public class IhrAttendanceTask {
             // 当前月份
             String currentMonth = LocalDate.now().toString().substring(0, 7);
 
-            // 先获取所有数据到内存
+            // API调用在事务外执行
             List<IhrAttendance> allAttendanceList = new ArrayList<>();
             for (IhrEmployeesAuxiliary aux : auxiliaries) {
                 try {
@@ -111,15 +129,26 @@ public class IhrAttendanceTask {
                 }
             }
 
-            // 再在事务中删除并插入
-            attendanceMapper.deleteAll();
-            attendanceMapper.insertBatch(allAttendanceList);
+            // 短事务仅用于DB写入
+            doSyncData(allAttendanceList);
 
             log.info("=== 完成: IHR同步考勤数据, 共{}条 ===", allAttendanceList.size());
         } catch (Exception e) {
             log.error("=== 失败: IHR同步考勤数据: {} ===", e.getMessage());
             throw e;
         }
+    }
+
+    void doSyncData(List<IhrAttendance> allAttendanceList) {
+        TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
+        txTemplate.execute(status -> {
+            attendanceMapper.deleteAll();
+            for (int i = 0; i < allAttendanceList.size(); i += BATCH_SIZE) {
+                int end = Math.min(i + BATCH_SIZE, allAttendanceList.size());
+                attendanceMapper.insertBatch(allAttendanceList.subList(i, end));
+            }
+            return null;
+        });
     }
 
     private List<IhrAttendance> fetchAttendanceDataList(String staffId, String periodSettingId, String periodMonth) {

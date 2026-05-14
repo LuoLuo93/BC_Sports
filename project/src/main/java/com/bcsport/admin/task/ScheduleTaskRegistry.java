@@ -15,6 +15,7 @@ public class ScheduleTaskRegistry {
     public static final String MODULE_IHR = "IHR";
     public static final String MODULE_QYWX = "QW";
     public static final String MODULE_DEMO = "DEMO";
+    public static final String MODULE_YDKL = "YDKL";
     public static final String MODULE_OTHER = "OTHER";
 
     private static final Map<String, TaskOption> TASK_MAP = new LinkedHashMap<>();
@@ -40,19 +41,27 @@ public class ScheduleTaskRegistry {
         //register("qywx.customer.detail.sync", "QW-同步客户详情", "qywxCustomerDetailTask", "sync", "同步企业微信外部联系人详情", MODULE_QYWX, 9);
         register("qywx.group.chat.and.stat.sync", "QW-一键同步群聊相关", "qywxGroupChatAndStatSyncTask", "syncAll", "一键同步：客户联系成员→群聊列表→群聊统计→群发消息→朋友圈", MODULE_QYWX, 13);
         register("qywx.employee.lifecycle.sync", "QW-员工生命周期整合同步", "qywxEmployeeLifecycleSyncTask", "syncAll", "一键同步：企微基础信息→新员工入职→员工信息变更→员工离职", MODULE_QYWX, 14);
-        register("qywx.new.employee.sync", "QW-录入企微新员工", "qywxNewEmployeeSyncTask", "sync", "从IHR新入职员工数据同步到企微通讯录", MODULE_QYWX, 15);
-        register("qywx.employee.update.sync", "QW-更新企微员工信息", "qywxEmployeeUpdateSyncTask", "sync", "从IHR变更员工数据更新企微通讯录信息", MODULE_QYWX, 16);
-        register("qywx.employee.leave.sync", "QW-企微员工离职同步", "qywxEmployeeLeaveSyncTask", "sync", "从IHR离职员工数据删除企微通讯录成员", MODULE_QYWX, 17);
+        //register("qywx.new.employee.sync", "QW-录入企微新员工", "qywxNewEmployeeSyncTask", "sync", "从IHR新入职员工数据同步到企微通讯录", MODULE_QYWX, 15);
+        //register("qywx.employee.update.sync", "QW-更新企微员工信息", "qywxEmployeeUpdateSyncTask", "sync", "从IHR变更员工数据更新企微通讯录信息", MODULE_QYWX, 16);
+        //register("qywx.employee.leave.sync", "QW-企微员工离职同步", "qywxEmployeeLeaveSyncTask", "sync", "从IHR离职员工数据删除企微通讯录成员", MODULE_QYWX, 17);
 
         //register("qywx.group.chat.sync", "QW-同步企微群", "qywxGroupChatTask", "sync", "同步企业微信群列表和群成员", MODULE_QYWX, 10);
         //register("qywx.group.chat.stat", "QW-同步群聊统计", "qywxGroupChatStatTask", "sync", "同步企业微信群聊统计数据", MODULE_QYWX, 11);
         //register("qywx.mass.message", "QW-同步群发消息", "qywxMassMessageTask", "sync", "同步企业微信群发消息记录", MODULE_QYWX, 12);
         //register("qywx.moment", "QW-同步朋友圈", "qywxMomentTask", "sync", "同步企业微信朋友圈", MODULE_QYWX, 14);
 
+        // === QW 企业微信标签模块 ===
+        register("qywx.tag.sync", "QW-同步企业标签库", "qywxCustomerTagTask", "syncTags", "从企微同步企业客户标签到本地", MODULE_QYWX, 20);
 
 
 
 
+
+
+        // === YDKL 云盯客流模块 ===
+        register("ydkl.sync.all", "云盯客流-一键同步", "ydSyncAllTask", "syncAll", "一键同步：客流数据→天气数据", MODULE_YDKL, 3);
+        // register("ydkl.customerflow.sync", "云盯客流-同步客流数据", "ydCustomerFlowTask", "sync", "从云盯API同步昨日门店客流数据", MODULE_YDKL, 1);
+        //  register("ydkl.weather.sync", "云盯客流-同步天气数据", "ydWeatherTask", "sync", "从云盯API同步昨日门店天气数据", MODULE_YDKL, 2);
 
         // === 示例任务 ===
         register("demoTask.noParams", "示例任务-无参数", "demoTask", "noParams", "演示定时任务基本功能", MODULE_DEMO, 1);

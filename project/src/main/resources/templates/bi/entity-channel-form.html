@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>实体渠道配置 - BC体育后台管理系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/main.css}">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <style>
+        .select2-container--default .select2-selection--single {
+            border: 1px solid var(--border-light) !important;
+            border-radius: 8px !important;
+            min-height: 38px !important; height: auto !important;
+            padding: 6px 12px !important;
+            background: white !important;
+            display: flex !important; align-items: center !important;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .select2-container--default.select2-container--open .select2-selection--single {
+            border-color: var(--primary-color) !important;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__arrow { height: 36px; right: 8px; }
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            color: var(--text-main) !important; padding-left: 0 !important;
+            line-height: 1.5 !important; font-size: var(--text-sm) !important;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__placeholder { color: #94a3b8 !important; }
+        .select2-dropdown {
+            border: 1px solid var(--border-light) !important; border-radius: 10px !important;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1) !important; z-index: 2000; overflow: hidden;
+        }
+        .select2-search--dropdown .select2-search__field {
+            border: 1px solid var(--border-light) !important; border-radius: 8px !important;
+            padding: 8px 12px !important; font-size: var(--text-sm) !important;
+        }
+        .select2-results__option { padding: 8px 12px !important; font-size: var(--text-sm) !important; }
+        .select2-results__option--highlighted[aria-selected] { background-color: var(--primary-color) !important; }
+
+        .form-section-title {
+            font-size: var(--text-lg); font-weight: 700; color: var(--text-main);
+            display: flex; align-items: center; gap: 8px;
+            padding-bottom: 12px; margin-bottom: 20px;
+            border-bottom: 2px solid var(--primary-soft);
+        }
+        .form-section-title i { color: var(--primary-color); }
+    </style>
+</head>
+<body>
+    <div th:replace="~{common/fragments :: sidebar}"></div>
+
+    <div class="main-content">
+        <nav th:replace="~{common/fragments :: top-navbar}"></nav>
+
+        <div class="content-wrapper">
+
+            <div class="bc-card">
+                <div class="bc-card-body" style="overflow: hidden;">
+                    <form id="entityForm" class="bc-table-container" style="border: none; border-radius: 0; padding: 0;">
+                        <input type="hidden" id="dataId">
+
+                        <!-- 实体关联 -->
+                        <div class="form-section-title">
+                            <i class="bi bi-link-45deg"></i> 实体关联
+                        </div>
+                        <div class="bc-form-grid bc-form-grid-3 mb-4">
+                            <div class="bc-form-group">
+                                <label class="bc-form-label">实体类型 <span class="text-danger">*</span></label>
+                                <select class="bc-select" id="entityType" required>
+                                    <option value="">请选择</option>
+                                    <option value="shop">店铺</option>
+                                    <option value="stock">仓库</option>
+                                    <option value="customer">客户</option>
+                                </select>
+                            </div>
+                            <div class="bc-form-group">
+                                <label class="bc-form-label">搜索并选择实体 <span class="text-danger">*</span></label>
+                                <select class="bc-select" id="externalId" required style="width: 100%;">
+                                    <option value="">请先选择实体类型</option>
+                                </select>
+                            </div>
+                            <div class="bc-form-group">
+                                <label class="bc-form-label">实体名称</label>
+                                <input type="text" class="bc-input" id="entityName" placeholder="选择实体后自动带出" readonly>
+                            </div>
+                        </div>
+
+                        <!-- 基础属性 -->
+                        <div class="form-section-title">
+                            <i class="bi bi-sliders"></i> 基础属性
+                        </div>
+                        <div class="bc-form-grid bc-form-grid-3 mb-4">
+                            <div class="bc-form-group">
+                                <label class="bc-form-label">所属品牌</label>
+                                <select class="bc-select" id="brandId">
+                                    <option value="">请选择品牌</option>
+                                </select>
+                            </div>
+                            <div class="bc-form-group">
+                                <label class="bc-form-label">状态</label>
+                                <select class="bc-select" id="status">
+                                    <option value="1">启用</option>
+                                    <option value="0">禁用</option>
+                                </select>
+                            </div>
+                            <div class="bc-form-group">
+                                <label class="bc-form-label">排序</label>
+                                <input type="number" class="bc-input" id="sort" value="0">
+                            </div>
+                        </div>
+
+                        <!-- 渠道配置 -->
+                        <div class="form-section-title">
+                            <i class="bi bi-diagram-3"></i> 渠道配置
+                        </div>
+                        <div class="bc-form-grid mb-4">
+                            <div class="bc-form-group">
+                                <label class="bc-form-label">渠道类型</label>
+                                <select class="bc-select" id="channelTypeId">
+                                    <option value="">请选择渠道类型</option>
+                                </select>
+                            </div>
+                            <div class="bc-form-group">
+                                <label class="bc-form-label">渠道定义</label>
+                                <select class="bc-select" id="channelDefId">
+                                    <option value="">选择类型后加载</option>
+                                </select>
+                            </div>
+                            <div class="bc-form-group">
+                                <label class="bc-form-label">渠道性质</label>
+                                <select class="bc-select" id="channelNatureId">
+                                    <option value="">请选择渠道性质</option>
+                                </select>
+                            </div>
+                            <div class="bc-form-group">
+                                <label class="bc-form-label">经营类型</label>
+                                <select class="bc-select" id="businessTypeId">
+                                    <option value="">选择性质后加载</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- 地区 -->
+                        <div class="form-section-title">
+                            <i class="bi bi-geo-alt"></i> 所属地区
+                        </div>
+                        <div class="bc-form-grid">
+                            <div class="bc-form-group">
+                                <label class="bc-form-label">一级地区</label>
+                                <select class="bc-select" id="regionLevel1Id">
+                                    <option value="">请选择一级地区</option>
+                                </select>
+                            </div>
+                            <div class="bc-form-group">
+                                <label class="bc-form-label">二级地区</label>
+                                <select class="bc-select" id="regionLevel2Id">
+                                    <option value="">选择一级后加载</option>
+                                </select>
+                            </div>
+                        </div>
+                    </form>
+                    </div>
+                </div>
+
+            <!-- 操作栏 -->
+            <div class="d-flex gap-2 mt-4" style="max-width: 900px; margin: 0 auto;">
+                <button type="button" class="btn bc-btn-secondary" id="cancelBtn">
+                    <i class="bi bi-arrow-left"></i> 返回列表
+                </button>
+                <button type="button" class="btn bc-btn-primary ms-auto" id="saveBtn">
+                    <i class="bi bi-check-lg"></i> 保存配置
+                </button>
+            </div>
+
+        </div>
+
+        <div th:replace="~{common/fragments :: footer}"></div>
+    </div>
+
+    <div th:replace="~{common/fragments :: confirm-modal}"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script th:inline="javascript">
+        window.userPermissions = /*[[${permissions}]]*/ [];
+    </script>
+    <script src="/js/common.js"></script>
+
+    <script th:inline="javascript">
+        var editId = /*[[${editId}]]*/ '';
+        var currentExternalEntities = [];
+
+        $(document).ready(function() {
+            loadDropdownData(function() {
+                if (editId) {
+                    loadEditData();
+                }
+            });
+
+            initSelect2();
+
+            $('#entityType').change(function() {
+                var type = $(this).val();
+                $('#entityName').val('');
+                if (type) { loadExternalEntities(type); }
+                else { $('#externalId').html('<option value="">请先选择实体类型</option>').trigger('change'); }
+            });
+
+            $('#externalId').change(function() {
+                var code = $(this).val();
+                var type = $('#entityType').val();
+                if (code && currentExternalEntities) {
+                    var entity = currentExternalEntities.find(function(item) {
+                        if (type === 'shop') return item.shopCode === code;
+                        if (type === 'stock') return item.warehouseCode === code;
+                        if (type === 'customer') return item.customerCode === code;
+                    });
+                    if (entity) {
+                        var name = type === 'shop' ? entity.shopName : (type === 'stock' ? entity.warehouseName : entity.customerName);
+                        $('#entityName').val(name);
+                    }
+                } else {
+                    $('#entityName').val('');
+                }
+            });
+
+            $('#channelTypeId').change(function() { loadChannelDefOptions($(this).val()); });
+            $('#channelNatureId').change(function() { loadBusinessTypeOptions($(this).val()); });
+            $('#regionLevel1Id').change(function() { loadRegionLevel2Options($(this).val()); });
+
+            $('#saveBtn').click(saveData);
+            $('#cancelBtn').click(function() { window.location.href = '/bi/entity-channel'; });
+        });
+
+        function loadDropdownData(callback) {
+            var pending = 4;
+            function done() { if (--pending === 0 && callback) callback(); }
+            BC.ajax({
+                url: '/api/channel-type/tree?parentId=0',
+                type: 'GET',
+                success: function(res) {
+                    var opts = '<option value="">请选择渠道类型</option>';
+                    res.forEach(function(item) { opts += '<option value="' + BC.escapeHtml(item.id) + '">' + BC.escapeHtml(item.typeName) + '</option>'; });
+                    $('#channelTypeId').html(opts);
+                    done();
+                },
+                error: function() { done(); }
+            });
+            BC.ajax({
+                url: '/api/channel-nature/tree?parentId=0',
+                type: 'GET',
+                success: function(res) {
+                    var opts = '<option value="">请选择渠道性质</option>';
+                    res.forEach(function(item) { opts += '<option value="' + BC.escapeHtml(item.id) + '">' + BC.escapeHtml(item.natureName) + '</option>'; });
+                    $('#channelNatureId').html(opts);
+                    done();
+                },
+                error: function() { done(); }
+            });
+            BC.ajax({
+                url: '/api/region/tree?parentId=0',
+                type: 'GET',
+                success: function(res) {
+                    var opts = '<option value="">请选择一级地区</option>';
+                    res.forEach(function(item) { opts += '<option value="' + BC.escapeHtml(item.id) + '">' + BC.escapeHtml(item.regionName) + '</option>'; });
+                    $('#regionLevel1Id').html(opts);
+                    done();
+                },
+                error: function() { done(); }
+            });
+            BC.ajax({
+                url: '/api/brand/list',
+                type: 'GET',
+                success: function(res) {
+                    var opts = '<option value="">请选择品牌</option>';
+                    res.forEach(function(item) { opts += '<option value="' + BC.escapeHtml(item.id) + '">' + BC.escapeHtml(item.brandName) + '</option>'; });
+                    $('#brandId').html(opts);
+                    done();
+                },
+                error: function() { done(); }
+            });
+        }
+
+        function initSelect2() {
+            if (!$('#externalId').data('select2')) {
+                $('#externalId').select2({
+                    placeholder: '输入名称或编码搜索...',
+                    language: { noResults: function() { return "未找到匹配项"; } }
+                });
+            }
+        }
+
+        function loadExternalEntities(type, selectedValue) {
+            var url = type === 'shop' ? '/api/erp-shop/list-enabled'
+                    : type === 'stock' ? '/api/erp-warehouse/list-enabled'
+                    : '/api/erp-customer/list-enabled';
+            BC.ajax({
+                url: url,
+                type: 'GET',
+                success: function(res) {
+                    currentExternalEntities = res;
+                    var opts = '<option value="">请选择实体</option>';
+                    res.forEach(function(item) {
+                        var code = type === 'shop' ? item.shopCode : (type === 'stock' ? item.warehouseCode : item.customerCode);
+                        var name = type === 'shop' ? item.shopName : (type === 'stock' ? item.warehouseName : item.customerName);
+                        opts += '<option value="' + BC.escapeHtml(code) + '">' + BC.escapeHtml(code) + ' - ' + BC.escapeHtml(name) + '</option>';
+                    });
+                    if (selectedValue) {
+                        // 编辑模式：select2 已销毁，先填充选项再初始化 select2
+                        $('#externalId').html(opts).val(selectedValue);
+                        initSelect2();
+                        $('#externalId').trigger('change');
+                    } else {
+                        $('#externalId').html(opts);
+                        initSelect2();
+                        $('#externalId').val('').trigger('change');
+                    }
+                }
+            });
+        }
+
+        function loadChannelDefOptions(parentId, callback) {
+            if (!parentId) { $('#channelDefId').html('<option value="">选择类型后加载</option>'); return; }
+            BC.ajax({
+                url: '/api/channel-type/tree?parentId=' + parentId,
+                type: 'GET',
+                success: function(res) {
+                    var opts = '<option value="">请选择渠道定义</option>';
+                    res.forEach(function(item) { opts += '<option value="' + BC.escapeHtml(item.id) + '">' + BC.escapeHtml(item.typeName) + '</option>'; });
+                    $('#channelDefId').html(opts);
+                    if (callback) callback();
+                }
+            });
+        }
+
+        function loadBusinessTypeOptions(parentId, callback) {
+            if (!parentId) { $('#businessTypeId').html('<option value="">选择性质后加载</option>'); return; }
+            BC.ajax({
+                url: '/api/channel-nature/tree?parentId=' + parentId,
+                type: 'GET',
+                success: function(res) {
+                    var opts = '<option value="">请选择经营类型</option>';
+                    res.forEach(function(item) { opts += '<option value="' + BC.escapeHtml(item.id) + '">' + BC.escapeHtml(item.natureName) + '</option>'; });
+                    $('#businessTypeId').html(opts);
+                    if (callback) callback();
+                }
+            });
+        }
+
+        function loadRegionLevel2Options(parentId, callback) {
+            if (!parentId) { $('#regionLevel2Id').html('<option value="">选择一级后加载</option>'); return; }
+            BC.ajax({
+                url: '/api/region/tree?parentId=' + parentId,
+                type: 'GET',
+                success: function(res) {
+                    var opts = '<option value="">请选择二级地区</option>';
+                    res.forEach(function(item) { opts += '<option value="' + BC.escapeHtml(item.id) + '">' + BC.escapeHtml(item.regionName) + '</option>'; });
+                    $('#regionLevel2Id').html(opts);
+                    if (callback) callback();
+                }
+            });
+        }
+
+        function loadEditData() {
+            BC.ajax({
+                url: '/api/entity-channel/' + editId,
+                type: 'GET',
+                success: function(res) {
+                    var d = res;
+                    $('#dataId').val(d.id);
+                    $('#entityType').val(d.entityType).prop('disabled', true);
+                    $('#entityName').val(d.entityName);
+                    $('#brandId').val(d.brandId || '');
+                    $('#status').val(d.status != null ? String(d.status) : '1');
+                    $('#sort').val(d.sort != null ? d.sort : 0);
+
+                    // 先销毁 select2，loadExternalEntities 会在 AJAX 回调中重建
+                    if ($('#externalId').data('select2')) {
+                        $('#externalId').select2('destroy');
+                    }
+                    loadExternalEntities(d.entityType, d.externalId);
+
+                    // 级联下拉框：先设父级值，加载子级选项后设子级值
+                    if (d.channelTypeId) {
+                        $('#channelTypeId').val(d.channelTypeId);
+                        loadChannelDefOptions(d.channelTypeId, function() {
+                            if (d.channelDefId) {
+                                $('#channelDefId').val(d.channelDefId);
+                            }
+                        });
+                    }
+                    if (d.channelNatureId) {
+                        $('#channelNatureId').val(d.channelNatureId);
+                        loadBusinessTypeOptions(d.channelNatureId, function() {
+                            if (d.businessTypeId) {
+                                $('#businessTypeId').val(d.businessTypeId);
+                            }
+                        });
+                    }
+                    if (d.regionLevel1Id) {
+                        $('#regionLevel1Id').val(d.regionLevel1Id);
+                        loadRegionLevel2Options(d.regionLevel1Id, function() {
+                            if (d.regionLevel2Id) {
+                                $('#regionLevel2Id').val(d.regionLevel2Id);
+                            }
+                        });
+                    }
+                }
+            });
+        }
+
+        function saveData() {
+            var id = $('#dataId').val();
+            var data = {
+                entityType: $('#entityType').val(),
+                externalId: $('#externalId').val(),
+                entityName: $('#entityName').val(),
+                brandId: $('#brandId').val(),
+                channelTypeId: $('#channelTypeId').val(),
+                channelDefId: $('#channelDefId').val(),
+                channelNatureId: $('#channelNatureId').val(),
+                businessTypeId: $('#businessTypeId').val(),
+                regionLevel1Id: $('#regionLevel1Id').val(),
+                regionLevel2Id: $('#regionLevel2Id').val(),
+                status: $('#status').val(),
+                sort: $('#sort').val()
+            };
+
+            if (!data.entityType) { BC.toast('请选择实体类型', 'warning'); return; }
+            if (!data.externalId) { BC.toast('请选择实体', 'warning'); return; }
+
+            var type = id ? 'PUT' : 'POST';
+            var url = '/api/entity-channel' + (id ? '/' + id : '');
+
+            BC.ajax({
+                url: url,
+                type: type,
+                data: data,
+                success: function(res) {
+                    BC.toast(id ? '修改成功' : '新增成功', 'success');
+                    setTimeout(function() { window.location.href = '/bi/entity-channel'; }, 800);
+                }
+            });
+        }
+    </script>
+</body>
+</html>

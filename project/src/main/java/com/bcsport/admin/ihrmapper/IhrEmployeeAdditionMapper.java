@@ -12,4 +12,5 @@ import java.util.List;
 public interface IhrEmployeeAdditionMapper extends BaseMapper<IhrEmployeeAddition> {
     void insertBatch(@Param("list") List<IhrEmployeeAddition> list);
     void deleteBySyncDate(@Param("syncDate") Date syncDate);
+    List<String> selectBySyncDates(@Param("syncDates") List<Date> syncDates);
 }

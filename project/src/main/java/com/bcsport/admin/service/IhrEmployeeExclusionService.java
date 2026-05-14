@@ -6,7 +6,7 @@ import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.dto.IhrEmployeeExclusionDTO;
 import com.bcsport.admin.dto.IhrEmployeeExclusionQueryDTO;
-import com.bcsport.admin.entity.qywx.IhrEmployeeExclusion;
+import com.bcsport.admin.entity.ihr.IhrEmployeeExclusion;
 import com.bcsport.admin.vo.IhrEmployeeExclusionVO;
 
 import java.util.List;

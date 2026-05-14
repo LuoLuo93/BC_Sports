@@ -6,7 +6,7 @@
     <title>定时任务 - BC体育后台管理系统</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
-    <link rel="stylesheet" th:href="@{/css/layout.css}">
+    <link rel="stylesheet" th:href="@{/css/main.css}">
 </head>
 <body>
     <div th:replace="~{common/fragments :: sidebar}"></div>
@@ -41,10 +41,6 @@
                             <div class="col-auto">
                                 <select class="bc-select" id="searchJobModule">
                                     <option value="">全部模块</option>
-                                    <option value="IHR">IHR 人力</option>
-                                    <option value="QW">企业微信</option>
-                                    <option value="DEMO">示例</option>
-                                    <option value="OTHER">其他</option>
                                 </select>
                             </div>
                             <div class="col-auto">
@@ -187,10 +183,6 @@
                                 <label class="bc-form-label">模块</label>
                                 <select class="bc-select" id="jobModule">
                                     <option value="">自动（推荐）</option>
-                                    <option value="IHR">IHR 人力</option>
-                                    <option value="QW">企业微信</option>
-                                    <option value="DEMO">示例</option>
-                                    <option value="OTHER">其他</option>
                                 </select>
                                 <small class="text-muted">留空则自动从预设任务获取</small>
                             </div>
@@ -256,10 +248,6 @@
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
     <script th:inline="javascript">
         window.userPermissions = /*[[${permissions}]]*/ [];
-        function hasPermission(p) {
-            if (!window.userPermissions) return false;
-            return window.userPermissions.includes('*') || window.userPermissions.includes(p);
-        }
     </script>
     <script src="/js/common.js"></script>
 
@@ -269,7 +257,9 @@
         var logPage = 1, logPageSize = 10;
 
         $(document).ready(function() {
-            loadJobList();
+            loadModuleOptions(function() {
+                loadJobList();
+            });
             loadTaskOptions();
 
             $('#tabJob').click(function(e) { e.preventDefault(); switchTab('job'); });
@@ -284,6 +274,8 @@
             $('#saveJobBtn').click(function() { saveJob(); });
             $('#validateCronBtn').click(function() { validateCron(); });
             $('#cleanLogBtn').click(function() { cleanLogs(); });
+
+            loadModuleOptions();
         });
 
         function switchTab(tab) {
@@ -303,7 +295,7 @@
         }
 
         function loadJobList() {
-            $.ajax({
+            BC.ajax({
                 url: '/api/schedule/job/page',
                 type: 'GET',
                 data: {
@@ -314,18 +306,14 @@
                     status: $('#searchJobStatus').val()
                 },
                 success: function(res) {
-                    if (res.code === 200) {
-                        renderJobTable(res.data.records);
-                        renderPagination({
-                            total: res.data.total,
-                            pages: res.data.pages,
-                            current: res.data.pageNum,
-                            limit: res.data.pageSize,
-                            callback: function(page) { jobPage = page; loadJobList(); }
-                        });
-                    } else {
-                        BC.toast(res.message, 'error');
-                    }
+                    renderJobTable(res.records);
+                    renderPagination({
+                        total: res.total,
+                        pages: res.pages,
+                        current: res.pageNum,
+                        limit: res.pageSize,
+                        callback: function(page) { jobPage = page; loadJobList(); }
+                    });
                 }
             });
         }
@@ -340,8 +328,8 @@
             data.forEach(function(item, i) {
                 var seq = (jobPage - 1) * jobPageSize + i + 1;
                 var statusTag = BC.getTag(item.status === 1 ? 'success' : 'secondary', item.status === 1 ? '运行中' : '已暂停');
-                var nextTime = item.nextExecuteTime || '-';
-                var taskDesc = item.taskDescription || item.taskKey;
+                var nextTime = BC.escapeHtml(item.nextExecuteTime || '-');
+                var taskDesc = BC.escapeHtml(item.taskDescription || item.taskKey);
                 var moduleTag = getModuleTag(item.module);
 
                 var actions = [];
@@ -351,19 +339,19 @@
                 } else {
                     actions.push({ icon: 'bi-play-circle', title: '恢复', onclick: 'resumeJob(\'' + item.id + '\')' });
                 }
-                if (hasPermission('monitor:schedule:edit')) {
+                if (BC.hasPermission('monitor:schedule:edit')) {
                     actions.push({ icon: 'bi-pencil', title: '编辑', onclick: 'editJob(\'' + item.id + '\')' });
                 }
-                if (hasPermission('monitor:schedule:delete')) {
+                if (BC.hasPermission('monitor:schedule:delete')) {
                     actions.push({ icon: 'bi-trash', title: '删除', onclick: 'deleteJob(\'' + item.id + '\')' });
                 }
 
                 tbody.append('<tr>' +
                     '<td><span class="text-muted small">' + seq + '</span></td>' +
                     '<td>' + moduleTag + '</td>' +
-                    '<td><span class="fw-bold text-main">' + item.jobName + '</span></td>' +
+                    '<td><span class="fw-bold text-main">' + BC.escapeHtml(item.jobName || '') + '</span></td>' +
                     '<td><span class="small">' + taskDesc + '</span></td>' +
-                    '<td><code class="small">' + item.cronExpression + '</code></td>' +
+                    '<td><code class="small">' + BC.escapeHtml(item.cronExpression) + '</code></td>' +
                     '<td>' + statusTag + '</td>' +
                     '<td><span class="small">' + nextTime + '</span></td>' +
                     '<td class="text-end">' + BC.getTableActions(actions) + '</td>' +
@@ -371,19 +359,46 @@
             });
         }
 
+        var moduleCache = [];
+
+        function loadModuleOptions(callback) {
+            BC.ajax({
+                url: '/api/dict/data/list',
+                type: 'GET',
+                data: { dictType: 'sys_schedule_module' },
+                success: function(res) {
+                    var list = res || [];
+                    moduleCache = list;
+                    var searchOpts = '<option value="">全部模块</option>';
+                    var formOpts = '<option value="">自动（推荐）</option>';
+                    list.forEach(function(item) {
+                        searchOpts += '<option value="' + item.dictValue + '">' + BC.escapeHtml(item.dictLabel) + '</option>';
+                        formOpts += '<option value="' + item.dictValue + '">' + BC.escapeHtml(item.dictLabel) + '</option>';
+                    });
+                    $('#searchJobModule').html(searchOpts);
+                    $('#jobModule').html(formOpts);
+                    if (callback) callback();
+                }
+            });
+        }
+
         function getModuleTag(module) {
-            var moduleMap = {
-                'IHR': { class: 'primary', text: 'IHR 人力' },
-                'QW': { class: 'info', text: '企业微信' },
-                'DEMO': { class: 'secondary', text: '示例' },
-                'OTHER': { class: 'light', text: '其他' }
+            var colorMap = {
+                'IHR': 'primary', 'QW': 'info', 'YDKL': 'warning',
+                'DEMO': 'secondary', 'OTHER': 'light'
             };
-            var m = moduleMap[module] || { class: 'light', text: module || '-' };
-            return BC.getTag(m.class, m.text);
+            var label = module;
+            for (var i = 0; i < moduleCache.length; i++) {
+                if (moduleCache[i].dictValue === module) {
+                    label = moduleCache[i].dictLabel;
+                    break;
+                }
+            }
+            return BC.getTag(colorMap[module] || 'light', label || module || '-');
         }
 
         function loadLogList() {
-            $.ajax({
+            BC.ajax({
                 url: '/api/schedule/log/page',
                 type: 'GET',
                 data: {
@@ -394,18 +409,14 @@
                     triggerType: $('#searchLogTriggerType').val()
                 },
                 success: function(res) {
-                    if (res.code === 200) {
-                        renderLogTable(res.data.records);
-                        renderPagination({
-                            total: res.data.total,
-                            pages: res.data.pages,
-                            current: res.data.pageNum,
-                            limit: res.data.pageSize,
-                            callback: function(page) { logPage = page; loadLogList(); }
-                        });
-                    } else {
-                        BC.toast(res.message, 'error');
-                    }
+                    renderLogTable(res.records);
+                    renderPagination({
+                        total: res.total,
+                        pages: res.pages,
+                        current: res.pageNum,
+                        limit: res.pageSize,
+                        callback: function(page) { logPage = page; loadLogList(); }
+                    });
                 }
             });
         }
@@ -431,7 +442,7 @@
 
                 tbody.append('<tr>' +
                     '<td><span class="text-muted small">' + seq + '</span></td>' +
-                    '<td><span class="fw-bold text-main">' + item.jobName + '</span></td>' +
+                    '<td><span class="fw-bold text-main">' + BC.escapeHtml(item.jobName || '') + '</span></td>' +
                     '<td>' + triggerTag + '</td>' +
                     '<td><span class="small">' + (item.executeTime || '-') + '</span></td>' +
                     '<td><span class="small">' + duration + '</span></td>' +
@@ -451,38 +462,36 @@
         }
 
         function loadTaskOptions() {
-            $.ajax({
+            BC.ajax({
                 url: '/api/schedule/tasks',
                 type: 'GET',
                 success: function(res) {
-                    if (res.code === 200) {
-                        var select = $('#taskKey');
-                        select.empty();
-                        select.append('<option value="">请选择预设任务</option>');
-                        res.data.forEach(function(task) {
-                            select.append('<option value="' + task.taskKey +
-                                '" data-desc="' + task.description +
-                                '" data-bean="' + task.beanName +
-                                '" data-method="' + task.methodName +
-                                '" data-module="' + (task.module || '') +
-                                '" data-sort="' + (task.sort !== undefined && task.sort !== null ? task.sort : '') + '">' + task.name + '</option>');
-                        });
-                        select.change(function() {
-                            var selected = $(this).find('option:selected');
-                            $('#taskDesc').text(selected.data('desc') || '');
-                            // 只有在新增模式下才自动填充模块和排序
-                            if (!isEditMode) {
-                                var autoModule = selected.data('module');
-                                var autoSort = selected.data('sort');
-                                if (autoModule) {
-                                    $('#jobModule').val(autoModule);
-                                }
-                                if (autoSort !== '' && autoSort !== undefined) {
-                                    $('#jobSort').val(autoSort);
-                                }
+                    var select = $('#taskKey');
+                    select.empty();
+                    select.append('<option value="">请选择预设任务</option>');
+                    res.forEach(function(task) {
+                        select.append('<option value="' + BC.escapeHtml(task.taskKey) +
+                            '" data-desc="' + BC.escapeHtml(task.description) +
+                            '" data-bean="' + BC.escapeHtml(task.beanName) +
+                            '" data-method="' + BC.escapeHtml(task.methodName) +
+                            '" data-module="' + BC.escapeHtml(task.module || '') +
+                            '" data-sort="' + (task.sort !== undefined && task.sort !== null ? task.sort : '') + '">' + BC.escapeHtml(task.name) + '</option>');
+                    });
+                    select.change(function() {
+                        var selected = $(this).find('option:selected');
+                        $('#taskDesc').text(selected.data('desc') || '');
+                        // 只有在新增模式下才自动填充模块和排序
+                        if (!isEditMode) {
+                            var autoModule = selected.data('module');
+                            var autoSort = selected.data('sort');
+                            if (autoModule) {
+                                $('#jobModule').val(autoModule);
                             }
-                        });
-                    }
+                            if (autoSort !== '' && autoSort !== undefined) {
+                                $('#jobSort').val(autoSort);
+                            }
+                        }
+                    });
                 }
             });
         }
@@ -504,9 +513,11 @@
                 modal.modal('show');
             } else {
                 modal.find('.modal-title span').text('编辑定时任务');
-                $.get('/api/schedule/job/' + id, function(res) {
-                    if (res.code === 200) {
-                        var d = res.data;
+                BC.ajax({
+                    url: '/api/schedule/job/' + id,
+                    type: 'GET',
+                    success: function(res) {
+                        var d = res;
                         $('#jobId').val(d.id);
                         $('#jobName').val(d.jobName);
                         $('#taskKey').val(d.taskKey);
@@ -541,19 +552,14 @@
             if (!data.taskKey) { BC.toast('请选择预设任务', 'error'); return; }
             if (!data.cronExpression) { BC.toast('请输入Cron表达式', 'error'); return; }
 
-            $.ajax({
+            BC.ajax({
                 url: id ? '/api/schedule/job/' + id : '/api/schedule/job',
                 type: id ? 'PUT' : 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify(data),
+                data: data,
                 success: function(res) {
-                    if (res.code === 200) {
-                        $('#jobModal').modal('hide');
-                        BC.toast(id ? '任务修改成功' : '任务新增成功', 'success');
-                        loadJobList();
-                    } else {
-                        BC.toast(res.message, 'error');
-                    }
+                    $('#jobModal').modal('hide');
+                    BC.toast(id ? '任务修改成功' : '任务新增成功', 'success');
+                    loadJobList();
                 }
             });
         }
@@ -565,16 +571,12 @@
                 type: 'danger'
             }, function(ok) {
                 if (ok) {
-                    $.ajax({
+                    BC.ajax({
                         url: '/api/schedule/job/' + id,
                         type: 'DELETE',
                         success: function(res) {
-                            if (res.code === 200) {
-                                BC.toast('任务删除成功', 'success');
-                                loadJobList();
-                            } else {
-                                BC.toast(res.message, 'error');
-                            }
+                            BC.toast('任务删除成功', 'success');
+                            loadJobList();
                         }
                     });
                 }
@@ -582,31 +584,23 @@
         }
 
         function pauseJob(id) {
-            $.ajax({
+            BC.ajax({
                 url: '/api/schedule/job/' + id + '/pause',
                 type: 'PUT',
                 success: function(res) {
-                    if (res.code === 200) {
-                        BC.toast('任务已暂停', 'success');
-                        loadJobList();
-                    } else {
-                        BC.toast(res.message, 'error');
-                    }
+                    BC.toast('任务已暂停', 'success');
+                    loadJobList();
                 }
             });
         }
 
         function resumeJob(id) {
-            $.ajax({
+            BC.ajax({
                 url: '/api/schedule/job/' + id + '/resume',
                 type: 'PUT',
                 success: function(res) {
-                    if (res.code === 200) {
-                        BC.toast('任务已恢复', 'success');
-                        loadJobList();
-                    } else {
-                        BC.toast(res.message, 'error');
-                    }
+                    BC.toast('任务已恢复', 'success');
+                    loadJobList();
                 }
             });
         }
@@ -614,41 +608,101 @@
         function runOnce(id) {
             BC.confirm({
                 title: '确认执行',
-                message: '确定要立即执行该任务一次吗？',
+                message: '确定要立即执行该任务吗？执行期间页面将被锁定，请等待完成。',
                 type: 'info'
             }, function(ok) {
                 if (ok) {
-                    $.ajax({
+                    // 1. 显示遮罩
+                    BC.showLoadingOverlay('任务执行');
+
+                    // 2. 锁定页面交互
+                    BC.lockPageInteractions();
+
+                    // 3. 发送执行请求
+                    BC.ajax({
                         url: '/api/schedule/job/' + id + '/run',
                         type: 'POST',
                         success: function(res) {
-                            if (res.code === 200) {
-                                BC.toast('任务已触发执行', 'success');
-                            } else {
-                                BC.toast(res.message, 'error');
-                            }
+                            BC.toast(res.message || '任务已触发执行', 'success');
+                            // 4. 开始轮询检查状态（按jobId）
+                            pollScheduleRunStatus(id);
+                        },
+                        error: function(msg) {
+                            BC.toast(msg || '任务触发失败', 'error');
+                            BC.unlockPageInteractions();
+                            BC.hideLoadingOverlay();
                         }
                     });
                 }
             });
         }
 
+        function pollScheduleRunStatus(jobId) {
+            var pollCount = 0;
+            var maxPolls = 900; // 最多轮询75分钟（5秒一次）
+            var startTime = Date.now();
+
+            function check() {
+                BC.ajax({
+                    url: '/api/schedule/run-status?jobId=' + encodeURIComponent(jobId),
+                    type: 'GET',
+                    success: function(res) {
+                        var running = res.running;
+
+                        // 更新已运行时间
+                        if (res.elapsedSeconds !== undefined) {
+                            BC.updateLoadingTimer(res.elapsedSeconds);
+                        } else {
+                            BC.updateLoadingTimer(Math.floor((Date.now() - startTime) / 1000));
+                        }
+
+                        if (running) {
+                            pollCount++;
+                            if (pollCount < maxPolls) {
+                                setTimeout(check, 5000);
+                            } else {
+                                BC.toast('任务执行时间过长，请稍后刷新页面查看结果', 'warning');
+                                BC.unlockPageInteractions();
+                                BC.hideLoadingOverlay();
+                                loadJobList();
+                            }
+                        } else {
+                            // 执行完成
+                            BC.toast('任务执行完成', 'success');
+                            BC.unlockPageInteractions();
+                            BC.hideLoadingOverlay();
+                            loadJobList();
+                        }
+                    },
+                    error: function() {
+                        pollCount++;
+                        if (pollCount < maxPolls) {
+                            setTimeout(check, 5000);
+                        } else {
+                            BC.unlockPageInteractions();
+                            BC.hideLoadingOverlay();
+                        }
+                    }
+                });
+            }
+
+            check();
+        }
+
         function validateCron() {
             var cron = $('#cronExpression').val();
             if (!cron) { BC.toast('请先输入Cron表达式', 'warning'); return; }
 
-            $.ajax({
+            BC.ajax({
                 url: '/api/schedule/cron/validate',
                 type: 'GET',
                 data: { cronExpression: cron },
                 success: function(res) {
-                    if (res.code === 200) {
-                        $('#cronPreview').text('校验通过，下次执行: ' + res.data);
-                        BC.toast('Cron表达式校验通过', 'success');
-                    } else {
-                        $('#cronPreview').text('校验失败: ' + res.message);
-                        BC.toast('Cron表达式格式错误', 'error');
-                    }
+                    $('#cronPreview').text('校验通过，下次执行: ' + res);
+                    BC.toast('Cron表达式校验通过', 'success');
+                },
+                error: function(msg) {
+                    $('#cronPreview').text('校验失败: ' + msg);
                 }
             });
         }
@@ -666,16 +720,12 @@
                 type: 'warning'
             }, function(ok) {
                 if (ok) {
-                    $.ajax({
+                    BC.ajax({
                         url: '/api/schedule/log/clean?keepDays=30',
                         type: 'DELETE',
                         success: function(res) {
-                            if (res.code === 200) {
-                                BC.toast('日志清理完成', 'success');
-                                loadLogList();
-                            } else {
-                                BC.toast(res.message, 'error');
-                            }
+                            BC.toast('日志清理完成', 'success');
+                            loadLogList();
                         }
                     });
                 }

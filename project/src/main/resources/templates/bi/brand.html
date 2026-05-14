@@ -9,7 +9,7 @@
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <!-- 自定义CSS -->
-    <link rel="stylesheet" th:href="@{/css/layout.css}">
+    <link rel="stylesheet" th:href="@{/css/main.css}">
     <style>
         .brand-logo-preview {
             width: 40px;
@@ -151,10 +151,6 @@
            // 将后端注入的权限列表同步到前端 JS 作用域
         window.userPermissions = /*[[${permissions}]]*/ [];
         
-        function hasPermission(p) {
-            if (!window.userPermissions) return false;
-            return window.userPermissions.includes('*') || window.userPermissions.includes(p);
-        }
     </script>
     <script src="/js/common.js"></script>
 
@@ -176,7 +172,7 @@
         });
 
         function loadDataList() {
-            $.ajax({
+            BC.ajax({
                 url: '/api/brand/page',
                 type: 'GET',
                 data: {
@@ -186,12 +182,8 @@
                     status: $('#searchStatus').val()
                 },
                 success: function(res) {
-                    if (res.code === 200) {
-                        renderTable(res.data.records);
-                        renderPagination(res.data);
-                    } else {
-                        BC.toast(res.message, 'error');
-                    }
+                    renderTable(res.records);
+                    renderPagination(res);
                 }
             });
         }
@@ -210,10 +202,10 @@
                 const safeId = String(item.id);
 
                 const btnGroup = [];
-                if (hasPermission('bi:brand:edit')) {
+                if (BC.hasPermission('bi:brand:edit')) {
                     btnGroup.push({ icon: 'bi-pencil', title: '修改信息', onclick: `editData('${safeId}')` });
                 }
-                if (hasPermission('bi:brand:delete')) {
+                if (BC.hasPermission('bi:brand:delete')) {
                     btnGroup.push({ icon: 'bi-trash', title: '彻底移除', onclick: `deleteData('${safeId}')` });
                 }
 
@@ -223,8 +215,8 @@
                     <tr>
                         <td><span class="text-muted small">${seq}</span></td>
                         <td>${logo}</td>
-                        <td><span class="fw-bold text-main">${item.brandName}</span></td>
-                        <td><span class="small text-secondary">${item.description || '-'}</span></td>
+                        <td><span class="fw-bold text-main">${BC.escapeHtml(item.brandName)}</span></td>
+                        <td><span class="small text-secondary">${BC.escapeHtml(item.description || '-')}</span></td>
                         <td><span class="small">${item.sort}</span></td>
                         <td>${statusTag}</td>
                         <td class="text-end">${actions}</td>
@@ -256,9 +248,11 @@
                 modal.modal('show');
             } else {
                 modal.find('.modal-title span').text('编辑品牌信息');
-                $.get(`/api/brand/${id}`, res => {
-                    if (res.code === 200) {
-                        const d = res.data;
+                BC.ajax({
+                    url: `/api/brand/${id}`,
+                    type: 'GET',
+                    success: res => {
+                        const d = res;
                         $('#dataId').val(d.id);
                         $('#brandName').val(d.brandName);
                         $('#brandLogo').val(d.brandLogo);
@@ -283,19 +277,14 @@
                 description: $('#description').val()
             };
             
-            $.ajax({
+            BC.ajax({
                 url: id ? `/api/brand/${id}` : '/api/brand',
                 type: id ? 'PUT' : 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify(data),
+                data: data,
                 success: res => {
-                    if (res.code === 200) {
-                        $('#dataModal').modal('hide');
-                        BC.toast(id ? '品牌资料已成功更新' : '新品牌已成功收录', 'success');
-                        loadDataList();
-                    } else {
-                        BC.toast(res.message, 'error');
-                    }
+                    $('#dataModal').modal('hide');
+                    BC.toast(id ? '品牌资料已成功更新' : '新品牌已成功收录', 'success');
+                    loadDataList();
                 }
             });
         }
@@ -307,14 +296,12 @@
                 type: 'danger'
             }, (ok) => {
                 if (ok) {
-                    $.ajax({
+                    BC.ajax({
                         url: `/api/brand/${id}`,
                         type: 'DELETE',
                         success: res => {
-                            if (res.code === 200) {
-                                BC.toast('品牌已被安全移除', 'success');
-                                loadDataList();
-                            }
+                            BC.toast('品牌已被安全移除', 'success');
+                            loadDataList();
                         }
                     });
                 }

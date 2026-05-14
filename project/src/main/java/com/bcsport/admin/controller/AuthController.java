@@ -1,15 +1,19 @@
 package com.bcsport.admin.controller;
 
 import com.bcsport.admin.common.Result;
+import com.bcsport.admin.dto.LoginDTO;
+import com.bcsport.admin.service.AuthCacheService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.authc.UsernamePasswordToken;
+import org.apache.shiro.session.Session;
+import org.apache.shiro.session.mgt.DefaultSessionKey;
+import org.apache.shiro.session.mgt.SessionManager;
 import org.apache.shiro.subject.Subject;
+import org.apache.shiro.web.mgt.DefaultWebSecurityManager;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 认证控制器
@@ -17,6 +21,9 @@ import org.springframework.web.bind.annotation.ResponseBody;
 @Slf4j
 @Controller
 public class AuthController {
+
+    @Autowired
+    private AuthCacheService authCacheService;
     
     /**
      * 登录页面
@@ -32,14 +39,31 @@ public class AuthController {
      */
     @PostMapping("/doLogin")
     @ResponseBody
-    public Result<?> doLogin(@RequestParam String username, 
-                            @RequestParam String password) {
+    public Result<?> doLogin(@RequestBody LoginDTO loginDTO) {
         try {
             Subject subject = SecurityUtils.getSubject();
-            UsernamePasswordToken token = new UsernamePasswordToken(username, password);
+            UsernamePasswordToken token = new UsernamePasswordToken(loginDTO.getUsername(), loginDTO.getPassword());
             subject.login(token);
-            
-            // 登录成功，Shiro 会自动管理身份信息存储到 Session )
+
+            // 踢掉该用户的旧会话
+            String username = loginDTO.getUsername();
+            String currentSessionId = subject.getSession().getId().toString();
+            String oldSessionId = authCacheService.getActiveSessionId(username);
+            if (oldSessionId != null && !oldSessionId.equals(currentSessionId)) {
+                try {
+                    SessionManager sessionManager =
+                            ((DefaultWebSecurityManager) SecurityUtils.getSecurityManager()).getSessionManager();
+                    Session existingSession = sessionManager.getSession(new DefaultSessionKey(oldSessionId));
+                    existingSession.stop();
+                    log.info("踢掉用户 {} 的旧会话: {}", username, oldSessionId);
+                } catch (Exception e) {
+                    log.warn("踢掉旧会话失败, username={}, oldSessionId={}: {}", username, oldSessionId, e.getMessage());
+                }
+            }
+
+            // 绑定新会话
+            authCacheService.bindUserSession(username, currentSessionId);
+
             log.info("用户登录成功: {}", username);
             return Result.success("登录成功", null);
         } catch (Exception e) {
@@ -57,7 +81,9 @@ public class AuthController {
         Subject subject = SecurityUtils.getSubject();
         if (subject != null) {
             String username = (String) subject.getPrincipal();
-            // subject.logout() 会自动失效会话并清除身份信息，包括相关的 Cookie
+            if (username != null) {
+                authCacheService.removeUserSession(username);
+            }
             subject.logout();
             log.info("用户登出系统: {}", username);
         }
@@ -97,11 +123,19 @@ public class AuthController {
     }
 
     /**
-     * 品牌管理页面
+     * 基础数据管理页面（品牌/地区/渠道类型/渠道性质）
+     */
+    @GetMapping("/bi/management")
+    public String biManagementPage() {
+        return "bi/bi-management";
+    }
+
+    /**
+     * 品牌管理页面 - 重定向到基础数据管理
      */
     @GetMapping("/bi/brand")
     public String brandPage() {
-        return "bi/brand";
+        return "redirect:/bi/management?tab=brand";
     }
 
     /**
@@ -178,23 +212,23 @@ public class AuthController {
 
     @GetMapping("/bi/region")
     public String region() {
-        return "bi/region";
+        return "redirect:/bi/management?tab=region";
     }
 
     /**
-     * 渠道类型管理页面
+     * 渠道类型管理页面 - 重定向到基础数据管理
      */
     @GetMapping("/bi/channel-type")
     public String channelTypePage() {
-        return "bi/channel-type";
+        return "redirect:/bi/management?tab=channelType";
     }
 
     /**
-     * 渠道性质管理页面
+     * 渠道性质管理页面 - 重定向到基础数据管理
      */
     @GetMapping("/bi/channel-nature")
     public String channelNaturePage() {
-        return "bi/channel-nature";
+        return "redirect:/bi/management?tab=channelNature";
     }
 
     /**
@@ -203,6 +237,12 @@ public class AuthController {
     @GetMapping("/bi/entity-channel")
     public String entityChannelPage() {
         return "bi/entity-channel";
+    }
+
+    @GetMapping("/bi/entity-channel/form")
+    public String entityChannelFormPage(@RequestParam(required = false) String id, org.springframework.ui.Model model) {
+        model.addAttribute("editId", id != null ? id : "");
+        return "bi/entity-channel-form";
     }
 
     /**
@@ -238,6 +278,14 @@ public class AuthController {
     }
 
     /**
+     * 企微客户标签管理页面
+     */
+    @GetMapping("/qywx/customer-tag")
+    public String customerTagPage() {
+        return "qywx/customer-tag";
+    }
+
+    /**
      * IHR入职排除页面
      */
     @GetMapping("/ihr/onboarding-exclusion")
@@ -255,6 +303,46 @@ public class AuthController {
         model.addAttribute("exclusionType", 2);
         model.addAttribute("pageTitle", "离职排除");
         return "ihr/exclusion";
+    }
+
+    /**
+     * IHR人员入职管理页面
+     */
+    @GetMapping("/ihr/onboarding-management")
+    public String onboardingManagementPage() {
+        return "ihr/onboarding-management";
+    }
+
+    /**
+     * IHR人员调整管理页面
+     */
+    @GetMapping("/ihr/adjustment-management")
+    public String adjustmentManagementPage() {
+        return "ihr/adjustment-management";
+    }
+
+    /**
+     * IHR人员离职管理页面
+     */
+    @GetMapping("/ihr/leaving-management")
+    public String leavingManagementPage() {
+        return "ihr/leaving-management";
+    }
+
+    /**
+     * IHR人员管理页面（入职/调整/离职三合一）
+     */
+    @GetMapping("/ihr/employee-management")
+    public String ihrEmployeeManagementPage() {
+        return "ihr/employee-management";
+    }
+
+    /**
+     * ERP人员管理页面
+     */
+    @GetMapping("/erp/employee-management")
+    public String erpEmployeeManagementPage() {
+        return "erp/employee-management";
     }
 
 }

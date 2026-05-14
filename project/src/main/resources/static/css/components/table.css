@@ -1,0 +1,149 @@
+/* ============================================
+   BC Sport Design System - Table Components
+   ============================================ */
+
+/* ---------- Table Container ---------- */
+.bc-table-container {
+    border-radius: var(--bc-radius-card);
+    overflow: auto;
+    flex: 1;
+    border: 1px solid rgba(0, 0, 0, 0.03);
+}
+
+/* ---------- Base Table ---------- */
+.bc-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.bc-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--bc-gray-50);
+    padding: var(--bc-space-3);
+    text-align: left;
+    font-size: var(--bc-text-sm);
+    font-weight: var(--bc-font-semibold);
+    color: var(--bc-text-muted);
+    border-bottom: 1px solid var(--bc-border);
+    box-shadow: inset 0 -1px 0 var(--bc-border);
+}
+
+.bc-table tbody td {
+    padding: var(--bc-space-3);
+    border-bottom: 1px solid var(--bc-gray-100);
+    color: var(--bc-gray-700);
+    font-size: var(--bc-text-base);
+    vertical-align: middle;
+}
+
+/* Hoverable Table */
+.bc-table-hover tbody tr {
+    transition: background-color var(--bc-duration-normal);
+}
+
+.bc-table-hover tbody tr:hover {
+    background-color: var(--bc-gray-50);
+}
+
+/* ---------- Empty State ---------- */
+.bc-empty-state {
+    text-align: center;
+    padding: var(--bc-space-12) var(--bc-space-6);
+    color: var(--bc-text-muted);
+}
+
+.bc-empty-state i {
+    font-size: var(--bc-text-2xl);
+    color: var(--bc-gray-300);
+    margin-bottom: var(--bc-space-3);
+    display: block;
+}
+
+.bc-empty-state p {
+    font-size: var(--bc-text-base);
+    margin: 0;
+}
+
+/* ---------- Table Actions ---------- */
+.bc-table-actions {
+    display: flex;
+    gap: var(--bc-space-2);
+    justify-content: flex-end;
+    align-items: center;
+}
+
+td.text-end .bc-table-actions {
+    justify-content: flex-end;
+}
+
+/* ---------- Icon Button ---------- */
+.bc-btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--bc-size-8);
+    height: var(--bc-size-8);
+    padding: 0;
+    font-size: var(--bc-text-sm);
+    border-radius: var(--bc-radius-button);
+    border: none;
+    background: transparent;
+    color: var(--bc-gray-500);
+    transition: var(--bc-transition-fast);
+    cursor: pointer;
+}
+
+.bc-btn-icon:hover {
+    background: var(--bc-gray-100);
+}
+
+.bc-btn-icon-primary {
+    color: var(--bc-primary-500);
+    background: var(--bc-primary-soft);
+}
+
+.bc-btn-icon-primary:hover {
+    background: var(--bc-primary-100);
+    color: var(--bc-primary);
+}
+
+.bc-btn-icon-success {
+    color: var(--bc-success-500);
+    background: var(--bc-success-soft);
+}
+
+.bc-btn-icon-success:hover {
+    background: var(--bc-success-100);
+    color: var(--bc-success);
+}
+
+.bc-btn-icon-warning {
+    color: var(--bc-warning-500);
+    background: var(--bc-warning-soft);
+}
+
+.bc-btn-icon-warning:hover {
+    background: var(--bc-warning-100);
+    color: var(--bc-warning);
+}
+
+.bc-btn-icon-danger {
+    color: var(--bc-danger-500);
+    background: var(--bc-danger-soft);
+}
+
+.bc-btn-icon-danger:hover {
+    background: var(--bc-danger-100);
+    color: var(--bc-danger);
+}
+
+/* ---------- Row Checkbox ---------- */
+.row-check {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: var(--bc-primary);
+}

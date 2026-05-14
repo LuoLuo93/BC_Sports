@@ -1,0 +1,103 @@
+/* ============================================
+   BC Sport Design System - Button Components
+   ============================================ */
+
+/* ---------- Button Base ---------- */
+.btn[class*="bc-btn-"] {
+    border-radius: var(--bc-radius-button);
+    font-weight: var(--bc-font-semibold);
+    font-size: var(--bc-text-base);
+    padding: var(--bc-space-2) var(--bc-space-4);
+    transition: var(--bc-transition-fast);
+}
+
+.btn[class*="bc-btn-"] i {
+    margin-right: var(--bc-space-1);
+}
+
+/* ---------- Primary Button ---------- */
+.bc-btn-primary {
+    background: var(--bc-primary) !important;
+    color: white !important;
+    border: none !important;
+}
+
+.bc-btn-primary:hover {
+    background: var(--bc-primary-hover) !important;
+    transform: translateY(-1px);
+}
+
+/* ---------- Secondary Button ---------- */
+.bc-btn-secondary {
+    background: var(--bc-gray-100) !important;
+    color: var(--bc-gray-600) !important;
+    border: 1px solid var(--bc-border) !important;
+    box-shadow: var(--bc-shadow-sm);
+}
+
+.bc-btn-secondary:hover {
+    background: var(--bc-gray-200) !important;
+    color: var(--bc-text-main) !important;
+    transform: translateY(-1px);
+}
+
+/* ---------- Success Button ---------- */
+.bc-btn-success {
+    background: linear-gradient(135deg, var(--bc-success-500) 0%, var(--bc-success-600) 100%) !important;
+    color: white !important;
+    border: none !important;
+    box-shadow: var(--bc-shadow-success);
+}
+
+.bc-btn-success:hover {
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+    transform: translateY(-1px);
+}
+
+/* ---------- Warning Button ---------- */
+.bc-btn-warning {
+    background: linear-gradient(135deg, var(--bc-warning-500) 0%, var(--bc-warning-600) 100%) !important;
+    color: white !important;
+    border: none !important;
+    box-shadow: var(--bc-shadow-warning);
+}
+
+.bc-btn-warning:hover {
+    box-shadow: 0 6px 20px rgba(245, 158, 11, 0.3);
+    transform: translateY(-1px);
+}
+
+/* ---------- Danger Button ---------- */
+.bc-btn-danger {
+    background: linear-gradient(135deg, var(--bc-danger-500) 0%, var(--bc-danger-600) 100%) !important;
+    color: white !important;
+    border: none !important;
+    box-shadow: var(--bc-shadow-danger);
+}
+
+.bc-btn-danger:hover {
+    box-shadow: 0 6px 20px rgba(239, 68, 68, 0.3);
+    transform: translateY(-1px);
+}
+
+/* ---------- Button Group ---------- */
+.bc-btn-group {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: var(--bc-space-2);
+    align-items: center;
+}
+
+/* ---------- Outline Button ---------- */
+.bc-btn-outline-primary {
+    background: transparent !important;
+    color: var(--bc-primary) !important;
+    border: 1px solid var(--bc-primary) !important;
+}
+
+.bc-btn-outline-primary:hover {
+    background: var(--bc-primary-soft) !important;
+    border-color: var(--bc-primary) !important;
+    color: var(--bc-primary) !important;
+    transform: translateY(-1px);
+}

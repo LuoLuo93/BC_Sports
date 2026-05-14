@@ -9,7 +9,7 @@
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <!-- 自定义CSS -->
-    <link rel="stylesheet" th:href="@{/css/layout.css}">
+    <link rel="stylesheet" th:href="@{/css/main.css}">
 </head>
 <body>
     <!-- 侧边栏 -->
@@ -64,31 +64,19 @@
                         </div>
                     </form>
 
-                    <div class="bc-table-container">
-                        <table class="bc-table bc-table-hover">
-                            <thead>
-                                <tr>
-                                    <th style="width: 80px;">序号</th>
-                                    <th>区域名称</th>
-                                    <th style="width: 150px;">行政编码</th>
-                                    <th style="width: 150px;">级别</th>
-                                    <th style="width: 100px;">排序</th>
-                                    <th style="width: 100px;">状态</th>
-                                    <th style="width: 120px;" class="text-end">管理操作</th>
-                                </tr>
-                            </thead>
-                            <tbody id="regionTableBody">
-                                <!-- 动态加载数据 -->
-                            </tbody>
-                        </table>
+                    <div class="bc-table-container" id="regionTreeContainer">
+                        <!-- 折叠面板动态加载 -->
                     </div>
 
-                    <!-- 分页组件 -->
-                    <div th:replace="~{common/fragments :: pagination}"></div>
                 </div>
             </div>
-            
+
+            <!-- 分页组件 -->
+            <div th:replace="~{common/fragments :: pagination}"></div>
+
         </div>
+
+        <div th:replace="~{common/fragments :: footer}"></div>
     </div>
 
     <!-- 添加/编辑模态框 -->
@@ -163,10 +151,6 @@
           // 将后端注入的权限列表同步到前端 JS 作用域
         window.userPermissions = /*[[${permissions}]]*/ [];
         
-        function hasPermission(p) {
-            if (!window.userPermissions) return false;
-            return window.userPermissions.includes('*') || window.userPermissions.includes(p);
-        }
     </script>
     <script src="/js/common.js"></script>
 
@@ -193,11 +177,13 @@
         });
 
         function loadSearchDropdowns() {
-            $.get('/api/region/tree?parentId=0', function(res) {
-                if (res.code === 200) {
+            BC.ajax({
+                url: '/api/region/tree?parentId=0',
+                type: 'GET',
+                success: function(res) {
                     var html = '<option value="">全部一级地区</option>';
-                    res.data.forEach(item => {
-                        html += `<option value="${item.id}">${item.regionName}</option>`;
+                    res.forEach(item => {
+                        html += `<option value="${BC.escapeHtml(item.id)}">${BC.escapeHtml(item.regionName)}</option>`;
                     });
                     $('#searchLevel1').html(html);
                 }
@@ -210,11 +196,13 @@
                 select2.html('<option value="">全部二级地区</option>');
                 return;
             }
-            $.get('/api/region/tree?parentId=' + parentId, function(res) {
-                if (res.code === 200) {
+            BC.ajax({
+                url: '/api/region/tree?parentId=' + parentId,
+                type: 'GET',
+                success: function(res) {
                     var html = '<option value="">全部二级地区</option>';
-                    res.data.forEach(item => {
-                        html += `<option value="${item.id}">${item.regionName}</option>`;
+                    res.forEach(item => {
+                        html += `<option value="${BC.escapeHtml(item.id)}">${BC.escapeHtml(item.regionName)}</option>`;
                     });
                     select2.html(html);
                 }
@@ -232,12 +220,13 @@
                 pageSize: pageSize
             };
 
-            $.get('/api/region/page', params, function(res) {
-                if (res.code === 200) {
-                    renderTable(res.data.records);
-                    renderPagination(res.data);
-                } else {
-                    BC.toast(res.message, 'error');
+            BC.ajax({
+                url: '/api/region/page',
+                type: 'GET',
+                data: params,
+                success: function(res) {
+                    renderTable(res.records);
+                    renderPagination(res);
                 }
             });
         }
@@ -246,180 +235,187 @@
             BC.renderPagination({
                 total: data.total,
                 pages: data.pages,
-                current: data.current,
+                current: data.pageNum,
                 callback: function(p) {
                     loadRegionData(p);
                 }
             });
         }
 
+        function makeRegionTypeTag(type) {
+            switch(type) {
+                case 1: return BC.getTag('info', '一级地区');
+                case 2: return BC.getTag('success', '二级地区');
+                case 3: return BC.getTag('warning', '三级地区');
+                default: return '';
+            }
+        }
+        function makeRegionActions(item) {
+            var btn = [];
+            if (BC.hasPermission('bi:region:add') && item.regionType === 1) {
+                btn.push({ icon: 'bi-plus-lg', title: '添加下级', onclick: 'addRegionSub(\'' + item.id + '\', ' + JSON.stringify(item.regionName || '') + ', ' + item.regionType + ')' });
+            }
+            if (BC.hasPermission('bi:region:edit')) {
+                btn.push({ icon: 'bi-pencil', title: '编辑', onclick: 'openModal(\'' + item.id + '\')' });
+            }
+            if (BC.hasPermission('bi:region:delete')) {
+                btn.push({ icon: 'bi-trash', title: '删除', onclick: 'deleteRegion(\'' + item.id + '\')' });
+            }
+            return '<div class="bc-collapse-actions">' + BC.getTableActions(btn) + '</div>';
+        }
+        var _regionUid = 0;
+
         function renderTable(data) {
-            var tbody = $('#regionTableBody');
-            tbody.empty();
+            var container = $('#regionTreeContainer');
+            container.empty();
+            _regionUid = 0;
 
             if (!data || data.length === 0) {
-                tbody.append('<tr><td colspan="7" class="text-center py-4">暂无区域数据</td></tr>');
+                container.html('<div class="text-center py-5"><i class="bi bi-geo-alt" style="font-size:2rem;color:#cbd5e1;"></i><p class="text-muted mt-2 mb-0">暂无区域数据</p></div>');
                 return;
             }
 
-            // 判断是否处于搜索模式
-            var isSearchMode = $('#searchName').val() || $('#searchLevel1').val() || $('#searchLevel2').val();
-
-            var globalIndex = (currentPage - 1) * pageSize;
             data.forEach(function(item) {
-                globalIndex++;
-                tbody.append(renderRow(item, 0, globalIndex, isSearchMode));
+                container.append(buildRegionCard(item));
+            });
+
+            container.off('click', '.bc-collapse-header').on('click', '.bc-collapse-header', function(e) {
+                if ($(e.target).closest('.bc-collapse-actions').length) return;
+                var $header = $(this);
+                var target = $header.data('target');
+                var $body = $('#' + target);
+                if (!$body.data('loaded')) {
+                    var parentId = $header.data('parent-id');
+                    loadSubRegions(parentId, target);
+                }
+                $body.toggleClass('open');
+                $header.find('.bc-collapse-arrow').toggleClass('open');
+                $header.toggleClass('expanded');
             });
         }
 
-        function renderRow(item, level, index, isSearchMode) {
-            var indent = level * 24;
-            var typeTag = '';
-            switch(item.regionType) {
-                case 1: typeTag = BC.getTag('info', '一级地区'); break;
-                case 2: typeTag = BC.getTag('success', '二级地区'); break;
-                case 3: typeTag = BC.getTag('success', '三级地区'); break;
-            }
-
+        function buildRegionCard(item) {
+            var typeTag = makeRegionTypeTag(item.regionType);
             var statusTag = BC.getTag(item.status === 1 ? 'success' : 'danger', item.status === 1 ? '启用' : '禁用');
-            
-            var btnGroup = [];
-            if (hasPermission('bi:region:add') && item.regionType === 1) {
-                btnGroup.push({ icon: 'bi-plus-lg', title: '添加下级区域', onclick: `addRegionSub('${item.id}', '${item.regionName}', ${item.regionType})` });
-            }
-            if (hasPermission('bi:region:edit')) {
-                btnGroup.push({ icon: 'bi-pencil', title: '编辑区域', onclick: `openModal('${item.id}')` });
-            }
-            if (hasPermission('bi:region:delete')) {
-                btnGroup.push({ icon: 'bi-trash', title: '注销区域', onclick: `deleteRegion('${item.id}')` });
+            var hasChildren = item.hasChildren;
+            var uid = 'region-' + (_regionUid++);
+
+            // 有子节点：折叠面板
+            if (hasChildren) {
+                var h = '<div class="bc-collapse-card">';
+                h += '<div class="bc-collapse-header" data-target="' + uid + '" data-parent-id="' + item.id + '">';
+                h +=   '<div class="bc-collapse-title">';
+                h +=     '<i class="bi bi-chevron-right bc-collapse-arrow"></i>';
+                h +=     '<i class="bi bi-geo-alt"></i>';
+                h +=     '<span>' + BC.escapeHtml(item.regionName || '') + '</span>';
+                h +=     typeTag + statusTag;
+                h +=   '</div>';
+                h +=   '<div class="bc-collapse-meta">';
+                if (item.regionCode) h += '<code>' + BC.escapeHtml(item.regionCode) + '</code>';
+                if (item.sort) h += '<span>排序 ' + item.sort + '</span>';
+                h +=   '</div>';
+                h +=   makeRegionActions(item);
+                h += '</div>';
+                h += '<div class="bc-collapse-body" id="' + uid + '"></div>';
+                h += '</div>';
+                return h;
             }
 
-            var actions = BC.getTableActions(btnGroup);
-
-            var displayName = isSearchMode ? (item.fullPath || item.regionName) : item.regionName;
-            var displayIndent = isSearchMode ? 0 : indent;
-
-            // 懒加载控制：如果是浏览模式且有子节点，显示展开图标
-            var expandIcon = '';
-            if (!isSearchMode && item.hasChildren) {
-                expandIcon = `<i class="bi bi-chevron-right expand-icon me-2" style="cursor:pointer;" onclick="toggleRegion(this, '${item.id}', ${level + 1})"></i>`;
-            } else {
-                expandIcon = `<i class="bi bi-geo-alt text-muted me-2"></i>`;
-            }
-
-            return `
-                <tr id="row-${item.id}" data-id="${item.id}" data-level="${level}" class="${item.parentId !== '0' ? 'child-row' : ''}">
-                    <td><span class="text-muted small">${index || '-'}</span></td>
-                    <td style="padding-left: ${displayIndent + 20}px">
-                        ${expandIcon}
-                        <span class="fw-bold text-main">${displayName}</span>
-                    </td>
-                    <td><code class="small text-muted">${item.regionCode || '-'}</code></td>
-                    <td>${typeTag}</td>
-                    <td><span class="small">${item.sort}</span></td>
-                    <td>${statusTag}</td>
-                    <td class="text-end">${actions}</td>
-                </tr>
-            `;
+            // 无子节点：单行
+            var h = '<div class="bc-collapse-item">';
+            h +=   '<div class="bc-collapse-item-info">';
+            h +=     '<span class="bc-collapse-item-dot"></span>';
+            h +=     '<i class="bi bi-geo-alt" style="color:var(--text-muted);"></i>';
+            h +=     '<span>' + BC.escapeHtml(item.regionName || '') + '</span>';
+            h +=     typeTag + statusTag;
+            h +=   '</div>';
+            h +=   '<div class="bc-collapse-item-detail">';
+            if (item.regionCode) h += '<code>' + BC.escapeHtml(item.regionCode) + '</code>';
+            if (item.sort) h += '<span>排序 ' + item.sort + '</span>';
+            h +=   '</div>';
+            h +=   makeRegionActions(item);
+            h += '</div>';
+            return h;
         }
 
-        function toggleRegion(icon, parentId, nextLevel) {
-            var $icon = $(icon);
-            var $row = $(`#row-${parentId}`);
-            var isExpanded = $icon.hasClass('bi-chevron-down');
-
-            if (isExpanded) {
-                // 折叠：删除所有子孙行
-                $icon.removeClass('bi-chevron-down').addClass('bi-chevron-right');
-                collapseChildren(parentId);
-            } else {
-                // 展开：如果有缓存则显示，没有则请求
-                $icon.removeClass('bi-chevron-right').addClass('bi-chevron-down');
-                loadSubRegions(parentId, nextLevel, $row);
-            }
-        }
-
-        function loadSubRegions(parentId, level, $parentRow) {
-            $.get('/api/region/tree', { parentId: parentId }, function(res) {
-                if (res.code === 200 && res.data.length > 0) {
-                    var html = '';
-                    res.data.forEach(item => {
-                        html += renderRow(item, level, null, false);
-                    });
-                    $parentRow.after(html);
+        function loadSubRegions(parentId, bodyId) {
+            var $body = $('#' + bodyId);
+            BC.ajax({
+                url: '/api/region/tree',
+                type: 'GET',
+                data: { parentId: parentId },
+                success: function(res) {
+                    $body.data('loaded', true);
+                    if (res.length > 0) {
+                        res.forEach(function(child) {
+                            $body.append(buildRegionCard(child));
+                        });
+                    } else {
+                        $body.append('<div class="bc-collapse-empty"><i class="bi bi-inbox me-1"></i>暂无下级区域</div>');
+                    }
                 }
             });
-        }
-
-        function collapseChildren(parentId) {
-            // 简单逻辑：移除所有 parentId 等于 parentId 的行，以及它们的后代
-            // 在本系统中由于只有2层，直接查找并移除即可
-            $(`#regionTableBody tr`).each(function() {
-                var currentId = $(this).data('id');
-                // 这里检查是否属于该父节点的子孙
-                // 这里可以通过更复杂的逻辑，或者在当前层级下直接移除
-            });
-            
-            // 改进：为了支持多层，我们可以在 renderRow 时添加 data-parent-id 属性
-            $(`tr`).each(function() {
-                // 由于目前只有两层，且添加了 data-id，我们可以简单处理
-                // 如果 parentId 是 0 的节点，折叠时移除所有不是 parentId 为 0 且其父级路径包含该 ID 的行
-            });
-            
-            // 为了简化实现，我们重新加载一级数据或简单移除
-            // 对于 2 层结构，直接移除所有 parentId 属性匹配的行即可（需给 tr 添加 data-parent-id）
-            loadRegionData(); // 最稳妥的方式是重新加载当前页
         }
 
         function addRegionSub(parentId, parentName, parentType) {
-            openModal(); // 先置空并打开
-            $('#modalTitle').text('新增下级区域 - ' + parentName);
-            
-            // 延迟设置，确保 openModal 中的 select 加载完成后能选中
-            setTimeout(function() {
+            openModal(null, function() {
+                $('#modalTitle').text('新增下级区域 - ' + parentName);
                 $('#parentId').val(parentId);
                 var nextType = Math.min(parseInt(parentType) + 1, 3);
                 $('#regionType').val(nextType);
-            }, 300);
+            });
         }
 
-        function openModal(id) {
+        function openModal(id, onReady) {
             $('#regionForm')[0].reset();
             $('#regionId').val('');
-            $('#modalTitle').text(id ? '编辑区域' : '新增区域');
-            
-            // 加载上级选项
-            $.get('/api/region/tree', function(res) {
-                var select = $('#parentId');
-                select.empty().append('<option value="0">无（顶级区域）</option>');
-                
-                function addOptions(nodes, level) {
-                    nodes.forEach(function(node) {
-                        if (node.id !== id) { // 不能选自己作为上级
-                            var prefix = '　'.repeat(level);
-                            select.append(`<option value="${node.id}">${prefix}${node.regionName}</option>`);
-                            if (node.children) addOptions(node.children, level + 1);
-                        }
-                    });
-                }
-                addOptions(res.data, 0);
+            if (!onReady) $('#modalTitle').text(id ? '编辑区域' : '新增区域');
 
-                if (id) {
-                    $.get('/api/region/' + id, function(res) {
-                        var d = res.data;
-                        $('#regionId').val(d.id);
-                        $('#parentId').val(d.parentId);
-                        $('#regionName').val(d.regionName);
-                        $('#regionCode').val(d.regionCode);
-                        $('#regionType').val(d.regionType);
-                        $('#sort').val(d.sort);
-                        $('#status').val(d.status);
-                        $('#remark').val(d.remark);
-                    });
+            BC.ajax({
+                url: '/api/region/tree',
+                type: 'GET',
+                success: function(res) {
+                    var select = $('#parentId');
+                    select.empty().append('<option value="0">无（顶级区域）</option>');
+
+                    function addOptions(nodes, level) {
+                        nodes.forEach(function(node) {
+                            if (node.id !== id) {
+                                var prefix = '　'.repeat(level);
+                                select.append('<option value="' + node.id + '">' + prefix + node.regionName + '</option>');
+                                if (node.children) addOptions(node.children, level + 1);
+                            }
+                        });
+                    }
+                    addOptions(res, 0);
+
+                    function done() {
+                        if (onReady) onReady();
+                        BC.showModal('#regionModal');
+                    }
+
+                    if (id) {
+                        BC.ajax({
+                            url: '/api/region/' + id,
+                            type: 'GET',
+                            success: function(res) {
+                                var d = res;
+                                $('#regionId').val(d.id);
+                                $('#parentId').val(d.parentId);
+                                $('#regionName').val(d.regionName);
+                                $('#regionCode').val(d.regionCode);
+                                $('#regionType').val(d.regionType);
+                                $('#sort').val(d.sort);
+                                $('#status').val(d.status);
+                                $('#remark').val(d.remark);
+                                done();
+                            }
+                        });
+                    } else {
+                        done();
+                    }
                 }
             });
-
-            $('#regionModal').modal('show');
         }
 
         function saveRegion() {
@@ -442,19 +438,14 @@
             var type = id ? 'PUT' : 'POST';
             var url = '/api/region' + (id ? '/' + id : '');
 
-            $.ajax({
+            BC.ajax({
                 url: url,
                 type: type,
-                contentType: 'application/json',
-                data: JSON.stringify(data),
+                data: data,
                 success: function(res) {
-                    if (res.code === 200) {
-                        $('#regionModal').modal('hide');
-                        BC.toast(res.message, 'success');
-                        loadRegionData();
-                    } else {
-                        BC.toast(res.message, 'error');
-                    }
+                    BC.hideModal('#regionModal');
+                    BC.toast(res.message, 'success');
+                    loadRegionData();
                 }
             });
         }
@@ -466,14 +457,12 @@
                 type: 'danger'
             }, function(confirmed) {
                 if (confirmed) {
-                    $.ajax({
+                    BC.ajax({
                         url: '/api/region/' + id,
                         type: 'DELETE',
                         success: function(res) {
-                            if (res.code === 200) {
-                                BC.toast(res.message, 'success');
-                                loadRegionData();
-                            }
+                            BC.toast(res.message, 'success');
+                            loadRegionData();
                         }
                     });
                 }

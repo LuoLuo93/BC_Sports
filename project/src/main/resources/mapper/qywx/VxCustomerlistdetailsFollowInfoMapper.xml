@@ -14,4 +14,18 @@
         </foreach>
     </insert>
 
+    <select id="selectAll" resultType="com.bcsport.admin.entity.qywx.VxCustomerlistdetailsFollowInfo">
+        SELECT id, userid, externalUserid, remark, description, createtime, addWay, operUserid, createTime2
+        FROM VX_CustomerListDetails_follow_info
+    </select>
+
+    <select id="selectByExternalUserids" resultType="com.bcsport.admin.entity.qywx.VxCustomerlistdetailsFollowInfo">
+        SELECT userid, externalUserid
+        FROM VX_CustomerListDetails_follow_info
+        WHERE externalUserid IN
+        <foreach collection="externalUserids" item="eid" open="(" separator="," close=")">
+            #{eid}
+        </foreach>
+    </select>
+
 </mapper>

@@ -24,28 +24,31 @@ public class QywxDepartmentMemberTask {
     @Autowired
     private QywxDepartmentMemberMapper memberMapper;
 
-    @Transactional(rollbackFor = Exception.class, transactionManager = "qywxTransactionManager")
     public void sync() {
-        log.info("=== Starting: QYWX sync department members ===");
+        log.info("=== 开始执行: 同步企微部门成员 ===");
         try {
             List<QywxDepartmentMember> memberList = apiClient.getDepartmentMemberList();
 
             if (memberList == null || memberList.isEmpty()) {
-                log.info("=== Completed: QYWX sync department members, no data ===");
+                log.info("=== 完成: 同步企微部门成员, 无数据 ===");
                 return;
             }
 
-            memberMapper.deleteAll();
+            doSync(memberList);
 
-            for (int i = 0; i < memberList.size(); i += BATCH_SIZE) {
-                int end = Math.min(i + BATCH_SIZE, memberList.size());
-                memberMapper.insertBatch(memberList.subList(i, end));
-            }
-
-            log.info("=== Completed: QYWX sync department members, total {} ===", memberList.size());
+            log.info("=== 完成: 同步企微部门成员, 共 {} 人 ===", memberList.size());
         } catch (Exception e) {
-            log.error("=== Failed: QYWX sync department members ===", e);
+            log.error("=== 失败: 同步企微部门成员 ===", e);
             throw e;
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class, transactionManager = "qywxTransactionManager")
+    public void doSync(List<QywxDepartmentMember> memberList) {
+        memberMapper.deleteAll();
+        for (int i = 0; i < memberList.size(); i += BATCH_SIZE) {
+            int end = Math.min(i + BATCH_SIZE, memberList.size());
+            memberMapper.insertBatch(memberList.subList(i, end));
         }
     }
 }

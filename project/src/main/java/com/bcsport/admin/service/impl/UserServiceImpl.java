@@ -12,6 +12,7 @@ import com.bcsport.admin.entity.UserRole;
 import com.bcsport.admin.entity.Role;
 import com.bcsport.admin.mapper.UserMapper;
 import com.bcsport.admin.mapper.UserRoleMapper;
+import com.bcsport.admin.service.AuthCacheService;
 import com.bcsport.admin.service.UserService;
 import com.bcsport.admin.util.BeanCopyUtils;
 import com.bcsport.admin.util.ShiroSecurityUtils;
@@ -38,6 +39,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     
     @Autowired
     private UserRoleMapper userRoleMapper;
+
+    @Autowired
+    private AuthCacheService authCacheService;
     
     @Autowired
     private com.bcsport.admin.mapper.RoleMapper roleMapper;
@@ -176,6 +180,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             // 批量插入（审计字段由 MybatisPlusAutoFillHandler 自动填充）
             userRoleList.forEach(userRoleMapper::insert);
         }
+        authCacheService.evictUser(userId);
         return true;
     }
     

@@ -58,8 +58,12 @@ public class EntityChannelController {
     @ApiOperation("新增实体渠道配置")
     @RequiresPermissions("bi:entity:add")
     public Result<?> add(@Valid @RequestBody EntityChannelDTO dto) {
-        boolean success = entityChannelService.addEntityChannel(dto);
-        return success ? Result.success("新增成功") : Result.error("新增失败");
+        try {
+            boolean success = entityChannelService.addEntityChannel(dto);
+            return success ? Result.success("新增成功") : Result.error("新增失败");
+        } catch (IllegalArgumentException e) {
+            return Result.error(e.getMessage());
+        }
     }
 
     /**
@@ -70,8 +74,12 @@ public class EntityChannelController {
     @RequiresPermissions("bi:entity:edit")
     public Result<?> update(@PathVariable String id, @Valid @RequestBody EntityChannelDTO dto) {
         dto.setId(id);
-        boolean success = entityChannelService.updateEntityChannel(dto);
-        return success ? Result.success("修改成功") : Result.error("修改失败");
+        try {
+            boolean success = entityChannelService.updateEntityChannel(dto);
+            return success ? Result.success("修改成功") : Result.error("修改失败");
+        } catch (IllegalArgumentException e) {
+            return Result.error(e.getMessage());
+        }
     }
 
     /**

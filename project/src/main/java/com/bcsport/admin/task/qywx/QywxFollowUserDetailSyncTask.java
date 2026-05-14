@@ -3,7 +3,6 @@ package com.bcsport.admin.task.qywx;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 企业微信客户联系成员整合同步任务
@@ -12,6 +11,9 @@ import org.springframework.transaction.annotation.Transactional;
  * 1. 同步客户联系成员列表
  * 2. 同步客户联系成员详情
  * 3. 同步客户详情
+ *
+ * 注意：编排方法不加@Transactional，每个子步骤有独立事务，
+ * 单步失败不影响其他步骤，避免嵌套事务导致UnexpectedRollbackException
  */
 @Slf4j
 @Component("qywxFollowUserDetailSyncTask")
@@ -29,11 +31,8 @@ public class QywxFollowUserDetailSyncTask {
     /**
      * 一键同步客户联系成员及其详情
      */
-    @Transactional(rollbackFor = Exception.class, transactionManager = "qywxTransactionManager")
     public void syncAll() {
-        log.info("========================================");
         log.info("=== 开始执行：企业微信客户联系成员整合同步 ===");
-        log.info("========================================");
         long totalStartTime = System.currentTimeMillis();
 
         try {
@@ -45,7 +44,6 @@ public class QywxFollowUserDetailSyncTask {
             try {
                 followUserTask.sync();
                 successCount++;
-                log.info("--- 步骤 1/3：同步客户联系成员 完成 ---");
             } catch (Exception e) {
                 failCount++;
                 log.error("--- 步骤 1/3：同步客户联系成员 失败 ---", e);
@@ -56,7 +54,6 @@ public class QywxFollowUserDetailSyncTask {
             try {
                 detailTask.syncFromFollowUser();
                 successCount++;
-                log.info("--- 步骤 2/3：同步客户联系成员详情 完成 ---");
             } catch (Exception e) {
                 failCount++;
                 log.error("--- 步骤 2/3：同步客户联系成员详情 失败 ---", e);
@@ -67,23 +64,17 @@ public class QywxFollowUserDetailSyncTask {
             try {
                 customerDetailTask.sync();
                 successCount++;
-                log.info("--- 步骤 3/3：同步客户详情 完成 ---");
             } catch (Exception e) {
                 failCount++;
                 log.error("--- 步骤 3/3：同步客户详情 失败 ---", e);
             }
 
             long totalTime = System.currentTimeMillis() - totalStartTime;
-            log.info("========================================");
-            log.info("=== 企业微信客户联系成员整合同步 完成 ===");
-            log.info("=== 成功：{} 个步骤，失败：{} 个步骤 ===", successCount, failCount);
-            log.info("=== 总耗时：{} ms ===", totalTime);
-            log.info("========================================");
+            log.info("=== 企业微信客户联系成员整合同步 完成, 成功: {}, 失败: {}, 耗时: {} ms ===",
+                    successCount, failCount, totalTime);
 
         } catch (Exception e) {
-            log.error("========================================");
             log.error("=== 企业微信客户联系成员整合同步 异常 ===", e);
-            log.error("========================================");
             throw e;
         }
     }

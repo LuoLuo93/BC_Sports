@@ -12,4 +12,24 @@
     <select id="selectAll" resultType="com.bcsport.admin.entity.qywx.QywxDepartment">
         SELECT * FROM VX_DepartmentList
     </select>
+
+    <select id="selectDepartIdByName" resultType="java.lang.String">
+        SELECT departId FROM VX_DepartmentList WHERE name = #{name}
+    </select>
+
+    <select id="selectDepartIdByNameAndParent" resultType="java.lang.String">
+        SELECT d.departId
+        FROM VX_DepartmentList d
+        LEFT JOIN VX_DepartmentList p ON d.parentId = p.departId
+        WHERE d.name = #{name} AND p.name = #{parentName}
+    </select>
+
+    <select id="selectDepartIdByThreeLevel" resultType="java.lang.String">
+        SELECT d.departId
+        FROM VX_DepartmentList d
+        LEFT JOIN VX_DepartmentList p ON d.parentId = p.departId
+        LEFT JOIN VX_DepartmentList gp ON p.parentId = gp.departId
+        WHERE d.name = #{name}
+        AND (p.name = #{parentName} OR gp.name = #{firstLevelName})
+    </select>
 </mapper>

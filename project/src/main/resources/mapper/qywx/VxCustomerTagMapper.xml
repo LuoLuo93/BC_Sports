@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bcsport.admin.qywxmapper.VxCustomerTagMapper">
+
+    <insert id="insertBatch">
+        INSERT INTO VX_CustomerTag (id, externalUserid, userid, tagId, tagName, source, batchNo, createTime)
+        SELECT item.id, item.externalUserid, item.userid, item.tagId, item.tagName, item.source, item.batchNo, GETDATE()
+        FROM (
+            VALUES
+            <foreach collection="list" item="item" separator=",">
+                (#{item.id}, #{item.externalUserid}, #{item.userid}, #{item.tagId}, #{item.tagName},
+                 #{item.source}, #{item.batchNo})
+            </foreach>
+        ) AS item(id, externalUserid, userid, tagId, tagName, source, batchNo)
+        WHERE NOT EXISTS (
+            SELECT 1 FROM VX_CustomerTag t
+            WHERE t.externalUserid = item.externalUserid
+            AND t.userid = item.userid
+            AND t.tagId = item.tagId
+        )
+    </insert>
+
+    <select id="selectByExternalUserid" resultType="com.bcsport.admin.entity.qywx.VxCustomerTag">
+        SELECT * FROM VX_CustomerTag WHERE externalUserid = #{externalUserid} ORDER BY createTime DESC
+    </select>
+
+    <select id="selectExistingTags" resultType="java.lang.String">
+        SELECT tagId FROM VX_CustomerTag WHERE externalUserid = #{externalUserid} AND userid = #{userid}
+    </select>
+
+</mapper>

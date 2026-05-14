@@ -52,14 +52,10 @@ public class QywxCustomerDetailTask {
     private PlatformTransactionManager transactionManager;
 
     public void sync() {
-        log.info("========================================");
-        log.info("=== Starting: QYWX sync customer detail ===");
-        log.info("========================================");
+        log.info("=== 开始执行: 同步客户详情 ===");
         long startTime = System.currentTimeMillis();
 
         try {
-            // 1. 清空表
-            log.info("Clearing existing data...");
             new TransactionTemplate(transactionManager).execute(status -> {
                 externalContactMapper.deleteAll();
                 followInfoMapper.deleteAll();
@@ -83,16 +79,16 @@ public class QywxCustomerDetailTask {
                 log.warn("=== Completed: no valid userid ===");
                 return;
             }
-            log.info("Found {} valid follow users", validUserList.size());
+            log.info("共 {} 个成员需要同步客户详情", validUserList.size());
 
             // 3. 多线程并行
             syncCustomerDetails(validUserList);
 
             long totalTime = System.currentTimeMillis() - startTime;
-            log.info("=== Completed: QYWX sync customer detail, time: {} ms ===", totalTime);
+            log.info("=== 完成: 同步客户详情, 耗时: {} ms ===", totalTime);
 
         } catch (Exception e) {
-            log.error("=== Failed: QYWX sync customer detail ===", e);
+            log.error("=== 失败: 同步客户详情 ===", e);
             throw new RuntimeException(e);
         }
     }
@@ -101,7 +97,6 @@ public class QywxCustomerDetailTask {
      * 多线程并行：每个线程请求API一页就写库一页，再请求下一页
      */
     private void syncCustomerDetails(List<String> followUserList) {
-        log.info("开始并行获取客户详情...");
         long startTime = System.currentTimeMillis();
 
         AtomicInteger successCount = new AtomicInteger(0);
@@ -127,14 +122,10 @@ public class QywxCustomerDetailTask {
                 try {
                     semaphore.acquire();
                     try {
-                        log.info("开始处理批次 {}/{}", currentBatch + 1, totalBatches);
-
-                        // 边翻页边写库
                         fetchPageAndWrite(batchUserIds, txTemplate,
                                 globalProcessedExternalUserIds, totalContacts, totalFollowInfos);
 
                         successCount.incrementAndGet();
-                        log.info("完成处理批次 {}/{}", currentBatch + 1, totalBatches);
                     } finally {
                         semaphore.release();
                     }
@@ -159,7 +150,7 @@ public class QywxCustomerDetailTask {
             Thread.currentThread().interrupt();
         }
 
-        log.info("并行获取客户详情完成，成功: {}, 失败: {}, contacts: {}, followInfos: {}, 耗时: {} ms",
+        log.info("客户详情同步完成, 成功: {}, 失败: {}, contacts: {}, followInfos: {}, 耗时: {} ms",
                 successCount.get(), failCount.get(), totalContacts.get(), totalFollowInfos.get(),
                 System.currentTimeMillis() - startTime);
     }

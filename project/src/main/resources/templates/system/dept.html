@@ -9,7 +9,7 @@
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <!-- 自定义CSS -->
-    <link rel="stylesheet" th:href="@{/css/layout.css}">
+    <link rel="stylesheet" th:href="@{/css/main.css}">
 </head>
 <body>
     <!-- 侧边栏 -->
@@ -170,7 +170,7 @@
                 resetDeptForm();
                 $('#deptModalTitle').text('添加部门');
                 loadParentDeptOptions();
-                $('#deptModal').modal('show');
+                BC.showModal('#deptModal');
             });
             
             // 保存部门
@@ -208,19 +208,12 @@
                 status: $('#searchStatus').val()
             };
             
-            $.ajax({
+            BC.ajax({
                 url: '/api/dept/list',
                 type: 'GET',
                 data: searchData,
                 success: function(response) {
-                    if (response.code === 200) {
-                        renderDeptTable(response.data);
-                    } else {
-                        BC.toast(response.message || '加载部门数据失败', 'error');
-                    }
-                },
-                error: function() {
-                    BC.toast('网络通信故障，请检查服务器状态', 'error');
+                    renderDeptTable(response);
                 }
             });
         }
@@ -233,7 +226,7 @@
                 $('#parentId').val(parentId);
                 $('#deptLevel').val(parentId === '0' ? '1' : '2');
             }, 200);
-            $('#deptModal').modal('show');
+            BC.showModal('#deptModal');
         }
         
         // 重置搜索
@@ -267,7 +260,7 @@
                     // 部门名称带层级缩进和图标
                     var nameCell = $('<td>').css('padding-left', (indent + 12) + 'px');
                     var icon = dept.children && dept.children.length > 0 ? 'bi-building-fill' : 'bi-building';
-                    nameCell.html('<i class="bi ' + icon + ' text-muted me-2"></i><span class="fw-bold text-main">' + dept.deptName + '</span>');
+                    nameCell.html('<i class="bi ' + icon + ' text-muted me-2"></i><span class="fw-bold text-main">' + BC.escapeHtml(dept.deptName) + '</span>');
                     row.append(nameCell);
                     
                     // 级别标签
@@ -296,7 +289,7 @@
                     
                     // 操作
                     var actions = BC.getTableActions([
-                        { icon: 'bi-plus-lg', title: '添加子部门', onclick: 'addSubDept("' + dept.id + '", "' + dept.deptName + '")' },
+                        { icon: 'bi-plus-lg', title: '添加子部门', onclick: 'addSubDept("' + dept.id + '", ' + JSON.stringify(dept.deptName || '') + ')' },
                         { icon: 'bi-pencil', title: '编辑部门', onclick: 'editDept("' + dept.id + '")' },
                         { icon: 'bi-trash', title: '删除部门', onclick: 'deleteDept("' + dept.id + '")' }
                     ]);
@@ -316,31 +309,29 @@
         
         // 加载上级部门选项
         function loadParentDeptOptions() {
-            $.ajax({
+            BC.ajax({
                 url: '/api/dept/list',
                 type: 'GET',
                 success: function(response) {
-                    if (response.code === 200) {
-                        var select = $('#parentId');
-                        select.empty();
-                        select.append('<option value="0">顶级部门</option>');
-                        
-                        function addOptions(deptList, level) {
-                            $.each(deptList, function(index, dept) {
-                                var indent = '';
-                                for (var i = 0; i < level; i++) {
-                                    indent += '　';
-                                }
-                                select.append('<option value="' + dept.id + '">' + indent + dept.deptName + '</option>');
-                                
-                                if (dept.children && dept.children.length > 0) {
-                                    addOptions(dept.children, level + 1);
-                                }
-                            });
-                        }
-                        
-                        addOptions(response.data, 0);
+                    var select = $('#parentId');
+                    select.empty();
+                    select.append('<option value="0">顶级部门</option>');
+
+                    function addOptions(deptList, level) {
+                        $.each(deptList, function(index, dept) {
+                            var indent = '';
+                            for (var i = 0; i < level; i++) {
+                                indent += '　';
+                            }
+                            select.append('<option value="' + BC.escapeHtml(dept.id) + '">' + indent + BC.escapeHtml(dept.deptName) + '</option>');
+
+                            if (dept.children && dept.children.length > 0) {
+                                addOptions(dept.children, level + 1);
+                            }
+                        });
                     }
+
+                    addOptions(response, 0);
                 }
             });
         }
@@ -356,35 +347,28 @@
         
         // 编辑部门
         function editDept(deptId) {
-            $.ajax({
+            BC.ajax({
                 url: '/api/dept/' + deptId,
                 type: 'GET',
                 success: function(response) {
-                    if (response.code === 200) {
-                        var dept = response.data;
-                        $('#deptId').val(dept.id);
-                        $('#deptName').val(dept.deptName);
-                        $('#sort').val(dept.sort);
-                        $('#leader').val(dept.leader || '');
-                        $('#phone').val(dept.phone || '');
-                        $('#email').val(dept.email || '');
-                        
-                        $('#deptStatus').val(dept.status);
-                        
-                        loadParentDeptOptions();
-                        setTimeout(function() {
-                            $('#parentId').val(dept.parentId);
-                            $('#deptLevel').val(dept.parentId === '0' ? '1' : '2');
-                        }, 500);
-                        
-                        $('#deptModalTitle').text('编辑部门');
-                        $('#deptModal').modal('show');
-                    } else {
-                        alert('获取部门信息失败: ' + response.message);
-                    }
-                },
-                error: function() {
-                    alert('获取部门信息失败');
+                    var dept = response;
+                    $('#deptId').val(dept.id);
+                    $('#deptName').val(dept.deptName);
+                    $('#sort').val(dept.sort);
+                    $('#leader').val(dept.leader || '');
+                    $('#phone').val(dept.phone || '');
+                    $('#email').val(dept.email || '');
+
+                    $('#deptStatus').val(dept.status);
+
+                    loadParentDeptOptions();
+                    setTimeout(function() {
+                        $('#parentId').val(dept.parentId);
+                        $('#deptLevel').val(dept.parentId === '0' ? '1' : '2');
+                    }, 500);
+
+                    $('#deptModalTitle').text('编辑部门');
+                    BC.showModal('#deptModal');
                 }
             });
         }
@@ -415,30 +399,21 @@
                 type = 'PUT';
             }
             
-            $.ajax({
+            BC.ajax({
                 url: url,
                 type: type,
-                contentType: 'application/json',
-                data: JSON.stringify(deptData),
+                data: deptData,
                 success: function(response) {
-                    if (response.code === 200) {
-                        $('#deptModal').modal('hide');
-                        // 延迟弹出，确保旧背景遮罩已销毁
-                        setTimeout(function() {
-                            BC.alert({
-                                title: '架构已更新',
-                                message: '部门组织架构变更已成功同步至核心系统',
-                                type: 'success'
-                            }, function() {
-                                loadDeptData();
-                            });
-                        }, 300);
-                    } else {
-                        BC.toast(response.message || '保存失败', 'error');
-                    }
-                },
-                error: function() {
-                    BC.toast('网络请求失败', 'error');
+                    BC.hideModal('#deptModal');
+                    setTimeout(function() {
+                        BC.alert({
+                            title: '架构已更新',
+                            message: '部门组织架构变更已成功同步至核心系统',
+                            type: 'success'
+                        }, function() {
+                            loadDeptData();
+                        });
+                    }, 300);
                 }
             });
         }
@@ -453,19 +428,12 @@
                 cancelText: '取消'
             }, function(confirmed) {
                 if (confirmed) {
-                    $.ajax({
+                    BC.ajax({
                         url: '/api/dept/' + deptId,
                         type: 'DELETE',
                         success: function(response) {
-                            if (response.code === 200) {
-                                BC.toast('部门及其子级架构已成功移除', 'success');
-                                loadDeptData();
-                            } else {
-                                BC.toast(response.message || '移除失败', 'error');
-                            }
-                        },
-                        error: function() {
-                            BC.toast('网络异常，请稍后再试', 'error');
+                            BC.toast('部门及其子级架构已成功移除', 'success');
+                            loadDeptData();
                         }
                     });
                 }

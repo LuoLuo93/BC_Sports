@@ -106,7 +106,7 @@ public class IhrEntityConverter {
         e.setFirstLevelDepartmentName(truncate(dto.getFirstLevelDepartmentName(), 200, "firstLevelDepartmentName"));
         e.setStaffRemark(truncate(dto.getStaffRemark(), 500, "staffRemark"));
         e.setQuitReason(truncate(dto.getQuitReason(), 500, "quitReason"));
-        e.setQuitReasonType(truncate(dto.getQuitReasonType(), 50, "quitReasonType"));
+        e.setQuitReasonType(truncate(dto.getQuitReasonType(), 100, "quitReasonType"));
         e.setQuitRemindStaff(truncate(dto.getQuitRemindStaff(), 10, "quitRemindStaff"));
         e.setLunarBirthdayYear(truncate(dto.getLunarBirthdayYear(), 10, "lunarBirthdayYear"));
         e.setLunarBirthdayMonth(truncate(dto.getLunarBirthdayMonth(), 10, "lunarBirthdayMonth"));
@@ -178,7 +178,7 @@ public class IhrEntityConverter {
         e.setPositionName(truncate(dto.getPositionName(), 100, "positionName"));
         e.setSex(truncate(dto.getSex(), 10, "sex"));
         e.setStaffType(truncate(dto.getStaffType(), 20, "staffType"));
-        e.setMarryStatus(truncate(dto.getMarryStatus(), 20, "marryStatus"));
+        e.setMarryStatus(truncate(dto.getMarryStatus(), 50, "marryStatus"));
         e.setHighestEducation(truncate(dto.getHighestEducation(), 50, "highestEducation"));
         e.setWorkPlace(truncate(dto.getWorkPlace(), 200, "workPlace"));
         e.setBirthday(truncate(dto.getBirthday(), 20, "birthday"));

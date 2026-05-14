@@ -1,0 +1,330 @@
+:root {
+    /* ============================================
+       BC Sport Design System - Design Tokens
+       ============================================ */
+
+    /* ---------- Colors ---------- */
+    /* Primary Color */
+    --bc-primary-50: #eff6ff;
+    --bc-primary-100: #dbeafe;
+    --bc-primary-200: #bfdbfe;
+    --bc-primary-300: #93c5fd;
+    --bc-primary-400: #60a5fa;
+    --bc-primary-500: #3b82f6;
+    --bc-primary-600: #2563eb;
+    --bc-primary-700: #1d4ed8;
+    --bc-primary-800: #1e40af;
+    --bc-primary-900: #1e3a8a;
+
+    /* Success Color */
+    --bc-success-50: #f0fdf4;
+    --bc-success-100: #dcfce7;
+    --bc-success-200: #bbf7d0;
+    --bc-success-300: #86efac;
+    --bc-success-400: #4ade80;
+    --bc-success-500: #22c55e;
+    --bc-success-600: #16a34a;
+    --bc-success-700: #15803d;
+    --bc-success-800: #166534;
+    --bc-success-900: #14532d;
+
+    /* Warning Color */
+    --bc-warning-50: #fffbeb;
+    --bc-warning-100: #fef3c7;
+    --bc-warning-200: #fde68a;
+    --bc-warning-300: #fcd34d;
+    --bc-warning-400: #fbbf24;
+    --bc-warning-500: #f59e0b;
+    --bc-warning-600: #d97706;
+    --bc-warning-700: #b45309;
+    --bc-warning-800: #92400e;
+    --bc-warning-900: #78350f;
+
+    /* Danger Color */
+    --bc-danger-50: #fef2f2;
+    --bc-danger-100: #fee2e2;
+    --bc-danger-200: #fecaca;
+    --bc-danger-300: #fca5a5;
+    --bc-danger-400: #f87171;
+    --bc-danger-500: #ef4444;
+    --bc-danger-600: #dc2626;
+    --bc-danger-700: #b91c1c;
+    --bc-danger-800: #991b1b;
+    --bc-danger-900: #7f1d1d;
+
+    /* Info Color */
+    --bc-info-50: #ecfeff;
+    --bc-info-100: #cffafe;
+    --bc-info-200: #a5f3fc;
+    --bc-info-300: #67e8f9;
+    --bc-info-400: #22d3ee;
+    --bc-info-500: #06b6d4;
+    --bc-info-600: #0891b2;
+    --bc-info-700: #0e7490;
+    --bc-info-800: #155e75;
+    --bc-info-900: #164e63;
+
+    /* Gray Scale */
+    --bc-gray-50: #f8fafc;
+    --bc-gray-100: #f1f5f9;
+    --bc-gray-200: #e2e8f0;
+    --bc-gray-300: #cbd5e1;
+    --bc-gray-400: #94a3b8;
+    --bc-gray-500: #64748b;
+    --bc-gray-600: #475569;
+    --bc-gray-700: #334155;
+    --bc-gray-800: #1e293b;
+    --bc-gray-900: #0f172a;
+
+    /* Semantic Color Aliases */
+    --bc-primary: var(--bc-primary-600);
+    --bc-primary-hover: var(--bc-primary-700);
+    --bc-primary-active: var(--bc-primary-800);
+    --bc-primary-soft: var(--bc-primary-50);
+    --bc-primary-soft-hover: var(--bc-primary-100);
+
+    --bc-success: var(--bc-success-600);
+    --bc-success-hover: var(--bc-success-700);
+    --bc-success-soft: var(--bc-success-50);
+
+    --bc-warning: var(--bc-warning-600);
+    --bc-warning-hover: var(--bc-warning-700);
+    --bc-warning-soft: var(--bc-warning-50);
+
+    --bc-danger: var(--bc-danger-600);
+    --bc-danger-hover: var(--bc-danger-700);
+    --bc-danger-soft: var(--bc-danger-50);
+
+    --bc-info: var(--bc-info-600);
+    --bc-info-hover: var(--bc-info-700);
+    --bc-info-soft: var(--bc-info-50);
+
+    /* Text Colors */
+    --bc-text-primary: var(--bc-gray-900);
+    --bc-text-main: var(--bc-gray-800);
+    --bc-text-secondary: var(--bc-gray-600);
+    --bc-text-muted: var(--bc-gray-500);
+    --bc-text-disabled: var(--bc-gray-400);
+
+    /* Border Colors */
+    --bc-border: var(--bc-gray-200);
+    --bc-border-light: var(--bc-gray-100);
+    --bc-border-dark: var(--bc-gray-300);
+
+    /* Background Colors */
+    --bc-bg: var(--bc-gray-50);
+    --bc-bg-body: var(--bc-gray-50);
+    --bc-bg-surface: #ffffff;
+    --bc-bg-elevated: #ffffff;
+    --bc-bg-disabled: var(--bc-gray-100);
+
+    /* Sidebar Colors (Legacy Compatibility) */
+    --sidebar-bg: var(--bc-gray-800);
+    --sidebar-active: var(--bc-gray-700);
+
+    /* ---------- Typography ---------- */
+    /* Font Family */
+    --bc-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    --bc-font-mono: 'SF Mono', Monaco, Inconsolata, 'Roboto Mono', monospace;
+
+    /* Font Size Scale */
+    --bc-text-xs: 0.75rem;      /* 12px */
+    --bc-text-sm: 0.875rem;     /* 14px */
+    --bc-text-base: 0.9375rem;  /* 15px */
+    --bc-text-lg: 1.0625rem;    /* 17px */
+    --bc-text-xl: 1.25rem;      /* 20px */
+    --bc-text-2xl: 1.5rem;      /* 24px */
+    --bc-text-3xl: 1.875rem;    /* 30px */
+    --bc-text-4xl: 2.25rem;     /* 36px */
+
+    /* Font Weight */
+    --bc-font-normal: 400;
+    --bc-font-medium: 500;
+    --bc-font-semibold: 600;
+    --bc-font-bold: 700;
+
+    /* Line Height */
+    --bc-leading-tight: 1.25;
+    --bc-leading-normal: 1.5;
+    --bc-leading-relaxed: 1.625;
+
+    /* Letter Spacing */
+    --bc-tracking-tighter: -0.05em;
+    --bc-tracking-tight: -0.025em;
+    --bc-tracking-normal: 0em;
+    --bc-tracking-wide: 0.025em;
+    --bc-tracking-wider: 0.05em;
+
+    /* Legacy Typography Aliases */
+    --text-xs: var(--bc-text-xs);
+    --text-sm: var(--bc-text-sm);
+    --text-base: var(--bc-text-base);
+    --text-lg: var(--bc-text-lg);
+    --text-xl: var(--bc-text-xl);
+    --text-2xl: var(--bc-text-2xl);
+
+    /* ---------- Spacing ---------- */
+    --bc-space-0: 0px;
+    --bc-space-1: 4px;
+    --bc-space-2: 8px;
+    --bc-space-3: 12px;
+    --bc-space-4: 16px;
+    --bc-space-5: 20px;
+    --bc-space-6: 24px;
+    --bc-space-7: 28px;
+    --bc-space-8: 32px;
+    --bc-space-9: 36px;
+    --bc-space-10: 40px;
+    --bc-space-12: 48px;
+    --bc-space-16: 64px;
+    --bc-space-20: 80px;
+
+    /* Semantic Spacing */
+    --bc-spacing-xs: var(--bc-space-1);
+    --bc-spacing-sm: var(--bc-space-2);
+    --bc-spacing-md: var(--bc-space-3);
+    --bc-spacing-lg: var(--bc-space-4);
+    --bc-spacing-xl: var(--bc-space-6);
+    --bc-spacing-2xl: var(--bc-space-8);
+
+    /* ---------- Sizing ---------- */
+    --bc-size-4: 16px;
+    --bc-size-6: 24px;
+    --bc-size-8: 32px;
+    --bc-size-10: 40px;
+    --bc-size-12: 48px;
+    --bc-size-16: 64px;
+    --bc-size-20: 80px;
+
+    /* Layout Dimensions */
+    --sidebar-width: 250px;
+    --sidebar-width-collapsed: 72px;
+    --header-height: 64px;
+    --tab-bar-height: 40px;
+    --footer-height: 40px;
+
+    /* ---------- Border Radius ---------- */
+    --bc-radius-none: 0px;
+    --bc-radius-sm: 4px;
+    --bc-radius-md: 6px;
+    --bc-radius-lg: 8px;
+    --bc-radius-xl: 10px;
+    --bc-radius-2xl: 12px;
+    --bc-radius-3xl: 16px;
+    --bc-radius-full: 9999px;
+
+    /* Component Radius */
+    --bc-radius-button: var(--bc-radius-lg);
+    --bc-radius-input: var(--bc-radius-lg);
+    --bc-radius-card: var(--bc-radius-2xl);
+    --bc-radius-modal: var(--bc-radius-3xl);
+    --bc-radius-badge: var(--bc-radius-full);
+    --bc-radius-avatar: var(--bc-radius-xl);
+
+    /* ---------- Shadows ---------- */
+    /* Shadow Scale */
+    --bc-shadow-none: 0 0 #0000;
+    --bc-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --bc-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --bc-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --bc-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --bc-shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    --bc-shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+
+    /* Color Shadows */
+    --bc-shadow-primary: 0 4px 12px rgba(37, 99, 235, 0.25);
+    --bc-shadow-success: 0 4px 12px rgba(16, 185, 129, 0.2);
+    --bc-shadow-warning: 0 4px 12px rgba(245, 158, 11, 0.2);
+    --bc-shadow-danger: 0 4px 12px rgba(239, 68, 68, 0.2);
+    --bc-shadow-info: 0 4px 12px rgba(6, 182, 212, 0.2);
+
+    /* Component Shadows */
+    --bc-shadow-card: var(--bc-shadow);
+    --bc-shadow-card-hover: var(--bc-shadow-md);
+    --bc-shadow-dropdown: var(--bc-shadow-lg);
+    --bc-shadow-modal: var(--bc-shadow-2xl);
+
+    /* ---------- Transitions ---------- */
+    /* Duration */
+    --bc-duration-fast: 150ms;
+    --bc-duration-normal: 200ms;
+    --bc-duration-medium: 250ms;
+    --bc-duration-slow: 300ms;
+    --bc-duration-slower: 400ms;
+
+    /* Timing Functions */
+    --bc-ease-linear: linear;
+    --bc-ease-in: cubic-bezier(0.4, 0, 1, 1);
+    --bc-ease-out: cubic-bezier(0, 0, 0.2, 1);
+    --bc-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+    --bc-ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+    /* Transition Presets */
+    --bc-transition-fast: all var(--bc-duration-fast) var(--bc-ease-out);
+    --bc-transition-normal: all var(--bc-duration-normal) var(--bc-ease-out);
+    --bc-transition-medium: all var(--bc-duration-medium) var(--bc-ease-out);
+    --bc-transition-slow: all var(--bc-duration-slow) var(--bc-ease-in-out);
+
+    /* ---------- Z-Index Scale ---------- */
+    --bc-z-dropdown: 1000;
+    --bc-z-sticky: 1020;
+    --bc-z-fixed: 1030;
+    --bc-z-modal-backdrop: 1040;
+    --bc-z-modal: 1050;
+    --bc-z-popover: 1060;
+    --bc-z-tooltip: 1070;
+    --bc-z-toast: 11000;
+    --bc-z-loading: 9999;
+
+    /* ---------- Component Specific Tokens ---------- */
+    /* Button */
+    --bc-button-height-sm: 32px;
+    --bc-button-height-md: 38px;
+    --bc-button-height-lg: 44px;
+    --bc-button-padding-x-sm: var(--bc-space-3);
+    --bc-button-padding-x-md: var(--bc-space-4);
+    --bc-button-padding-x-lg: var(--bc-space-5);
+
+    /* Input */
+    --bc-input-height-sm: 32px;
+    --bc-input-height-md: 38px;
+    --bc-input-height-lg: 44px;
+
+    /* Card */
+    --bc-card-padding: var(--bc-space-6);
+    --bc-card-header-padding: var(--bc-space-6);
+    --bc-card-body-padding: var(--bc-space-6);
+
+    /* ---------- Legacy Compatibility Aliases ---------- */
+    /* These are kept for backward compatibility */
+    --primary-color: var(--bc-primary);
+    --primary-hover: var(--bc-primary-hover);
+    --primary-soft: var(--bc-primary-soft);
+    --success-color: var(--bc-success);
+    --danger-color: var(--bc-danger);
+    --warning-color: var(--bc-warning);
+    --text-main: var(--bc-text-main);
+    --text-muted: var(--bc-text-muted);
+    --border-light: var(--bc-border-light);
+    --bg-body: var(--bc-bg-body);
+}
+
+/* ============================================
+   Dark Mode (Future)
+   ============================================ */
+@media (prefers-color-scheme: dark) {
+    :root {
+        /* Dark mode tokens can be added here */
+    }
+}
+
+/* ============================================
+   Reduced Motion Accessibility
+   ============================================ */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}

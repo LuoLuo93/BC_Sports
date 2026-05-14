@@ -19,7 +19,9 @@ public class MybatisPlusConfig {
     public MybatisPlusInterceptor mybatisPlusInterceptor() {
         MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
         // 添加分页插件，指定数据库类型为Oracle
-        interceptor.addInnerInterceptor(new PaginationInnerInterceptor(DbType.ORACLE));
+        PaginationInnerInterceptor paginationInterceptor = new PaginationInnerInterceptor(DbType.ORACLE);
+        paginationInterceptor.setMaxLimit(500L);
+        interceptor.addInnerInterceptor(paginationInterceptor);
         return interceptor;
     }
     

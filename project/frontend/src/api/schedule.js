@@ -36,8 +36,8 @@ export function resumeScheduleJob(id) {
   return request.put(`/api/schedule/job/${id}/resume`)
 }
 
-export function runScheduleJob(id) {
-  return request.post(`/api/schedule/job/${id}/run`)
+export function runScheduleJob(id, params) {
+  return request.post(`/api/schedule/job/${id}/run`, params || {})
 }
 
 export function getScheduleRunStatus() {
@@ -48,6 +48,6 @@ export function getScheduleLogPage(params) {
   return request.get('/api/schedule/log/page', { params })
 }
 
-export function cleanScheduleLog() {
-  return request.delete('/api/schedule/log/clean')
+export function cleanScheduleLog(params) {
+  return request.delete('/api/schedule/log/clean', { params })
 }

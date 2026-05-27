@@ -1,0 +1,1 @@
+var e={pending:[`未同步`,`info`],syncing:[`同步中`,`warning`],success:[`已同步`,`success`],failed:[`失败`,`danger`]};function t(t){return e[t]?.[0]||t}function n(t){return e[t]?.[1]||`info`}export{n,t};

@@ -36,6 +36,7 @@ public class QywxApiClient {
     @Value("${qywx.corp-id}")
     private String corpId;
 
+    //自建应用 帆软FR
     @Value("${qywx.corp-secret}")
     private String corpSecret;
 
@@ -790,7 +791,9 @@ public class QywxApiClient {
             if (groupId != null) {
                 requestBody.set("group_id", groupId);
             }
-            requestBody.set("group_name", groupName);
+            if (groupName != null) {
+                requestBody.set("group_name", groupName);
+            }
 
             JSONArray tagArr = new JSONArray();
             for (String name : tagNames) {

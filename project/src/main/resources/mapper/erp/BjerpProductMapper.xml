@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bcsport.admin.erpmapper.BjerpProductMapper">
+
+    <select id="searchProducts" resultType="java.util.Map">
+        SELECT product.name           AS MATERIAL_NUMBER,
+               product.VALUE          AS MATERIAL_NAME,
+               product.VIRTUALNAME    AS STYLE_NUMBER,
+               product.M_DIM1_ID      AS BRAND_ID,
+               brand.ATTRIBNAME       AS BRAND_NAME,
+               product.colorsalias    AS COLOR,
+               product.PRICELIST      AS PRICE,
+               CAST(NULL AS VARCHAR2(100))  AS EXECUTION_STANDARD,
+               CAST(NULL AS VARCHAR2(20))   AS EAN13,
+               product.M_SIZEGROUP_ID AS SIZEGROUP_ID,
+               product.SIZES          AS SIZES
+        FROM M_PRODUCT product
+        LEFT JOIN M_DIM brand ON product.M_DIM1_ID = brand.ID
+        <where>
+            <if test="materialNumber != null and materialNumber != ''">
+                product.name LIKE '%' || #{materialNumber} || '%'
+            </if>
+            <if test="styleNumber != null and styleNumber != ''">
+                AND product.VIRTUALNAME LIKE '%' || #{styleNumber} || '%'
+            </if>
+            <if test="materialName != null and materialName != ''">
+                AND product.VALUE LIKE '%' || #{materialName} || '%'
+            </if>
+            <if test="brandId != null and brandId != ''">
+                AND product.M_DIM1_ID = #{brandId}
+            </if>
+        </where>
+        ORDER BY product.name
+    </select>
+
+    <select id="getProductByEan13" resultType="java.util.Map">
+        SELECT product.name           AS MATERIAL_NUMBER,
+               product.VALUE          AS MATERIAL_NAME,
+               product.VIRTUALNAME    AS STYLE_NUMBER,
+               product.M_DIM1_ID      AS BRAND_ID,
+               brand.ATTRIBNAME       AS BRAND_NAME,
+               product.colorsalias    AS COLOR,
+               product.PRICELIST      AS PRICE,
+               CAST(NULL AS VARCHAR2(100))  AS EXECUTION_STANDARD,
+               CAST(NULL AS VARCHAR2(20))   AS EAN13,
+               product.M_SIZEGROUP_ID AS SIZEGROUP_ID,
+               product.SIZES          AS SIZES
+        FROM M_PRODUCT product
+        LEFT JOIN M_DIM brand ON product.M_DIM1_ID = brand.ID
+        WHERE product.name IS NOT NULL
+    </select>
+
+    <select id="getBrands" resultType="java.util.Map">
+        SELECT ID, ATTRIBNAME FROM M_DIM WHERE M_DIMDEF_ID = 1  and DIMFLAG = 'DIM1' ORDER BY ATTRIBCODE ASC
+    </select>
+
+</mapper>

@@ -1,5 +1,7 @@
 import { defineStore } from 'pinia'
 
+const MAX_TABS = 15
+
 export const useTabStore = defineStore('tab', {
   state: () => ({
     tabs: [],
@@ -7,6 +9,11 @@ export const useTabStore = defineStore('tab', {
   }),
 
   actions: {
+    clearAll() {
+      this.tabs = []
+      this.activeTab = '/'
+    },
+
     addTab(tab) {
       const existing = this.tabs.find(t => t.path === tab.path)
       if (existing) {
@@ -19,8 +26,12 @@ export const useTabStore = defineStore('tab', {
         title: tab.title || tab.path,
         icon: tab.icon || ''
       })
-      if (this.tabs.length > 20) {
-        this.tabs.shift()
+      while (this.tabs.length > MAX_TABS) {
+        const removableIndex = this.tabs.findIndex(
+          t => t.path !== '/' && t.path !== this.activeTab
+        )
+        if (removableIndex === -1) break
+        this.tabs.splice(removableIndex, 1)
       }
     },
 
@@ -34,6 +45,11 @@ export const useTabStore = defineStore('tab', {
 
     setActiveTab(path) {
       this.activeTab = path
+      const index = this.tabs.findIndex(t => t.path === path)
+      if (index > -1 && index < this.tabs.length - 1) {
+        const [tab] = this.tabs.splice(index, 1)
+        this.tabs.push(tab)
+      }
     },
 
     initDashboard() {

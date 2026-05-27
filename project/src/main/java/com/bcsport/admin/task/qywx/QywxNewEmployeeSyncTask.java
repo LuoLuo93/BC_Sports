@@ -96,6 +96,9 @@ public class QywxNewEmployeeSyncTask {
                     }
                 } catch (Exception e) {
                     log.error("查询员工详情失败, 批次 {}-{}: {}", i + 1, end, e.getMessage());
+                    for (String id : batchIds) {
+                        onboardingService.markSyncFailed(id, null, null, "查询员工详情失败: " + e.getMessage());
+                    }
                 }
             }
 
@@ -185,7 +188,7 @@ public class QywxNewEmployeeSyncTask {
 
         } catch (Exception e) {
             log.error("=== 失败: 录入企微新员工 ===", e);
-            throw new RuntimeException(e);
+            
         }
     }
 

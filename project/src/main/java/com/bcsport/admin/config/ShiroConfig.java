@@ -103,7 +103,7 @@ public class ShiroConfig {
         
         // 添加自定义过滤器
         Map<String, Filter> filters = new LinkedHashMap<>();
-        // 可以在这里添加自定义过滤器，如JWT过滤器
+        filters.put("spaAuth", new SpaAuthFilter());
         shiroFilterFactoryBean.setFilters(filters);
         
         // 配置路径过滤规则
@@ -121,9 +121,10 @@ public class ShiroConfig {
         filterChainDefinitionMap.put("/webjars/**", "anon");
         filterChainDefinitionMap.put("/v2/api-docs", "anon");
         filterChainDefinitionMap.put("/swagger-resources/**", "anon");
-        
-        // 需要认证的路径
-        filterChainDefinitionMap.put("/**", "authc");
+        filterChainDefinitionMap.put("/actuator/**", "anon");
+
+        // 需要认证的路径（使用 SpaAuthFilter 处理 API 请求返回 JSON 而非重定向）
+        filterChainDefinitionMap.put("/**", "spaAuth");
         
         shiroFilterFactoryBean.setFilterChainDefinitionMap(filterChainDefinitionMap);
         

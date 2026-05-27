@@ -17,6 +17,16 @@ import org.springframework.stereotype.Component;
 @Component("qywxEmployeeLifecycleSyncTask")
 public class QywxEmployeeLifecycleSyncTask {
 
+    private static volatile boolean syncing = false;
+
+    public static boolean isSyncing() {
+        return syncing;
+    }
+
+    public static void setSyncing(boolean v) {
+        syncing = v;
+    }
+
     @Autowired
     private QywxFullSyncTask qywxFullSyncTask;
 
@@ -35,7 +45,7 @@ public class QywxEmployeeLifecycleSyncTask {
     public void syncAll() {
         log.info("=== 开始执行：企业微信员工生命周期整合同步 ===");
         long totalStartTime = System.currentTimeMillis();
-
+        syncing = true;
         try {
             int successCount = 0;
             int failCount = 0;
@@ -87,6 +97,8 @@ public class QywxEmployeeLifecycleSyncTask {
         } catch (Exception e) {
             log.error("=== 企业微信员工生命周期整合同步 异常 ===", e);
             throw e;
+        } finally {
+            syncing = false;
         }
     }
 }

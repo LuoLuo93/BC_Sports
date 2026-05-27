@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bcsport.admin.ihrmapper.NanXOrderMapper">
+
+    <resultMap id="orderResultMap" type="com.bcsport.admin.entity.ihr.NanXOrderMaster">
+        <result column="outTradeId" property="outTradeId"/>
+        <result column="totalFee" property="totalFee"/>
+        <result column="payment" property="payment"/>
+        <result column="nasOuid" property="nasOuid"/>
+        <result column="created" property="created"/>
+        <result column="num" property="num"/>
+        <collection property="details" ofType="com.bcsport.admin.entity.ihr.NanXOrderDetail">
+            <result column="outOrderId" property="outOrderId"/>
+            <result column="outTradeId" property="outTradeId"/>
+            <result column="title" property="title"/>
+            <result column="outItemId" property="outItemId"/>
+            <result column="outerSkuId" property="outerSkuId"/>
+            <result column="orderNum" property="orderNum"/>
+            <result column="orderTotalFee" property="orderTotalFee"/>
+            <result column="orderPayment" property="orderPayment"/>
+            <result column="orderPrice" property="orderPrice"/>
+        </collection>
+    </resultMap>
+
+    <select id="selectAllOrdersPaged" resultMap="orderResultMap">
+        SELECT m.outTradeId, m.totalFee, m.payment, m.nasOuid, m.created, m.num,
+               d.outOrderId, d.title, d.outItemId, d.outerSkuId,
+               d.orderNum, d.orderTotalFee, d.orderPayment, d.orderPrice
+        FROM (
+            SELECT outTradeId, totalFee, payment, nasOuid, created, num
+            FROM nanXOrderMaster
+            ORDER BY outTradeId
+            OFFSET #{offset} ROWS FETCH NEXT #{limit} ROWS ONLY
+        ) m
+        LEFT JOIN nanXOrderDetail d ON m.outTradeId = d.outTradeId
+    </select>
+
+</mapper>

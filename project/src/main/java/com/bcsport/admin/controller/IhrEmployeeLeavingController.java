@@ -77,6 +77,7 @@ public class IhrEmployeeLeavingController {
             return Result.success("同步成功");
         } catch (Exception e) {
             log.error("单个离职员工同步异常, employeeId={}", employeeId, e);
+            leavingService.markSyncFailed(employeeId, null, null, e.getMessage());
             return Result.error("同步失败: " + e.getMessage());
         }
     }

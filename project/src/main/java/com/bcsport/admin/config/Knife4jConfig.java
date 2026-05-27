@@ -3,8 +3,6 @@ package com.bcsport.admin.config;
 import com.github.xiaoymin.knife4j.spring.annotations.EnableKnife4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Import;
-import springfox.bean.validators.configuration.BeanValidatorPluginsConfiguration;
 import springfox.documentation.builders.ApiInfoBuilder;
 import springfox.documentation.builders.PathSelectors;
 import springfox.documentation.builders.RequestHandlerSelectors;
@@ -22,35 +20,23 @@ import springfox.documentation.swagger2.annotations.EnableSwagger2;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Knife4j 配置类
- */
 @Configuration
 @EnableSwagger2
 @EnableKnife4j
-@Import(BeanValidatorPluginsConfiguration.class)
 public class Knife4jConfig {
-    
-    /**
-     * 创建API文档Docket
-     */
+
     @Bean
     public Docket createRestApi() {
         return new Docket(DocumentationType.SWAGGER_2)
                 .apiInfo(apiInfo())
                 .select()
-                // 扫描Controller包路径)
                 .apis(RequestHandlerSelectors.basePackage("com.bcsport.admin.controller"))
                 .paths(PathSelectors.any())
                 .build()
-                // 配置安全模式，用于Swagger界面的JWT认证
                 .securitySchemes(securitySchemes())
                 .securityContexts(securityContexts());
     }
-    
-    /**
-     * API信息
-     */
+
     private ApiInfo apiInfo() {
         return new ApiInfoBuilder()
                 .title("BC体育后台管理系统 API文档")
@@ -59,19 +45,13 @@ public class Knife4jConfig {
                 .version("1.0.0")
                 .build();
     }
-    
-    /**
-     * 配置安全模式（JWT)
-     */
+
     private List<SecurityScheme> securitySchemes() {
         List<SecurityScheme> apiKeys = new ArrayList<>();
         apiKeys.add(new ApiKey("Authorization", "Authorization", "header"));
         return apiKeys;
     }
-    
-    /**
-     * 配置安全上下文)
-     */
+
     private List<SecurityContext> securityContexts() {
         List<SecurityContext> securityContexts = new ArrayList<>();
         securityContexts.add(SecurityContext.builder()
@@ -80,10 +60,7 @@ public class Knife4jConfig {
                 .build());
         return securityContexts;
     }
-    
-    /**
-     * 默认的安全引用)
-     */
+
     private List<SecurityReference> defaultAuth() {
         AuthorizationScope authorizationScope = new AuthorizationScope("global", "accessEverything");
         AuthorizationScope[] authorizationScopes = new AuthorizationScope[1];

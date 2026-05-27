@@ -30,6 +30,13 @@ import java.util.stream.Collectors;
 @Component("qywxCustomerTagTask")
 public class QywxCustomerTagTask {
 
+    private static volatile boolean syncing = false;
+    private static volatile boolean batchTagging = false;
+
+    public static boolean isSyncing() { return syncing; }
+    public static void setSyncing(boolean v) { syncing = v; }
+    public static boolean isBatchTagging() { return batchTagging; }
+
     private static final int BATCH_SIZE = 100;
     private static final int MARK_TAG_BATCH = 50;
     private static final int FLUSH_THRESHOLD = 500;
@@ -60,6 +67,7 @@ public class QywxCustomerTagTask {
      */
     public void syncTags() {
         log.info("=== 开始执行: 同步企业标签库 ===");
+        syncing = true;
         try {
             // --- HTTP call: outside transaction ---
             JSONObject result = apiClient.getCorpTagList(null, null);
@@ -120,6 +128,8 @@ public class QywxCustomerTagTask {
         } catch (Exception e) {
             log.error("=== 失败: 同步企业标签库: {} ===", e.getMessage(), e);
             throw e;
+        } finally {
+            syncing = false;
         }
     }
 
@@ -131,6 +141,7 @@ public class QywxCustomerTagTask {
     public Map<String, Object> batchTag(List<Map<String, String>> items) {
         String batchNo = "BATCH_" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
         log.info("=== 开始批量打标, 批次号: {}, 共{}条 ===", batchNo, items.size());
+        batchTagging = true;
 
         // 1. 加载标签库 Map<tagName, tagId>
         List<VxCorpTag> corpTags = corpTagMapper.selectAllActive();
@@ -273,6 +284,19 @@ public class QywxCustomerTagTask {
         summary.put("unmatchedTags", new ArrayList<>(unmatchedTags));
         summary.put("unmatchedCustomers", new ArrayList<>(unmatchedCustomers));
         return summary;
+    }
+
+    /**
+     * 异步批量打标（fire-and-forget）
+     */
+    public void batchTagAsync(List<Map<String, String>> items) {
+        try {
+            batchTag(items);
+        } catch (Exception e) {
+            log.error("异步批量打标异常: {}", e.getMessage(), e);
+        } finally {
+            batchTagging = false;
+        }
     }
 
     private void flushRecords(List<VxCustomerTag> buffer) {

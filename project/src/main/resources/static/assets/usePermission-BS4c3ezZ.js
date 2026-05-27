@@ -1,0 +1,1 @@
+import{r as e}from"./index-vz96isyE.js";function t(){let t=e();return{hasPermission:e=>t.hasPermission(e)}}export{t};

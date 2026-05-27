@@ -8,6 +8,8 @@ import com.bcsport.admin.dto.ScheduleJobQueryDTO;
 import com.bcsport.admin.entity.ScheduleJob;
 import com.bcsport.admin.vo.ScheduleJobVO;
 
+import java.util.Map;
+
 public interface ScheduleJobService extends IService<ScheduleJob> {
 
     PageResult<ScheduleJobVO> pageJobs(PageQuery pageQuery, ScheduleJobQueryDTO queryDTO);
@@ -25,6 +27,8 @@ public interface ScheduleJobService extends IService<ScheduleJob> {
     boolean resumeJob(String id);
 
     void runOnce(String id);
+
+    void runOnce(String id, Map<String, String> params);
 
     void refreshAllJobs();
 }

@@ -1,0 +1,1 @@
+import{r as e}from"./index-CX_7-M8l.js";function t(){let t=e();return{hasPermission:e=>t.hasPermission(e)}}export{t};

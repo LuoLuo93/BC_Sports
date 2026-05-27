@@ -73,6 +73,9 @@ public class IhrEmployeeOnboardingController {
     @RequiresPermissions("ihr:onboarding:sync")
     public Result<?> syncQywx() {
         log.info("手动触发推送企微同步");
+        if (QywxEmployeeLifecycleSyncTask.isSyncing()) {
+            return Result.error("企微同步正在进行中，请稍后再试");
+        }
         new Thread(() -> {
             try {
                 qywxEmployeeLifecycleSyncTask.syncAll();
@@ -96,6 +99,7 @@ public class IhrEmployeeOnboardingController {
             return Result.success("同步成功");
         } catch (Exception e) {
             log.error("单个员工同步异常, employeesId={}", employeesId, e);
+            onboardingService.markSyncFailed(employeesId, null, null, e.getMessage());
             return Result.error("同步失败: " + e.getMessage());
         }
     }

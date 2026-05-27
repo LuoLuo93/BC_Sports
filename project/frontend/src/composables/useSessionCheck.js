@@ -1,11 +1,13 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { checkSession } from '@/api/auth'
 import { useAuthStore } from '@/stores/auth'
+import { useTabStore } from '@/stores/tab'
 import router from '@/router'
 import { ElMessageBox } from 'element-plus'
 
 export function useSessionCheck() {
   const authStore = useAuthStore()
+  const tabStore = useTabStore()
   let timer = null
   let failCount = 0
   let kickedOut = false
@@ -14,6 +16,7 @@ export function useSessionCheck() {
     if (kickedOut) return
     kickedOut = true
     authStore.clearAuth()
+    tabStore.clearAll()
     ElMessageBox.alert(msg || '您的账号已在其他设备登录', '登录提示', {
       confirmButtonText: '重新登录',
       type: 'warning'

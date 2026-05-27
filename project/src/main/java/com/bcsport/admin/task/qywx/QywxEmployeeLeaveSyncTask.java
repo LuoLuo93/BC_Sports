@@ -142,7 +142,7 @@ public class QywxEmployeeLeaveSyncTask {
 
         } catch (Exception e) {
             log.error("=== 失败: 企微员工离职同步 ===", e);
-            throw new RuntimeException(e);
+            
         }
     }
 

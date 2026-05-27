@@ -16,6 +16,8 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
+import cn.hutool.json.JSONUtil;
+
 import java.lang.reflect.Method;
 import java.time.LocalDateTime;
 import java.util.HashSet;
@@ -196,13 +198,20 @@ public class ScheduleConfig {
                 Object bean = applicationContext.getBean(option.getBeanName());
                 Method method = findMethod(bean.getClass(), option.getMethodName());
                 method.setAccessible(true);
-                method.invoke(bean);
+                Class<?>[] paramTypes = method.getParameterTypes();
+                if (paramTypes.length == 1 && Map.class.isAssignableFrom(paramTypes[0])) {
+                    Map<String, String> paramMap = parseParams(job.getParams());
+                    method.invoke(bean, paramMap);
+                } else {
+                    method.invoke(bean);
+                }
                 scheduleLog.setStatus(1);
             } catch (Exception e) {
                 scheduleLog.setStatus(0);
                 String errorMsg = getExceptionMessage(e);
                 scheduleLog.setErrorMsg(errorMsg.length() > 2000 ? errorMsg.substring(0, 2000) : errorMsg);
-                log.error("定时任务执行失败: [{}] {}", job.getJobName(), e.getMessage(), e);
+                Throwable cause = e instanceof java.lang.reflect.InvocationTargetException ? e.getCause() : e;
+                log.error("定时任务执行失败: [{}] {}", job.getJobName(), cause != null ? cause.getMessage() : e.getMessage(), e);
             } finally {
                 scheduleLog.setFinishTime(LocalDateTime.now());
                 scheduleLog.setDuration(System.currentTimeMillis() - startTime);
@@ -241,6 +250,22 @@ public class ScheduleConfig {
             return findMethod(superClass, methodName);
         }
         throw new NoSuchMethodException("方法不存在：" + methodName);
+    }
+
+    private Map<String, String> parseParams(String paramsJson) {
+        if (paramsJson == null || paramsJson.trim().isEmpty()) return null;
+        try {
+            cn.hutool.json.JSONObject obj = JSONUtil.parseObj(paramsJson);
+            Map<String, String> map = new java.util.HashMap<>();
+            for (String key : obj.keySet()) {
+                Object val = obj.get(key);
+                map.put(key, val != null ? val.toString() : null);
+            }
+            return map;
+        } catch (Exception e) {
+            log.warn("解析任务参数失败: {}", paramsJson, e);
+            return null;
+        }
     }
 
     private String getExceptionMessage(Throwable e) {

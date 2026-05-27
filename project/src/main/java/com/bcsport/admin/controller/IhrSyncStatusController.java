@@ -2,6 +2,7 @@ package com.bcsport.admin.controller;
 
 import com.bcsport.admin.common.Result;
 import com.bcsport.admin.task.ihr.IhrEmployeeTask;
+import com.bcsport.admin.task.qywx.QywxEmployeeLifecycleSyncTask;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.Data;
@@ -31,6 +32,14 @@ public class IhrSyncStatusController {
             long elapsedSeconds = (System.currentTimeMillis() - startTime.getTime()) / 1000;
             vo.setElapsedSeconds(elapsedSeconds);
         }
+        return Result.success(vo);
+    }
+
+    @GetMapping("/qywx-sync-status")
+    @ApiOperation("查询企微同步状态")
+    public Result<SyncStatusVO> getQywxSyncStatus() {
+        SyncStatusVO vo = new SyncStatusVO();
+        vo.setSyncing(QywxEmployeeLifecycleSyncTask.isSyncing());
         return Result.success(vo);
     }
 

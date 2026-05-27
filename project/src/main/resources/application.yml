@@ -84,9 +84,9 @@ spring:
     bjerp:
       type: com.alibaba.druid.pool.DruidDataSource
       driver-class-name: oracle.jdbc.OracleDriver
-      url: jdbc:oracle:thin:@//${BJERP_DB_HOST:localhost}:${BJERP_DB_PORT:1521}/${BJERP_DB_SERVICE:orcl}
-      username: ${BJERP_DB_USERNAME:bj_erp}
-      password: ${BJERP_DB_PASSWORD:password}
+      url: jdbc:oracle:thin:@//${BJERP_DB_HOST:192.168.5.174}:${BJERP_DB_PORT:1521}/${BJERP_DB_SERVICE:orcl}
+      username: ${BJERP_DB_USERNAME:bosnds3}
+      password: ${BJERP_DB_PASSWORD:abc123}
       druid:
         initial-size: 3
         min-idle: 3
@@ -107,7 +107,7 @@ spring:
   redis:
     host: localhost
     port: 6379
-    password: 
+    password: ''
     database: 0
     timeout: 10000ms
     lettuce:
@@ -130,6 +130,9 @@ spring:
     date-format: yyyy-MM-dd HH:mm:ss
     time-zone: GMT+8
     default-property-inclusion: non_null
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
 
 # MyBatis-Plus 配置
 mybatis-plus:
@@ -198,6 +201,25 @@ ydkl:
   customer-flow-url: https://yd.yunding360.com/openapi/store/customerFlow/getDataByTime
   weather-url: https://yd.yunding360.com/openapi/store/customerFlow/getWeatherByTime
 
+# 南讯CRM配置
+nxcrm:
+  # 生产
+  app-key: NS80000319002
+  group-id: 80000319
+  app-secret: 8F11A34C685C5FD4868FC3748F74CB54
+  server-url: https://open-v6.vecrp.com
+  area-id: 100047593
+  # 测试
+  #app-key: NS81000091178
+  #group-id: 81000091
+  #app-secret: C3EE07B4D087B2B4E6C1F3C56EEA8B74
+  #server-url: https://sandbox-open.vecrp.com
+
+# BarTender打印配置
+bartender:
+  enabled: false
+  url: http://192.168.x.x:5153/Integration/StickerPrint
+
 # 日志配置 - 使用logback-spring.xml配置文件
 logging:
   config: classpath:logback-spring.xml
@@ -210,3 +232,17 @@ logging:
 # 文件上传配置
 spring.servlet.multipart.max-file-size: 10MB
 spring.servlet.multipart.max-request-size: 50MB
+
+# Actuator 监控
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,env,loggers
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: when-authorized
+  health:
+    redis:
+      enabled: false

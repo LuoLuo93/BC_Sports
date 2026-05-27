@@ -35,4 +35,7 @@ public class ScheduleJobDTO {
 
     @ApiModelProperty("备注")
     private String remark;
+
+    @ApiModelProperty("任务参数(JSON)")
+    private String params;
 }

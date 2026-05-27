@@ -77,6 +77,7 @@ public class IhrEmployeeUpdateController {
             return Result.success("同步成功");
         } catch (Exception e) {
             log.error("单个调整员工同步异常, staffId={}", staffId, e);
+            updateService.markSyncFailed(staffId, null, null, e.getMessage());
             return Result.error("同步失败: " + e.getMessage());
         }
     }

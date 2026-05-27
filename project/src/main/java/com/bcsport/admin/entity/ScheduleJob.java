@@ -40,4 +40,8 @@ public class ScheduleJob extends BaseEntity {
     @ApiModelProperty("备注")
     @TableField("remark")
     private String remark;
+
+    @ApiModelProperty("任务参数(JSON)")
+    @TableField("PARAMS")
+    private String params;
 }

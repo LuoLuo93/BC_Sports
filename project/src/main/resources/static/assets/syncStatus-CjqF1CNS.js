@@ -1,0 +1,1 @@
+var e={0:[`未同步`,`info`],1:[`已同步`,`success`],2:[`同步失败`,`danger`],3:[`已跳过`,`warning`]};function t(t){return e[t]?.[0]||t}function n(t){return e[t]?.[1]||`info`}export{n,t};

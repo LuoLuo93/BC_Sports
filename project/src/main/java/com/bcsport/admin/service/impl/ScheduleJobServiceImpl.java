@@ -21,8 +21,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import cn.hutool.json.JSONUtil;
+
 import javax.annotation.PostConstruct;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -47,7 +50,8 @@ public class ScheduleJobServiceImpl extends ServiceImpl<ScheduleJobMapper, Sched
             }
         }
         wrapper.eq(ScheduleJob::getDeleted, 0);
-        wrapper.orderByAsc(ScheduleJob::getSort)
+        wrapper.orderByAsc(ScheduleJob::getModule)
+               .orderByAsc(ScheduleJob::getSort)
                .orderByDesc(ScheduleJob::getCreateTime);
 
         Page<ScheduleJob> result = baseMapper.selectPage(page, wrapper);
@@ -60,6 +64,16 @@ public class ScheduleJobServiceImpl extends ServiceImpl<ScheduleJobMapper, Sched
                     vo.setTaskDescription(option.getDescription());
                     vo.setBeanName(option.getBeanName());
                     vo.setMethodName(option.getMethodName());
+                    if (option.getParamDefs() != null) {
+                        vo.setParamDefs(option.getParamDefs().stream()
+                            .map(pd -> {
+                                Map<String, String> m = new java.util.HashMap<>();
+                                m.put("key", pd.getKey());
+                                m.put("label", pd.getLabel());
+                                m.put("type", pd.getType());
+                                return m;
+                            }).collect(java.util.stream.Collectors.toList()));
+                    }
                     if (vo.getModule() == null) {
                         vo.setModule(option.getModule());
                     }
@@ -91,6 +105,16 @@ public class ScheduleJobServiceImpl extends ServiceImpl<ScheduleJobMapper, Sched
             vo.setTaskDescription(option.getDescription());
             vo.setBeanName(option.getBeanName());
             vo.setMethodName(option.getMethodName());
+            if (option.getParamDefs() != null) {
+                vo.setParamDefs(option.getParamDefs().stream()
+                    .map(pd -> {
+                        Map<String, String> m = new java.util.HashMap<>();
+                        m.put("key", pd.getKey());
+                        m.put("label", pd.getLabel());
+                        m.put("type", pd.getType());
+                        return m;
+                    }).collect(java.util.stream.Collectors.toList()));
+            }
         }
         return vo;
     }
@@ -188,9 +212,17 @@ public class ScheduleJobServiceImpl extends ServiceImpl<ScheduleJobMapper, Sched
 
     @Override
     public void runOnce(String id) {
+        runOnce(id, null);
+    }
+
+    @Override
+    public void runOnce(String id, Map<String, String> params) {
         ScheduleJob job = getById(id);
         if (job == null) {
             throw new BusinessException("任务不存在");
+        }
+        if (params != null && !params.isEmpty()) {
+            job.setParams(JSONUtil.toJsonStr(params));
         }
         scheduleConfig.executeJobImmediately(job);
     }

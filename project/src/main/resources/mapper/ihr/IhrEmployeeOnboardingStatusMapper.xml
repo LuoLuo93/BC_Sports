@@ -55,7 +55,7 @@
             os.sync_time AS syncTime,
             os.error_message AS errorMessage
         <include refid="onboardingJoin" />
-        ORDER BY ea_latest.sync_date DESC, ei.staff_name
+        ORDER BY ei.enroll_in_date DESC
         OFFSET #{offset} ROWS FETCH NEXT #{limit} ROWS ONLY
     </select>
 

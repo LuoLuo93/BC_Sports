@@ -1,0 +1,1 @@
+-- 此文件已废弃，请使用 fix_permission_mismatch.sql

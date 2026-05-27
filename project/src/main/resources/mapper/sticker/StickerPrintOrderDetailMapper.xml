@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bcsport.admin.mapper.sticker.StickerPrintOrderDetailMapper">
+
+    <insert id="batchInsert">
+        INSERT INTO sticker_print_order_detail (id, order_id, article_no, article_name, size_code, size_name, size_group, ean13, brand_name, price, print_qty, sort)
+        VALUES
+        <foreach collection="list" item="d" separator=",">
+            (#{d.id}, #{d.orderId}, #{d.articleNo}, #{d.articleName}, #{d.sizeCode}, #{d.sizeName}, #{d.sizeGroup}, #{d.ean13}, #{d.brandName}, #{d.price}, #{d.printQty}, #{d.sort})
+        </foreach>
+    </insert>
+
+</mapper>

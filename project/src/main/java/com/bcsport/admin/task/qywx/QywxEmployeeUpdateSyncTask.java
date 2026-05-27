@@ -87,6 +87,9 @@ public class QywxEmployeeUpdateSyncTask {
                     }
                 } catch (Exception e) {
                     log.error("查询员工详情失败, 批次 {}-{}: {}", i + 1, end, e.getMessage());
+                    for (String id : batchIds) {
+                        updateService.markSyncFailed(id, null, null, "查询员工详情失败: " + e.getMessage());
+                    }
                 }
             }
 
@@ -180,7 +183,7 @@ public class QywxEmployeeUpdateSyncTask {
 
         } catch (Exception e) {
             log.error("=== 失败: 更新企微员工信息 ===", e);
-            throw new RuntimeException(e);
+            
         }
     }
 

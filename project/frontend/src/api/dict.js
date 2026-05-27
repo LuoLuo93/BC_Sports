@@ -24,6 +24,10 @@ export function getDictDataList(params) {
   return request.get('/api/dict/data/list', { params })
 }
 
+export function getDictDataPage(params) {
+  return request.get('/api/dict/data/page', { params })
+}
+
 export function getDictData(id) {
   return request.get(`/api/dict/data/${id}`)
 }

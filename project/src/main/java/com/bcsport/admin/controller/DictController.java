@@ -1,6 +1,8 @@
 package com.bcsport.admin.controller;
 
+import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.common.Result;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.bcsport.admin.entity.DictData;
 import com.bcsport.admin.entity.DictType;
 import com.bcsport.admin.service.DictDataService;
@@ -74,6 +76,17 @@ public class DictController {
     @RequiresPermissions("system:dict:query")
     public Result<List<DictData>> listData(@RequestParam String dictType) {
         return Result.success(dictDataService.listByDictType(dictType));
+    }
+
+    @GetMapping("/data/page")
+    @ApiOperation("分页查询字典数据")
+    @RequiresPermissions("system:dict:query")
+    public Result<PageResult<DictData>> pageData(
+            @RequestParam String dictType,
+            @RequestParam(defaultValue = "1") Integer pageNum,
+            @RequestParam(defaultValue = "10") Integer pageSize) {
+        IPage<DictData> page = dictDataService.pageByDictType(dictType, pageNum, pageSize);
+        return Result.success(new PageResult<>(page));
     }
 
     @GetMapping("/data/{id}")

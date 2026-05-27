@@ -42,6 +42,9 @@ public class QywxTagController {
     @Autowired
     private VxCustomerTagMapper customerTagMapper;
 
+    @Autowired
+    private com.bcsport.admin.task.qywx.QywxApiClient qywxApiClient;
+
     @GetMapping("/corp-tags")
     @ApiOperation("获取企业标签库（分页）")
     @RequiresPermissions("qywx:tag:query")
@@ -85,12 +88,120 @@ public class QywxTagController {
     @ApiOperation("同步企业标签库")
     @RequiresPermissions("qywx:tag:sync")
     public Result<String> syncCorpTags() {
+        if (QywxCustomerTagTask.isSyncing()) {
+            return Result.error("标签库同步正在进行中，请稍后再试");
+        }
+        new Thread(() -> {
+            try {
+                customerTagTask.syncTags();
+            } catch (Exception e) {
+                log.error("标签库同步异常", e);
+            }
+        }, "qywx-tag-sync").start();
+        return Result.success("标签库同步已触发，请稍后刷新页面查看数据");
+    }
+
+    @GetMapping("/sync-status")
+    @ApiOperation("标签库同步状态")
+    @RequiresPermissions("qywx:tag:query")
+    public Result<Map<String, Object>> getSyncStatus() {
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("syncing", QywxCustomerTagTask.isSyncing());
+        data.put("batchTagging", QywxCustomerTagTask.isBatchTagging());
+        return Result.success(data);
+    }
+
+    @PostMapping("/add-corp-tag")
+    @ApiOperation("添加标签组")
+    @RequiresPermissions("qywx:tag:sync")
+    public Result<?> addCorpTag(@RequestBody Map<String, Object> params) {
+        String groupName = (String) params.get("groupName");
+        List<String> tags = (List<String>) params.get("tags");
+        if (groupName == null || groupName.trim().isEmpty()) {
+            return Result.paramError("标签组名称不能为空");
+        }
+        if (tags == null || tags.isEmpty()) {
+            return Result.paramError("请至少添加一个标签");
+        }
         try {
+            tags = tags.stream().filter(t -> t != null && !t.trim().isEmpty()).collect(Collectors.toList());
+            if (tags.isEmpty()) { return Result.paramError("请至少添加一个有效标签"); }
+            qywxApiClient.addCorpTag(null, groupName.trim(), tags);
             customerTagTask.syncTags();
-            return Result.success("标签库同步成功");
+            return Result.success("标签组创建成功");
         } catch (Exception e) {
-            log.error("标签库同步失败: {}", e.getMessage(), e);
-            return Result.error("标签库同步失败，请查看日志或稍后重试");
+            log.error("添加标签组失败: {}", e.getMessage(), e);
+            return Result.error("添加标签组失败: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/edit-corp-tag")
+    @ApiOperation("编辑标签组")
+    @RequiresPermissions("qywx:tag:sync")
+    public Result<?> editCorpTagGroup(@RequestBody Map<String, Object> params) {
+        String groupId = (String) params.get("groupId");
+        String groupName = (String) params.get("groupName");
+        List<Map<String, String>> tags = (List<Map<String, String>>) params.get("tags");
+        if (groupId == null || groupId.isEmpty()) {
+            return Result.paramError("标签组ID不能为空");
+        }
+        if (groupName == null || groupName.trim().isEmpty()) {
+            return Result.paramError("标签组名称不能为空");
+        }
+        try {
+            // 1. 编辑标签组名称
+            qywxApiClient.editCorpTag(groupId, groupName.trim(), null);
+
+            if (tags != null) {
+                // 2. 编辑已有标签名称 / 收集新标签
+                List<String> newTagNames = new ArrayList<>();
+                for (Map<String, String> tag : tags) {
+                    String tagId = tag.get("tagId");
+                    String tagName = tag.get("tagName");
+                    if (tagName == null || tagName.trim().isEmpty()) continue;
+                    if (tagId != null && !tagId.isEmpty()) {
+                        // 已有标签，编辑名称
+                        qywxApiClient.editCorpTag(tagId, tagName.trim(), null);
+                    } else {
+                        // 新标签
+                        newTagNames.add(tagName.trim());
+                    }
+                }
+                // 3. 删除已移除的标签
+                List<String> deletedIds = (List<String>) params.get("deletedTagIds");
+                if (deletedIds != null && !deletedIds.isEmpty()) {
+                    qywxApiClient.delCorpTag(deletedIds, null);
+                }
+                // 4. 添加新标签
+                if (!newTagNames.isEmpty()) {
+                    qywxApiClient.addCorpTag(groupId, null, newTagNames);
+                }
+            }
+            customerTagTask.syncTags();
+            return Result.success("标签组编辑成功");
+        } catch (Exception e) {
+            log.error("编辑标签组失败: {}", e.getMessage(), e);
+            return Result.error("标签组编辑部分失败，部分修改可能已生效，请同步标签库后检查: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/delete-corp-tag")
+    @ApiOperation("删除标签组")
+    @RequiresPermissions("qywx:tag:sync")
+    public Result<?> deleteCorpTagGroup(@RequestBody Map<String, Object> params) {
+        String groupId = (String) params.get("groupId");
+        List<String> tagIds = (List<String>) params.get("tagIds");
+        if (groupId == null || groupId.isEmpty()) {
+            return Result.paramError("标签组ID不能为空");
+        }
+        try {
+            List<String> groupIds = Collections.singletonList(groupId);
+            qywxApiClient.delCorpTag(tagIds, groupIds);
+            customerTagTask.syncTags();
+            return Result.success("标签组删除成功");
+        } catch (Exception e) {
+            log.error("删除标签组失败: {}", e.getMessage(), e);
+            return Result.error("删除标签组失败: " + e.getMessage());
         }
     }
 
@@ -128,13 +239,16 @@ public class QywxTagController {
     @PostMapping("/upload")
     @ApiOperation("上传Excel批量打标")
     @RequiresPermissions("qywx:tag:batch")
-    public Result<Map<String, Object>> uploadTagExcel(@RequestParam("file") MultipartFile file) {
+    public Result<String> uploadTagExcel(@RequestParam("file") MultipartFile file) {
         if (file.isEmpty()) {
             return Result.paramError("请上传Excel文件");
         }
         String originalFilename = file.getOriginalFilename();
         if (originalFilename == null || (!originalFilename.endsWith(".xlsx") && !originalFilename.endsWith(".xls"))) {
             return Result.paramError("仅支持.xlsx或.xls格式的Excel文件");
+        }
+        if (QywxCustomerTagTask.isBatchTagging()) {
+            return Result.error("打标任务正在进行中，请稍后再试");
         }
 
         try {
@@ -167,14 +281,14 @@ public class QywxTagController {
                     return Result.paramError("Excel中没有有效数据");
                 }
 
-                Map<String, Object> summary = customerTagTask.batchTag(rows);
-                return Result.success(summary);
+                new Thread(() -> customerTagTask.batchTagAsync(rows), "qywx-batch-tag").start();
+                return Result.success("打标任务已触发，请稍后查看打标签日志");
             } finally {
                 reader.close();
             }
         } catch (Exception e) {
-            log.error("Excel打标失败: {}", e.getMessage(), e);
-            return Result.error("Excel打标失败，请检查文件格式或查看日志");
+            log.error("Excel解析失败: {}", e.getMessage(), e);
+            return Result.error("Excel解析失败，请检查文件格式");
         }
     }
 

@@ -1,6 +1,8 @@
 package com.bcsport.admin.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.bcsport.admin.entity.DictData;
 import com.bcsport.admin.mapper.DictDataMapper;
@@ -22,6 +24,14 @@ public class DictDataServiceImpl extends ServiceImpl<DictDataMapper, DictData> i
                .eq(DictData::getStatus, 1)
                .orderByAsc(DictData::getSort);
         return list(wrapper);
+    }
+
+    @Override
+    public IPage<DictData> pageByDictType(String dictType, int pageNum, int pageSize) {
+        LambdaQueryWrapper<DictData> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(DictData::getDictType, dictType)
+               .orderByAsc(DictData::getSort);
+        return page(new Page<>(pageNum, pageSize), wrapper);
     }
 
     @Override

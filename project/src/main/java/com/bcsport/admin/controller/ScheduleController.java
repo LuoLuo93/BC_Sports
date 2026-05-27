@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/schedule")
@@ -115,12 +116,12 @@ public class ScheduleController {
     @PostMapping("/job/{id}/run")
     @ApiOperation("手动执行一次")
     @RequiresPermissions("monitor:schedule:edit")
-    public Result<?> runOnce(@PathVariable String id) {
+    public Result<?> runOnce(@PathVariable String id, @RequestBody(required = false) Map<String, String> params) {
         // 防止同一任务重复触发
         if (ScheduleConfig.isJobRunning(id)) {
             return Result.error("任务「" + ScheduleConfig.getJobName(id) + "」正在执行中，请等待完成后再试");
         }
-        scheduleJobService.runOnce(id);
+        scheduleJobService.runOnce(id, params);
         return Result.success("已触发执行");
     }
 
@@ -139,6 +140,7 @@ public class ScheduleController {
             vo.setRunning(ScheduleConfig.isAnyManualRunning());
             vo.setJobName(ScheduleConfig.getFirstRunningJobName());
             vo.setElapsedSeconds(0);
+            vo.setRunningJobIds(ScheduleConfig.getRunningJobIds());
         }
         return Result.success(vo);
     }
@@ -148,6 +150,7 @@ public class ScheduleController {
         private boolean running;
         private String jobName;
         private long elapsedSeconds;
+        private java.util.Set<String> runningJobIds;
     }
 
     @GetMapping("/log/page")

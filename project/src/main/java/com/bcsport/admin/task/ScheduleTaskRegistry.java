@@ -3,6 +3,7 @@ package com.bcsport.admin.task;
 import lombok.Data;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,6 +18,7 @@ public class ScheduleTaskRegistry {
     public static final String MODULE_DEMO = "DEMO";
     public static final String MODULE_YDKL = "YDKL";
     public static final String MODULE_OTHER = "OTHER";
+    public static final String MODULE_NXCRM = "NXCRM";
 
     private static final Map<String, TaskOption> TASK_MAP = new LinkedHashMap<>();
 
@@ -63,6 +65,16 @@ public class ScheduleTaskRegistry {
         // register("ydkl.customerflow.sync", "云盯客流-同步客流数据", "ydCustomerFlowTask", "sync", "从云盯API同步昨日门店客流数据", MODULE_YDKL, 1);
         //  register("ydkl.weather.sync", "云盯客流-同步天气数据", "ydWeatherTask", "sync", "从云盯API同步昨日门店天气数据", MODULE_YDKL, 2);
 
+        // === NXCRM 南讯CRM模块 ===
+        register("nxcrm.token.refresh", "NXCRM-刷新Token", "nxcrmTokenRefreshTask", "refreshToken", "刷新南讯CRM AccessToken", MODULE_NXCRM, 1);
+        register("nxcrm.fill.shopId", "NXCRM-填充shopId", "nxcrmTagScheduleTask", "fillShopId", "按nasOuid查询会员店铺信息并更新shopId", MODULE_NXCRM, 2);
+        register("nxcrm.tag.category.sync", "NXCRM-同步标签分类", "nxcrmTagCategorySyncTask", "syncTagCategories", "从南讯CRM同步标签分类列表", MODULE_NXCRM, 3);
+        register("nxcrm.order.sync", "NXCRM-同步订单", "nxcrmOrderSyncTask", "syncOrders", "从IHR同步订单到南讯CRM", MODULE_NXCRM, 4);
+        register("nxcrm.tag.increment.sync", "NXCRM-同步增量标签", "nxcrmTagIncrementSyncTask", "syncIncrementTags", "从南讯CRM同步增量标签数据", MODULE_NXCRM, 5,
+            new ParamDef("startTime", "开始时间", "date"),
+            new ParamDef("endTime", "结束时间", "date"));
+        register("nxcrm.member.tag.push", "NXCRM-推送会员标签", "nxcrmMemberTagPushTask", "pushMemberTags", "从IHR读取会员标签数据并推送到南讯CRM", MODULE_NXCRM, 6);
+
         // === 示例任务 ===
         register("demoTask.noParams", "示例任务-无参数", "demoTask", "noParams", "演示定时任务基本功能", MODULE_DEMO, 1);
         register("demoTask.withParams", "示例任务-带参数", "demoTask", "withParams", "演示带参数的定时任务", MODULE_DEMO, 2);
@@ -73,6 +85,15 @@ public class ScheduleTaskRegistry {
      */
     public static void register(String taskKey, String name, String beanName, String methodName, String description, String module, int sort) {
         TASK_MAP.put(taskKey, new TaskOption(taskKey, name, beanName, methodName, description, module, sort));
+    }
+
+    /**
+     * 注册任务（带模块、排序和参数定义）
+     */
+    public static void register(String taskKey, String name, String beanName, String methodName, String description, String module, int sort, ParamDef... paramDefs) {
+        TaskOption option = new TaskOption(taskKey, name, beanName, methodName, description, module, sort);
+        option.setParamDefs(paramDefs != null && paramDefs.length > 0 ? Arrays.asList(paramDefs) : null);
+        TASK_MAP.put(taskKey, option);
     }
 
     /**
@@ -99,6 +120,7 @@ public class ScheduleTaskRegistry {
         private String description;
         private String module;
         private Integer sort;
+        private List<ParamDef> paramDefs;
 
         public TaskOption(String taskKey, String name, String beanName, String methodName, String description, String module, Integer sort) {
             this.taskKey = taskKey;
@@ -108,6 +130,19 @@ public class ScheduleTaskRegistry {
             this.description = description;
             this.module = module;
             this.sort = sort;
+        }
+    }
+
+    @Data
+    public static class ParamDef {
+        private String key;
+        private String label;
+        private String type;
+
+        public ParamDef(String key, String label, String type) {
+            this.key = key;
+            this.label = label;
+            this.type = type;
         }
     }
 }

@@ -1,0 +1,1 @@
+import{r as e}from"./index-qo4ULadd.js";function t(){let t=e();return{hasPermission:e=>t.hasPermission(e)}}export{t};

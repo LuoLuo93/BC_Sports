@@ -39,6 +39,11 @@
                     #{sno}
                 </foreach>
             </if>
+            AND NOT EXISTS (
+                SELECT 1 FROM employee_additions ea
+                WHERE ea.employees_id = em_latest.staff_id
+                AND CONVERT(DATE, ea.sync_date) = CONVERT(DATE, em_latest.sync_date)
+            )
         </where>
     </sql>
 

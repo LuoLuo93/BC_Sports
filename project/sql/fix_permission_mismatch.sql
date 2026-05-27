@@ -1,0 +1,64 @@
+-- ============================================================
+-- 权限对齐修复脚本
+-- 原则：以 backend @RequiresPermissions 为准，同步修改 DB
+-- ============================================================
+
+-- ==================== 1. 贴纸打印：sticker:order:* → sticker:print:* ====================
+UPDATE BC_SPORTS_SYS_MENU SET PERMISSION = 'sticker:print:query' WHERE ID = 'STICKER_PRINT';
+UPDATE BC_SPORTS_SYS_MENU SET PERMISSION = 'sticker:print:add' WHERE ID = 'STICKER_PRINT_ADD';
+UPDATE BC_SPORTS_SYS_MENU SET PERMISSION = 'sticker:print:edit' WHERE ID = 'STICKER_PRINT_EDIT';
+UPDATE BC_SPORTS_SYS_MENU SET PERMISSION = 'sticker:print:delete' WHERE ID = 'STICKER_PRINT_DELETE';
+UPDATE BC_SPORTS_SYS_MENU SET PERMISSION = 'sticker:print:edit', MENU_NAME = '提交审核' WHERE ID = 'STICKER_PRINT_SUBMIT';
+UPDATE BC_SPORTS_SYS_MENU SET PERMISSION = 'sticker:print:all' WHERE ID = 'STICKER_PRINT_ALL';
+UPDATE BC_SPORTS_SYS_MENU SET PERMISSION = 'sticker:print:review' WHERE ID = 'STICKER_PRINT_REVIEW';
+UPDATE BC_SPORTS_SYS_MENU SET PERMISSION = 'sticker:print:execute', MENU_NAME = 'BarTender打印' WHERE ID = 'STICKER_PRINT_BT';
+
+-- ==================== 2. 企微标签：qywx:customer-tag:* → qywx:tag:* ====================
+UPDATE BC_SPORTS_SYS_MENU SET PERMISSION = 'qywx:tag:query', MENU_NAME = '客户标签' WHERE ID = 'QYWX_CUSTOMER_TAG';
+UPDATE BC_SPORTS_SYS_MENU SET PERMISSION = 'qywx:tag:add' WHERE ID = 'QYWX_CUSTOMER_TAG_ADD';
+
+-- 补充企微缺失的按钮权限
+INSERT INTO BC_SPORTS_SYS_MENU (ID, PARENT_ID, MENU_NAME, ICON, MENU_TYPE, PATH, PERMISSION, SORT, STATUS, VISIBLE, DESCRIPTION, ICON_COLOR, CREATE_TIME, UPDATE_TIME, CREATE_BY, UPDATE_BY, DELETED)
+VALUES ('QYWX_TAG_SYNC', 'QYWX_CUSTOMER_TAG', '同步标签', null, 2, null, 'qywx:tag:sync', 2, 1, 0, null, null, SYSTIMESTAMP, SYSTIMESTAMP, 'admin', 'admin', 0);
+
+INSERT INTO BC_SPORTS_SYS_MENU (ID, PARENT_ID, MENU_NAME, ICON, MENU_TYPE, PATH, PERMISSION, SORT, STATUS, VISIBLE, DESCRIPTION, ICON_COLOR, CREATE_TIME, UPDATE_TIME, CREATE_BY, UPDATE_BY, DELETED)
+VALUES ('QYWX_TAG_BATCH', 'QYWX_CUSTOMER_TAG', '批量打标', null, 2, null, 'qywx:tag:batch', 3, 1, 0, null, null, SYSTIMESTAMP, SYSTIMESTAMP, 'admin', 'admin', 0);
+
+INSERT INTO BC_SPORTS_SYS_MENU (ID, PARENT_ID, MENU_NAME, ICON, MENU_TYPE, PATH, PERMISSION, SORT, STATUS, VISIBLE, DESCRIPTION, ICON_COLOR, CREATE_TIME, UPDATE_TIME, CREATE_BY, UPDATE_BY, DELETED)
+VALUES ('QYWX_TAG_EXECUTE', 'QYWX_CUSTOMER_TAG', '执行', null, 2, null, 'qywx:tag:execute', 4, 1, 0, null, null, SYSTIMESTAMP, SYSTIMESTAMP, 'admin', 'admin', 0);
+
+-- ==================== 3. IHR_DIR menu_type 修正 ====================
+UPDATE BC_SPORTS_SYS_MENU SET MENU_TYPE = 0 WHERE ID = 'IHR_DIR';
+
+-- ==================== 4. 补充 IHR 入职/调岗/离职管理菜单 ====================
+INSERT INTO BC_SPORTS_SYS_MENU (ID, PARENT_ID, MENU_NAME, ICON, MENU_TYPE, PATH, PERMISSION, SORT, STATUS, VISIBLE, DESCRIPTION, ICON_COLOR, CREATE_TIME, UPDATE_TIME, CREATE_BY, UPDATE_BY, DELETED)
+VALUES ('IHR_ONBOARDING', 'IHR_DIR', '入职管理', 'bi-person-plus', 1, '/ihr/onboarding-management', 'ihr:onboarding:query', 4, 1, 1, null, null, SYSTIMESTAMP, SYSTIMESTAMP, 'admin', 'admin', 0);
+INSERT INTO BC_SPORTS_SYS_MENU (ID, PARENT_ID, MENU_NAME, ICON, MENU_TYPE, PATH, PERMISSION, SORT, STATUS, VISIBLE, DESCRIPTION, ICON_COLOR, CREATE_TIME, UPDATE_TIME, CREATE_BY, UPDATE_BY, DELETED)
+VALUES ('IHR_ONBOARDING_SYNC', 'IHR_ONBOARDING', '同步', null, 2, null, 'ihr:onboarding:sync', 1, 1, 0, null, null, SYSTIMESTAMP, SYSTIMESTAMP, 'admin', 'admin', 0);
+
+INSERT INTO BC_SPORTS_SYS_MENU (ID, PARENT_ID, MENU_NAME, ICON, MENU_TYPE, PATH, PERMISSION, SORT, STATUS, VISIBLE, DESCRIPTION, ICON_COLOR, CREATE_TIME, UPDATE_TIME, CREATE_BY, UPDATE_BY, DELETED)
+VALUES ('IHR_UPDATE', 'IHR_DIR', '调岗管理', 'bi-arrow-left-right', 1, '/ihr/adjustment-management', 'ihr:update:query', 5, 1, 1, null, null, SYSTIMESTAMP, SYSTIMESTAMP, 'admin', 'admin', 0);
+INSERT INTO BC_SPORTS_SYS_MENU (ID, PARENT_ID, MENU_NAME, ICON, MENU_TYPE, PATH, PERMISSION, SORT, STATUS, VISIBLE, DESCRIPTION, ICON_COLOR, CREATE_TIME, UPDATE_TIME, CREATE_BY, UPDATE_BY, DELETED)
+VALUES ('IHR_UPDATE_SYNC', 'IHR_UPDATE', '同步', null, 2, null, 'ihr:update:sync', 1, 1, 0, null, null, SYSTIMESTAMP, SYSTIMESTAMP, 'admin', 'admin', 0);
+
+INSERT INTO BC_SPORTS_SYS_MENU (ID, PARENT_ID, MENU_NAME, ICON, MENU_TYPE, PATH, PERMISSION, SORT, STATUS, VISIBLE, DESCRIPTION, ICON_COLOR, CREATE_TIME, UPDATE_TIME, CREATE_BY, UPDATE_BY, DELETED)
+VALUES ('IHR_LEAVING', 'IHR_DIR', '离职管理', 'bi-person-dash', 1, '/ihr/leaving-management', 'ihr:leaving:query', 6, 1, 1, null, null, SYSTIMESTAMP, SYSTIMESTAMP, 'admin', 'admin', 0);
+INSERT INTO BC_SPORTS_SYS_MENU (ID, PARENT_ID, MENU_NAME, ICON, MENU_TYPE, PATH, PERMISSION, SORT, STATUS, VISIBLE, DESCRIPTION, ICON_COLOR, CREATE_TIME, UPDATE_TIME, CREATE_BY, UPDATE_BY, DELETED)
+VALUES ('IHR_LEAVING_SYNC', 'IHR_LEAVING', '同步', null, 2, null, 'ihr:leaving:sync', 1, 1, 0, null, null, SYSTIMESTAMP, SYSTIMESTAMP, 'admin', 'admin', 0);
+
+-- ==================== 5. 补充南讯会员标签同步按钮 ====================
+INSERT INTO BC_SPORTS_SYS_MENU (ID, PARENT_ID, MENU_NAME, ICON, MENU_TYPE, PATH, PERMISSION, SORT, STATUS, VISIBLE, DESCRIPTION, ICON_COLOR, CREATE_TIME, UPDATE_TIME, CREATE_BY, UPDATE_BY, DELETED)
+VALUES ('NXCRM_MEMBER_TAG_SYNC', 'NXCRM_MEMBER_TAG', '同步', null, 2, null, 'nxcrm:member:tag:sync', 1, 1, 0, null, null, SYSTIMESTAMP, SYSTIMESTAMP, 'admin', 'admin', 0);
+
+-- ==================== 6. 新增菜单绑定到 admin 角色 ====================
+INSERT INTO bc_sports_sys_role_menu (id, role_id, menu_id, create_time, create_by)
+SELECT rawtohex(sys_guid()), '1', id, SYSTIMESTAMP, 'admin' FROM bc_sports_sys_menu
+WHERE id IN (
+  'QYWX_TAG_SYNC', 'QYWX_TAG_BATCH', 'QYWX_TAG_EXECUTE',
+  'IHR_ONBOARDING', 'IHR_ONBOARDING_SYNC',
+  'IHR_UPDATE', 'IHR_UPDATE_SYNC',
+  'IHR_LEAVING', 'IHR_LEAVING_SYNC',
+  'NXCRM_MEMBER_TAG_SYNC'
+);
+
+COMMIT;

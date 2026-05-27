@@ -1,162 +1,717 @@
 <template>
-  <div class="dashboard">
-    <el-row :gutter="16" class="mb-4">
-      <el-col :span="6">
-        <el-card shadow="hover" class="stat-card">
-          <div class="stat-body">
-            <div class="stat-icon bg-primary-soft">
-              <el-icon :size="24" color="#1d4ed8"><User /></el-icon>
-            </div>
-            <div>
-              <div class="stat-label">总用户数</div>
-              <div class="stat-value">1,234</div>
-              <div class="stat-change text-success">+12% 较上月</div>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card shadow="hover" class="stat-card">
-          <div class="stat-body">
-            <div class="stat-icon bg-success-soft">
-              <el-icon :size="24" color="#10b981"><Connection /></el-icon>
-            </div>
-            <div>
-              <div class="stat-label">活跃会话</div>
-              <div class="stat-value">89</div>
-              <div class="stat-change text-success">实时在线</div>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card shadow="hover" class="stat-card">
-          <div class="stat-body">
-            <div class="stat-icon bg-warning-soft">
-              <el-icon :size="24" color="#f59e0b"><ShoppingCart /></el-icon>
-            </div>
-            <div>
-              <div class="stat-label">今日订单</div>
-              <div class="stat-value">456</div>
-              <div class="stat-change text-danger">-3% 较昨日</div>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card shadow="hover" class="stat-card">
-          <div class="stat-body">
-            <div class="stat-icon bg-info-soft">
-              <el-icon :size="24" color="#3b82f6"><Money /></el-icon>
-            </div>
-            <div>
-              <div class="stat-label">结算营收</div>
-              <div class="stat-value">&yen;12,345</div>
-              <div class="stat-change text-muted">当日累计</div>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-    </el-row>
+  <div class="cockpit">
+    <!-- Topographic Background -->
+    <div class="topo-bg"></div>
 
-    <el-row :gutter="16">
-      <el-col :span="16">
-        <el-card shadow="hover" class="chart-card">
-          <template #header>
-            <div class="card-header">
-              <span><el-icon><TrendCharts /></el-icon> 业务趋势分析</span>
-            </div>
-          </template>
-          <div class="chart-placeholder">
-            <el-icon :size="48" color="#1d4ed8"><TrendCharts /></el-icon>
-            <p>可视化引擎加载中...</p>
-            <small>正在同步实时交易数据</small>
+    <!-- Snow Fall -->
+    <div class="snow-fall">
+      <span v-for="n in 50" :key="n" class="snowflake" :style="snowStyle(n)"></span>
+    </div>
+
+    <!-- Header -->
+    <header class="cockpit-header">
+      <div class="header-deco left-deco">
+        <svg width="160" height="24" viewBox="0 0 160 24" fill="none">
+          <path d="M0 18 L20 18 L28 8 L44 16 L56 6 L72 14 L88 4 L104 12 L120 8 L136 16 L148 6 L160 10" stroke="#0ea5e9" stroke-width="1.2" fill="none" opacity="0.35" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="header-center">
+        <h1 class="header-title">BC Sport 数据驾驶舱</h1>
+        <div class="header-sub">
+          <span class="status-dot"></span>
+          <span class="sub-text">SYSTEM ONLINE</span>
+          <span class="sub-sep">·</span>
+          <span class="header-time">{{ currentTime }}</span>
+          <span class="sub-sep">·</span>
+          <span class="sub-text">ELEV 2,180m</span>
+        </div>
+      </div>
+      <div class="header-deco right-deco">
+        <svg width="160" height="24" viewBox="0 0 160 24" fill="none">
+          <path d="M0 10 L12 6 L28 14 L44 4 L60 12 L76 8 L92 16 L108 6 L124 14 L140 4 L152 18 L160 18" stroke="#0ea5e9" stroke-width="1.2" fill="none" opacity="0.35" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <button class="fullscreen-btn" @click="toggleFullscreen" :title="isFullscreen ? '退出全屏' : '全屏'">
+        <svg v-if="!isFullscreen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+        <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 14h6v6"/><path d="M20 10h-6V4"/><path d="M14 10l7-7"/><path d="M3 21l7-7"/></svg>
+      </button>
+    </header>
+
+    <!-- HUD Bar -->
+    <div class="hud-bar">
+      <div class="hud-chip"><el-icon><Location /></el-icon><span>BC-ALPINE-01</span></div>
+      <div class="hud-chip"><el-icon><Odometer /></el-icon><span>2,180m</span></div>
+      <div class="hud-chip cold"><el-icon><PartlyCloudy /></el-icon><span>-4°C</span></div>
+      <div class="hud-chip"><span>🏔</span><span>32cm SNOW</span></div>
+      <div class="hud-chip"><span>⛷</span><span>24/28 TRAILS</span></div>
+      <div class="hud-chip signal"><span class="signal-dot"></span><span>SIGNAL OK</span></div>
+    </div>
+
+    <!-- KPI Row -->
+    <div class="kpi-row">
+      <div v-for="(kpi, idx) in kpis" :key="kpi.label" class="kpi-card" :style="{ animationDelay: 0.06 * idx + 's' }">
+        <div class="kpi-label">{{ kpi.label }}</div>
+        <div class="kpi-value">
+          {{ kpi.prefix }}{{ animatedValues[kpi.label] }}{{ kpi.suffix }}
+        </div>
+        <div class="kpi-trend" :class="kpi.trendClass">
+          <span class="trend-arrow">{{ kpi.trendClass === 'up' ? '↗' : kpi.trendClass === 'down' ? '↘' : '→' }}</span>
+          {{ kpi.trend }}
+          <span class="trend-sub">{{ kpi.trendSub }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Three-Column Layout -->
+    <div class="immersive-layout">
+      <!-- Left Column -->
+      <div class="side-column left-col">
+        <div class="panel" style="flex: 2; --anim-delay: 0.2s">
+          <div class="panel-header">
+            <span class="panel-indicator"></span>
+            <span class="panel-title">营收趋势</span>
+            <span class="panel-tag">LIVE</span>
           </div>
-        </el-card>
-      </el-col>
-      <el-col :span="8">
-        <el-card shadow="hover" class="activity-card">
-          <template #header>
-            <span><el-icon><Lightning /></el-icon> 实时动态</span>
-          </template>
-          <div class="activity-list">
-            <div class="activity-item">
-              <div class="activity-dot bg-success"></div>
-              <div class="activity-content">
-                <div class="activity-title">用户注册 <small class="activity-time">2分钟前</small></div>
-                <p>新用户 <strong>张三</strong> 成功加入系统</p>
-              </div>
-            </div>
-            <div class="activity-item">
-              <div class="activity-dot bg-primary"></div>
-              <div class="activity-content">
-                <div class="activity-title">订单完成 <small class="activity-time">15分钟前</small></div>
-                <p>订单 <strong>#12345</strong> 已完成银行结算</p>
-              </div>
-            </div>
-            <div class="activity-item">
-              <div class="activity-dot bg-warning"></div>
-              <div class="activity-content">
-                <div class="activity-title">系统通知 <small class="activity-time">1小时前</small></div>
-                <p>数据中心预计在 23:00 进行例行维护</p>
-              </div>
-            </div>
+          <div class="panel-body">
+            <v-chart :option="revenueOption" autoresize />
           </div>
-        </el-card>
-      </el-col>
-    </el-row>
+        </div>
+        <div class="panel" style="flex: 1; --anim-delay: 0.3s">
+          <div class="panel-header">
+            <span class="panel-indicator"></span>
+            <span class="panel-title">渠道分布</span>
+            <span class="panel-tag">MIX</span>
+          </div>
+          <div class="panel-body">
+            <v-chart :option="channelOption" autoresize />
+          </div>
+        </div>
+        <div class="panel" style="flex: 1.2; --anim-delay: 0.4s">
+          <div class="panel-header">
+            <span class="panel-indicator"></span>
+            <span class="panel-title">品类排行</span>
+            <span class="panel-tag">RANK</span>
+          </div>
+          <div class="panel-body">
+            <v-chart :option="categoryOption" autoresize />
+          </div>
+        </div>
+      </div>
+
+      <!-- Center Column -->
+      <div class="center-column">
+        <div class="core-container" style="--anim-delay: 0.25s">
+          <div class="panel-header core-header">
+            <span class="panel-indicator"></span>
+            <span class="panel-title">ALPINE TERRAIN / 高山数字沙盘</span>
+            <span class="panel-tag">TERRAIN</span>
+          </div>
+          <AlpineTerrain class="core-earth" />
+        </div>
+      </div>
+
+      <!-- Right Column -->
+      <div class="side-column right-col">
+        <div class="panel" style="flex: 2; --anim-delay: 0.5s">
+          <div class="panel-header">
+            <span class="panel-indicator"></span>
+            <span class="panel-title">会员增长</span>
+            <span class="panel-tag">TREND</span>
+          </div>
+          <div class="panel-body">
+            <v-chart :option="customerOption" autoresize />
+          </div>
+        </div>
+        <div class="panel" style="flex: 1.5; --anim-delay: 0.6s">
+          <div class="panel-header">
+            <span class="panel-indicator"></span>
+            <span class="panel-title">门店排行</span>
+            <span class="panel-tag">TOP5</span>
+          </div>
+          <div class="panel-body">
+            <v-chart :option="shopOption" autoresize />
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { User, Connection, ShoppingCart, Money, TrendCharts, Lightning } from '@element-plus/icons-vue'
+defineOptions({ name: 'Dashboard' })
+import { ref, onMounted, onUnmounted, computed } from 'vue'
+import VChart from 'vue-echarts'
+import AlpineTerrain from '@/components/3d/AlpineTerrain.vue'
+import { Location, Odometer, PartlyCloudy } from '@element-plus/icons-vue'
+
+const isFullscreen = ref(false)
+function toggleFullscreen() {
+  const el = document.querySelector('.cockpit')
+  if (!document.fullscreenElement) {
+    el.requestFullscreen().then(() => { isFullscreen.value = true })
+  } else {
+    document.exitFullscreen().then(() => { isFullscreen.value = false })
+  }
+}
+onMounted(() => {
+  document.addEventListener('fullscreenchange', () => {
+    isFullscreen.value = !!document.fullscreenElement
+  })
+})
+
+const currentTime = ref('')
+let timer = null
+function updateTime() {
+  const now = new Date()
+  currentTime.value = now.toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' })
+}
+onMounted(() => { updateTime(); timer = setInterval(updateTime, 1000) })
+onUnmounted(() => clearInterval(timer))
+
+// ─── Snow Fall ──────────────────────────────
+function snowStyle(n) {
+  const s = 2 + Math.random() * 4
+  return {
+    left: Math.random() * 100 + '%',
+    width: s + 'px', height: s + 'px',
+    animationDelay: Math.random() * 10 + 's',
+    animationDuration: 8 + Math.random() * 12 + 's',
+    opacity: 0.12 + Math.random() * 0.2
+  }
+}
+
+// ─── KPIs ───────────────────────────────────
+const kpis = ref([
+  { label: '今日营收', target: 284600, prefix: '¥', suffix: '', trend: '+12.5%', trendClass: 'up', trendSub: '较昨日' },
+  { label: '今日订单', target: 3472, prefix: '', suffix: '', trend: '+8.3%', trendClass: 'up', trendSub: '较昨日' },
+  { label: '活跃会员', target: 15680, prefix: '', suffix: '', trend: '+3.2%', trendClass: 'up', trendSub: '较上周' },
+  { label: '滑雪品类占比', target: 38, prefix: '', suffix: '%', trend: '+2.1%', trendClass: 'up', trendSub: '较上月' },
+  { label: '门店数量', target: 128, prefix: '', suffix: '家', trend: '+5', trendClass: 'up', trendSub: '本季新增' },
+  { label: '客单价', target: 528, prefix: '¥', suffix: '', trend: '+6.8%', trendClass: 'up', trendSub: '较上月' },
+  { label: '退货率', target: 2.3, prefix: '', suffix: '%', trend: '-0.4%', trendClass: 'down', trendSub: '较上月' }
+])
+
+const animatedValues = ref({})
+function playKpiAnimations() {
+  kpis.value.forEach(kpi => {
+    animateValue(kpi.label, kpi.target, kpi.suffix === '%' && kpi.target < 10 ? 1 : 0)
+  })
+}
+onMounted(() => playKpiAnimations())
+function animateValue(key, target, decimals = 0) {
+  const duration = 2000
+  const start = performance.now()
+  function tick(now) {
+    const progress = Math.min((now - start) / duration, 1)
+    const eased = 1 - Math.pow(1 - progress, 3)
+    const current = eased * target
+    if (target >= 10000) {
+      animatedValues.value[key] = (current / 10000).toFixed(1) + '万'
+    } else if (decimals > 0) {
+      animatedValues.value[key] = current.toFixed(decimals)
+    } else {
+      animatedValues.value[key] = Math.round(current).toLocaleString()
+    }
+    if (progress < 1) requestAnimationFrame(tick)
+  }
+  requestAnimationFrame(tick)
+}
+
+// ─── Chart Colors (Light Theme) ─────────────
+const skiBlue = '#0ea5e9'
+const skiIce = '#bae6fd'
+const hikeGreen = '#10b981'
+const trailOrange = '#f97316'
+const auroraViolet = '#8b5cf6'
+
+const tooltip = {
+  backgroundColor: 'rgba(255, 255, 255, 0.95)',
+  borderColor: 'rgba(15, 23, 42, 0.06)',
+  borderWidth: 1,
+  textStyle: { color: '#0f172a', fontSize: 12, fontFamily: 'Inter, sans-serif' },
+  extraCssText: 'box-shadow: 0 4px 16px rgba(15,23,42,0.08); border-radius: 8px;'
+}
+
+const axis = {
+  axisLine: { lineStyle: { color: 'rgba(15, 23, 42, 0.06)' } },
+  axisTick: { show: false },
+  axisLabel: { color: '#64748b', fontSize: 10, fontFamily: 'Inter, sans-serif' },
+  splitLine: { lineStyle: { color: 'rgba(15, 23, 42, 0.06)' } }
+}
+
+// ─── Chart Data ─────────────────────────────
+const months = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月']
+
+const revenueData = ref({
+  orders: [1200, 1890, 1650, 2380, 2130, 2910, 2690, 3250, 3580, 3140, 3810, 4250],
+  revenue: [86, 128, 95, 198, 165, 241, 219, 274, 296, 252, 318, 362]
+})
+const channelData = ref([
+  { value: 735, name: '线上商城' },
+  { value: 580, name: '线下门店' },
+  { value: 284, name: '经销商' },
+  { value: 148, name: '大客户' },
+  { value: 96, name: '其他' }
+])
+const categoryData = ref([186, 324, 456, 578, 842])
+const shopData = ref([156, 198, 245, 312, 389])
+const customerData = ref([820, 960, 1050, 1280, 1150, 1420, 1360, 1580, 1690, 1520, 1780, 1950])
+
+// ─── Revenue Trend ──────────────────────────
+const revenueOption = computed(() => ({
+  color: [skiBlue, hikeGreen],
+  tooltip: { ...tooltip, trigger: 'axis' },
+  legend: {
+    data: ['订单量', '营收(万)'],
+    textStyle: { color: '#64748b', fontSize: 11, fontFamily: 'Inter, sans-serif' },
+    top: 0, right: 0, itemWidth: 12, itemHeight: 8
+  },
+  grid: { left: '3%', right: '3%', bottom: '8%', top: '14%', containLabel: true },
+  xAxis: { type: 'category', data: months, boundaryGap: false, ...axis },
+  yAxis: { type: 'value', ...axis },
+  series: [
+    {
+      name: '订单量', type: 'line', smooth: true, symbol: 'circle', symbolSize: 4,
+      lineStyle: { width: 2, color: skiBlue },
+      itemStyle: { color: skiBlue },
+      areaStyle: {
+        color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+          colorStops: [
+            { offset: 0, color: 'rgba(14,165,233,0.2)' },
+            { offset: 1, color: 'rgba(14,165,233,0)' }
+          ]
+        }
+      },
+      data: revenueData.value.orders
+    },
+    {
+      name: '营收(万)', type: 'line', smooth: true, symbol: 'diamond', symbolSize: 5,
+      lineStyle: { width: 2, color: hikeGreen },
+      itemStyle: { color: hikeGreen },
+      areaStyle: {
+        color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+          colorStops: [
+            { offset: 0, color: 'rgba(16,185,129,0.15)' },
+            { offset: 1, color: 'rgba(16,185,129,0)' }
+          ]
+        }
+      },
+      data: revenueData.value.revenue
+    }
+  ]
+}))
+
+// ─── Channel Pie ────────────────────────────
+const channelOption = computed(() => ({
+  color: [skiBlue, hikeGreen, auroraViolet, trailOrange, skiIce],
+  tooltip: { ...tooltip, trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+  series: [{
+    type: 'pie', radius: ['40%', '68%'], center: ['50%', '48%'],
+    itemStyle: { borderColor: 'rgba(255,255,255,0.9)', borderWidth: 2, borderRadius: 6 },
+    label: { color: '#64748b', fontSize: 10, fontFamily: 'Inter, sans-serif', formatter: '{b}\n{d}%' },
+    labelLine: { lineStyle: { color: 'rgba(15,23,42,0.1)' } },
+    emphasis: {
+      label: { fontSize: 13, fontWeight: 'bold', color: '#0f172a' },
+      itemStyle: { shadowBlur: 12, shadowColor: 'rgba(14,165,233,0.15)' }
+    },
+    data: channelData.value
+  }]
+}))
+
+// ─── Category Ranking ───────────────────────
+const categoryOption = computed(() => ({
+  color: [skiBlue],
+  tooltip: { ...tooltip, trigger: 'axis', axisPointer: { type: 'shadow' } },
+  grid: { left: '3%', right: '12%', bottom: '6%', top: '6%', containLabel: true },
+  xAxis: { type: 'value', ...axis },
+  yAxis: { type: 'category', data: ['配件', '户外服饰', '徒步装备', '滑雪装备', '上装'], ...axis, inverse: true },
+  series: [{
+    type: 'bar', barWidth: 14,
+    itemStyle: {
+      borderRadius: [0, 6, 6, 0],
+      color: { type: 'linear', x: 0, y: 0, x2: 1, y2: 0,
+        colorStops: [
+          { offset: 0, color: 'rgba(14,165,233,0.06)' },
+          { offset: 1, color: skiBlue }
+        ]
+      }
+    },
+    backgroundStyle: { color: 'rgba(14,165,233,0.03)', borderRadius: [0, 6, 6, 0] },
+    showBackground: true,
+    data: categoryData.value
+  }]
+}))
+
+// ─── Shop TOP5 ──────────────────────────────
+const shopOption = computed(() => ({
+  color: [hikeGreen],
+  tooltip: { ...tooltip, trigger: 'axis', axisPointer: { type: 'shadow' } },
+  grid: { left: '3%', right: '12%', bottom: '6%', top: '6%', containLabel: true },
+  xAxis: { type: 'value', ...axis },
+  yAxis: { type: 'category', data: ['杭州旗舰', '成都太古', '北京三里', '长春万达', '哈尔滨中央'], ...axis, inverse: true },
+  series: [{
+    type: 'bar', barWidth: 14,
+    itemStyle: {
+      borderRadius: [0, 6, 6, 0],
+      color: { type: 'linear', x: 0, y: 0, x2: 1, y2: 0,
+        colorStops: [
+          { offset: 0, color: 'rgba(16,185,129,0.06)' },
+          { offset: 1, color: hikeGreen }
+        ]
+      }
+    },
+    backgroundStyle: { color: 'rgba(16,185,129,0.03)', borderRadius: [0, 6, 6, 0] },
+    showBackground: true,
+    data: shopData.value
+  }]
+}))
+
+// ─── Customer Growth ────────────────────────
+const customerOption = computed(() => ({
+  color: [auroraViolet],
+  tooltip: { ...tooltip, trigger: 'axis' },
+  grid: { left: '3%', right: '3%', bottom: '8%', top: '8%', containLabel: true },
+  xAxis: { type: 'category', data: months, ...axis },
+  yAxis: { type: 'value', ...axis },
+  series: [{
+    type: 'bar', barWidth: 14,
+    itemStyle: {
+      borderRadius: [6, 6, 0, 0],
+      color: { type: 'linear', x: 0, y: 1, x2: 0, y2: 0,
+        colorStops: [
+          { offset: 0, color: 'rgba(139,92,246,0.06)' },
+          { offset: 1, color: auroraViolet }
+        ]
+      }
+    },
+    backgroundStyle: { color: 'rgba(139,92,246,0.03)', borderRadius: [6, 6, 0, 0] },
+    showBackground: true,
+    data: customerData.value
+  }]
+}))
+
+// ─── Polling ────────────────────────────────
+let pollTimer = null
+function jitter(base, pct) {
+  return Math.round(base * (1 + (Math.random() - 0.5) * 2 * pct))
+}
+async function refreshData() {
+  kpis.value = [
+    { label: '今日营收', target: jitter(284600, 0.05), prefix: '¥', suffix: '', trend: '+' + (10 + Math.random() * 5).toFixed(1) + '%', trendClass: 'up', trendSub: '较昨日' },
+    { label: '今日订单', target: jitter(3472, 0.08), prefix: '', suffix: '', trend: '+' + (5 + Math.random() * 6).toFixed(1) + '%', trendClass: 'up', trendSub: '较昨日' },
+    { label: '活跃会员', target: jitter(15680, 0.03), prefix: '', suffix: '', trend: '+' + (1 + Math.random() * 4).toFixed(1) + '%', trendClass: 'up', trendSub: '较上周' },
+    { label: '滑雪品类占比', target: jitter(38, 0.05), prefix: '', suffix: '%', trend: '+' + (1 + Math.random() * 2).toFixed(1) + '%', trendClass: 'up', trendSub: '较上月' },
+    { label: '门店数量', target: 128, prefix: '', suffix: '家', trend: '+5', trendClass: 'up', trendSub: '本季新增' },
+    { label: '客单价', target: jitter(528, 0.06), prefix: '¥', suffix: '', trend: '+' + (4 + Math.random() * 5).toFixed(1) + '%', trendClass: 'up', trendSub: '较上月' },
+    { label: '退货率', target: +(1.5 + Math.random() * 1.5).toFixed(1), prefix: '', suffix: '%', trend: '-' + (Math.random() * 0.5).toFixed(1) + '%', trendClass: 'down', trendSub: '较上月' }
+  ]
+  playKpiAnimations()
+  revenueData.value = {
+    orders: [1200, 1890, 1650, 2380, 2130, 2910, 2690, 3250, 3580, 3140, 3810, jitter(4250, 0.05)],
+    revenue: [86, 128, 95, 198, 165, 241, 219, 274, 296, 252, 318, jitter(362, 0.05)]
+  }
+  channelData.value = [
+    { value: jitter(735, 0.05), name: '线上商城' },
+    { value: jitter(580, 0.05), name: '线下门店' },
+    { value: jitter(284, 0.05), name: '经销商' },
+    { value: jitter(148, 0.05), name: '大客户' },
+    { value: jitter(96, 0.05), name: '其他' }
+  ]
+  categoryData.value = categoryData.value.map(v => jitter(v, 0.04))
+  shopData.value = shopData.value.map(v => jitter(v, 0.04))
+  customerData.value = customerData.value.map((v, i) => i === customerData.value.length - 1 ? jitter(v, 0.06) : v)
+}
+onMounted(() => { pollTimer = setInterval(refreshData, 30000) })
+onUnmounted(() => { clearInterval(pollTimer) })
 </script>
 
 <style scoped>
-.dashboard { padding: 0; }
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
 
-.stat-card { border-radius: 12px; border: none; }
-.stat-body { display: flex; align-items: center; gap: 16px; }
-.stat-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; }
-.bg-primary-soft { background: #eff6ff; }
-.bg-success-soft { background: #f0fdf4; }
-.bg-warning-soft { background: #fffbeb; }
-.bg-info-soft { background: #eff6ff; }
-
-.stat-label { font-size: 0.75rem; font-weight: 600; color: #78716c; text-transform: uppercase; letter-spacing: 0.05em; }
-.stat-value { font-size: 1.75rem; font-weight: 800; color: #1c1917; margin: 2px 0; }
-.stat-change { font-size: 0.75rem; }
-.text-success { color: #10b981; }
-.text-danger { color: #ef4444; }
-.text-muted { color: #78716c; }
-
-.chart-card, .activity-card { border-radius: 12px; border: none; }
-.card-header { display: flex; align-items: center; gap: 8px; font-weight: 700; }
-
-.chart-placeholder {
-  height: 350px;
+.cockpit {
+  --ski-blue: #0ea5e9;
+  --ski-ice: #bae6fd;
+  --hike-green: #10b981;
+  --trail-orange: #f97316;
+  --aurora: #8b5cf6;
+  --panel-bg: rgba(255, 255, 255, 0.7);
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  position: relative;
+  height: calc(100vh - 56px - 38px - 32px);
+  background: radial-gradient(ellipse at 50% 0%, #f8fafc 0%, #e2e8f0 70%);
+  padding: 16px 24px 24px;
+  overflow: hidden;
+  color: var(--text-primary);
+  margin: -20px -24px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: rgba(248, 249, 250, 0.5);
-  border-radius: 12px;
-  border: 1px dashed #dee2e6;
-  color: #78716c;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+.cockpit:fullscreen { height: 100vh; }
+
+/* ─── Topographic Background ────────────── */
+.topo-bg {
+  position: fixed;
+  inset: 0;
+  opacity: 0.04;
+  pointer-events: none;
+  z-index: 0;
+  background-image: url("data:image/svg+xml,%3Csvg width='400' height='400' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M50 200 Q100 160 150 200 Q200 240 250 200 Q300 160 350 200' fill='none' stroke='rgba(15,23,42,1)' stroke-width='0.5'/%3E%3Cpath d='M30 240 Q90 200 150 240 Q210 280 270 240 Q330 200 370 240' fill='none' stroke='rgba(15,23,42,1)' stroke-width='0.5'/%3E%3Cpath d='M50 280 Q100 250 150 280 Q200 310 250 280 Q300 250 350 280' fill='none' stroke='rgba(15,23,42,1)' stroke-width='0.4'/%3E%3Cpath d='M70 160 Q120 130 170 160 Q220 190 270 160 Q320 130 370 160' fill='none' stroke='rgba(15,23,42,1)' stroke-width='0.4'/%3E%3Cpath d='M50 120 Q100 100 150 120 Q200 140 250 120 Q300 100 350 120' fill='none' stroke='rgba(15,23,42,1)' stroke-width='0.3'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 400px 400px;
 }
 
-.chart-placeholder p { font-weight: 500; margin-top: 12px; }
-.chart-placeholder small { font-size: 0.8rem; }
+/* ─── Snow Fall ─────────────────────────── */
+.snow-fall { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+.snowflake {
+  position: absolute;
+  top: -10px;
+  background: #cbd5e1;
+  border-radius: 50%;
+  opacity: 0;
+  animation: snowfall linear infinite;
+}
+@keyframes snowfall {
+  0% { transform: translateY(-10px) translateX(0); opacity: 0; }
+  10% { opacity: 0.5; }
+  90% { opacity: 0.2; }
+  100% { transform: translateY(100vh) translateX(30px); opacity: 0; }
+}
 
-.activity-list { padding: 0; }
-.activity-item { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid #f5f5f4; }
-.activity-item:last-child { border-bottom: none; }
-.activity-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 6px; flex-shrink: 0; }
-.bg-success { background: #10b981; }
-.bg-primary { background: #3b82f6; }
-.bg-warning { background: #f59e0b; }
+/* ─── Header ────────────────────────────── */
+.cockpit-header {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 0 16px;
+  margin-bottom: 6px;
+}
+.header-center { text-align: center; }
+.header-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: var(--text-primary);
+  margin: 0;
+}
+.header-sub {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  font-family: 'Inter', sans-serif;
+  letter-spacing: 0.5px;
+}
+.sub-text { color: rgba(14,165,233,0.6); }
+.sub-sep { color: rgba(15,23,42,0.1); }
+.header-time { font-family: 'Outfit', monospace; letter-spacing: 1px; color: var(--text-secondary); }
+.status-dot {
+  width: 5px; height: 5px;
+  background: var(--hike-green);
+  border-radius: 50%;
+  box-shadow: 0 0 6px rgba(16,185,129,0.4);
+  animation: statusPulse 2s ease-in-out infinite;
+}
+@keyframes statusPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.header-deco { flex: 1; display: flex; align-items: center; }
+.left-deco { justify-content: flex-end; padding-right: 24px; }
+.right-deco { justify-content: flex-start; padding-left: 24px; }
+.fullscreen-btn {
+  position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+  background: rgba(15,23,42,0.04); border: 1px solid rgba(15,23,42,0.08);
+  border-radius: 8px; color: var(--text-secondary);
+  width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all 0.25s ease; padding: 0;
+}
+.fullscreen-btn:hover {
+  background: rgba(14,165,233,0.08); border-color: rgba(14,165,233,0.2);
+  color: var(--ski-blue);
+}
+.fullscreen-btn svg { width: 16px; height: 16px; }
 
-.activity-title { font-weight: 700; font-size: 0.8rem; }
-.activity-time { color: #a8a29e; font-weight: 400; margin-left: auto; }
-.activity-content p { font-size: 0.8rem; color: #78716c; margin: 4px 0 0; }
+/* ─── HUD Bar ──────────────────────────── */
+.hud-bar {
+  position: relative; z-index: 2;
+  display: flex; gap: 8px; margin-bottom: 10px;
+  padding: 0 4px;
+}
+.hud-chip {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; font-family: 'Inter', sans-serif;
+  color: var(--text-secondary);
+  background: rgba(255,255,255,0.6);
+  border: 1px solid rgba(15,23,42,0.06);
+  border-radius: 20px; padding: 3px 12px;
+  backdrop-filter: blur(8px);
+}
+.hud-chip .el-icon { font-size: 12px; color: var(--ski-blue); }
+.hud-chip.cold { color: #0284c7; }
+.hud-chip.signal { margin-left: auto; }
+.signal-dot {
+  width: 5px; height: 5px; background: var(--hike-green);
+  border-radius: 50%; animation: statusPulse 1.5s ease-in-out infinite;
+}
+
+/* ─── KPI Cards ─────────────────────────── */
+.kpi-row {
+  position: relative; z-index: 2;
+  display: grid; grid-template-columns: repeat(7, 1fr);
+  gap: 10px; margin-bottom: 12px;
+}
+.kpi-card {
+  background: var(--panel-bg);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255,255,255,0.8);
+  border-radius: 16px;
+  padding: 14px 12px 10px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  animation: fadeUp 0.5s ease-out both;
+  box-shadow: 0 10px 40px rgba(15, 23, 42, 0.05);
+}
+.kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 44px rgba(15, 23, 42, 0.08);
+}
+@keyframes fadeUp {
+  from { transform: translateY(12px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.kpi-label {
+  font-size: 10px; color: var(--text-secondary);
+  letter-spacing: 0.5px; margin-bottom: 4px;
+  font-family: 'Inter', sans-serif;
+}
+.kpi-value {
+  font-size: 20px; font-weight: 700;
+  font-family: 'Outfit', sans-serif;
+  color: var(--text-primary); line-height: 1.3;
+}
+.kpi-trend {
+  font-size: 11px; margin-top: 4px;
+  display: flex; align-items: center; gap: 3px;
+  font-family: 'Inter', sans-serif;
+}
+.kpi-trend.up { color: var(--hike-green); }
+.kpi-trend.down { color: var(--trail-orange); }
+.trend-arrow { font-size: 12px; font-weight: 600; }
+.trend-sub { color: rgba(15,23,42,0.2); margin-left: 3px; font-size: 10px; }
+
+/* ─── Layout ────────────────────────────── */
+.immersive-layout {
+  position: relative; z-index: 2;
+  display: grid; grid-template-columns: 1fr 2fr 1fr;
+  gap: 10px; flex: 1; min-height: 0;
+}
+.side-column { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+.left-col { grid-column: 1; }
+.right-col { grid-column: 3; }
+.center-column { grid-column: 2; display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+
+/* ─── Panel (Glassmorphism — Light) ─────── */
+.panel {
+  position: relative;
+  background: var(--panel-bg);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255,255,255,0.8);
+  border-radius: 16px;
+  overflow: hidden;
+  transition: box-shadow 0.3s ease;
+  display: flex; flex-direction: column;
+  box-shadow: 0 10px 40px rgba(15, 23, 42, 0.05);
+  animation: fadeUp 0.6s ease-out both;
+  animation-delay: var(--anim-delay, 0s);
+}
+.panel:hover {
+  box-shadow: 0 14px 44px rgba(15, 23, 42, 0.08);
+}
+.panel-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px 0;
+}
+.panel-indicator {
+  width: 3px; height: 14px;
+  background: var(--ski-blue);
+  border-radius: 2px;
+  opacity: 0.6;
+}
+.panel-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 12px; font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: 0.5px;
+}
+.panel-tag {
+  margin-left: auto;
+  font-size: 9px; font-family: 'Inter', sans-serif;
+  color: rgba(14,165,233,0.55);
+  background: rgba(14,165,233,0.06);
+  padding: 2px 8px;
+  border-radius: 10px;
+  letter-spacing: 0.5px;
+  font-weight: 500;
+}
+.panel-body {
+  padding: 4px 10px 10px;
+  flex: 1; min-height: 0;
+}
+.panel-body :deep(.echarts) {
+  width: 100% !important; height: 100% !important;
+}
+
+/* ─── Core Container (Light) ────────────── */
+.core-container {
+  position: relative;
+  background: var(--panel-bg);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255,255,255,0.8);
+  border-radius: 16px;
+  overflow: hidden;
+  flex: 1; min-height: 0;
+  display: flex; flex-direction: column;
+  box-shadow: 0 10px 40px rgba(15, 23, 42, 0.05);
+  animation: fadeUp 0.6s ease-out both;
+  animation-delay: var(--anim-delay, 0s);
+}
+.core-header {
+  position: absolute; top: 0; left: 0; right: 0;
+  z-index: 10;
+  background: linear-gradient(180deg, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0) 100%);
+  padding-top: 10px;
+}
+
+/* ─── Alpine Terrain 3D ─────────────────── */
+
+/* ─── Responsive ────────────────────────── */
+@media (max-width: 1400px) {
+  .immersive-layout { grid-template-columns: 1fr 1.5fr 1fr; }
+}
+@media (max-width: 1200px) {
+  .kpi-row { grid-template-columns: repeat(4, 1fr); }
+  .immersive-layout { display: flex; flex-direction: column; }
+  .side-column { flex-direction: row !important; flex-wrap: wrap; }
+  .side-column .panel { min-height: 200px; flex: 1 1 45% !important; }
+  .center-column { min-height: 500px; }
+}
+@media (max-width: 768px) {
+  .kpi-row { grid-template-columns: repeat(2, 1fr); }
+  .header-deco { display: none; }
+  .header-title { font-size: 18px; letter-spacing: 2px; }
+  .hud-bar { flex-wrap: wrap; gap: 6px; }
+  .side-column { flex-direction: column !important; }
+  .side-column .panel { min-height: 180px; flex: none !important; }
+  .core-gauges .gauges-inner { height: 80px; }
+}
 </style>

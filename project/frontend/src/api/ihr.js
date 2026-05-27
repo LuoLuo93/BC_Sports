@@ -5,6 +5,10 @@ export function getIhrSyncStatus() {
   return request.get('/api/ihr/sync-status')
 }
 
+export function getQywxSyncStatus() {
+  return request.get('/api/ihr/qywx-sync-status')
+}
+
 // IHR Onboarding
 export function getIhrOnboardingPage(params) {
   return request.get('/api/ihr-onboarding/page', { params })
@@ -70,7 +74,7 @@ export function deleteIhrExclusion(id) {
 }
 
 export function batchDeleteIhrExclusion(ids) {
-  return request.delete('/api/ihr-exclusion/batch', { data: ids })
+  return request.delete('/api/ihr-exclusion/batch', { data: { ids } })
 }
 
 export function batchUpdateIhrExclusionStatus(data) {

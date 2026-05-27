@@ -6,6 +6,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -111,12 +112,39 @@ public class AuthCacheService {
         }
     }
 
+    // ==================== 在线用户管理 ====================
+
+    /**
+     * 扫描所有在线用户的 session 映射
+     * @return Map<username, sessionId>
+     */
+    public Map<String, String> scanSessionKeys() {
+        Map<String, String> result = new java.util.LinkedHashMap<>();
+        try (org.springframework.data.redis.core.Cursor<String> cursor = redisTemplate.scan(
+                    org.springframework.data.redis.core.ScanOptions.scanOptions().match(SESSION_KEY + "*").count(200).build())) {
+            while (cursor.hasNext()) {
+                String key = cursor.next();
+                String username = key.substring(SESSION_KEY.length());
+                String sessionId = getActiveSessionId(username);
+                if (sessionId != null) {
+                    result.put(username, sessionId);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Redis扫描在线用户失败", e);
+        }
+        return result;
+    }
+
     private void scanAndDelete(String prefix) {
         java.util.Set<String> keys = new java.util.HashSet<>();
-        org.springframework.data.redis.core.Cursor<String> cursor = redisTemplate.scan(
-                org.springframework.data.redis.core.ScanOptions.scanOptions().match(prefix + "*").count(100).build());
-        while (cursor.hasNext()) {
-            keys.add(cursor.next());
+        try (org.springframework.data.redis.core.Cursor<String> cursor = redisTemplate.scan(
+                org.springframework.data.redis.core.ScanOptions.scanOptions().match(prefix + "*").count(100).build())) {
+            while (cursor.hasNext()) {
+                keys.add(cursor.next());
+            }
+        } catch (Exception e) {
+            log.warn("Redis扫描删除失败, prefix={}", prefix, e);
         }
         if (!keys.isEmpty()) {
             redisTemplate.delete(keys);

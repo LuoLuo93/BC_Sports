@@ -20,8 +20,8 @@ export function deleteUser(id) {
   return request.delete(`/api/user/${id}`)
 }
 
-export function resetPassword(id) {
-  return request.put(`/api/user/${id}/resetPassword`)
+export function resetPassword(id, data) {
+  return request.put(`/api/user/${id}/resetPassword`, data)
 }
 
 export function changePassword(id, data) {

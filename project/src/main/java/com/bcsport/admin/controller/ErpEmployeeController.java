@@ -10,6 +10,9 @@ import com.bcsport.admin.task.ihr.IhrEmployeeTask;
 import com.bcsport.admin.vo.ErpEmployeeVO;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -110,6 +113,14 @@ public class ErpEmployeeController {
         return Result.success("ERP同步已触发，请稍后刷新页面查看同步状态");
     }
 
+    @GetMapping("/sync-status")
+    @ApiOperation("查询ERP同步状态")
+    public Result<SyncStatusVO> getSyncStatus() {
+        SyncStatusVO vo = new SyncStatusVO();
+        vo.setSyncing(ErpEmployeeSyncTask.isSyncing());
+        return Result.success(vo);
+    }
+
     @PostMapping("/sync-erp/{syncType}/{employeeId}")
     @ApiOperation("同步单个员工到ERP")
     @RequiresPermissions("erp:employee:sync")
@@ -128,5 +139,12 @@ public class ErpEmployeeController {
             log.error("单个员工ERP同步异常, syncType={}, employeeId={}", syncType, employeeId, e);
             return Result.error("同步失败: " + e.getMessage());
         }
+    }
+
+    @Data
+    @ApiModel("同步状态")
+    public static class SyncStatusVO {
+        @ApiModelProperty("是否同步中")
+        private boolean syncing;
     }
 }

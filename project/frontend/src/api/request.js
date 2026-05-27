@@ -5,14 +5,21 @@ import { ElMessage } from 'element-plus'
 
 const request = axios.create({
   timeout: 60000,
-  withCredentials: true,
-  headers: {
-    'Content-Type': 'application/json'
+  withCredentials: true
+})
+
+request.interceptors.request.use(config => {
+  if (!(config.data instanceof FormData)) {
+    config.headers['Content-Type'] = 'application/json'
   }
+  return config
 })
 
 request.interceptors.response.use(
   response => {
+    if (response.config.responseType === 'blob') {
+      return response.data
+    }
     const res = response.data
     if (res.code === 200) {
       return res

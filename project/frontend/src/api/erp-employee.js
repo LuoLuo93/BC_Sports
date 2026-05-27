@@ -23,3 +23,7 @@ export function syncErpEmployee() {
 export function syncErpEmployeeByType(syncType, employeeId) {
   return request.post(`/api/erp-employee/sync-erp/${syncType}/${employeeId}`)
 }
+
+export function getErpSyncStatus() {
+  return request.get('/api/erp-employee/sync-status')
+}

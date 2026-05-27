@@ -6,6 +6,8 @@ import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 
 @Data
 @ApiModel(value = "ScheduleJobVO", description = "定时任务配置展示")
@@ -42,6 +44,12 @@ public class ScheduleJobVO {
 
     @ApiModelProperty("备注")
     private String remark;
+
+    @ApiModelProperty("任务参数(JSON)")
+    private String params;
+
+    @ApiModelProperty("参数定义")
+    private List<Map<String, String>> paramDefs;
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private LocalDateTime createTime;

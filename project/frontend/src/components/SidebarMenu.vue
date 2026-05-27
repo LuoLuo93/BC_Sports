@@ -2,6 +2,7 @@
   <div class="sidebar-menu-items">
     <!-- Dashboard -->
     <div
+      v-if="level === 0"
       class="menu-item"
       :class="{ active: isActive('/') }"
       @click="navigate('/')"
@@ -10,7 +11,9 @@
       <span v-show="!collapsed">仪表盘</span>
     </div>
 
-    <template v-for="menu in visibleMenus" :key="menu.id">
+    <template v-for="(menu, idx) in visibleMenus" :key="menu.id">
+      <!-- Section divider between top-level groups -->
+      <div v-if="level === 0 && idx > 0" class="menu-section-divider"></div>
       <!-- Directory: has visible children -->
       <template v-if="isDirectory(menu)">
         <div
@@ -58,17 +61,8 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import {
-  Odometer, ArrowDown,
-  Menu as MenuIcon, Setting, User, Key, Lock,
-  Document, Folder, FolderOpened, DataBoard,
-  List, Grid, Histogram, TrendCharts, Timer,
-  Connection, OfficeBuilding, House, Shop,
-  HomeFilled, Location, MapLocation, Edit, Delete,
-  Plus, Search, Download, Upload, Bell,
-  Calendar, ChatDotRound, Management,
-  Monitor, DataAnalysis, Opportunity, Avatar, Tools
-} from '@element-plus/icons-vue'
+import { Odometer, ArrowDown } from '@element-plus/icons-vue'
+import { getMenuIcon, getIconColorStyle } from '@/utils/iconMap'
 
 const props = defineProps({
   menus: { type: Array, default: () => [] },
@@ -86,96 +80,8 @@ const visibleMenus = computed(() => {
   return props.menus.filter(m => m.visible === 1 && m.menuType !== 2)
 })
 
-// Map Bootstrap Icons (bi-*) to Element Plus icons
-const biIconMap = {
-  'bi-speedometer2': Odometer,
-  'bi-compass': Location,
-  'bi-people': User,
-  'bi-person': User,
-  'bi-person-circle': Avatar,
-  'bi-key': Key,
-  'bi-lock': Lock,
-  'bi-shield-lock': Lock,
-  'bi-gear': Setting,
-  'bi-sliders': Tools,
-  'bi-folder': Folder,
-  'bi-folder-open': FolderOpened,
-  'bi-file-earmark': Document,
-  'bi-file-text': Document,
-  'bi-list': List,
-  'bi-grid': Grid,
-  'bi-house': HomeFilled,
-  'bi-building': OfficeBuilding,
-  'bi-shop': Shop,
-  'bi-cart': Shop,
-  'bi-geo-alt': MapLocation,
-  'bi-bar-chart': Histogram,
-  'bi-bar-chart-line': TrendCharts,
-  'bi-graph-up': TrendCharts,
-  'bi-activity': DataAnalysis,
-  'bi-clock-history': Timer,
-  'bi-bell': Bell,
-  'bi-calendar': Calendar,
-  'bi-chat-dots': ChatDotRound,
-  'bi-clipboard-data': DataBoard,
-  'bi-diagram-3': Management,
-  'bi-display': Monitor,
-  'bi-lightning': Opportunity,
-  'bi-puzzle': Grid,
-  'bi-tree': List,
-  'bi-database': DataAnalysis,
-  'bi-hdd': DataBoard,
-  'bi-cloud': Connection,
-  'bi-globe': MapLocation,
-  'bi-envelope': ChatDotRound,
-  'bi-tag': List,
-  'bi-tags': List,
-  'bi-bookmark': List,
-  'bi-eye': Search,
-  'bi-pencil': Edit,
-  'bi-trash': Delete,
-  'bi-plus': Plus,
-  'bi-search': Search,
-  'bi-download': Download,
-  'bi-upload': Upload,
-  'bi-arrow-repeat': Connection,
-  'bi-exclamation-triangle': Opportunity,
-  'bi-info-circle': ChatDotRound,
-  'bi-question-circle': ChatDotRound,
-  'bi-box-arrow-right': Connection,
-  'bi-menu-button-wide': MenuIcon,
-  'bi-layout-sidebar': MenuIcon,
-  'bi-table': Grid,
-  'bi-card-list': List
-}
-
-function getMenuIcon(icon) {
-  if (!icon) return Document
-  const mapped = biIconMap[icon]
-  if (mapped) return mapped
-  // Strip "bi-" prefix and try to find a close match
-  return Document
-}
-
 function iconStyle(menu) {
-  if (!menu.iconColor) return {}
-  const colorMap = {
-    'primary': '#3b82f6',
-    'success': '#10b981',
-    'warning': '#f59e0b',
-    'danger': '#ef4444',
-    'info': '#6b7280',
-    'blue': '#3b82f6',
-    'green': '#10b981',
-    'yellow': '#f59e0b',
-    'red': '#ef4444',
-    'orange': '#f97316',
-    'purple': '#8b5cf6',
-    'pink': '#ec4899',
-    'cyan': '#06b6d4'
-  }
-  const color = colorMap[menu.iconColor] || menu.iconColor
-  return { color }
+  return getIconColorStyle(menu.iconColor)
 }
 
 function isDirectory(menu) {
@@ -265,27 +171,31 @@ watch(() => route.path, () => {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 20px;
-  color: rgba(255, 255, 255, 0.6);
+  padding: 9px 16px;
+  margin: 1px 8px;
+  color: rgba(255, 255, 255, 0.55);
   cursor: pointer;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 500;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
   white-space: nowrap;
-  border-left: 3px solid transparent;
+  border-radius: 8px;
   user-select: none;
+  border-left: 3px solid transparent;
+  position: relative;
 }
 
 .menu-item:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.92);
 }
 
 .menu-item.active {
-  background: rgba(29, 78, 216, 0.15);
+  background: rgba(59, 130, 246, 0.12);
   color: #60a5fa;
   border-left-color: #3b82f6;
   font-weight: 600;
+  box-shadow: inset 3px 0 12px -4px rgba(59, 130, 246, 0.4);
 }
 
 .menu-item .menu-text {
@@ -294,10 +204,19 @@ watch(() => route.path, () => {
   text-overflow: ellipsis;
 }
 
+.menu-item .el-icon {
+  transition: transform 0.2s ease;
+}
+
+.menu-item:hover .el-icon {
+  transform: scale(1.08);
+}
+
 .menu-item.directory .arrow {
   margin-left: auto;
   transition: transform 0.25s ease;
   flex-shrink: 0;
+  font-size: 12px;
 }
 
 .menu-item.directory .arrow.rotated {
@@ -326,5 +245,11 @@ watch(() => route.path, () => {
     max-height: 500px;
     opacity: 1;
   }
+}
+
+.menu-section-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.06);
+  margin: 8px 16px;
 }
 </style>

@@ -25,11 +25,53 @@
     </select>
 
     <select id="selectDepartIdByThreeLevel" resultType="java.lang.String">
-        SELECT d.departId
-        FROM VX_DepartmentList d
-        LEFT JOIN VX_DepartmentList p ON d.parentId = p.departId
-        LEFT JOIN VX_DepartmentList gp ON p.parentId = gp.departId
-        WHERE d.name = #{name}
-        AND (p.name = #{parentName} OR gp.name = #{firstLevelName})
+        WITH dept_tree AS (
+            SELECT departId, name, parentId, departId AS rootId, 0 AS lvl
+            FROM VX_DepartmentList
+            WHERE name = #{name}
+            UNION ALL
+            SELECT d.departId, d.name, d.parentId, t.rootId, t.lvl + 1
+            FROM VX_DepartmentList d
+            INNER JOIN dept_tree t ON d.departId = t.parentId
+        )
+        SELECT rootId
+        FROM dept_tree
+        WHERE name = #{firstLevelName} AND lvl &gt; 0
+        OPTION (MAXRECURSION 10)
+    </select>
+
+    <select id="selectDepartIdByAncestorChain" resultType="java.lang.String">
+        WITH dept_match AS (
+            SELECT departId AS rootId, departId, name, parentId, 0 AS lvl
+            FROM VX_DepartmentList
+            WHERE name = #{name}
+            UNION ALL
+            SELECT m.rootId, d.departId, d.name, d.parentId, m.lvl + 1
+            FROM VX_DepartmentList d
+            INNER JOIN dept_match m ON d.departId = m.parentId
+            WHERE m.lvl &lt;
+            <choose>
+                <when test="ancestorNames != null and ancestorNames.size() > 0">
+                    ${ancestorNames.size()}
+                </when>
+                <otherwise>0</otherwise>
+            </choose>
+            AND d.name =
+            <choose>
+                <when test="ancestorNames != null and ancestorNames.size() > 0">
+                    <foreach collection="ancestorNames" item="aName" index="idx" open="CASE m.lvl" close="END">
+                        WHEN ${idx} THEN #{aName}
+                    </foreach>
+                </when>
+                <otherwise>#{name}</otherwise>
+            </choose>
+        )
+        SELECT rootId FROM dept_match
+        WHERE lvl =
+        <choose>
+            <when test="ancestorNames != null and ancestorNames.size() > 0">${ancestorNames.size()}</when>
+            <otherwise>0</otherwise>
+        </choose>
+        OPTION (MAXRECURSION 10)
     </select>
 </mapper>

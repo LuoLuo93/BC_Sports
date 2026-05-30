@@ -6,16 +6,24 @@ import { getMenuTree } from '@/api/menu'
 const DEPT_KEY = 'bc_ref_dept'
 const ROLE_KEY = 'bc_ref_role'
 const MENU_KEY = 'bc_ref_menu_tree'
+const TTL_MS = 60 * 60 * 1000 // 1 小时
 
 function load(key) {
   try {
     const raw = localStorage.getItem(key)
-    return raw ? JSON.parse(raw) : null
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    // 兼容旧格式（无时间戳）
+    if (parsed && parsed._ts && Date.now() - parsed._ts > TTL_MS) {
+      localStorage.removeItem(key)
+      return null
+    }
+    return parsed && parsed._ts ? parsed.data : parsed
   } catch { return null }
 }
 
 function save(key, data) {
-  try { localStorage.setItem(key, JSON.stringify(data)) } catch { /* ignore */ }
+  try { localStorage.setItem(key, JSON.stringify({ data, _ts: Date.now() })) } catch { /* ignore */ }
 }
 
 function remove(key) {

@@ -22,7 +22,7 @@ export function getMetricDetail(name) {
 }
 
 export function getLoggers() {
-  return actuator.get('/actuator/loggers').then(r => r.data)
+  return actuator.get('/actuator/loggers', { timeout: 30000 }).then(r => r.data)
 }
 
 export function setLoggerLevel(name, level) {

@@ -13,6 +13,7 @@ public interface QywxDepartmentMapper extends BaseMapper<QywxDepartment> {
     void deleteAll();
     List<QywxDepartment> selectAll();
     List<String> selectDepartIdByName(@Param("name") String name);
-    String selectDepartIdByNameAndParent(@Param("name") String name, @Param("parentName") String parentName);
-    String selectDepartIdByThreeLevel(@Param("name") String name, @Param("parentName") String parentName, @Param("firstLevelName") String firstLevelName);
+    List<String> selectDepartIdByNameAndParent(@Param("name") String name, @Param("parentName") String parentName);
+    List<String> selectDepartIdByThreeLevel(@Param("name") String name, @Param("firstLevelName") String firstLevelName);
+    List<String> selectDepartIdByAncestorChain(@Param("name") String name, @Param("ancestorNames") List<String> ancestorNames);
 }

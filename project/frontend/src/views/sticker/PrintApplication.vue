@@ -17,21 +17,21 @@
         <el-table v-loading="loading" :data="tableData" border stripe>
           <el-table-column prop="orderNo" label="申请单号" width="200" />
           <el-table-column prop="applicant" label="申请人" width="120" />
-          <el-table-column prop="status" label="状态" width="100">
+          <el-table-column prop="status" label="状态" width="110">
             <template #default="{ row }">
-              <el-tag :type="statusTagType(row.status)">{{ statusLabel(row.status) }}</el-tag>
+              <span :class="['status-badge', 'status-' + row.status]">{{ statusLabel(row.status) }}</span>
             </template>
           </el-table-column>
           <el-table-column prop="remark" label="备注" show-overflow-tooltip />
           <el-table-column prop="createTime" label="创建时间" width="180" />
-          <el-table-column label="操作" width="320" fixed="right">
+          <el-table-column label="操作" width="360" align="center" fixed="right">
             <template #default="{ row }">
-              <el-button link type="primary" @click="handleView(row)">查看</el-button>
-              <el-button v-if="row.status === 0 && hasPermission('sticker:print:edit')" link type="primary" @click="handleEdit(row)">编辑</el-button>
-              <el-button v-if="row.status === 0 && hasPermission('sticker:print:edit')" link type="warning" @click="handleSubmit(row)">提交</el-button>
-              <el-button v-if="row.status === 0 && hasPermission('sticker:print:delete')" link type="danger" @click="handleDelete(row)">删除</el-button>
-              <el-button v-if="row.status === 1 && hasPermission('sticker:print:review')" link type="success" @click="handleReview(row)">审核</el-button>
-              <el-button v-if="row.status === 2 && hasPermission('sticker:print:execute')" link type="primary" @click="handleBarTenderPrint(row)">打印</el-button>
+              <el-button type="success" plain size="small" @click="handleView(row)">查看</el-button>
+              <el-button v-if="row.status === 0 && hasPermission('sticker:print:edit')" type="primary" plain size="small" @click="handleEdit(row)">编辑</el-button>
+              <el-button v-if="row.status === 0 && hasPermission('sticker:print:edit')" type="warning" plain size="small" @click="handleSubmit(row)">提交</el-button>
+              <el-button v-if="row.status === 0 && hasPermission('sticker:print:delete')" type="danger" plain size="small" @click="handleDelete(row)">删除</el-button>
+              <el-button v-if="row.status === 1 && hasPermission('sticker:print:review')" type="success" plain size="small" @click="handleReview(row)">审核</el-button>
+              <el-button v-if="row.status === 2 && hasPermission('sticker:print:execute')" type="primary" plain size="small" @click="handleBarTenderPrint(row)">打印</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -54,7 +54,7 @@
       <div class="form-view">
         <!-- 紧凑头部栏 -->
         <div class="form-header">
-          <el-button type="warning" size="small" @click="formVisible = false">返回列表</el-button>
+          <el-button type="warning" size="small" @click="handleBack">返回列表</el-button>
           <span class="form-header-title">{{ isEdit ? '编辑打印申请单' : '新建打印申请单' }}</span>
           <el-button type="primary" size="small" @click="handleSave">保存</el-button>
         </div>
@@ -89,9 +89,9 @@
           <div class="search-panel">
             <div class="search-bar">
               <span class="panel-bar-title">货品搜索</span>
-              <el-input v-model="searchMaterialNumber" placeholder="货号" size="small" clearable style="width:130px" @keyup.enter="searchProductsAction" />
-              <el-input v-model="searchStyleNumber" placeholder="款号" size="small" clearable style="width:130px" @keyup.enter="searchProductsAction" />
-              <el-input v-model="searchMaterialName" placeholder="商品名称" size="small" clearable style="width:160px" @keyup.enter="searchProductsAction" />
+              <el-input v-model="searchMaterialNumber" placeholder="货号" size="small" clearable style="width:170px" @keyup.enter="searchProductsAction" />
+              <el-input v-model="searchStyleNumber" placeholder="款号" size="small" clearable style="width:170px" @keyup.enter="searchProductsAction" />
+              <el-input v-model="searchMaterialName" placeholder="商品名称" size="small" clearable style="width:200px" @keyup.enter="searchProductsAction" />
               <el-select v-model="searchBrandId" placeholder="品牌" size="small" clearable filterable style="width:140px">
                 <el-option v-for="b in brandList" :key="b.ID" :label="b.ATTRIBNAME" :value="b.ID" />
               </el-select>
@@ -101,23 +101,32 @@
               </el-button>
             </div>
             <el-table v-loading="productLoading" :data="productList" border size="small" @selection-change="handleProductSelect" height="100%">
-              <el-table-column type="selection" width="35" />
-              <el-table-column type="index" label="#" width="45" />
-              <el-table-column prop="MATERIAL_NUMBER" label="货号" width="150" show-overflow-tooltip />
-              <el-table-column prop="STYLE_NUMBER" label="款号" width="150" show-overflow-tooltip />
-              <el-table-column prop="MATERIAL_NAME" label="商品名称" width="240" show-overflow-tooltip />
-              <el-table-column prop="BRAND_NAME" label="品牌" width="100" show-overflow-tooltip />
-              <el-table-column prop="COLOR" label="颜色" width="80" />
-              <el-table-column prop="PRICE" label="价格" width="110">
+              <el-table-column type="selection" width="35" fixed="left" />
+              <el-table-column type="index" label="#" width="45" fixed="left" />
+              <el-table-column prop="MATERIAL_NUMBER" label="货号" width="170" show-overflow-tooltip fixed="left" class-name="col-key" />
+              <el-table-column prop="STYLE_NUMBER" label="款号" width="170" show-overflow-tooltip fixed="left" class-name="col-key" />
+              <el-table-column prop="MATERIAL_NAME" label="商品名称" width="200" show-overflow-tooltip fixed="left" class-name="col-key" />
+              <el-table-column prop="BRAND_NAME" label="品牌" width="120" show-overflow-tooltip />
+              <el-table-column prop="COLOR" label="颜色" width="90" />
+              <el-table-column prop="PRICE" label="价格" width="120">
                 <template #default="{ row }">{{ row.PRICE != null ? Number(row.PRICE).toFixed(5) : '-' }}</template>
               </el-table-column>
-              <el-table-column prop="EXECUTION_STANDARD" label="执行标准" width="100">
+              <el-table-column prop="EXECUTION_STANDARD" label="执行标准" width="160">
                 <template #default="{ row }">{{ row.EXECUTION_STANDARD || '-' }}</template>
               </el-table-column>
-              <el-table-column prop="EAN13" label="EAN13" width="130">
+              <el-table-column prop="ORIGIN" label="产地" width="90">
+                <template #default="{ row }">{{ row.ORIGIN || '-' }}</template>
+              </el-table-column>
+              <el-table-column prop="MANUFACTURER" label="制造商" width="140">
+                <template #default="{ row }">{{ row.MANUFACTURER || '-' }}</template>
+              </el-table-column>
+              <el-table-column prop="MATERIAL_COMPOSITION" label="面料成分" width="160">
+                <template #default="{ row }">{{ row.MATERIAL_COMPOSITION || '-' }}</template>
+              </el-table-column>
+              <el-table-column prop="EAN13" label="EAN13" width="150">
                 <template #default="{ row }">{{ row.EAN13 || '-' }}</template>
               </el-table-column>
-              <el-table-column prop="SIZES" label="尺码组列表" min-width="160" show-overflow-tooltip>
+              <el-table-column prop="SIZES" label="尺码组列表" min-width="200" show-overflow-tooltip>
                 <template #default="{ row }">{{ row.SIZES || '-' }}</template>
               </el-table-column>
             </el-table>
@@ -126,57 +135,65 @@
           <!-- 下方：已选明细（占更多空间） -->
           <div class="detail-panel">
             <div class="panel-bar">
-              <span class="panel-bar-title">已选明细 <span class="detail-summary">共 {{ form.details.length }} 条，合计 {{ totalPrintQty }} 张</span></span>
-              <div style="display:flex;gap:6px">
+              <span class="panel-bar-title">已选明细 <span class="detail-summary">共 {{ filteredDetails.length }} 条，合计 <em class="total-qty">{{ totalPrintQty }}</em> 张</span></span>
+              <div style="display:flex;gap:6px;align-items:center">
+                <el-input v-model="detailKeyword" placeholder="搜索货号/款号/货品名称" size="small" clearable style="width:240px" />
                 <el-button size="small" :disabled="!selectedRows.length" @click="handleBatchSetQty">批量设置数量</el-button>
                 <el-button type="danger" size="small" :disabled="!selectedRows.length" @click="handleBatchDelete">批量删除</el-button>
               </div>
             </div>
             <el-table :data="pagedDetails" border size="small" @selection-change="handleDetailSelect" ref="detailTableRef" height="100%">
-              <el-table-column type="selection" width="35" />
-              <el-table-column label="#" width="45">
+              <el-table-column type="selection" width="35" fixed="left" />
+              <el-table-column label="#" width="45" fixed="left">
                 <template #default="{ $index }">{{ (detailPage - 1) * detailSize + $index + 1 }}</template>
               </el-table-column>
-              <el-table-column prop="materialNumber" label="货号" width="150" show-overflow-tooltip />
-              <el-table-column prop="articleNo" label="款号" width="150" show-overflow-tooltip />
-              <el-table-column prop="articleName" label="商品名称" width="240" show-overflow-tooltip />
-              <el-table-column prop="brandName" label="品牌" width="100" />
-              <el-table-column prop="color" label="颜色" width="80" />
-              <el-table-column prop="price" label="价格" width="110">
+              <el-table-column prop="materialNumber" label="货号" width="170" show-overflow-tooltip fixed="left" class-name="col-key" />
+              <el-table-column prop="styleNumber" label="款号" width="170" show-overflow-tooltip fixed="left" class-name="col-key" />
+              <el-table-column prop="materialName" label="货品名称" width="200" show-overflow-tooltip fixed="left" class-name="col-key" />
+              <el-table-column prop="brandName" label="品牌" width="120" />
+              <el-table-column prop="color" label="颜色" width="90" />
+              <el-table-column prop="price" label="价格" width="120">
                 <template #default="{ row }">{{ row.price ? Number(row.price).toFixed(5) : '-' }}</template>
               </el-table-column>
-              <el-table-column prop="executionStandard" label="执行标准" width="100">
+              <el-table-column prop="executionStandard" label="执行标准" width="160">
                 <template #default="{ row }">{{ row.executionStandard || '-' }}</template>
               </el-table-column>
-              <el-table-column prop="ean13" label="EAN13" width="130">
+              <el-table-column prop="origin" label="产地" width="90">
+                <template #default="{ row }">{{ row.origin || '-' }}</template>
+              </el-table-column>
+              <el-table-column prop="manufacturer" label="制造商" width="140">
+                <template #default="{ row }">{{ row.manufacturer || '-' }}</template>
+              </el-table-column>
+              <el-table-column prop="materialComposition" label="面料成分" width="160">
+                <template #default="{ row }">{{ row.materialComposition || '-' }}</template>
+              </el-table-column>
+              <el-table-column prop="ean13" label="EAN13" width="150">
                 <template #default="{ row }">{{ row.ean13 || '-' }}</template>
               </el-table-column>
-              <el-table-column label="尺码" width="160">
-                <template #default="{ row, $index }">
-                  <div v-if="row.sizeName" style="display:flex;align-items:center;gap:4px">
-                    <span>{{ row.sizeName }}</span>
-                    <el-button link type="primary" size="small" @click="openSizeAssign(row, (detailPage - 1) * detailSize + $index)">编辑</el-button>
-                  </div>
-                  <el-button v-else link type="primary" size="small" @click="openSizeAssign(row, (detailPage - 1) * detailSize + $index)">调整数量</el-button>
-                </template>
-              </el-table-column>
-              <el-table-column label="数量" width="110">
+              <el-table-column label="尺码" width="80" align="center" fixed="right">
                 <template #default="{ row }">
-                  <span v-if="row.sizeName">{{ row.printQty }}</span>
+                  <el-tag v-if="row.sizeName" type="warning" size="small" effect="dark">{{ row.sizeName }}</el-tag>
                   <span v-else style="color:#d9d9d9">-</span>
                 </template>
               </el-table-column>
-              <el-table-column label="操作" width="50">
-                <template #default="{ $index }">
-                  <el-button link type="danger" size="small" @click="form.details.splice((detailPage - 1) * detailSize + $index, 1)">删除</el-button>
+              <el-table-column label="数量" width="70" align="center" fixed="right">
+                <template #default="{ row }">
+                  <span v-if="row.sizeName" class="detail-qty">{{ row.printQty }}</span>
+                  <span v-else style="color:#d9d9d9">-</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="操作" width="140" align="center" fixed="right">
+                <template #default="{ row, $index }">
+                  <el-button type="primary" plain size="small" @click="openSizeAssign(row, (detailPage - 1) * detailSize + $index)">{{ row.sizeName ? '编辑' : '调整数量' }}</el-button>
+                  <el-button type="danger" plain size="small" @click="form.details.splice((detailPage - 1) * detailSize + $index, 1)">删除</el-button>
                 </template>
               </el-table-column>
             </el-table>
             <el-pagination
-              v-if="form.details.length > 0"
+              v-if="filteredDetails.length > 0"
               v-model:current-page="detailPage"
               v-model:page-size="detailSize"
-              :total="form.details.length"
+              :total="filteredDetails.length"
               :page-sizes="[20, 50, 100]"
               layout="total, sizes, prev, pager, next"
               size="small"
@@ -216,34 +233,41 @@
     </el-dialog>
 
     <!-- 尺码赋值 -->
-    <el-dialog v-model="showSizeAssignDialog" title="尺码赋值" width="460px" class="size-assign-dialog">
+    <el-dialog v-model="showSizeAssignDialog" title="尺码赋值" width="520px" class="size-assign-dialog" destroy-on-close>
       <div class="sa-header">
         <div class="sa-header-bar"></div>
-        <div>
+        <div class="sa-header-info">
           <div class="sa-header-name">{{ sizeAssignProductName }}</div>
-          <div class="sa-header-sub">选择需要打印的尺码及数量</div>
+          <div class="sa-header-meta">
+            <span v-if="sizeAssignMeta.brand" class="sa-meta-item">品牌: {{ sizeAssignMeta.brand }}</span>
+            <span v-if="sizeAssignMeta.color" class="sa-meta-item">颜色: {{ sizeAssignMeta.color }}</span>
+            <span v-if="sizeAssignMeta.ean13" class="sa-meta-item">EAN13: {{ sizeAssignMeta.ean13 }}</span>
+          </div>
         </div>
       </div>
       <div class="sa-toolbar">
         <el-checkbox v-model="sizeAssignAllChecked" @change="toggleSizeAssignAll">全选</el-checkbox>
+        <span class="sa-toolbar-count">已选 <b>{{ sizeAssignCheckedCount }}</b> / {{ sizeAssignOptions.length }} 个尺码</span>
       </div>
       <div class="sa-list">
-        <div v-for="(item, i) in sizeAssignOptions" :key="i" class="sa-item" :class="{ 'sa-item--checked': item.checked }">
-          <el-checkbox v-model="item.checked" />
+        <div v-for="(item, i) in sizeAssignOptions" :key="i" class="sa-item" :class="{ 'sa-item--checked': item.checked, 'sa-item--existing': item.existing }" @click="item.checked = !item.checked">
+          <el-checkbox v-model="item.checked" @click.stop />
           <span class="sa-item-size">{{ item.size }}</span>
-          <el-input-number v-model="item.qty" :min="1" :max="999" size="small" controls-position="right" style="width:130px" :disabled="!item.checked" />
+          <el-tag v-if="item.existing" type="warning" size="small" effect="plain">已添加</el-tag>
+          <el-input-number v-model="item.qty" :min="1" :max="999" size="small" controls-position="right" style="width:120px" :disabled="!item.checked" @click.stop />
         </div>
+        <div v-if="!sizeAssignOptions.length" class="sa-empty">无可用尺码</div>
       </div>
       <template #footer>
         <el-button @click="showSizeAssignDialog = false">取消</el-button>
-        <el-button type="primary" @click="confirmSizeAssign">确认赋值</el-button>
+        <el-button type="primary" @click="confirmSizeAssign">确认 ({{ sizeAssignCheckedCount }})</el-button>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, reactive, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, onBeforeRouteLeave } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getPrintOrderPage, getPrintOrder, createPrintOrder, updatePrintOrder, submitPrintOrder, reviewPrintOrder, deletePrintOrder, bartenderPrint, searchProducts, getProductBrands } from '@/api/sticker'
@@ -285,11 +309,26 @@ const selectedRows = ref([])
 const detailTableRef = ref()
 const detailPage = ref(1)
 const detailSize = ref(50)
+const detailKeyword = ref('')
+
+const filteredDetails = computed(() => {
+  const kw = detailKeyword.value.trim().toLowerCase()
+  if (!kw) return form.details
+  return form.details.filter(d =>
+    (d.materialNumber || '').toLowerCase().includes(kw) ||
+    (d.styleNumber || '').toLowerCase().includes(kw) ||
+    (d.materialName || '').toLowerCase().includes(kw)
+  )
+})
+
+const totalPrintQty = computed(() => form.details.reduce((sum, d) => sum + (d.printQty || 0), 0))
 
 const pagedDetails = computed(() => {
   const start = (detailPage.value - 1) * detailSize.value
-  return form.details.slice(start, start + detailSize.value)
+  return filteredDetails.value.slice(start, start + detailSize.value)
 })
+
+watch(detailKeyword, () => { detailPage.value = 1 })
 
 // Batch qty
 const batchQty = ref(1)
@@ -314,15 +353,15 @@ const reviewForm = reactive({ status: 2, reviewRemark: '' })
 const showSizeAssignDialog = ref(false)
 const sizeAssignRowIndex = ref(-1)
 const sizeAssignProductName = ref('')
+const sizeAssignMeta = reactive({ brand: '', color: '', ean13: '' })
 const sizeAssignOptions = ref([])
 const sizeAssignAllChecked = ref(false)
+const sizeAssignCheckedCount = computed(() => sizeAssignOptions.value.filter(o => o.checked).length)
 
 const STATUS_MAP = { 0: '草稿', 1: '待审核', 2: '已审核', 3: '已驳回' }
 const STATUS_TAG = { 0: 'info', 1: 'warning', 2: 'success', 3: 'danger' }
 const statusLabel = (s) => STATUS_MAP[s] || '未知'
 const statusTagType = (s) => STATUS_TAG[s] || 'info'
-
-const totalPrintQty = computed(() => form.details.reduce((sum, d) => sum + (d.printQty || 0), 0))
 
 // ─── List ──────────────────────────────────────────────
 async function loadData() {
@@ -423,6 +462,20 @@ async function handleBarTenderPrint(row) {
   }
 }
 
+function handleBack() {
+  if (form.details.length > 0) {
+    ElMessageBox.confirm('有未保存的数据，确定返回吗？', '提示', {
+      confirmButtonText: '确定返回',
+      cancelButtonText: '继续编辑',
+      type: 'warning'
+    }).then(() => {
+      formVisible.value = false
+    }).catch(() => {})
+  } else {
+    formVisible.value = false
+  }
+}
+
 async function handleSave() {
   if (form.details.length === 0) {
     ElMessage.warning('请至少添加一条明细')
@@ -501,20 +554,36 @@ function handleProductSelect(selection) {
 }
 
 function confirmProductSelect() {
+  const skipped = []
   for (const p of selectedProducts.value) {
+    const mn = p.MATERIAL_NUMBER || ''
+    const sn = p.STYLE_NUMBER || ''
+    const exists = form.details.some(d => d.materialNumber === mn && d.styleNumber === sn)
+    if (exists) {
+      skipped.push(p.MATERIAL_NAME || mn)
+      continue
+    }
     form.details.push({
-      materialNumber: p.MATERIAL_NUMBER || '',
-      articleNo: p.STYLE_NUMBER || '',
-      articleName: p.MATERIAL_NAME || '',
+      materialNumber: mn,
+      styleNumber: sn,
+      materialName: p.MATERIAL_NAME || '',
       sizeGroup: p.SIZES || '',
       color: p.COLOR || '',
       ean13: p.EAN13 || '',
       brandName: p.BRAND_NAME || '',
       price: p.PRICE || 0,
       executionStandard: p.EXECUTION_STANDARD || '',
+      origin: p.ORIGIN || '',
+      manufacturer: p.MANUFACTURER || '',
+      manufacturerAddress: p.MANUFACTURER_ADDRESS || '',
+      contactPhone: p.CONTACT_PHONE || '',
+      materialComposition: p.MATERIAL_COMPOSITION || '',
       sizeName: '',
       printQty: 0
     })
+  }
+  if (skipped.length) {
+    ElMessage.warning(`${skipped.join('、')} 已在明细中，已跳过`)
   }
   selectedProducts.value = []
 }
@@ -522,14 +591,28 @@ function confirmProductSelect() {
 // ─── Size Assign ────────────────────────────────────────
 function openSizeAssign(row, index) {
   sizeAssignRowIndex.value = index
-  sizeAssignProductName.value = `${row.articleNo} ${row.articleName}`
+  sizeAssignProductName.value = `${row.styleNumber || ''} ${row.materialName || ''}`
+  sizeAssignMeta.brand = row.brandName || ''
+  sizeAssignMeta.color = row.color || ''
+  sizeAssignMeta.ean13 = row.ean13 || ''
   const sizes = parseSizes(row.sizeGroup)
-  sizeAssignOptions.value = sizes.map(s => ({
-    size: s,
-    checked: false,
-    qty: 1
-  }))
-  sizeAssignAllChecked.value = false
+  // 找出同货号已添加的尺码及数量
+  const existingMap = {}
+  form.details.forEach((d, i) => {
+    if (d.materialNumber === row.materialNumber && d.styleNumber === row.styleNumber && d.sizeName) {
+      existingMap[d.sizeName] = { qty: d.printQty, index: i }
+    }
+  })
+  sizeAssignOptions.value = sizes.map(s => {
+    const exist = existingMap[s]
+    return {
+      size: s,
+      checked: !!exist,
+      qty: exist ? exist.qty : 1,
+      existing: !!exist
+    }
+  })
+  sizeAssignAllChecked.value = sizeAssignOptions.value.every(o => o.checked)
   showSizeAssignDialog.value = true
 }
 
@@ -547,22 +630,39 @@ function confirmSizeAssign() {
   }
   const idx = sizeAssignRowIndex.value
   const orig = form.details[idx]
-  const insertBefore = idx
-  // Remove original row
-  form.details.splice(idx, 1)
-  // Insert one row per selected size
-  for (const c of checked) {
-    form.details.splice(insertBefore, 0, {
-      articleNo: orig.articleNo,
-      articleName: orig.articleName,
+  // 找到同货号所有行的位置，记录首个位置用于插入
+  let firstIdx = -1
+  const removeIndices = []
+  form.details.forEach((d, i) => {
+    if (d.materialNumber === orig.materialNumber && d.styleNumber === orig.styleNumber) {
+      if (firstIdx === -1) firstIdx = i
+      removeIndices.push(i)
+    }
+  })
+  // 从后往前删除，避免索引偏移
+  for (let i = removeIndices.length - 1; i >= 0; i--) {
+    form.details.splice(removeIndices[i], 1)
+  }
+  // 在原首个位置插入勾选的尺码
+  const insertAt = firstIdx >= 0 ? firstIdx : idx
+  for (let i = 0; i < checked.length; i++) {
+    form.details.splice(insertAt + i, 0, {
+      materialNumber: orig.materialNumber,
+      styleNumber: orig.styleNumber,
+      materialName: orig.materialName,
       sizeGroup: orig.sizeGroup,
       color: orig.color,
       ean13: orig.ean13,
       brandName: orig.brandName,
       price: orig.price,
       executionStandard: orig.executionStandard,
-      sizeName: c.size,
-      printQty: c.qty
+      origin: orig.origin,
+      manufacturer: orig.manufacturer,
+      manufacturerAddress: orig.manufacturerAddress,
+      contactPhone: orig.contactPhone,
+      materialComposition: orig.materialComposition,
+      sizeName: checked[i].size,
+      printQty: checked[i].qty
     })
   }
   showSizeAssignDialog.value = false
@@ -633,7 +733,7 @@ onBeforeUnmount(() => {
 .form-info-row {
   display: flex;
   gap: 0;
-  padding: 0 16px;
+  padding: 12px 16px;
   background: #fff;
   border-bottom: 1px solid #e5e7eb;
   flex-shrink: 0;
@@ -641,18 +741,24 @@ onBeforeUnmount(() => {
 }
 .info-item {
   flex: 1;
-  padding: 10px 12px;
+  padding: 8px 14px;
   display: flex;
+  flex-direction: column;
+  gap: 4px;
   align-items: center;
-  gap: 8px;
   border-right: 1px solid #f3f4f6;
 }
 .info-item:last-child { border-right: none; }
 .info-label {
-  font-size: 13px;
-  color: #6b7280;
-  font-weight: 500;
+  font-size: 11px;
+  color: #6366f1;
+  font-weight: 600;
   white-space: nowrap;
+  letter-spacing: 0.04em;
+  background: linear-gradient(135deg, #eef2ff, #e0e7ff);
+  padding: 2px 10px;
+  border-radius: 10px;
+  border: 1px solid #c7d2fe;
 }
 .info-value {
   font-size: 14px;
@@ -724,6 +830,26 @@ onBeforeUnmount(() => {
   font-size: 12px;
   color: #9ca3af;
 }
+.detail-qty {
+  display: inline-block;
+  min-width: 28px;
+  padding: 2px 8px;
+  background: #ecfdf5;
+  color: #059669;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 14px;
+  text-align: center;
+}
+.total-qty {
+  font-style: normal;
+  font-weight: 700;
+  font-size: 15px;
+  color: #dc2626;
+  background: #fef2f2;
+  padding: 1px 8px;
+  border-radius: 4px;
+}
 
 /* ─── Size Assign Dialog ────────────────────────────── */
 .size-assign-dialog :deep(.el-dialog__body) {
@@ -733,38 +859,61 @@ onBeforeUnmount(() => {
   display: flex;
   gap: 12px;
   align-items: center;
-  padding: 12px;
-  background: #f8fafc;
+  padding: 14px;
+  background: #f0f5ff;
   border-radius: 8px;
   margin-bottom: 16px;
+  border: 1px solid #dbeafe;
 }
 .sa-header-bar {
   width: 4px;
-  height: 36px;
+  height: 44px;
   background: linear-gradient(180deg, #3b82f6, #6366f1);
   border-radius: 2px;
   flex-shrink: 0;
+}
+.sa-header-info {
+  flex: 1;
+  min-width: 0;
 }
 .sa-header-name {
   font-size: 14px;
   font-weight: 600;
   color: #1f2937;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.sa-header-sub {
+.sa-header-meta {
+  display: flex;
+  gap: 12px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+.sa-meta-item {
   font-size: 12px;
-  color: #9ca3af;
-  margin-top: 2px;
+  color: #6b7280;
 }
 .sa-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   padding-bottom: 10px;
   margin-bottom: 10px;
   border-bottom: 1px solid #f3f4f6;
+}
+.sa-toolbar-count {
+  font-size: 12px;
+  color: #9ca3af;
+}
+.sa-toolbar-count b {
+  color: #3b82f6;
 }
 .sa-list {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  max-height: 300px;
+  max-height: 340px;
   overflow-y: auto;
 }
 .sa-item {
@@ -775,6 +924,7 @@ onBeforeUnmount(() => {
   border: 1px solid #f3f4f6;
   border-radius: 6px;
   transition: all 0.15s;
+  cursor: pointer;
 }
 .sa-item:hover {
   background: #f8fafc;
@@ -783,10 +933,24 @@ onBeforeUnmount(() => {
   background: #eff6ff;
   border-color: #bfdbfe;
 }
+.sa-item--existing {
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+.sa-item--existing.sa-item--checked {
+  background: #fef3c7;
+  border-color: #fcd34d;
+}
 .sa-item-size {
   width: 60px;
   font-size: 14px;
   font-weight: 500;
   color: #374151;
+}
+.sa-empty {
+  text-align: center;
+  padding: 24px;
+  color: #c0c4cc;
+  font-size: 13px;
 }
 </style>

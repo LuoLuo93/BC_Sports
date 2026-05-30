@@ -10,6 +10,7 @@
         </div>
       </template>
 
+      <div class="table-responsive">
       <el-table v-loading="loading" :data="tableData" border stripe empty-text="暂无在线用户">
         <el-table-column type="index" label="#" width="50" align="center" />
         <el-table-column prop="username" label="用户名" width="120" />
@@ -41,6 +42,7 @@
           </template>
         </el-table-column>
       </el-table>
+      </div>
     </el-card>
   </div>
 </template>
@@ -51,18 +53,12 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Refresh } from '@element-plus/icons-vue'
 import { getOnlineUserList, kickOnlineUser } from '@/api/online-user'
+import { formatTime } from '@/utils/format'
 
 const loading = ref(false)
 const kicking = ref('')
 const tableData = ref([])
 let pollTimer = null
-
-function formatTime(ts) {
-  if (!ts) return '-'
-  const d = new Date(ts)
-  const pad = n => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
-}
 
 function formatTimeout(ms) {
   if (!ms || ms <= 0) return '永不过期'

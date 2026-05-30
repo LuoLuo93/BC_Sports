@@ -59,11 +59,14 @@ public class QywxDataSourceConfig {
         // MyBatis 配置：分页插件指定 SQL Server 方言
         com.baomidou.mybatisplus.core.MybatisConfiguration configuration = new com.baomidou.mybatisplus.core.MybatisConfiguration();
         configuration.setMapUnderscoreToCamelCase(true);
+        configuration.setJdbcTypeForNull(org.apache.ibatis.type.JdbcType.VARCHAR);
         configuration.setLogImpl(org.apache.ibatis.logging.slf4j.Slf4jImpl.class);
         configuration.setDefaultStatementTimeout(300);
 
         MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
-        interceptor.addInnerInterceptor(new PaginationInnerInterceptor(DbType.SQL_SERVER));
+        PaginationInnerInterceptor paginationInterceptor = new PaginationInnerInterceptor(DbType.SQL_SERVER);
+        paginationInterceptor.setMaxLimit(500L);
+        interceptor.addInnerInterceptor(paginationInterceptor);
         configuration.addInterceptor(interceptor);
 
         factory.setConfiguration(configuration);

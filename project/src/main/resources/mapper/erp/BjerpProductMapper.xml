@@ -2,35 +2,54 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.bcsport.admin.erpmapper.BjerpProductMapper">
 
-    <select id="searchProducts" resultType="java.util.Map">
-        SELECT product.name           AS MATERIAL_NUMBER,
-               product.VALUE          AS MATERIAL_NAME,
-               product.VIRTUALNAME    AS STYLE_NUMBER,
-               product.M_DIM1_ID      AS BRAND_ID,
-               brand.ATTRIBNAME       AS BRAND_NAME,
-               product.colorsalias    AS COLOR,
-               product.PRICELIST      AS PRICE,
-               CAST(NULL AS VARCHAR2(100))  AS EXECUTION_STANDARD,
-               CAST(NULL AS VARCHAR2(20))   AS EAN13,
-               product.M_SIZEGROUP_ID AS SIZEGROUP_ID,
-               product.SIZES          AS SIZES
-        FROM M_PRODUCT product
-        LEFT JOIN M_DIM brand ON product.M_DIM1_ID = brand.ID
+    <sql id="searchProductsWhere">
         <where>
             <if test="materialNumber != null and materialNumber != ''">
-                product.name LIKE '%' || #{materialNumber} || '%'
+                product.name LIKE '%' || #{materialNumber} || '%' ESCAPE '\'
             </if>
             <if test="styleNumber != null and styleNumber != ''">
-                AND product.VIRTUALNAME LIKE '%' || #{styleNumber} || '%'
+                AND product.VIRTUALNAME LIKE '%' || #{styleNumber} || '%' ESCAPE '\'
             </if>
             <if test="materialName != null and materialName != ''">
-                AND product.VALUE LIKE '%' || #{materialName} || '%'
+                AND product.VALUE LIKE '%' || #{materialName} || '%' ESCAPE '\'
             </if>
             <if test="brandId != null and brandId != ''">
                 AND product.M_DIM1_ID = #{brandId}
             </if>
         </where>
-        ORDER BY product.name
+    </sql>
+
+    <select id="countProducts" resultType="long">
+        SELECT COUNT(*)
+        FROM M_PRODUCT product
+        <include refid="searchProductsWhere"/>
+    </select>
+
+    <select id="searchProducts" resultType="java.util.Map">
+        SELECT * FROM (
+            SELECT TMP.*, ROW_NUMBER() OVER (ORDER BY product_name) AS RN FROM (
+                SELECT product.name AS PRODUCT_NAME,
+                product.name AS MATERIAL_NUMBER,
+                product.VALUE AS MATERIAL_NAME,
+                product.VIRTUALNAME AS STYLE_NUMBER,
+                product.M_DIM1_ID AS BRAND_ID,
+                brand.ATTRIBNAME AS BRAND_NAME,
+                product.colorsalias AS COLOR,
+                product.PRICELIST AS PRICE,
+                'GB 18401-2010' AS EXECUTION_STANDARD,
+                '6901234567890' AS EAN13,
+                '中国' AS ORIGIN,
+                'B.C.SPORTS' AS MANUFACTURER,
+                '福建省厦门市思明区体育路88号' AS MANUFACTURER_ADDRESS,
+                '0592-8888888' AS CONTACT_PHONE,
+                '100%聚酯纤维' AS MATERIAL_COMPOSITION,
+                product.M_SIZEGROUP_ID AS SIZEGROUP_ID,
+                product.SIZES AS SIZES
+                FROM M_PRODUCT product
+                LEFT JOIN M_DIM brand ON product.M_DIM1_ID = brand.ID
+                <include refid="searchProductsWhere"/>
+            ) TMP
+        ) WHERE RN &gt; #{offset} AND RN &lt;= #{offset} + #{pageSize}
     </select>
 
     <select id="getProductByEan13" resultType="java.util.Map">
@@ -47,7 +66,7 @@
                product.SIZES          AS SIZES
         FROM M_PRODUCT product
         LEFT JOIN M_DIM brand ON product.M_DIM1_ID = brand.ID
-        WHERE product.name IS NOT NULL
+        WHERE product.name = #{ean13}
     </select>
 
     <select id="getBrands" resultType="java.util.Map">

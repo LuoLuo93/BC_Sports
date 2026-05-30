@@ -13,4 +13,11 @@
     <select id="selectNameByUserid" resultType="java.lang.String">
         SELECT name FROM VX_DepartmentMembersList WHERE userid = #{userid}
     </select>
+
+    <select id="selectNameByUserids" resultType="com.bcsport.admin.entity.qywx.QywxDepartmentMemberDetail">
+        SELECT userid, name FROM VX_DepartmentMembersList WHERE userid IN
+        <foreach collection="userids" item="userid" open="(" separator="," close=")">
+            #{userid}
+        </foreach>
+    </select>
 </mapper>

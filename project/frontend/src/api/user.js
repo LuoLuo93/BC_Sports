@@ -8,6 +8,14 @@ export function getUser(id) {
   return request.get(`/api/user/${id}`)
 }
 
+export function getProfile() {
+  return request.get('/api/user/profile')
+}
+
+export function updateProfile(data) {
+  return request.put('/api/user/profile', data)
+}
+
 export function createUser(data) {
   return request.post('/api/user', data)
 }

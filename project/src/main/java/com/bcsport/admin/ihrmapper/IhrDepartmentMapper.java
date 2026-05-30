@@ -11,4 +11,5 @@ import java.util.List;
 public interface IhrDepartmentMapper extends BaseMapper<IhrDepartment> {
     void insertBatch(@Param("list") List<IhrDepartment> list);
     void deleteAll();
+    List<String> selectAncestorNames(@Param("departmentId") Long departmentId);
 }

@@ -13,6 +13,8 @@ import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.Valid;
+
 import java.util.Map;
 
 @RestController
@@ -26,7 +28,7 @@ public class StickerPrintController {
     @GetMapping("/page")
     @ApiOperation("分页查询打印单")
     @RequiresPermissions("sticker:print:query")
-    public Result<PageResult<StickerPrintOrderVO>> page(PageQuery pageQuery, StickerPrintQueryDTO queryDTO) {
+    public Result<PageResult<StickerPrintOrderVO>> page(@Valid PageQuery pageQuery, StickerPrintQueryDTO queryDTO) {
         return Result.success(stickerPrintService.pageOrders(pageQuery, queryDTO));
     }
 

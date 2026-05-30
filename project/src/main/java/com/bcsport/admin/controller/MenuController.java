@@ -1,5 +1,6 @@
 package com.bcsport.admin.controller;
 
+import com.bcsport.admin.annotation.OperLog;
 import com.bcsport.admin.common.Result;
 import com.bcsport.admin.dto.MenuDTO;
 import com.bcsport.admin.service.MenuService;
@@ -12,7 +13,7 @@ import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import javax.validation.Valid;
+import jakarta.validation.Valid;
 import java.util.List;
 
 /**
@@ -82,6 +83,7 @@ public class MenuController {
     @PostMapping
     @ApiOperation("新增菜单")
     @RequiresPermissions("menu:add")
+    @OperLog(module = "菜单管理", operation = "新增菜单")
     public Result<?> addMenu(@Valid @RequestBody MenuDTO menuDTO) {
         boolean success = menuService.addMenu(menuDTO);
         if (success) {
@@ -96,6 +98,7 @@ public class MenuController {
     @PutMapping("/{id}")
     @ApiOperation("更新菜单")
     @RequiresPermissions("menu:edit")
+    @OperLog(module = "菜单管理", operation = "更新菜单")
     public Result<?> updateMenu(@PathVariable String id, @Valid @RequestBody MenuDTO menuDTO) {
         menuDTO.setId(id);
         boolean success = menuService.updateMenu(menuDTO);
@@ -111,6 +114,7 @@ public class MenuController {
     @DeleteMapping("/{id}")
     @ApiOperation("删除菜单")
     @RequiresPermissions("menu:delete")
+    @OperLog(module = "菜单管理", operation = "删除菜单")
     public Result<?> deleteMenu(@PathVariable String id) {
         boolean success = menuService.deleteMenu(id);
         if (success) {

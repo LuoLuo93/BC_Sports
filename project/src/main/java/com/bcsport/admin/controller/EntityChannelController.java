@@ -1,5 +1,6 @@
 package com.bcsport.admin.controller;
 
+import com.bcsport.admin.annotation.OperLog;
 import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.common.Result;
@@ -13,7 +14,7 @@ import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import javax.validation.Valid;
+import jakarta.validation.Valid;
 
 /**
  * 实体渠道配置控制器
@@ -57,6 +58,7 @@ public class EntityChannelController {
     @PostMapping
     @ApiOperation("新增实体渠道配置")
     @RequiresPermissions("bi:entity:add")
+    @OperLog(module = "实体渠道", operation = "新增实体渠道")
     public Result<?> add(@Valid @RequestBody EntityChannelDTO dto) {
         try {
             boolean success = entityChannelService.addEntityChannel(dto);
@@ -72,6 +74,7 @@ public class EntityChannelController {
     @PutMapping("/{id}")
     @ApiOperation("修改实体渠道配置")
     @RequiresPermissions("bi:entity:edit")
+    @OperLog(module = "实体渠道", operation = "修改实体渠道")
     public Result<?> update(@PathVariable String id, @Valid @RequestBody EntityChannelDTO dto) {
         dto.setId(id);
         try {
@@ -88,6 +91,7 @@ public class EntityChannelController {
     @DeleteMapping("/{id}")
     @ApiOperation("删除实体渠道配置")
     @RequiresPermissions("bi:entity:delete")
+    @OperLog(module = "实体渠道", operation = "删除实体渠道")
     public Result<?> delete(@PathVariable String id) {
         boolean success = entityChannelService.deleteEntityChannel(id);
         return success ? Result.success("删除成功") : Result.error("删除失败");

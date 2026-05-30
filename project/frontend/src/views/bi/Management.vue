@@ -1,12 +1,15 @@
 <template>
   <div class="page-container">
-    <el-card shadow="never">
-      <el-tabs v-model="activeTab">
-        <!-- 品牌管理 -->
-        <el-tab-pane label="品牌管理" name="brand">
-          <div class="toolbar-right">
-            <el-button v-if="hasPermission('bi:brand:add')" type="primary" size="small" :icon="Plus" @click="handleBrandAdd">新增品牌</el-button>
-          </div>
+    <el-tabs v-model="activeTab" class="bi-mgmt-tabs">
+      <!-- 品牌管理 -->
+      <el-tab-pane label="品牌管理" name="brand">
+        <el-card shadow="never">
+          <template #header>
+            <div class="card-header-row">
+              <span class="card-header-title">品牌列表</span>
+              <el-button v-if="hasPermission('bi:brand:add')" type="primary" size="small" :icon="Plus" @click="handleBrandAdd">新增品牌</el-button>
+            </div>
+          </template>
           <div class="table-responsive">
             <el-table v-loading="brandLoading" :data="brandList" border stripe empty-text="暂无数据">
               <el-table-column label="品牌名称" min-width="160">
@@ -20,7 +23,7 @@
                   <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">{{ row.status === 1 ? '正常' : '停用' }}</el-tag>
                 </template>
               </el-table-column>
-              <el-table-column label="操作" width="200" align="right" header-align="right">
+              <el-table-column label="操作" width="200" align="center">
                 <template #default="{ row }">
                   <el-button v-if="hasPermission('bi:brand:edit')" type="primary" plain size="small" @click="handleBrandEdit(row)">编辑</el-button>
                   <el-button v-if="hasPermission('bi:brand:delete')" type="danger" plain size="small" @click="handleBrandDelete(row)">删除</el-button>
@@ -31,21 +34,31 @@
           <div class="pagination-wrapper--sm">
             <el-pagination v-model:current-page="brandQuery.pageNum" v-model:page-size="brandQuery.pageSize" :total="brandTotal" :page-sizes="PAGE_SIZES" layout="total, sizes, prev, pager, next" @size-change="() => { brandQuery.pageNum = 1; loadBrands() }" @current-change="loadBrands" />
           </div>
-        </el-tab-pane>
+        </el-card>
+      </el-tab-pane>
 
-        <!-- 地区管理 -->
-        <el-tab-pane label="地区管理" name="region">
-          <div class="toolbar-right">
-            <el-button v-if="hasPermission('bi:region:add')" type="primary" size="small" :icon="Plus" @click="handleRegionAdd()">新增地区</el-button>
-          </div>
+      <!-- 地区管理 -->
+      <el-tab-pane label="地区管理" name="region">
+        <el-card shadow="never">
+          <template #header>
+            <div class="card-header-row">
+              <span class="card-header-title">地区列表</span>
+              <div>
+                <el-button size="small" @click="toggleExpandAll">{{ isExpandAll ? '折叠全部' : '展开全部' }}</el-button>
+                <el-button v-if="hasPermission('bi:region:add')" type="primary" size="small" :icon="Plus" @click="handleRegionAdd()">新增地区</el-button>
+              </div>
+            </div>
+          </template>
           <div class="table-responsive">
-            <el-table v-loading="regionLoading" :data="regionList" row-key="id" :tree-props="{ children: 'children' }" default-expand-all border stripe :row-class-name="treeRowClass">
-              <el-table-column label="地区名称" min-width="200">
+            <el-table v-if="refreshTable" v-loading="regionLoading" :data="regionList" row-key="id" :tree-props="{ children: 'children' }" :default-expand-all="isExpandAll" border stripe :row-class-name="treeRowClass">
+              <el-table-column label="地区名称" min-width="240">
                 <template #default="{ row }">
                   <div class="name-cell">
                     <el-icon v-if="row.children?.length" class="icon-folder" :size="16"><Folder /></el-icon>
                     <el-icon v-else class="icon-doc" :size="14"><Document /></el-icon>
                     <span>{{ row.regionName }}</span>
+                    <el-tag v-if="row.children?.length" size="small" type="primary" effect="plain" class="level-tag">一级地区</el-tag>
+                    <el-tag v-else size="small" type="info" effect="plain" class="level-tag">二级地区</el-tag>
                   </div>
                 </template>
               </el-table-column>
@@ -56,7 +69,7 @@
                   <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">{{ row.status === 1 ? '正常' : '停用' }}</el-tag>
                 </template>
               </el-table-column>
-              <el-table-column label="操作" width="280" align="right" header-align="right">
+              <el-table-column label="操作" width="280" align="center">
                 <template #default="{ row }">
                   <el-button v-if="row.children?.length && hasPermission('bi:region:add')" type="warning" plain size="small" @click="handleRegionAdd(row)">新增子地区</el-button>
                   <el-button v-if="hasPermission('bi:region:edit')" type="primary" plain size="small" @click="handleRegionEdit(row)">编辑</el-button>
@@ -65,21 +78,31 @@
               </el-table-column>
             </el-table>
           </div>
-        </el-tab-pane>
+        </el-card>
+      </el-tab-pane>
 
-        <!-- 渠道类型 -->
-        <el-tab-pane label="渠道类型" name="channelType">
-          <div class="toolbar-right">
-            <el-button v-if="hasPermission('bi:channelType:add')" type="primary" size="small" :icon="Plus" @click="handleCtAdd()">新增类型</el-button>
-          </div>
+      <!-- 渠道类型 -->
+      <el-tab-pane label="渠道类型" name="channelType">
+        <el-card shadow="never">
+          <template #header>
+            <div class="card-header-row">
+              <span class="card-header-title">渠道类型</span>
+              <div>
+                <el-button size="small" @click="toggleExpandAll">{{ isExpandAll ? '折叠全部' : '展开全部' }}</el-button>
+                <el-button v-if="hasPermission('bi:channelType:add')" type="primary" size="small" :icon="Plus" @click="handleCtAdd()">新增类型</el-button>
+              </div>
+            </div>
+          </template>
           <div class="table-responsive">
-            <el-table v-loading="ctLoading" :data="ctList" row-key="id" :tree-props="{ children: 'children' }" :row-class-name="treeRowClass" default-expand-all border stripe>
-              <el-table-column label="类型名称" min-width="200">
+            <el-table v-if="refreshTable" v-loading="ctLoading" :data="ctList" row-key="id" :tree-props="{ children: 'children' }" :row-class-name="treeRowClass" :default-expand-all="isExpandAll" border stripe>
+              <el-table-column label="类型名称" min-width="240">
                 <template #default="{ row }">
                   <div class="name-cell">
                     <el-icon v-if="row.children?.length" class="icon-folder" :size="16"><Folder /></el-icon>
                     <el-icon v-else class="icon-doc" :size="14"><Document /></el-icon>
                     <span>{{ row.typeName }}</span>
+                    <el-tag v-if="row.children?.length" size="small" type="primary" effect="plain" class="level-tag">渠道类型</el-tag>
+                    <el-tag v-else size="small" type="info" effect="plain" class="level-tag">渠道定义</el-tag>
                   </div>
                 </template>
               </el-table-column>
@@ -89,7 +112,7 @@
                   <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">{{ row.status === 1 ? '正常' : '停用' }}</el-tag>
                 </template>
               </el-table-column>
-              <el-table-column label="操作" width="280" align="right" header-align="right">
+              <el-table-column label="操作" width="280" align="center">
                 <template #default="{ row }">
                   <el-button v-if="row.children?.length && hasPermission('bi:channelType:add')" type="warning" plain size="small" @click="handleCtAdd(row)">新增子类型</el-button>
                   <el-button v-if="hasPermission('bi:channelType:edit')" type="primary" plain size="small" @click="handleCtEdit(row)">编辑</el-button>
@@ -98,21 +121,31 @@
               </el-table-column>
             </el-table>
           </div>
-        </el-tab-pane>
+        </el-card>
+      </el-tab-pane>
 
-        <!-- 渠道性质 -->
-        <el-tab-pane label="渠道性质" name="channelNature">
-          <div class="toolbar-right">
-            <el-button v-if="hasPermission('bi:channelNature:add')" type="primary" size="small" :icon="Plus" @click="handleCnAdd()">新增性质</el-button>
-          </div>
+      <!-- 渠道性质 -->
+      <el-tab-pane label="渠道性质" name="channelNature">
+        <el-card shadow="never">
+          <template #header>
+            <div class="card-header-row">
+              <span class="card-header-title">渠道性质</span>
+              <div>
+                <el-button size="small" @click="toggleExpandAll">{{ isExpandAll ? '折叠全部' : '展开全部' }}</el-button>
+                <el-button v-if="hasPermission('bi:channelNature:add')" type="primary" size="small" :icon="Plus" @click="handleCnAdd()">新增性质</el-button>
+              </div>
+            </div>
+          </template>
           <div class="table-responsive">
-            <el-table v-loading="cnLoading" :data="cnList" row-key="id" :tree-props="{ children: 'children' }" :row-class-name="treeRowClass" default-expand-all border stripe>
-              <el-table-column label="性质名称" min-width="200">
+            <el-table v-if="refreshTable" v-loading="cnLoading" :data="cnList" row-key="id" :tree-props="{ children: 'children' }" :row-class-name="treeRowClass" :default-expand-all="isExpandAll" border stripe>
+              <el-table-column label="性质名称" min-width="240">
                 <template #default="{ row }">
                   <div class="name-cell">
                     <el-icon v-if="row.children?.length" class="icon-folder" :size="16"><Folder /></el-icon>
                     <el-icon v-else class="icon-doc" :size="14"><Document /></el-icon>
                     <span>{{ row.natureName }}</span>
+                    <el-tag v-if="row.children?.length" size="small" type="primary" effect="plain" class="level-tag">渠道性质</el-tag>
+                    <el-tag v-else size="small" type="info" effect="plain" class="level-tag">销售类型</el-tag>
                   </div>
                 </template>
               </el-table-column>
@@ -122,7 +155,7 @@
                   <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">{{ row.status === 1 ? '正常' : '停用' }}</el-tag>
                 </template>
               </el-table-column>
-              <el-table-column label="操作" width="280" align="right" header-align="right">
+              <el-table-column label="操作" width="280" align="center">
                 <template #default="{ row }">
                   <el-button v-if="row.children?.length && hasPermission('bi:channelNature:add')" type="warning" plain size="small" @click="handleCnAdd(row)">新增子性质</el-button>
                   <el-button v-if="hasPermission('bi:channelNature:edit')" type="primary" plain size="small" @click="handleCnEdit(row)">编辑</el-button>
@@ -131,9 +164,9 @@
               </el-table-column>
             </el-table>
           </div>
-        </el-tab-pane>
-      </el-tabs>
-    </el-card>
+        </el-card>
+      </el-tab-pane>
+    </el-tabs>
 
     <!-- 品牌弹窗 -->
     <el-dialog v-model="brandDialogVisible" :title="brandIsEdit ? '编辑品牌' : '新增品牌'" width="480px" destroy-on-close>
@@ -210,7 +243,7 @@
 
 <script setup>
 defineOptions({ name: 'BiManagement' })
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getBrandPage, getBrand, createBrand, updateBrand, deleteBrand } from '@/api/brand'
 import { getRegionTree, getRegion, createRegion, updateRegion, deleteRegion } from '@/api/region'
@@ -223,6 +256,15 @@ import { PAGE_SIZES } from '@/utils/constants'
 const { hasPermission } = usePermission()
 
 const activeTab = ref('brand')
+
+// 树表折叠/展开
+const isExpandAll = ref(false)
+const refreshTable = ref(true)
+function toggleExpandAll() {
+  refreshTable.value = false
+  isExpandAll.value = !isExpandAll.value
+  nextTick(() => { refreshTable.value = true })
+}
 
 function treeRowClass({ row }) {
   return row.children?.length ? 'tree-parent-row' : 'tree-child-row'
@@ -325,6 +367,9 @@ onMounted(() => { loadBrands(); loadRegions(); loadCt(); loadCn() })
 </script>
 
 <style scoped>
+.bi-mgmt-tabs :deep(.el-tabs__header) {
+  margin-bottom: 0;
+}
 /* 父子行样式 */
 .el-table :deep(.tree-parent-row) td {
   font-weight: 600;
@@ -360,6 +405,12 @@ onMounted(() => { loadBrands(); loadRegions(); loadCt(); loadCn() })
 .icon-doc {
   color: var(--el-text-color-placeholder);
   flex-shrink: 0;
+}
+.level-tag {
+  margin-left: 6px;
+  font-size: 11px;
+  transform: scale(0.9);
+  transform-origin: left center;
 }
 .icon-brand {
   color: var(--el-color-primary);

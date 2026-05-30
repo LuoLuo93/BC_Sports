@@ -2,7 +2,7 @@ package com.bcsport.admin.dto;
 
 import lombok.Data;
 
-import javax.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotBlank;
 
 /**
  * 实体渠道配置DTO

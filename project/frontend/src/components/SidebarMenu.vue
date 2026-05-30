@@ -59,7 +59,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { Odometer, ArrowDown } from '@element-plus/icons-vue'
 import { getMenuIcon, getIconColorStyle } from '@/utils/iconMap'
@@ -74,6 +74,8 @@ const props = defineProps({
 const router = useRouter()
 const route = useRoute()
 const openMenus = ref([])
+
+const currentPath = computed(() => route.path)
 
 // Filter: only show visible items, exclude buttons (menuType=2)
 const visibleMenus = computed(() => {
@@ -92,15 +94,14 @@ function isDirectory(menu) {
 }
 
 function isActive(path) {
-  const current = route.path
+  const current = currentPath.value
   return current === path || (current === '/index' && path === '/')
 }
 
 function isMenuActive(menu) {
   if (!menu.path || menu.path === '#') return false
-  const current = route.path
+  const current = currentPath.value
   if (current === menu.path) return true
-  // Exact prefix match (avoid /bi/brand matching /bi/brand-something)
   if (current.startsWith(menu.path + '/') || current.startsWith(menu.path + '?')) return true
   return false
 }
@@ -157,7 +158,7 @@ function navigate(path) {
 
 // Watch route changes to auto-expand
 watch(() => route.path, () => {
-  autoExpandForRoute()
+  nextTick(() => autoExpandForRoute())
 }, { immediate: true })
 </script>
 
@@ -177,7 +178,7 @@ watch(() => route.path, () => {
   cursor: pointer;
   font-size: 0.8125rem;
   font-weight: 500;
-  transition: all 0.2s ease;
+  transition: background 0.15s ease, border-left-color 0.15s ease;
   white-space: nowrap;
   border-radius: 8px;
   user-select: none;
@@ -251,5 +252,30 @@ watch(() => route.path, () => {
   height: 1px;
   background: rgba(255, 255, 255, 0.06);
   margin: 8px 16px;
+}
+
+/* Light sidebar overrides */
+.sidebar-light .sidebar-menu-items .menu-item {
+  color: rgba(30, 41, 59, 0.65);
+}
+
+.sidebar-light .sidebar-menu-items .menu-item:hover {
+  background: rgba(30, 41, 59, 0.06);
+  color: rgba(30, 41, 59, 0.9);
+}
+
+.sidebar-light .sidebar-menu-items .menu-item.active {
+  background: rgba(29, 78, 216, 0.08);
+  color: var(--bc-primary);
+  border-left-color: var(--bc-primary);
+  box-shadow: inset 3px 0 12px -4px rgba(29, 78, 216, 0.25);
+}
+
+.sidebar-light .sidebar-menu-items .menu-section-divider {
+  background: rgba(30, 41, 59, 0.08);
+}
+
+.sidebar-light .sidebar-menu-items .menu-item .arrow {
+  color: rgba(30, 41, 59, 0.5);
 }
 </style>

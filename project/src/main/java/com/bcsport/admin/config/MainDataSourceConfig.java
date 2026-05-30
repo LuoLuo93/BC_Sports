@@ -46,7 +46,7 @@ public class MainDataSourceConfig {
         
         // 设置 Mapper 位置
         factory.setMapperLocations(new PathMatchingResourcePatternResolver()
-                .getResources("classpath*:mapper/*.xml"));
+                .getResources("classpath*:mapper/**/*.xml"));
 
         // MyBatis-Plus 全局配置
         GlobalConfig globalConfig = new GlobalConfig();
@@ -63,6 +63,7 @@ public class MainDataSourceConfig {
         // MyBatis 配置
         com.baomidou.mybatisplus.core.MybatisConfiguration configuration = new com.baomidou.mybatisplus.core.MybatisConfiguration();
         configuration.setMapUnderscoreToCamelCase(true);
+        configuration.setJdbcTypeForNull(org.apache.ibatis.type.JdbcType.VARCHAR);
         configuration.setLogImpl(org.apache.ibatis.logging.slf4j.Slf4jImpl.class);
         configuration.setDefaultStatementTimeout(300);
         // 添加分页插件

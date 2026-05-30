@@ -1,5 +1,6 @@
 package com.bcsport.admin.controller;
 
+import com.bcsport.admin.annotation.OperLog;
 import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.common.Result;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -14,7 +15,7 @@ import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import javax.validation.Valid;
+import jakarta.validation.Valid;
 import java.util.List;
 
 @Slf4j
@@ -48,6 +49,7 @@ public class DictController {
     @PostMapping("/type")
     @ApiOperation("新增字典类型")
     @RequiresPermissions("system:dict:add")
+    @OperLog(module = "字典管理", operation = "新增字典类型")
     public Result<Void> addType(@Valid @RequestBody DictType dictType) {
         dictTypeService.addDictType(dictType);
         return Result.success(null);
@@ -56,6 +58,7 @@ public class DictController {
     @PutMapping("/type")
     @ApiOperation("修改字典类型")
     @RequiresPermissions("system:dict:edit")
+    @OperLog(module = "字典管理", operation = "修改字典类型")
     public Result<Void> updateType(@Valid @RequestBody DictType dictType) {
         dictTypeService.updateDictType(dictType);
         return Result.success(null);
@@ -64,6 +67,7 @@ public class DictController {
     @DeleteMapping("/type/{id}")
     @ApiOperation("删除字典类型")
     @RequiresPermissions("system:dict:delete")
+    @OperLog(module = "字典管理", operation = "删除字典类型")
     public Result<Void> deleteType(@PathVariable String id) {
         dictTypeService.deleteDictType(id);
         return Result.success(null);
@@ -99,6 +103,7 @@ public class DictController {
     @PostMapping("/data")
     @ApiOperation("新增字典数据")
     @RequiresPermissions("system:dict:add")
+    @OperLog(module = "字典管理", operation = "新增字典数据")
     public Result<Void> addData(@Valid @RequestBody DictData dictData) {
         dictDataService.addDictData(dictData);
         return Result.success(null);
@@ -107,6 +112,7 @@ public class DictController {
     @PutMapping("/data")
     @ApiOperation("修改字典数据")
     @RequiresPermissions("system:dict:edit")
+    @OperLog(module = "字典管理", operation = "修改字典数据")
     public Result<Void> updateData(@Valid @RequestBody DictData dictData) {
         dictDataService.updateDictData(dictData);
         return Result.success(null);
@@ -115,6 +121,7 @@ public class DictController {
     @DeleteMapping("/data/{id}")
     @ApiOperation("删除字典数据")
     @RequiresPermissions("system:dict:delete")
+    @OperLog(module = "字典管理", operation = "删除字典数据")
     public Result<Void> deleteData(@PathVariable String id) {
         dictDataService.deleteDictData(id);
         return Result.success(null);

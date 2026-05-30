@@ -159,6 +159,12 @@
         </el-card>
 
         <el-card shadow="never">
+          <template #header>
+            <div class="card-header-row">
+              <span class="card-header-title">执行日志</span>
+            </div>
+          </template>
+          <div class="table-responsive">
           <el-table v-loading="logLoading" :data="logData" border stripe empty-text="暂无执行日志">
             <el-table-column prop="jobName" label="任务名称" min-width="150" />
             <el-table-column label="触发类型" width="110" align="center">
@@ -171,7 +177,7 @@
                 <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">{{ row.status === 1 ? '成功' : '失败' }}</el-tag>
               </template>
             </el-table-column>
-            <el-table-column prop="executeTime" label="执行时间" width="200" show-overflow-tooltip />
+            <el-table-column prop="executeTime" label="执行时间" width="200" align="center" show-overflow-tooltip />
             <el-table-column label="耗时" width="100" align="center">
               <template #default="{ row }">
                 <span v-if="row.duration != null">{{ row.duration < 1000 ? row.duration + 'ms' : (row.duration / 1000).toFixed(1) + 's' }}</span>
@@ -180,6 +186,7 @@
             </el-table-column>
             <el-table-column prop="errorMsg" label="异常信息" min-width="200" show-overflow-tooltip />
           </el-table>
+          </div>
 
           <div class="pagination-wrapper">
             <el-pagination v-model:current-page="logQuery.pageNum" v-model:page-size="logQuery.pageSize" :total="logTotal" :page-sizes="PAGE_SIZES" layout="total, sizes, prev, pager, next, jumper" @size-change="handleLogSearch" @current-change="loadLogData" />

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bcsport.admin.ihrmapper.NxcrmTagValueMapper">
+
+    <insert id="insertBatch" parameterType="java.util.List">
+        INSERT INTO NXCRM_TAG_VALUE
+            (TAG_CODE, TAG_VALUE_CODE, TAG_VALUE_NAME, DESCRIPTION, DISPLAY_ORDER, SYNC_TIME)
+        <foreach collection="list" item="item" separator="UNION ALL">
+            SELECT
+                #{item.tagCode}, #{item.tagValueCode}, #{item.tagValueName},
+                #{item.description}, #{item.displayOrder}, #{item.syncTime}
+        </foreach>
+    </insert>
+
+</mapper>

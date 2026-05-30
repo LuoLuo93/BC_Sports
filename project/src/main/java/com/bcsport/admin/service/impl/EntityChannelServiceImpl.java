@@ -25,7 +25,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -104,9 +110,7 @@ public class EntityChannelServiceImpl implements EntityChannelService {
 
         IPage<EntityChannel> entityPage = entityChannelMapper.selectPage(page, queryWrapper);
 
-        List<EntityChannelVO> voList = entityPage.getRecords().stream()
-                .map(this::convertToVO)
-                .collect(Collectors.toList());
+        List<EntityChannelVO> voList = convertToVOBatch(entityPage.getRecords());
 
         PageResult<EntityChannelVO> pageResult = new PageResult<>();
         pageResult.setRecords(voList);
@@ -125,7 +129,7 @@ public class EntityChannelServiceImpl implements EntityChannelService {
         if (entity == null || entity.getDeleted() == 1) {
             return null;
         }
-        return convertToVO(entity);
+        return convertToVOBatch(Collections.singletonList(entity)).get(0);
     }
 
     @Override
@@ -206,54 +210,83 @@ public class EntityChannelServiceImpl implements EntityChannelService {
     }
 
     /**
-     * 转换为VO对象
+     * 批量转换为VO对象（消除N+1查询）
      */
-    private EntityChannelVO convertToVO(EntityChannel entity) {
-        EntityChannelVO vo = new EntityChannelVO();
-        BeanUtils.copyProperties(entity, vo);
-
-        // 设置实体类型名称
-        vo.setEntityTypeName(getEntityTypeName(entity.getEntityType()));
-
-        // 设置品牌名称
-        if (entity.getBrandId() != null) {
-            vo.setBrandName(getBrandName(entity.getBrandId()));
+    private List<EntityChannelVO> convertToVOBatch(List<EntityChannel> entities) {
+        if (entities == null || entities.isEmpty()) {
+            return Collections.emptyList();
         }
 
-        // 设置渠道类型名称
-        if (entity.getChannelTypeId() != null) {
-            vo.setChannelTypeName(getChannelTypeName(entity.getChannelTypeId()));
+        Set<String> channelTypeIds = new HashSet<>();
+        Set<String> channelNatureIds = new HashSet<>();
+        Set<String> regionIds = new HashSet<>();
+        Set<String> brandIds = new HashSet<>();
+
+        for (EntityChannel e : entities) {
+            addIfPresent(channelTypeIds, e.getChannelTypeId());
+            addIfPresent(channelTypeIds, e.getChannelDefId());
+            addIfPresent(channelNatureIds, e.getChannelNatureId());
+            addIfPresent(channelNatureIds, e.getBusinessTypeId());
+            addIfPresent(regionIds, e.getRegionLevel1Id());
+            addIfPresent(regionIds, e.getRegionLevel2Id());
+            addIfPresent(brandIds, e.getBrandId());
         }
 
-        // 设置渠道定义名称（注意：渠道定义也在 ChannelType 表中）
-        if (entity.getChannelDefId() != null) {
-            vo.setChannelDefName(getChannelTypeName(entity.getChannelDefId()));
+        Map<String, String> channelTypeNameMap = channelTypeIds.isEmpty() ? Collections.emptyMap() :
+                buildNameMap(channelTypeMapper.selectBatchIds(new ArrayList<>(channelTypeIds)),
+                        ChannelType::getId, ChannelType::getTypeName);
+        Map<String, String> channelNatureNameMap = channelNatureIds.isEmpty() ? Collections.emptyMap() :
+                buildNameMap(channelNatureMapper.selectBatchIds(new ArrayList<>(channelNatureIds)),
+                        ChannelNature::getId, ChannelNature::getNatureName);
+        Map<String, String> regionNameMap = regionIds.isEmpty() ? Collections.emptyMap() :
+                buildNameMap(regionMapper.selectBatchIds(new ArrayList<>(regionIds)),
+                        Region::getId, Region::getRegionName);
+        Map<String, String> brandNameMap = brandIds.isEmpty() ? Collections.emptyMap() :
+                buildNameMap(brandMapper.selectBatchIds(new ArrayList<>(brandIds)),
+                        Brand::getId, Brand::getBrandName);
+
+        return entities.stream().map(entity -> {
+            EntityChannelVO vo = new EntityChannelVO();
+            BeanUtils.copyProperties(entity, vo);
+            vo.setEntityTypeName(getEntityTypeName(entity.getEntityType()));
+
+            if (entity.getBrandId() != null) {
+                vo.setBrandName(brandNameMap.get(entity.getBrandId()));
+            }
+            if (entity.getChannelTypeId() != null) {
+                vo.setChannelTypeName(channelTypeNameMap.get(entity.getChannelTypeId()));
+            }
+            if (entity.getChannelDefId() != null) {
+                vo.setChannelDefName(channelTypeNameMap.get(entity.getChannelDefId()));
+            }
+            if (entity.getChannelNatureId() != null) {
+                vo.setChannelNatureName(channelNatureNameMap.get(entity.getChannelNatureId()));
+            }
+            if (entity.getBusinessTypeId() != null) {
+                vo.setBusinessTypeName(channelNatureNameMap.get(entity.getBusinessTypeId()));
+            }
+            if (entity.getRegionLevel1Id() != null) {
+                vo.setRegionLevel1Name(regionNameMap.get(entity.getRegionLevel1Id()));
+            }
+            if (entity.getRegionLevel2Id() != null) {
+                vo.setRegionLevel2Name(regionNameMap.get(entity.getRegionLevel2Id()));
+            }
+            vo.setStatusName(entity.getStatus() == 1 ? "启用" : "禁用");
+            return vo;
+        }).collect(Collectors.toList());
+    }
+
+    private void addIfPresent(Set<String> set, String value) {
+        if (value != null && !value.isEmpty()) {
+            set.add(value);
         }
+    }
 
-        // 设置渠道性质名称
-        if (entity.getChannelNatureId() != null) {
-            vo.setChannelNatureName(getChannelNatureName(entity.getChannelNatureId()));
+    private <T> Map<String, String> buildNameMap(List<T> list, Function<T, String> keyMapper, Function<T, String> valueMapper) {
+        if (list == null || list.isEmpty()) {
+            return Collections.emptyMap();
         }
-
-        // 设置经营类型名称（注意：经营类型也在 ChannelNature 表中）
-        if (entity.getBusinessTypeId() != null) {
-            vo.setBusinessTypeName(getChannelNatureName(entity.getBusinessTypeId()));
-        }
-
-        // 设置一级地区名称
-        if (entity.getRegionLevel1Id() != null) {
-            vo.setRegionLevel1Name(getRegionName(entity.getRegionLevel1Id()));
-        }
-
-        // 设置二级地区名称
-        if (entity.getRegionLevel2Id() != null) {
-            vo.setRegionLevel2Name(getRegionName(entity.getRegionLevel2Id()));
-        }
-
-        // 设置状态名称
-        vo.setStatusName(entity.getStatus() == 1 ? "启用" : "禁用");
-
-        return vo;
+        return list.stream().collect(Collectors.toMap(keyMapper, valueMapper, (a, b) -> a));
     }
 
     private String getEntityTypeName(String entityType) {
@@ -264,25 +297,5 @@ public class EntityChannelServiceImpl implements EntityChannelService {
             case "customer": return "客户";
             default: return entityType;
         }
-    }
-
-    private String getChannelTypeName(String channelTypeId) {
-        ChannelType channelType = channelTypeMapper.selectById(channelTypeId);
-        return channelType != null ? channelType.getTypeName() : null;
-    }
-
-    private String getChannelNatureName(String channelNatureId) {
-        ChannelNature channelNature = channelNatureMapper.selectById(channelNatureId);
-        return channelNature != null ? channelNature.getNatureName() : null;
-    }
-
-    private String getRegionName(String regionId) {
-        Region region = regionMapper.selectById(regionId);
-        return region != null ? region.getRegionName() : null;
-    }
-
-    private String getBrandName(String brandId) {
-        Brand brand = brandMapper.selectById(brandId);
-        return brand != null ? brand.getBrandName() : null;
     }
 }

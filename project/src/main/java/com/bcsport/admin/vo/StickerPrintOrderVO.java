@@ -5,6 +5,7 @@ import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -60,19 +61,58 @@ public class StickerPrintOrderVO {
 
         private String id;
 
-        @ApiModelProperty("货品编码")
-        private String productCode;
+        @ApiModelProperty("货号")
+        private String materialNumber;
 
         @ApiModelProperty("货品名称")
-        private String productName;
+        private String materialName;
 
-        @ApiModelProperty("规格")
-        private String spec;
+        @ApiModelProperty("款号")
+        private String styleNumber;
 
-        @ApiModelProperty("数量")
-        private Integer quantity;
+        @ApiModelProperty("颜色")
+        private String color;
 
-        @ApiModelProperty("打印状态：0-未打印，1-已打印")
-        private Integer printStatus;
+        @ApiModelProperty("执行标准")
+        private String executionStandard;
+
+        @ApiModelProperty("尺码编码")
+        private String sizeCode;
+
+        @ApiModelProperty("尺码名称")
+        private String sizeName;
+
+        @ApiModelProperty("尺码组")
+        private String sizeGroup;
+
+        @ApiModelProperty("EAN13")
+        private String ean13;
+
+        @ApiModelProperty("品牌名称")
+        private String brandName;
+
+        @ApiModelProperty("价格")
+        private BigDecimal price;
+
+        @ApiModelProperty("打印数量")
+        private Integer printQty;
+
+        @ApiModelProperty("排序")
+        private Integer sort;
+
+        @ApiModelProperty("产地")
+        private String origin;
+
+        @ApiModelProperty("制造商")
+        private String manufacturer;
+
+        @ApiModelProperty("制造商地址")
+        private String manufacturerAddress;
+
+        @ApiModelProperty("联系电话")
+        private String contactPhone;
+
+        @ApiModelProperty("材质/面料成分")
+        private String materialComposition;
     }
 }

@@ -10,11 +10,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -66,6 +67,9 @@ public class NxcrmTagIncrementSyncTask {
             tagInfoMapper.delete(null);
 
             LocalDateTime now = LocalDateTime.now();
+            List<NxcrmTagInfo> tagInfoList = new ArrayList<>();
+            List<NxcrmTagValue> tagValueList = new ArrayList<>();
+
             for (IncrementTagInfo t : tags) {
                 NxcrmTagInfo info = new NxcrmTagInfo();
                 info.setTagCode(t.getTagCode());
@@ -87,7 +91,7 @@ public class NxcrmTagIncrementSyncTask {
                 info.setTagCreateTime(toLocalDateTime(t.getCreateTime()));
                 info.setTagUpdateTime(toLocalDateTime(t.getUpdateTime()));
                 info.setSyncTime(now);
-                tagInfoMapper.insert(info);
+                tagInfoList.add(info);
 
                 if (t.getTagValueList() != null) {
                     for (IncrementTagValueInfo v : t.getTagValueList()) {
@@ -98,11 +102,18 @@ public class NxcrmTagIncrementSyncTask {
                         val.setDescription(v.getDescription());
                         val.setDisplayOrder(v.getDisplayOrder());
                         val.setSyncTime(now);
-                        tagValueMapper.insert(val);
+                        tagValueList.add(val);
                     }
                 }
             }
-            log.info("增量标签同步完成, 标签{}条", tags.size());
+
+            if (!tagInfoList.isEmpty()) {
+                tagInfoMapper.insertBatch(tagInfoList);
+            }
+            if (!tagValueList.isEmpty()) {
+                tagValueMapper.insertBatch(tagValueList);
+            }
+            log.info("增量标签同步完成, 标签{}条, 标签值{}条", tagInfoList.size(), tagValueList.size());
             log.info("=== 完成执行: 南讯CRM同步增量标签 ===");
         } catch (Exception e) {
             log.error("=== 失败执行: 南讯CRM同步增量标签 ===", e);

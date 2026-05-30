@@ -1,38 +1,28 @@
 <template>
-  <div class="page-container">
-    <!-- 搜索栏 -->
-    <el-card shadow="never" class="search-card">
-      <el-form :model="query" inline>
-        <el-form-item label="角色名称">
-          <el-input v-model="query.roleName" placeholder="请输入角色名称" clearable @keyup.enter="loadData" />
-        </el-form-item>
-        <el-form-item label="角色编码">
-          <el-input v-model="query.roleCode" placeholder="请输入角色编码" clearable @keyup.enter="loadData" />
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model="query.status" placeholder="全部" clearable >
-            <el-option label="正常" :value="1" />
-            <el-option label="停用" :value="0" />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" :icon="Search" @click="handleSearch">搜索</el-button>
-          <el-button :icon="RefreshRight" @click="resetQuery">重置</el-button>
-        </el-form-item>
-      </el-form>
-    </el-card>
-
-    <!-- 表格 -->
-    <el-card shadow="never">
-      <template #header>
-        <div class="card-header-row">
-          <span class="card-header-title">角色列表</span>
-          <el-button v-if="hasPermission('role:add')" type="primary" size="small" :icon="Plus" @click="handleAdd">新增角色</el-button>
-        </div>
-      </template>
-
-      <div class="table-responsive">
-        <el-table v-loading="loading" :data="tableData" border stripe empty-text="暂无数据">
+  <SearchPage title="角色列表" v-model:page-num="query.pageNum" v-model:page-size="query.pageSize"
+    :total="total" @page-change="loadData">
+    <template #search>
+      <el-form-item label="角色名称">
+        <el-input v-model="query.roleName" placeholder="请输入角色名称" clearable @keyup.enter="loadData" />
+      </el-form-item>
+      <el-form-item label="角色编码">
+        <el-input v-model="query.roleCode" placeholder="请输入角色编码" clearable @keyup.enter="loadData" />
+      </el-form-item>
+      <el-form-item label="状态">
+        <el-select v-model="query.status" placeholder="全部" clearable >
+          <el-option label="正常" :value="1" />
+          <el-option label="停用" :value="0" />
+        </el-select>
+      </el-form-item>
+      <el-form-item>
+        <el-button type="primary" :icon="Search" @click="handleSearch">搜索</el-button>
+        <el-button :icon="RefreshRight" @click="resetQuery">重置</el-button>
+      </el-form-item>
+    </template>
+    <template #actions>
+      <el-button v-if="hasPermission('role:add')" type="primary" size="small" :icon="Plus" @click="handleAdd">新增角色</el-button>
+    </template>
+    <el-table v-loading="loading" :data="tableData" border stripe empty-text="暂无数据">
           <el-table-column type="index" label="#" width="50" align="center" />
           <el-table-column prop="roleName" label="角色名称" min-width="140" />
           <el-table-column prop="roleCode" label="角色编码" min-width="140">
@@ -56,20 +46,7 @@
             </template>
           </el-table-column>
         </el-table>
-      </div>
-
-      <div class="pagination-wrapper">
-        <el-pagination
-          v-model:current-page="query.pageNum"
-          v-model:page-size="query.pageSize"
-          :total="total"
-          :page-sizes="PAGE_SIZES"
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="handleSearch"
-          @current-change="loadData"
-        />
-      </div>
-    </el-card>
+  </SearchPage>
 
     <!-- 新增/编辑弹窗 -->
     <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑角色' : '新增角色'" width="560px" destroy-on-close>
@@ -118,18 +95,17 @@
         <el-button type="primary" :loading="permSubmitting" @click="handlePermSubmit">确定</el-button>
       </template>
     </el-dialog>
-  </div>
 </template>
 
 <script setup>
 defineOptions({ name: 'RoleManagement' })
 import { ref, reactive, onMounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import SearchPage from '@/components/SearchPage.vue'
 import { getRolePage, getRole, createRole, updateRole, deleteRole, getRolePermissions, updateRolePermissions } from '@/api/role'
 import { Plus, Search, RefreshRight } from '@element-plus/icons-vue'
 import { usePermission } from '@/composables/usePermission'
 import { usePageQuery } from '@/composables/usePageQuery'
-import { PAGE_SIZES } from '@/utils/constants'
 import { useRefStore } from '@/stores/reference'
 
 const { hasPermission } = usePermission()

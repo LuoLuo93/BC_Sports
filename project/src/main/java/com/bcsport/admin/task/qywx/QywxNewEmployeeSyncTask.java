@@ -3,8 +3,11 @@ package com.bcsport.admin.task.qywx;
 import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import com.bcsport.admin.entity.ihr.IhrEmployeeDetail;
+import com.bcsport.admin.entity.ihr.IhrEmployeeExclusion;
+import com.bcsport.admin.ihrmapper.IhrDepartmentMapper;
 import com.bcsport.admin.ihrmapper.IhrEmployeeAdditionMapper;
 import com.bcsport.admin.ihrmapper.IhrEmployeeDetailMapper;
+import com.bcsport.admin.ihrmapper.IhrEmployeeExclusionMapper;
 import com.bcsport.admin.qywxmapper.QywxDepartmentMapper;
 import com.bcsport.admin.service.IhrEmployeeExclusionService;
 import com.bcsport.admin.service.IhrEmployeeOnboardingService;
@@ -38,6 +41,9 @@ public class QywxNewEmployeeSyncTask {
     private QywxDepartmentMapper departmentMapper;
 
     @Autowired
+    private IhrDepartmentMapper ihrDepartmentMapper;
+
+    @Autowired
     private QywxApiClient apiClient;
 
     @Autowired
@@ -45,6 +51,9 @@ public class QywxNewEmployeeSyncTask {
 
     @Autowired
     private IhrEmployeeExclusionService exclusionService;
+
+    @Autowired
+    private IhrEmployeeExclusionMapper exclusionMapper;
 
     @Autowired
     private IhrEmployeeOnboardingService onboardingService;
@@ -109,6 +118,12 @@ public class QywxNewEmployeeSyncTask {
 
             log.info("查到 {} 个员工详细信息，开始处理", allEmployees.size());
 
+            // Pre-load exclusions for O(1) lookup
+            List<IhrEmployeeExclusion> exclusions = exclusionMapper.selectActiveExclusions(1);
+            Set<String> exclusionSet = exclusions.stream()
+                    .map(e -> e.getStaffName() + "|" + e.getStaffNo())
+                    .collect(Collectors.toSet());
+
             // 3. 逐个处理员工
             int successCount = 0;
             int skipCount = 0;
@@ -128,8 +143,8 @@ public class QywxNewEmployeeSyncTask {
                         continue;
                     }
 
-                    // 检查是否在入职排除列表中
-                    if (exclusionService.checkExcluded(staffName, staffNo, 1)) {
+                    // Check exclusion using pre-loaded Set
+                    if (exclusionSet.contains(staffName + "|" + staffNo)) {
                         log.info("员工 {}({}) 在入职排除列表中，跳过", staffName, staffNo);
                         onboardingService.markSyncSkipped(employee.getId(), staffName, staffNo);
                         skipCount++;
@@ -147,6 +162,13 @@ public class QywxNewEmployeeSyncTask {
 
                     // 匹配部门 ID
                     String departId = resolveDepartId(employee);
+                    if (departId == null) {
+                        failCount++;
+                        onboardingService.markSyncFailed(employee.getId(), staffName, staffNo,
+                                "部门匹配失败: " + employee.getDepartmentName());
+                        log.warn("创建企微用户失败(部门匹配): {}({}), 部门: {}", staffName, mobile, employee.getDepartmentName());
+                        continue;
+                    }
                     log.info("员工 {}({}), 部门 {} -> 企微部门ID: {}", employee.getStaffName(), mobile, employee.getDepartmentName(), departId);
 
                     // 构建创建用户请求
@@ -227,6 +249,11 @@ public class QywxNewEmployeeSyncTask {
 
         // 匹配部门
         String departId = resolveDepartId(employee);
+        if (departId == null) {
+            onboardingService.markSyncFailed(employeesId, staffName, staffNo,
+                    "部门匹配失败: " + employee.getDepartmentName());
+            return "部门匹配失败: " + employee.getDepartmentName();
+        }
 
         // 创建企微用户
         JSONObject requestBody = buildCreateUserBody(employee, departId);
@@ -248,57 +275,55 @@ public class QywxNewEmployeeSyncTask {
     }
 
     /**
-     * 匹配企微部门 ID（复用原项目多级匹配逻辑）
+     * 匹配企微部门 ID
+     * 优先按部门名直接匹配，多个同名时通过 IHR department 表递归查祖先链消歧
+     * @return 部门 ID，无法确定时返回 null
      */
     private String resolveDepartId(IhrEmployeeDetail employee) {
         String departmentName = employee.getDepartmentName();
         if (departmentName == null || departmentName.isEmpty()) {
-            return DEFAULT_DEPART_ID;
+            log.warn("员工 {} 的部门名称为空", employee.getStaffName());
+            return null;
         }
 
         try {
-            // 第一级：直接按部门名查
             List<String> departIds = departmentMapper.selectDepartIdByName(departmentName);
             if (departIds == null || departIds.isEmpty()) {
-                log.warn("未找到部门: {}, 分配到默认部门", departmentName);
-                return DEFAULT_DEPART_ID;
+                log.warn("未找到部门: {}", departmentName);
+                return null;
             }
 
-            // 只有一个匹配，直接返回
             if (departIds.size() == 1) {
                 return departIds.get(0);
             }
 
-            // 多个匹配，需要用一级部门名进一步筛选
-            String firstLevelDeptName = employee.getFirstLevelDepartmentName();
-            if (firstLevelDeptName == null || firstLevelDeptName.isEmpty()) {
-                log.warn("部门 {} 有多个匹配但无一级部门信息, 使用第一个: {}", departmentName, departIds.get(0));
-                return departIds.get(0);
-            }
-
-            // 判断是否主管岗位（需要三级部门匹配）
-            String positionName = employee.getPositionName();
-            if (positionName != null && positionName.contains("主管")) {
-                // 三级部门匹配：部门名 -> 上级部门 -> 一级部门
-                // 先查当前部门的上级部门名（通过 department 表的 parentId 关系）
-                String result = departmentMapper.selectDepartIdByThreeLevel(
-                        departmentName, firstLevelDeptName, firstLevelDeptName);
-                if (result != null && !result.isEmpty()) {
-                    return result;
+            // 多个同名部门，通过 IHR department 表递归查祖先链消歧
+            String deptIdStr = employee.getDepartmentId();
+            if (deptIdStr != null && !deptIdStr.isEmpty() && !"null".equals(deptIdStr)) {
+                try {
+                    Long deptId = Long.parseLong(deptIdStr);
+                    List<String> ancestorNames = ihrDepartmentMapper.selectAncestorNames(deptId);
+                    // 去掉根部门（最后一个），两套系统的公司名不同不需要比较
+                    if (ancestorNames != null && ancestorNames.size() > 1) {
+                        ancestorNames = ancestorNames.subList(0, ancestorNames.size() - 1);
+                    }
+                    if (ancestorNames != null && !ancestorNames.isEmpty()) {
+                        List<String> results = departmentMapper.selectDepartIdByAncestorChain(departmentName, ancestorNames);
+                        if (results != null && !results.isEmpty()) {
+                            log.info("通过祖先链匹配部门成功: {} -> 祖先: {}", departmentName, ancestorNames);
+                            return results.get(0);
+                        }
+                    }
+                } catch (NumberFormatException e) {
+                    log.warn("部门ID格式错误: {}", deptIdStr);
                 }
             }
 
-            // 二级匹配：部门名 + 一级部门名
-            String result = departmentMapper.selectDepartIdByNameAndParent(departmentName, firstLevelDeptName);
-            if (result != null && !result.isEmpty()) {
-                return result;
-            }
-
-            log.warn("未找到部门 {} 的精确匹配(一级部门: {}), 分配到默认部门", departmentName, firstLevelDeptName);
-            return DEFAULT_DEPART_ID;
+            log.warn("未找到部门 {} 的精确匹配(共{}个同名部门)", departmentName, departIds.size());
+            return null;
         } catch (Exception e) {
             log.error("匹配部门失败: {}: {}", departmentName, e.getMessage());
-            return DEFAULT_DEPART_ID;
+            return null;
         }
     }
 

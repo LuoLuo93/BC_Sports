@@ -17,4 +17,6 @@ public interface IhrEmployeeExclusionMapper extends BaseMapper<IhrEmployeeExclus
     void insertBatch(@Param("list") List<IhrEmployeeExclusion> list);
 
     List<String> selectActiveStaffNos(@Param("exclusionType") Integer exclusionType);
+
+    List<IhrEmployeeExclusion> selectActiveExclusions(@Param("exclusionType") Integer exclusionType);
 }

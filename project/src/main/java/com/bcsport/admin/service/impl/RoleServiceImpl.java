@@ -165,12 +165,13 @@ public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements Ro
                         roleMenu.setId(UUID.randomUUID().toString().replace("-", ""));
                         roleMenu.setRoleId(roleId);
                         roleMenu.setMenuId(menuId);
+                        roleMenu.setCreateTime(LocalDateTime.now());
+                        roleMenu.setCreateBy(com.bcsport.admin.util.ShiroSecurityUtils.getCurrentUserId());
                         return roleMenu;
                     })
                     .collect(Collectors.toList());
 
-            // 使用批量插入（需要RoleMenuMapper继承MyBatis-Plus的批量插入方法）
-            roleMenuList.forEach(roleMenuMapper::insert);
+            roleMenuMapper.batchInsert(roleMenuList);
         }
         authCacheService.evictAll();
         return true;

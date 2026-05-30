@@ -1,5 +1,6 @@
 package com.bcsport.admin.config;
 
+import org.apache.shiro.subject.Subject;
 import org.apache.shiro.web.filter.authc.FormAuthenticationFilter;
 import org.apache.shiro.web.util.WebUtils;
 
@@ -47,6 +48,12 @@ public class SpaAuthFilter extends FormAuthenticationFilter {
                 || uri.endsWith(".ico") || uri.endsWith(".png") || uri.endsWith(".jpg")
                 || uri.endsWith(".svg") || uri.endsWith(".woff") || uri.endsWith(".woff2")
                 || uri.endsWith(".ttf") || uri.endsWith(".eot")) {
+            return true;
+        }
+
+        // 支持 Remember-Me：已记住的用户视为已认证
+        Subject subject = getSubject(request, response);
+        if (subject != null && subject.isRemembered()) {
             return true;
         }
 

@@ -161,6 +161,7 @@ shiro:
       chain-definitions:
         /login anon
         /doLogin anon
+        /api/config/public anon
         /assets/** anon
         /static/** anon
         /css/** anon
@@ -233,12 +234,15 @@ logging:
 spring.servlet.multipart.max-file-size: 10MB
 spring.servlet.multipart.max-request-size: 50MB
 
+# 上传文件存储路径
+bc.upload.path: E:/work/BC_Sport/BcSportsDataManageSystem/project/src/main/resources/static/images
+
 # Actuator 监控
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics,env,loggers
+        include: health,info,metrics
       base-path: /actuator
   endpoint:
     health:

@@ -17,10 +17,16 @@ public class AuthCacheService {
     private static final String ROLE_KEY = "auth:role:";
     private static final String MENU_KEY = "auth:menu:";
     private static final String SESSION_KEY = "auth:session:";
+    private static final String LOGIN_FAIL_KEY = "auth:login:fail:";
+    private static final String LOGIN_LOCK_KEY = "auth:login:lock:";
+    private static final String CAPTCHA_KEY = "auth:captcha:";
     private static final long TTL_MINUTES = 30;
 
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
+
+    @Autowired
+    private ConfigService configService;
 
     @SuppressWarnings("unchecked")
     public List<String> getPermissions(String userId) {
@@ -78,7 +84,8 @@ public class AuthCacheService {
 
     public void bindUserSession(String username, String sessionId) {
         try {
-            redisTemplate.opsForValue().set(SESSION_KEY + username, sessionId);
+            int timeoutMinutes = configService.getInt("security.sessionTimeout", 30);
+            redisTemplate.opsForValue().set(SESSION_KEY + username, sessionId, timeoutMinutes, TimeUnit.MINUTES);
         } catch (Exception e) {
             log.warn("Redis绑定用户会话失败, username={}", username, e);
         }
@@ -109,6 +116,92 @@ public class AuthCacheService {
             scanAndDelete(MENU_KEY);
         } catch (Exception e) {
             log.warn("Redis清除全部权限缓存失败", e);
+        }
+    }
+
+    // ==================== 登录锁定管理 ====================
+
+    /**
+     * 记录一次登录失败，返回当前累计失败次数
+     */
+    public long recordLoginFailure(String username) {
+        String key = LOGIN_FAIL_KEY + username;
+        try {
+            Long count = redisTemplate.opsForValue().increment(key);
+            if (count != null && count == 1) {
+                redisTemplate.expire(key, 1, TimeUnit.HOURS);
+            }
+            return count != null ? count : 0;
+        } catch (Exception e) {
+            log.warn("Redis记录登录失败次数异常, username={}", username, e);
+            return 0;
+        }
+    }
+
+    /**
+     * 清除登录失败计数（登录成功时调用）
+     */
+    public void clearLoginFailures(String username) {
+        try {
+            redisTemplate.delete(LOGIN_FAIL_KEY + username);
+        } catch (Exception e) {
+            log.warn("Redis清除登录失败计数异常, username={}", username, e);
+        }
+    }
+
+    /**
+     * 获取当前登录失败次数
+     */
+    public long getLoginFailureCount(String username) {
+        try {
+            Object val = redisTemplate.opsForValue().get(LOGIN_FAIL_KEY + username);
+            return val != null ? Long.parseLong(val.toString()) : 0;
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    /**
+     * 锁定账号
+     */
+    public void lockAccount(String username, int lockMinutes) {
+        try {
+            redisTemplate.opsForValue().set(LOGIN_LOCK_KEY + username, "1", lockMinutes, TimeUnit.MINUTES);
+        } catch (Exception e) {
+            log.warn("Redis锁定账号异常, username={}", username, e);
+        }
+    }
+
+    /**
+     * 检查账号是否被锁定，返回剩余锁定秒数（0=未锁定）
+     */
+    public long getLockRemainSeconds(String username) {
+        try {
+            Long ttl = redisTemplate.getExpire(LOGIN_LOCK_KEY + username, TimeUnit.SECONDS);
+            return ttl != null && ttl > 0 ? ttl : 0;
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    // ==================== 验证码管理 ====================
+
+    public void putCaptcha(String captchaKey, String code) {
+        try {
+            redisTemplate.opsForValue().set(CAPTCHA_KEY + captchaKey, code, 5, TimeUnit.MINUTES);
+        } catch (Exception e) {
+            log.warn("Redis写入验证码失败, key={}", captchaKey, e);
+        }
+    }
+
+    public String getCaptchaAndDelete(String captchaKey) {
+        try {
+            Object val = redisTemplate.opsForValue().get(CAPTCHA_KEY + captchaKey);
+            redisTemplate.delete(CAPTCHA_KEY + captchaKey);
+            return val != null ? val.toString() : null;
+        } catch (Exception e) {
+            log.warn("Redis读取验证码失败, key={}", captchaKey, e);
+            return null;
         }
     }
 

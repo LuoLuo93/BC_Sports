@@ -14,7 +14,10 @@ import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.concurrent.ThreadPoolExecutor;
 
 @Slf4j
 @RestController
@@ -33,6 +36,10 @@ public class IhrEmployeeOnboardingController {
 
     @Autowired
     private QywxNewEmployeeSyncTask qywxNewEmployeeSyncTask;
+
+    @Autowired
+    @Qualifier("taskThreadPool")
+    private ThreadPoolExecutor taskThreadPool;
 
     @GetMapping("/page")
     @ApiOperation("分页查询入职员工")
@@ -57,13 +64,13 @@ public class IhrEmployeeOnboardingController {
             IhrEmployeeTask.setSyncing(true);
             IhrEmployeeTask.setSyncStartTime(new java.util.Date());
 
-            new Thread(() -> {
+            taskThreadPool.execute(() -> {
                 try {
                     ihrEmployeeTask.syncAllFromManual();
                 } catch (Exception e) {
                     log.error("IHR员工同步异常", e);
                 }
-            }, "ihr-sync-manual").start();
+            });
         }
         return Result.success("IHR同步已触发，请稍后刷新页面查看数据");
     }
@@ -76,13 +83,13 @@ public class IhrEmployeeOnboardingController {
         if (QywxEmployeeLifecycleSyncTask.isSyncing()) {
             return Result.error("企微同步正在进行中，请稍后再试");
         }
-        new Thread(() -> {
+        taskThreadPool.execute(() -> {
             try {
                 qywxEmployeeLifecycleSyncTask.syncAll();
             } catch (Exception e) {
                 log.error("企微同步异常", e);
             }
-        }, "qywx-sync-manual").start();
+        });
         return Result.success("企微同步已触发，请稍后刷新页面查看同步状态");
     }
 

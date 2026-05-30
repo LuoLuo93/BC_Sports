@@ -26,4 +26,9 @@ public interface QywxDepartmentMemberDetailMapper {
      * 根据用户ID查找姓名
      */
     String selectNameByUserid(@Param("userid") String userid);
+
+    /**
+     * 根据用户ID批量查找姓名
+     */
+    List<QywxDepartmentMemberDetail> selectNameByUserids(@Param("userids") List<String> userids);
 }

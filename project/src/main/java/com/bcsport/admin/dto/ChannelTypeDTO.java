@@ -2,8 +2,8 @@ package com.bcsport.admin.dto;
 
 import lombok.Data;
 
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 /**
  * 渠道类型数据传输对象（新增或修改完

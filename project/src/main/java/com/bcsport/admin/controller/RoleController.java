@@ -1,5 +1,6 @@
 package com.bcsport.admin.controller;
 
+import com.bcsport.admin.annotation.OperLog;
 import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.common.Result;
@@ -14,7 +15,7 @@ import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import javax.validation.Valid;
+import jakarta.validation.Valid;
 import java.util.List;
 
 /**
@@ -70,6 +71,7 @@ public class RoleController {
     @PostMapping
     @ApiOperation("新增角色")
     @RequiresPermissions("role:add")
+    @OperLog(module = "角色管理", operation = "新增角色")
     public Result<?> addRole(@Valid @RequestBody RoleDTO roleDTO) {
         boolean success = roleService.addRole(roleDTO);
         if (success) {
@@ -84,6 +86,7 @@ public class RoleController {
     @PutMapping("/{id}")
     @ApiOperation("更新角色")
     @RequiresPermissions("role:edit")
+    @OperLog(module = "角色管理", operation = "更新角色")
     public Result<?> updateRole(@PathVariable String id, @Valid @RequestBody RoleDTO roleDTO) {
         roleDTO.setId(id);
         boolean success = roleService.updateRole(roleDTO);
@@ -99,6 +102,7 @@ public class RoleController {
     @DeleteMapping("/{id}")
     @ApiOperation("删除角色")
     @RequiresPermissions("role:delete")
+    @OperLog(module = "角色管理", operation = "删除角色")
     public Result<?> deleteRole(@PathVariable String id) {
         boolean success = roleService.deleteRole(id);
         if (success) {
@@ -124,6 +128,7 @@ public class RoleController {
     @PutMapping("/{id}/permissions")
     @ApiOperation("分配权限")
     @RequiresPermissions("role:assignPermission")
+    @OperLog(module = "角色管理", operation = "分配权限")
     public Result<?> assignPermissions(@PathVariable String id, @RequestBody List<String> permissionIds) {
         boolean success = roleService.assignPermissions(id, permissionIds);
         if (success) {

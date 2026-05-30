@@ -103,10 +103,10 @@
         <div class="core-container" style="--anim-delay: 0.25s">
           <div class="panel-header core-header">
             <span class="panel-indicator"></span>
-            <span class="panel-title">ALPINE TERRAIN / 高山数字沙盘</span>
-            <span class="panel-tag">TERRAIN</span>
+            <span class="panel-title">OUTDOOR GEAR / 户外装备展示</span>
+            <span class="panel-tag">3D</span>
           </div>
-          <AlpineTerrain class="core-earth" />
+          <OutdoorModel class="core-earth" />
         </div>
       </div>
 
@@ -141,7 +141,7 @@
 defineOptions({ name: 'Dashboard' })
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import VChart from 'vue-echarts'
-import AlpineTerrain from '@/components/3d/AlpineTerrain.vue'
+import OutdoorModel from '@/components/3d/OutdoorModel.vue'
 import { Location, Odometer, PartlyCloudy } from '@element-plus/icons-vue'
 
 const isFullscreen = ref(false)

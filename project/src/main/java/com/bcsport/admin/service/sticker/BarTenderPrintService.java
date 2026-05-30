@@ -30,8 +30,9 @@ public class BarTenderPrintService {
 
         List<Map<String, Object>> printData = details.stream().map(d -> {
             Map<String, Object> item = new LinkedHashMap<>();
-            item.put("articleNo", d.getArticleNo());
-            item.put("articleName", d.getArticleName());
+            item.put("styleNumber", d.getStyleNumber());
+            item.put("materialName", d.getMaterialName());
+            item.put("materialNumber", d.getMaterialNumber());
             item.put("brandName", d.getBrandName());
             item.put("sizeName", d.getSizeName());
             item.put("sizeGroup", d.getSizeGroup());

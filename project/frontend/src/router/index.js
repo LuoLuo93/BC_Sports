@@ -21,6 +21,7 @@ const routes = [
       { path: 'system/role', name: 'RoleManagement', component: () => import('@/views/system/Role.vue'), meta: { pageTitle: '角色管理' } },
       { path: 'system/dept', name: 'DeptManagement', component: () => import('@/views/system/Dept.vue'), meta: { pageTitle: '部门管理' } },
       { path: 'system/dict', name: 'DictManagement', component: () => import('@/views/system/Dict.vue'), meta: { pageTitle: '字典管理' } },
+      { path: 'system/log', name: 'LogManagement', component: () => import('@/views/system/Log.vue'), meta: { pageTitle: '操作日志' } },
       { path: 'system/online-user', name: 'OnlineUser', component: () => import('@/views/system/OnlineUser.vue'), meta: { pageTitle: '在线用户' } },
       // BI
       { path: 'bi/management', name: 'BiManagement', component: () => import('@/views/bi/Management.vue'), meta: { pageTitle: '品牌与渠道' } },
@@ -44,6 +45,7 @@ const routes = [
       // Sticker
       { path: 'sticker/print', name: 'StickerPrintList', component: () => import('@/views/sticker/PrintApplication.vue'), meta: { pageTitle: '贴纸打印' } },
       { path: 'sticker/print/:orderId', name: 'StickerPrintDetail', component: () => import('@/views/sticker/PrintDetail.vue'), meta: { pageTitle: '申请单详情' } },
+      { path: 'sticker/data', name: 'StickerData', component: () => import('@/views/sticker/StickerData.vue'), meta: { pageTitle: '贴纸资料维护' } },
       // Monitor
       { path: 'monitor/schedule', name: 'Schedule', component: () => import('@/views/monitor/Schedule.vue'), meta: { pageTitle: '定时任务' } },
       { path: 'monitor/system', name: 'SystemMonitor', component: () => import('@/views/monitor/SystemMonitor.vue'), meta: { pageTitle: '系统监控' } },
@@ -58,7 +60,7 @@ const routes = [
     ]
   },
   { path: '/403', name: 'Forbidden', component: () => import('@/views/error/403.vue'), meta: { requiresAuth: false } },
-  { path: '/:pathMatch(.*)*', redirect: '/' }
+  { path: '/:pathMatch(.*)*', name: 'NotFound', component: () => import('@/views/error/404.vue'), meta: { requiresAuth: false } }
 ]
 
 const router = createRouter({

@@ -23,7 +23,7 @@ import org.springframework.util.StringUtils;
 
 import cn.hutool.json.JSONUtil;
 
-import javax.annotation.PostConstruct;
+import jakarta.annotation.PostConstruct;
 import java.util.List;
 import java.util.Map;
 

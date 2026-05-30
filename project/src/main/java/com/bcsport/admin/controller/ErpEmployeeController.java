@@ -16,11 +16,13 @@ import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.ThreadPoolExecutor;
 
 @Slf4j
 @RestController
@@ -38,6 +40,10 @@ public class ErpEmployeeController {
 
     @Autowired
     private ErpEmployeeSyncTask erpSyncTask;
+
+    @Autowired
+    @Qualifier("taskThreadPool")
+    private ThreadPoolExecutor taskThreadPool;
 
     @GetMapping("/onboarding/page")
     @ApiOperation("分页查询入职员工")
@@ -78,13 +84,13 @@ public class ErpEmployeeController {
             IhrEmployeeTask.setSyncing(true);
             IhrEmployeeTask.setSyncStartTime(new java.util.Date());
 
-            new Thread(() -> {
+            taskThreadPool.execute(() -> {
                 try {
                     ihrEmployeeTask.syncAllFromManual();
                 } catch (Exception e) {
                     log.error("IHR员工同步异常", e);
                 }
-            }, "ihr-sync-erp-manual").start();
+            });
         }
         return Result.success("IHR同步已触发，请稍后刷新页面查看数据");
     }
@@ -100,7 +106,7 @@ public class ErpEmployeeController {
                 return Result.error("ERP同步正在进行中，请稍后再试");
             }
             ErpEmployeeSyncTask.setSyncing(true);
-            new Thread(() -> {
+            taskThreadPool.execute(() -> {
                 try {
                     erpSyncTask.syncAll();
                 } catch (Exception e) {
@@ -108,7 +114,7 @@ public class ErpEmployeeController {
                 } finally {
                     ErpEmployeeSyncTask.setSyncing(false);
                 }
-            }, "erp-sync-manual").start();
+            });
         }
         return Result.success("ERP同步已触发，请稍后刷新页面查看同步状态");
     }

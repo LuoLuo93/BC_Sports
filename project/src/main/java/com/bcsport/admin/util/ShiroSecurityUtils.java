@@ -47,7 +47,7 @@ public class ShiroSecurityUtils implements ApplicationContextAware {
      */
     public static String getCurrentUsername() {
         Subject subject = getSubject();
-        if (subject != null && subject.isAuthenticated()) {
+        if (subject != null && (subject.isAuthenticated() || subject.isRemembered())) {
             Object principal = subject.getPrincipal();
             if (principal != null) {
                 return principal.toString();

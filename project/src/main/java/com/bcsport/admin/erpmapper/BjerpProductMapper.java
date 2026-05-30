@@ -8,7 +8,9 @@ import java.util.Map;
 
 @Mapper
 public interface BjerpProductMapper {
-    List<Map<String, Object>> searchProducts(@Param("materialNumber") String materialNumber, @Param("styleNumber") String styleNumber, @Param("materialName") String materialName, @Param("brandId") String brandId);
+    long countProducts(@Param("materialNumber") String materialNumber, @Param("styleNumber") String styleNumber, @Param("materialName") String materialName, @Param("brandId") String brandId);
+
+    List<Map<String, Object>> searchProducts(@Param("materialNumber") String materialNumber, @Param("styleNumber") String styleNumber, @Param("materialName") String materialName, @Param("brandId") String brandId, @Param("offset") long offset, @Param("pageSize") long pageSize);
 
     Map<String, Object> getProductByEan13(@Param("ean13") String ean13);
 

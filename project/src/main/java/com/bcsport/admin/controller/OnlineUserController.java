@@ -1,9 +1,11 @@
 package com.bcsport.admin.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.bcsport.admin.common.Result;
 import com.bcsport.admin.entity.User;
 import com.bcsport.admin.service.AuthCacheService;
 import com.bcsport.admin.service.UserService;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.apache.shiro.session.Session;
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 在线用户管理
@@ -42,6 +45,16 @@ public class OnlineUserController {
         Map<String, String> sessionMap = authCacheService.scanSessionKeys();
         List<OnlineUserVO> list = new ArrayList<>();
 
+        if (sessionMap.isEmpty()) {
+            return Result.success(list);
+        }
+
+        // 批量查询用户信息，避免 N+1
+        List<String> usernames = new ArrayList<>(sessionMap.keySet());
+        Map<String, User> userMap = userService.list(
+                new LambdaQueryWrapper<User>().in(User::getUsername, usernames)
+        ).stream().collect(Collectors.toMap(User::getUsername, u -> u));
+
         for (Map.Entry<String, String> entry : sessionMap.entrySet()) {
             String username = entry.getKey();
             String sessionId = entry.getValue();
@@ -58,7 +71,7 @@ public class OnlineUserController {
                 continue;
             }
 
-            User user = userService.getByUsername(username);
+            User user = userMap.get(username);
             OnlineUserVO vo = new OnlineUserVO();
             vo.setUsername(username);
             vo.setUserId(user != null ? user.getId() : "");
@@ -99,6 +112,7 @@ public class OnlineUserController {
     /**
      * 在线用户VO
      */
+    @Data
     static class OnlineUserVO {
         private String username;
         private String userId;
@@ -108,22 +122,5 @@ public class OnlineUserController {
         private Long lastAccessTime;
         private String host;
         private long timeout;
-
-        public String getUsername() { return username; }
-        public void setUsername(String username) { this.username = username; }
-        public String getUserId() { return userId; }
-        public void setUserId(String userId) { this.userId = userId; }
-        public String getNickname() { return nickname; }
-        public void setNickname(String nickname) { this.nickname = nickname; }
-        public String getSessionId() { return sessionId; }
-        public void setSessionId(String sessionId) { this.sessionId = sessionId; }
-        public Long getLoginTime() { return loginTime; }
-        public void setLoginTime(Long loginTime) { this.loginTime = loginTime; }
-        public Long getLastAccessTime() { return lastAccessTime; }
-        public void setLastAccessTime(Long lastAccessTime) { this.lastAccessTime = lastAccessTime; }
-        public String getHost() { return host; }
-        public void setHost(String host) { this.host = host; }
-        public long getTimeout() { return timeout; }
-        public void setTimeout(long timeout) { this.timeout = timeout; }
     }
 }

@@ -2,7 +2,9 @@ package com.bcsport.admin.controller;
 
 import com.bcsport.admin.common.Result;
 import com.bcsport.admin.dto.LoginDTO;
+import com.bcsport.admin.annotation.OperLog;
 import com.bcsport.admin.service.AuthCacheService;
+import com.bcsport.admin.service.ConfigService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.authc.UsernamePasswordToken;
@@ -24,6 +26,9 @@ public class AuthController {
 
     @Autowired
     private AuthCacheService authCacheService;
+
+    @Autowired
+    private ConfigService configService;
     
     /**
      * 登录页面
@@ -39,14 +44,47 @@ public class AuthController {
      */
     @PostMapping("/doLogin")
     @ResponseBody
+    @OperLog(module = "系统认证", operation = "用户登录", saveParams = false)
     public Result<?> doLogin(@RequestBody LoginDTO loginDTO) {
+        String username = loginDTO.getUsername();
+
+        // 验证码校验
+        boolean captchaEnabled = configService.getBoolean("security.captchaEnabled", true);
+        if (captchaEnabled) {
+            String captchaKey = loginDTO.getCaptchaKey();
+            String captchaCode = loginDTO.getCaptchaCode();
+            if (captchaKey == null || captchaCode == null) {
+                return Result.error("请输入验证码");
+            }
+            String cachedCode = authCacheService.getCaptchaAndDelete(captchaKey);
+            if (cachedCode == null) {
+                return Result.error("验证码已过期，请刷新验证码");
+            }
+            if (!cachedCode.equalsIgnoreCase(captchaCode)) {
+                return Result.error("验证码错误");
+            }
+        }
+
+        // 检查账号是否被锁定
+        long lockSeconds = authCacheService.getLockRemainSeconds(username);
+        if (lockSeconds > 0) {
+            long minutes = (lockSeconds + 59) / 60;
+            return Result.error("账号已锁定，请 " + minutes + " 分钟后再试");
+        }
+
         try {
             Subject subject = SecurityUtils.getSubject();
-            UsernamePasswordToken token = new UsernamePasswordToken(loginDTO.getUsername(), loginDTO.getPassword());
+            UsernamePasswordToken token = new UsernamePasswordToken(username, loginDTO.getPassword());
+            // 设置 RememberMe
+            if (Boolean.TRUE.equals(loginDTO.getRememberMe())) {
+                token.setRememberMe(true);
+            }
             subject.login(token);
 
+            // 登录成功，清除失败计数
+            authCacheService.clearLoginFailures(username);
+
             // 踢掉该用户的旧会话
-            String username = loginDTO.getUsername();
             String currentSessionId = subject.getSession().getId().toString();
             String oldSessionId = authCacheService.getActiveSessionId(username);
             if (oldSessionId != null && !oldSessionId.equals(currentSessionId)) {
@@ -67,8 +105,19 @@ public class AuthController {
             log.info("用户登录成功: {}", username);
             return Result.success("登录成功", null);
         } catch (Exception e) {
-            log.error("登录失败: {}", e.getMessage());
-            return Result.error("用户名或密码错误");
+            // 登录失败，记录失败次数
+            long failCount = authCacheService.recordLoginFailure(username);
+            int maxRetry = configService.getInt("security.loginMaxRetry", 5);
+            int lockMinutes = configService.getInt("security.loginLockMinutes", 30);
+
+            if (failCount >= maxRetry) {
+                authCacheService.lockAccount(username, lockMinutes);
+                log.warn("用户 {} 连续登录失败 {} 次，已锁定 {} 分钟", username, failCount, lockMinutes);
+                return Result.error("连续登录失败 " + failCount + " 次，账号已锁定 " + lockMinutes + " 分钟");
+            }
+
+            log.error("登录失败: username={}, 剩余尝试次数={}", username, maxRetry - failCount);
+            return Result.error("用户名或密码错误，还剩 " + (maxRetry - failCount) + " 次尝试机会");
         }
     }
     
@@ -77,13 +126,21 @@ public class AuthController {
      */
     @PostMapping("/doLogout")
     @ResponseBody
-    public Result<?> doLogout() {
+    @OperLog(module = "系统认证", operation = "用户登出", saveParams = false)
+    public Result<?> doLogout(jakarta.servlet.http.HttpServletResponse response) {
         Subject subject = SecurityUtils.getSubject();
         if (subject != null) {
             String username = (String) subject.getPrincipal();
             if (username != null) {
                 authCacheService.removeUserSession(username);
             }
+            // 清除 RememberMe Cookie
+            jakarta.servlet.http.Cookie rmCookie = new jakarta.servlet.http.Cookie("rememberMe", "");
+            rmCookie.setPath("/");
+            rmCookie.setMaxAge(0);
+            rmCookie.setHttpOnly(true);
+            response.addCookie(rmCookie);
+
             subject.logout();
             log.info("用户登出系统: {}", username);
         }

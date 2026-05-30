@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -41,7 +42,30 @@ public class StickerPrintService {
     private BjerpProductMapper bjerpProductMapper;
 
     public List<Map<String, Object>> searchProducts(String materialNumber, String styleNumber, String materialName, String brandId) {
-        return bjerpProductMapper.searchProducts(materialNumber, styleNumber, materialName, brandId);
+        return bjerpProductMapper.searchProducts(
+                escapeLike(materialNumber), escapeLike(styleNumber), escapeLike(materialName), brandId, 0, 500);
+    }
+
+    public PageResult<Map<String, Object>> searchProducts(PageQuery pageQuery, String materialNumber, String styleNumber, String materialName, String brandId) {
+        int pageSize = Math.max(Math.min(pageQuery.getPageSize() != null ? pageQuery.getPageSize() : 20, 500), 1);
+        int pageNum = Math.max(pageQuery.getPageNum() != null ? pageQuery.getPageNum() : 1, 1);
+        int offset = (pageNum - 1) * pageSize;
+
+        String mn = escapeLike(materialNumber), sn = escapeLike(styleNumber), mname = escapeLike(materialName);
+        long total = bjerpProductMapper.countProducts(mn, sn, mname, brandId);
+        List<Map<String, Object>> records = total > 0
+                ? bjerpProductMapper.searchProducts(mn, sn, mname, brandId, offset, pageSize)
+                : Collections.emptyList();
+
+        PageResult<Map<String, Object>> result = new PageResult<>();
+        result.setPageNum((long) pageNum);
+        result.setPageSize((long) pageSize);
+        result.setTotal(total);
+        result.setRecords(records);
+        result.setPages((long) Math.ceil((double) total / pageSize));
+        result.setHasPrevious(pageNum > 1);
+        result.setHasNext((long) pageNum < result.getPages());
+        return result;
     }
 
     public List<Map<String, Object>> getBrands() {
@@ -197,5 +221,10 @@ public class StickerPrintService {
     private String generateOrderNo() {
         return "SP" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
             + String.format("%03d", (int) (Math.random() * 1000));
+    }
+
+    private String escapeLike(String value) {
+        if (value == null || value.isEmpty()) return value;
+        return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }
 }

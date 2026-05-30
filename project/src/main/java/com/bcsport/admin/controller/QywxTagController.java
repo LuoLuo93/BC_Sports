@@ -17,14 +17,16 @@ import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -44,6 +46,10 @@ public class QywxTagController {
 
     @Autowired
     private com.bcsport.admin.task.qywx.QywxApiClient qywxApiClient;
+
+    @Autowired
+    @Qualifier("taskThreadPool")
+    private ThreadPoolExecutor taskThreadPool;
 
     @GetMapping("/corp-tags")
     @ApiOperation("获取企业标签库（分页）")
@@ -91,13 +97,13 @@ public class QywxTagController {
         if (QywxCustomerTagTask.isSyncing()) {
             return Result.error("标签库同步正在进行中，请稍后再试");
         }
-        new Thread(() -> {
+        taskThreadPool.execute(() -> {
             try {
                 customerTagTask.syncTags();
             } catch (Exception e) {
                 log.error("标签库同步异常", e);
             }
-        }, "qywx-tag-sync").start();
+        });
         return Result.success("标签库同步已触发，请稍后刷新页面查看数据");
     }
 
@@ -281,7 +287,7 @@ public class QywxTagController {
                     return Result.paramError("Excel中没有有效数据");
                 }
 
-                new Thread(() -> customerTagTask.batchTagAsync(rows), "qywx-batch-tag").start();
+                taskThreadPool.execute(() -> customerTagTask.batchTagAsync(rows));
                 return Result.success("打标任务已触发，请稍后查看打标签日志");
             } finally {
                 reader.close();

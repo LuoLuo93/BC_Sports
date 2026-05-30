@@ -20,4 +20,13 @@
         WHERE name = '工号' AND enrollInDate = #{staffNo}
     </select>
 
+    <select id="selectUseridByStaffNos" resultType="com.bcsport.admin.entity.qywx.QywxAttrsBase">
+        SELECT userid, enrollInDate
+        FROM VX_attrsBase
+        WHERE name = '工号' AND enrollInDate IN
+        <foreach collection="staffNos" item="staffNo" open="(" separator="," close=")">
+            #{staffNo}
+        </foreach>
+    </select>
+
 </mapper>

@@ -5,7 +5,6 @@
       <el-tab-pane label="健康状态" name="health">
         <div class="tab-header">
           <el-button :icon="Refresh" circle @click="loadHealth" :loading="healthLoading" />
-          <span class="refresh-hint">每 60 秒自动刷新</span>
         </div>
 
         <el-row :gutter="16" v-loading="healthLoading">
@@ -77,7 +76,6 @@
       <el-tab-pane label="JVM 监控" name="jvm">
         <div class="tab-header">
           <el-button :icon="Refresh" circle @click="loadJvmMetrics" :loading="jvmLoading" />
-          <span class="refresh-hint">每 30 秒自动刷新</span>
         </div>
 
         <el-row :gutter="16" v-loading="jvmLoading">
@@ -132,32 +130,48 @@
 
       <!-- 日志管理 -->
       <el-tab-pane label="日志管理" name="loggers">
-        <div class="tab-header">
-          <el-input v-model="loggerSearch" placeholder="搜索 Logger 名称" clearable style="width: 300px" :prefix-icon="Search" />
-        </div>
+        <el-card shadow="never" class="search-card">
+          <el-form inline>
+            <el-form-item label="Logger">
+              <el-input v-model="loggerSearch" placeholder="搜索 Logger 名称" clearable style="width: 300px" :prefix-icon="Search" />
+            </el-form-item>
+            <el-form-item>
+              <el-button :icon="Refresh" @click="loadLoggers" :loading="loggersLoading">刷新</el-button>
+            </el-form-item>
+          </el-form>
+        </el-card>
 
-        <el-table :data="filteredLoggers" stripe border max-height="600" v-loading="loggersLoading">
-          <el-table-column prop="name" label="Logger 名称" min-width="300" show-overflow-tooltip />
-          <el-table-column label="有效级别" width="130" align="center">
-            <template #default="{ row }">
-              <el-tag :type="levelType(row.effectiveLevel)" size="small">{{ row.effectiveLevel }}</el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column label="配置级别" width="160" align="center">
-            <template #default="{ row }">
-              <el-select v-model="row.configuredLevel" placeholder="继承" size="small" clearable style="width: 110px" @change="val => changeLogLevel(row.name, val)">
-                <el-option v-for="lv in logLevels" :key="lv" :label="lv" :value="lv" />
-              </el-select>
-            </template>
-          </el-table-column>
-        </el-table>
+        <el-card shadow="never">
+          <template #header>
+            <div class="card-header-row">
+              <span class="card-header-title">日志管理</span>
+            </div>
+          </template>
+          <div class="table-responsive">
+            <el-table :data="filteredLoggers" stripe border max-height="600" v-loading="loggersLoading">
+              <el-table-column prop="name" label="Logger 名称" min-width="300" show-overflow-tooltip />
+              <el-table-column label="有效级别" width="130" align="center">
+                <template #default="{ row }">
+                  <el-tag :type="levelType(row.effectiveLevel)" size="small">{{ row.effectiveLevel }}</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column label="配置级别" width="160" align="center">
+                <template #default="{ row }">
+                  <el-select v-model="row.configuredLevel" placeholder="继承" size="small" clearable style="width: 110px" @change="val => changeLogLevel(row.name, val)">
+                    <el-option v-for="lv in logLevels" :key="lv" :label="lv" :value="lv" />
+                  </el-select>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+        </el-card>
       </el-tab-pane>
     </el-tabs>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { Refresh, Search, Monitor, Cpu, Timer, DataLine } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { getHealth, getMetricDetail, getLoggers, setLoggerLevel } from '@/api/monitor'
@@ -167,29 +181,15 @@ const healthLoading = ref(false)
 const jvmLoading = ref(false)
 const loggersLoading = ref(false)
 
-let healthTimer = null
-let jvmTimer = null
-
-function startHealthTimer() {
-  stopHealthTimer()
-  healthTimer = setInterval(loadHealth, 60000)
-}
-function stopHealthTimer() {
-  if (healthTimer) { clearInterval(healthTimer); healthTimer = null }
-}
-function startJvmTimer() {
-  stopJvmTimer()
-  jvmTimer = setInterval(loadJvmMetrics, 30000)
-}
-function stopJvmTimer() {
-  if (jvmTimer) { clearInterval(jvmTimer); jvmTimer = null }
-}
+// Track which tabs have been loaded to avoid redundant fetches
+const healthLoaded = ref(false)
+const jvmLoaded = ref(false)
+const loggersLoaded = ref(false)
 
 watch(activeTab, (tab) => {
-  stopHealthTimer()
-  stopJvmTimer()
-  if (tab === 'health') startHealthTimer()
-  else if (tab === 'jvm') startJvmTimer()
+  if (tab === 'health' && !healthLoaded.value) loadHealth()
+  else if (tab === 'jvm' && !jvmLoaded.value) loadJvmMetrics()
+  else if (tab === 'loggers' && !loggersLoaded.value) loadLoggers()
 })
 
 // --- Health ---
@@ -225,6 +225,7 @@ async function loadHealth() {
     if (comps.diskSpace) diskSpace.value = comps.diskSpace.details || comps.diskSpace
     if (comps.dataSource) dataSource.value = comps.dataSource
     else if (comps.db) dataSource.value = comps.db
+    healthLoaded.value = true
   } catch (e) {
     console.error('Health check failed', e)
   } finally {
@@ -280,6 +281,7 @@ async function loadJvmMetrics() {
       threads: { live: liveThreads ? Math.round(liveThreads) : null },
       uptime: uptimeSeconds ? formatDuration(uptimeSeconds / 1000) : null
     }
+    jvmLoaded.value = true
   } catch (e) {
     console.error('JVM metrics failed', e)
   } finally {
@@ -318,6 +320,7 @@ async function loadLoggers() {
         configuredLevel: loggers.ROOT.configuredLevel || ''
       })
     }
+    loggersLoaded.value = true
   } catch (e) {
     console.error('Loggers failed', e)
   } finally {
@@ -389,14 +392,6 @@ function levelType(level) {
 // --- Lifecycle ---
 onMounted(() => {
   loadHealth()
-  loadJvmMetrics()
-  loadLoggers()
-  startHealthTimer()
-})
-
-onBeforeUnmount(() => {
-  stopHealthTimer()
-  stopJvmTimer()
 })
 </script>
 
@@ -410,11 +405,6 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 12px;
   margin-bottom: 16px;
-}
-
-.refresh-hint {
-  font-size: 12px;
-  color: #909399;
 }
 
 .card-title {

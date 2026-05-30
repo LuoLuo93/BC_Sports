@@ -1,9 +1,9 @@
 <template>
   <div class="sticker-item" :style="{ width: stickerWidth + 'mm', height: stickerHeight + 'mm' }">
     <div class="sticker-brand">{{ item.brandName }}</div>
-    <div class="sticker-name">{{ item.articleName }}</div>
+    <div class="sticker-name">{{ item.materialName }}</div>
     <div class="sticker-info">
-      <span>货号: {{ item.articleNo }}</span>
+      <span>货号: {{ item.materialNumber }}</span>
       <span>尺码: {{ item.sizeName }}</span>
     </div>
     <svg :id="'barcode-' + item.ean13 + '-' + index"></svg>

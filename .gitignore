@@ -57,3 +57,16 @@ cookies2.txt
 # Database init files (optional, uncomment if you don't want to commit)
 # bc_sport_final_init.sql
 # init_channel_tables.sql
+
+# Frontend build output
+project/src/main/resources/static/assets/
+project/src/main/resources/static/images/
+project/src/main/resources/static/index.html
+project/src/main/resources/static/index.avif
+
+# Node modules
+project/frontend/node_modules/
+
+# Temp scripts
+kill*.bat
+*.security

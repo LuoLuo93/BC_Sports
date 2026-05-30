@@ -2,7 +2,11 @@ package com.bcsport.admin.task.qywx;
 
 import cn.hutool.json.JSONObject;
 import com.bcsport.admin.entity.ihr.IhrEmployeeDetail;
+import com.bcsport.admin.entity.ihr.IhrEmployeeExclusion;
+import com.bcsport.admin.entity.qywx.QywxAttrsBase;
+import com.bcsport.admin.entity.qywx.QywxDepartmentMemberDetail;
 import com.bcsport.admin.ihrmapper.IhrEmployeeDetailMapper;
+import com.bcsport.admin.ihrmapper.IhrEmployeeExclusionMapper;
 import com.bcsport.admin.qywxmapper.QywxAttrsBaseMapper;
 import com.bcsport.admin.qywxmapper.QywxDepartmentMemberDetailMapper;
 import com.bcsport.admin.service.IhrEmployeeExclusionService;
@@ -12,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 企微员工离职同步任务
@@ -37,6 +42,9 @@ public class QywxEmployeeLeaveSyncTask {
 
     @Autowired
     private IhrEmployeeExclusionService exclusionService;
+
+    @Autowired
+    private IhrEmployeeExclusionMapper exclusionMapper;
 
     @Autowired
     private IhrEmployeeLeavingService leavingService;
@@ -67,6 +75,41 @@ public class QywxEmployeeLeaveSyncTask {
 
             log.info("查到 {} 个离职员工，开始处理", leavedEmployees.size());
 
+            // Pre-load exclusions for O(1) lookup
+            List<IhrEmployeeExclusion> exclusions = exclusionMapper.selectActiveExclusions(2);
+            Set<String> exclusionSet = exclusions.stream()
+                    .map(e -> e.getStaffName() + "|" + e.getStaffNo())
+                    .collect(Collectors.toSet());
+
+            // Pre-load userid-by-staffNo mappings
+            List<String> allStaffNos = leavedEmployees.stream()
+                    .map(IhrEmployeeDetail::getStaffNo)
+                    .filter(sn -> sn != null && !sn.isEmpty() && !"null".equals(sn))
+                    .distinct()
+                    .collect(Collectors.toList());
+
+            Map<String, String> staffNoToUserid = new HashMap<>();
+            if (!allStaffNos.isEmpty()) {
+                List<QywxAttrsBase> attrsList = attrsBaseMapper.selectUseridByStaffNos(allStaffNos);
+                for (QywxAttrsBase attr : attrsList) {
+                    if (attr.getEnrollInDate() != null && attr.getUserid() != null) {
+                        staffNoToUserid.put(attr.getEnrollInDate(), attr.getUserid());
+                    }
+                }
+            }
+
+            // Pre-load name-by-userid mappings
+            List<String> userids = new ArrayList<>(staffNoToUserid.values());
+            Map<String, String> useridToName = new HashMap<>();
+            if (!userids.isEmpty()) {
+                List<QywxDepartmentMemberDetail> members = memberDetailMapper.selectNameByUserids(userids);
+                for (QywxDepartmentMemberDetail m : members) {
+                    if (m.getUserid() != null && m.getName() != null) {
+                        useridToName.put(m.getUserid(), m.getName());
+                    }
+                }
+            }
+
             int successCount = 0;
             int skipCount = 0;
             int failCount = 0;
@@ -77,8 +120,8 @@ public class QywxEmployeeLeaveSyncTask {
                 String staffNo = employee.getStaffNo();
 
                 try {
-                    // 检查是否在离职排除列表中
-                    if (exclusionService.checkExcluded(staffName, staffNo, 2)) {
+                    // Check exclusion using pre-loaded Set
+                    if (exclusionSet.contains(staffName + "|" + staffNo)) {
                         leavingService.markSyncSkipped(employeeId, staffName, staffNo);
                         skipCount++;
                         continue;
@@ -90,16 +133,16 @@ public class QywxEmployeeLeaveSyncTask {
                         continue;
                     }
 
-                    // 1. 通过工号查找企微 userid
-                    String qywxUserid = attrsBaseMapper.selectUseridByStaffNo(staffNo);
+                    // Look up userid from pre-loaded Map
+                    String qywxUserid = staffNoToUserid.get(staffNo);
                     if (qywxUserid == null || qywxUserid.isEmpty()) {
                         leavingService.markSyncSkipped(employeeId, staffName, staffNo);
                         skipCount++;
                         continue;
                     }
 
-                    // 2. 通过 userid 查企微中的姓名，与 IHR 姓名比对
-                    String qywxName = memberDetailMapper.selectNameByUserid(qywxUserid);
+                    // Look up name from pre-loaded Map
+                    String qywxName = useridToName.get(qywxUserid);
                     if (qywxName == null || !qywxName.equals(staffName)) {
                         log.warn("姓名不匹配，跳过: 工号={}, IHR姓名={}, 企微姓名={}, userid={}",
                                 staffNo, staffName, qywxName, qywxUserid);

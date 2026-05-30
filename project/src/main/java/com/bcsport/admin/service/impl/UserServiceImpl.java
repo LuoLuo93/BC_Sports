@@ -173,12 +173,13 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
                         userRole.setId(java.util.UUID.randomUUID().toString().replace("-", ""));
                         userRole.setUserId(userId);
                         userRole.setRoleId(roleId);
+                        userRole.setCreateTime(LocalDateTime.now());
+                        userRole.setCreateBy(com.bcsport.admin.util.ShiroSecurityUtils.getCurrentUserId());
                         return userRole;
                     })
                     .collect(Collectors.toList());
 
-            // 批量插入（审计字段由 MybatisPlusAutoFillHandler 自动填充）
-            userRoleList.forEach(userRoleMapper::insert);
+            userRoleMapper.batchInsert(userRoleList);
         }
         authCacheService.evictUser(userId);
         return true;
@@ -212,6 +213,17 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         return true;
     }
     
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean updateUserProfile(String userId, UserDTO userDTO) {
+        User user = new User();
+        user.setId(userId);
+        user.setNickname(userDTO.getNickname());
+        user.setEmail(userDTO.getEmail());
+        user.setPhone(userDTO.getPhone());
+        return userMapper.updateById(user) > 0;
+    }
+
     @Override
     public void testUserRoleAssignment() {
         // Implementation excluded to keep file length manageable, 

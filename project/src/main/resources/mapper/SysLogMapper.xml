@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bcsport.admin.mapper.SysLogMapper">
+
+    <select id="selectLogPage" resultType="com.bcsport.admin.entity.SysLog">
+        SELECT id, module, operation, method, params, ip, user_id, username,
+               operation_time, status, error_msg
+        FROM bc_sports_sys_log
+        <where>
+            <if test="query.module != null and query.module != ''">
+                AND module = #{query.module}
+            </if>
+            <if test="query.username != null and query.username != ''">
+                AND username LIKE '%' || #{query.username} || '%'
+            </if>
+            <if test="query.status != null">
+                AND status = #{query.status}
+            </if>
+            <if test="query.startTime != null">
+                AND operation_time &gt;= #{query.startTime}
+            </if>
+            <if test="query.endTime != null">
+                AND operation_time &lt;= #{query.endTime}
+            </if>
+        </where>
+        ORDER BY operation_time DESC
+    </select>
+
+    <delete id="deleteBeforeDays">
+        DELETE FROM bc_sports_sys_log
+        WHERE operation_time &lt; SYSTIMESTAMP - #{days}
+    </delete>
+
+</mapper>

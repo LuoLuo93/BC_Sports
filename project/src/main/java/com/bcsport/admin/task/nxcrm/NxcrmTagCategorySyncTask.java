@@ -7,7 +7,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
+import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
@@ -27,14 +28,18 @@ public class NxcrmTagCategorySyncTask {
             List<CustomerTagCategory> categories = nxCrmApiClient.getTagCategories();
             if (categories != null && !categories.isEmpty()) {
                 tagCategoryMapper.delete(null);
+
+                List<NxcrmTagCategory> entityList = new ArrayList<>();
                 for (CustomerTagCategory cat : categories) {
                     NxcrmTagCategory entity = new NxcrmTagCategory();
                     entity.setId(cat.getId());
                     entity.setPid(cat.getPid());
                     entity.setName(cat.getName());
                     entity.setPidFullPath(cat.getPidFullPath());
-                    tagCategoryMapper.insert(entity);
+                    entityList.add(entity);
                 }
+                tagCategoryMapper.insertBatch(entityList);
+
                 log.info("标签分类同步完成, 共{}条", categories.size());
             }
             log.info("=== 完成执行: 南讯CRM同步标签分类 ===");

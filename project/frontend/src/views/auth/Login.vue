@@ -2,38 +2,41 @@
   <div class="login-layout">
     <!-- Left: Brand -->
     <div class="brand-side">
-      <img
-        src="https://images.unsplash.com/photo-1551698618-1dfe5d97d256?auto=format&fit=crop&q=80&w=3540"
-        class="brand-image"
-        alt="Skiing Summit"
-      />
+      <div class="brand-image-fallback"></div>
+      <img class="brand-image" src="/index.avif" alt="Outdoor" />
       <div class="brand-overlay"></div>
 
       <!-- Noise texture -->
       <div class="noise-layer"></div>
 
-      <!-- Aurora effect -->
-      <div class="aurora">
-        <div class="aurora-beam b1"></div>
-        <div class="aurora-beam b2"></div>
-        <div class="aurora-beam b3"></div>
-        <div class="aurora-beam b4"></div>
+      <!-- Mesh gradient orbs -->
+      <div class="mesh-orb orb-1"></div>
+      <div class="mesh-orb orb-2"></div>
+      <div class="mesh-orb orb-3"></div>
+
+      <!-- Light beams -->
+      <div class="light-beams">
+        <div class="beam beam-1"></div>
+        <div class="beam beam-2"></div>
       </div>
 
-      <!-- Floating shapes -->
-      <div class="floating-shapes">
-        <span v-for="i in 12" :key="i" class="shape" :class="'shape-' + (i % 4)" :style="shapeStyle(i)"></span>
+      <!-- Floating particles -->
+      <div class="particles">
+        <span v-for="i in 20" :key="i" class="particle" :class="'p-' + (i % 3)" :style="particleStyle(i)"></span>
       </div>
 
       <!-- Mountain silhouette with glow -->
       <div class="mountain-glow"></div>
       <svg class="mountain-silhouette" viewBox="0 0 1440 220" preserveAspectRatio="none">
-        <path d="M0,220 L0,150 L100,90 L200,130 L340,55 L460,100 L560,25 L680,85 L800,35 L940,100 L1060,30 L1180,75 L1300,50 L1440,90 L1440,220 Z" fill="rgba(0,0,0,0.2)"/>
-        <path d="M0,220 L0,165 L160,115 L340,155 L520,95 L700,140 L880,80 L1060,125 L1240,90 L1440,135 L1440,220 Z" fill="rgba(0,0,0,0.1)"/>
+        <path d="M0,220 L0,150 L100,90 L200,130 L340,55 L460,100 L560,25 L680,85 L800,35 L940,100 L1060,30 L1180,75 L1300,50 L1440,90 L1440,220 Z" fill="rgba(0,0,0,0.25)"/>
+        <path d="M0,220 L0,165 L160,115 L340,155 L520,95 L700,140 L880,80 L1060,125 L1240,90 L1440,135 L1440,220 Z" fill="rgba(0,0,0,0.12)"/>
       </svg>
 
       <div class="brand-text">
-        <div class="brand-badge">EST. 2024</div>
+        <div class="brand-badge">
+          <span class="badge-dot"></span>
+          EST. 2024
+        </div>
         <h2>Touch the<br/><span class="title-accent">Highest Peak</span></h2>
         <p>B.C.SPORTS 巅峰数字化中心<br/>为每一场远征保驾护航。</p>
 
@@ -74,7 +77,7 @@
             <div class="logo-icon">
               <el-icon><Location /></el-icon>
             </div>
-            <span>B.C.SPORTS</span>
+            <span>{{ systemName }}</span>
           </div>
           <h2>让人人尽享户外运动的快乐</h2>
           <p class="login-subtitle">
@@ -95,6 +98,9 @@
               v-model="form.username"
               placeholder="请输入员工账号/ID"
               size="large"
+              autofocus
+              autocomplete="username"
+              @keyup.enter="$refs.passwordInput?.focus()"
             />
           </div>
 
@@ -105,18 +111,47 @@
             </label>
             <el-input
               id="password"
+              ref="passwordInput"
               v-model="form.password"
               type="password"
               placeholder="请输入访问密钥"
               size="large"
               show-password
+              autocomplete="current-password"
               @keyup.enter="handleLogin"
+              @keyup="checkCapsLock"
             />
+            <transition name="alert-fade">
+              <div v-if="capsLockOn" class="caps-lock-tip">
+                <el-icon><WarningFilled /></el-icon>
+                <span>Caps Lock 已开启</span>
+              </div>
+            </transition>
+          </div>
+
+          <div v-if="captchaEnabled" class="bc-form-group">
+            <label class="bc-label" for="captcha">
+              <el-icon><Key /></el-icon>
+              CAPTCHA / 验证码
+            </label>
+            <div class="captcha-row">
+              <el-input
+                id="captcha"
+                v-model="form.captchaCode"
+                placeholder="请输入验证码"
+                size="large"
+                @keyup.enter="handleLogin"
+              />
+              <div class="captcha-img-wrapper" @click="loadCaptcha" title="点击刷新验证码">
+                <img v-if="captchaImage" :src="captchaImage" alt="验证码" class="captcha-img" />
+                <el-icon v-else :size="20" class="captcha-refresh"><Refresh /></el-icon>
+              </div>
+            </div>
           </div>
 
           <div class="options-bar">
             <el-checkbox v-model="form.rememberMe">信任此设备</el-checkbox>
-            <a href="#" class="form-link">授权遇到困难?</a>
+            <a href="javascript:void(0)" class="form-link" @click="helpDialogVisible = true">授权遇到困难?</a>
           </div>
 
           <button
@@ -146,11 +181,27 @@
 
         <transition name="alert-fade">
           <div v-if="errorMsg" class="error-alert">
-            <el-icon><CircleCheck /></el-icon>
+            <el-icon><WarningFilled /></el-icon>
             <span>{{ errorMsg }}</span>
           </div>
         </transition>
       </div>
+
+      <!-- 帮助对话框 -->
+      <el-dialog v-model="helpDialogVisible" title="授权帮助" width="400px" :append-to-body="true">
+        <div class="help-content">
+          <p><strong>无法登录？请尝试以下方案：</strong></p>
+          <ul>
+            <li>确认账号密码是否正确（区分大小写）</li>
+            <li>联系管理员确认账号是否已启用</li>
+            <li>清除浏览器缓存后重试</li>
+          </ul>
+          <p class="help-contact">技术支持：请联系系统管理员</p>
+        </div>
+      </el-dialog>
+
+      <!-- 版本号 -->
+      <div class="version-info">v1.0.0</div>
 
       <div class="brand-footer">
         <div class="badge-item">
@@ -177,7 +228,9 @@ import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useTabStore } from '@/stores/tab'
-import { User, Key, ArrowRight, Location, CircleCheck, Orange, Coffee, IceCreamRound } from '@element-plus/icons-vue'
+import { getPublicConfig } from '@/api/config'
+import { applyPublicConfig } from '@/utils/appConfig'
+import { User, Key, Location, WarningFilled, Orange, Coffee, IceCreamRound, Refresh } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -185,13 +238,21 @@ const authStore = useAuthStore()
 const tabStore = useTabStore()
 
 const formRef = ref(null)
+const passwordInput = ref(null)
 const loading = ref(false)
 const errorMsg = ref('')
+const capsLockOn = ref(false)
+const helpDialogVisible = ref(false)
+const systemName = ref('BC体育数据管理系统')
+const captchaEnabled = ref(false)
+const captchaKey = ref('')
+const captchaImage = ref('')
 
 const form = ref({
   username: '',
   password: '',
-  rememberMe: false
+  rememberMe: false,
+  captchaCode: ''
 })
 
 const rules = {
@@ -199,21 +260,56 @@ const rules = {
   password: [{ required: true, message: '请输入访问密钥', trigger: 'blur' }]
 }
 
-onMounted(() => {
+onMounted(async () => {
   if (route.query.kicked === '1') {
     errorMsg.value = '您的账号已在其他设备登录，请重新登录'
   }
+  try {
+    const res = await getPublicConfig()
+    if (res.code === 200 && res.data) {
+      if (res.data['sys.name']) {
+        systemName.value = res.data['sys.name']
+        document.title = systemName.value
+      }
+      applyPublicConfig(res.data)
+      if (res.data['security.captchaEnabled'] === 'true') {
+        captchaEnabled.value = true
+        loadCaptcha()
+      }
+    }
+  } catch (e) {
+    // use default name
+  }
 })
 
-function shapeStyle(i) {
-  const size = 5 + Math.random() * 12
+function checkCapsLock(e) {
+  if (e.getModifierState) {
+    capsLockOn.value = e.getModifierState('CapsLock')
+  }
+}
+
+function particleStyle(i) {
+  const size = 2 + Math.random() * 4
   return {
     width: size + 'px',
     height: size + 'px',
     left: (3 + Math.random() * 94) + '%',
     top: (3 + Math.random() * 70) + '%',
-    animationDelay: (i * 0.6) + 's',
-    animationDuration: (7 + Math.random() * 8) + 's'
+    animationDelay: (i * 0.8) + 's',
+    animationDuration: (8 + Math.random() * 12) + 's'
+  }
+}
+
+async function loadCaptcha() {
+  try {
+    const res = await fetch('/api/captcha', { credentials: 'include' })
+    const data = await res.json()
+    if (data.code === 200 && data.data) {
+      captchaKey.value = data.data.captchaKey
+      captchaImage.value = data.data.captchaImage
+    }
+  } catch (e) {
+    // ignore
   }
 }
 
@@ -222,14 +318,21 @@ async function handleLogin() {
   const valid = await formRef.value?.validate().catch(() => false)
   if (!valid) return
 
+  const loginData = {
+    ...form.value,
+    captchaKey: captchaEnabled.value ? captchaKey.value : undefined,
+    captchaCode: captchaEnabled.value ? form.value.captchaCode : undefined
+  }
+
   loading.value = true
   try {
-    await authStore.login(form.value)
+    await authStore.login(loginData)
     tabStore.clearAll()
     tabStore.initDashboard()
     router.push('/')
   } catch (e) {
     errorMsg.value = e.message || '凭据检验未通过，请核对后重试'
+    if (captchaEnabled.value) loadCaptcha()
   } finally {
     loading.value = false
   }
@@ -251,7 +354,7 @@ async function handleLogin() {
 .brand-side {
   flex: 0 0 60%;
   position: relative;
-  background-color: #0c1a14;
+  background-color: #070e0a;
   overflow: hidden;
 }
 
@@ -261,7 +364,19 @@ async function handleLogin() {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  filter: contrast(1.1) brightness(0.65) saturate(1.2);
+  filter: contrast(1.12) brightness(0.55) saturate(1.3);
+  animation: ken-burns 35s ease-in-out infinite alternate;
+  transform-origin: 30% 35%;
+}
+
+.brand-image-fallback {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 20% 50%, #0d3320 0%, transparent 60%),
+    radial-gradient(ellipse at 70% 20%, #0c2d4a 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 80%, #1a0a2e 0%, transparent 50%),
+    linear-gradient(135deg, #050a07 0%, #0a1f15 30%, #0d1b2a 60%, #0a0a1a 100%);
   animation: ken-burns 35s ease-in-out infinite alternate;
   transform-origin: 30% 35%;
 }
@@ -275,8 +390,8 @@ async function handleLogin() {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(180deg, rgba(0,0,0,0.02) 0%, rgba(6,78,59,0.25) 40%, rgba(0,0,0,0.55) 100%),
-    linear-gradient(135deg, rgba(6,78,59,0.45) 0%, rgba(29,78,216,0.18) 50%, rgba(99,102,241,0.12) 100%);
+    linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(5,70,50,0.2) 35%, rgba(0,0,0,0.6) 100%),
+    linear-gradient(135deg, rgba(5,80,55,0.4) 0%, rgba(15,60,120,0.15) 50%, rgba(80,40,150,0.08) 100%);
   z-index: 1;
 }
 
@@ -285,67 +400,57 @@ async function handleLogin() {
   position: absolute;
   inset: 0;
   z-index: 2;
-  opacity: 0.03;
+  opacity: 0.035;
   pointer-events: none;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   background-size: 200px;
 }
 
-/* --- Aurora --- */
-.aurora {
+/* --- Mesh gradient orbs --- */
+.mesh-orb {
   position: absolute;
-  inset: 0;
-  z-index: 3;
-  pointer-events: none;
-  overflow: hidden;
-}
-
-.aurora-beam {
-  position: absolute;
-  width: 250%;
-  height: 55%;
   border-radius: 50%;
-  filter: blur(100px);
+  pointer-events: none;
+  z-index: 3;
   mix-blend-mode: screen;
 }
 
-.b1 {
-  top: -25%;
-  left: -60%;
-  background: linear-gradient(90deg, transparent, rgba(16,185,129,0.3), rgba(59,130,246,0.2), transparent);
-  animation: aurora-drift 14s ease-in-out infinite alternate;
-}
-
-.b2 {
+.orb-1 {
+  width: 500px;
+  height: 500px;
   top: -15%;
-  left: -40%;
-  background: linear-gradient(90deg, transparent, rgba(99,102,241,0.25), rgba(16,185,129,0.15), transparent);
-  animation: aurora-drift 18s ease-in-out infinite alternate-reverse;
+  left: -10%;
+  background: radial-gradient(circle, rgba(16,185,129,0.2) 0%, transparent 70%);
+  animation: orb-float 18s ease-in-out infinite alternate;
 }
 
-.b3 {
-  top: 5%;
-  left: -50%;
-  background: linear-gradient(90deg, transparent, rgba(14,165,233,0.2), rgba(139,92,246,0.15), transparent);
-  animation: aurora-drift 22s ease-in-out infinite alternate;
+.orb-2 {
+  width: 400px;
+  height: 400px;
+  bottom: 10%;
+  right: -5%;
+  background: radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%);
+  animation: orb-float 22s ease-in-out infinite alternate-reverse;
 }
 
-.b4 {
-  top: -5%;
-  left: -30%;
-  background: linear-gradient(90deg, transparent, rgba(56,189,248,0.15), rgba(99,102,241,0.1), transparent);
-  animation: aurora-drift 16s ease-in-out infinite alternate-reverse;
+.orb-3 {
+  width: 300px;
+  height: 300px;
+  top: 40%;
+  left: 50%;
+  background: radial-gradient(circle, rgba(139,92,246,0.1) 0%, transparent 70%);
+  animation: orb-float 15s ease-in-out infinite alternate;
   animation-delay: -5s;
 }
 
-@keyframes aurora-drift {
-  0% { transform: translateX(-8%) rotate(-2deg) scaleY(0.9); }
-  50% { transform: translateX(5%) rotate(1deg) scaleY(1.1); }
-  100% { transform: translateX(10%) rotate(3deg) scaleY(0.95); }
+@keyframes orb-float {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(30px, -20px) scale(1.1); }
+  100% { transform: translate(-20px, 15px) scale(0.95); }
 }
 
-/* --- Floating Shapes --- */
-.floating-shapes {
+/* --- Light beams --- */
+.light-beams {
   position: absolute;
   inset: 0;
   z-index: 4;
@@ -353,55 +458,86 @@ async function handleLogin() {
   overflow: hidden;
 }
 
-.shape {
+.beam {
   position: absolute;
+  width: 2px;
+  background: linear-gradient(180deg, transparent, rgba(255,255,255,0.04), transparent);
+  transform-origin: top center;
+}
+
+.beam-1 {
+  height: 120%;
+  top: -10%;
+  left: 30%;
+  transform: rotate(-15deg);
+  animation: beam-sway 12s ease-in-out infinite alternate;
+}
+
+.beam-2 {
+  height: 100%;
+  top: 0;
+  left: 65%;
+  transform: rotate(10deg);
+  animation: beam-sway 16s ease-in-out infinite alternate-reverse;
+}
+
+@keyframes beam-sway {
+  0% { transform: rotate(-15deg) scaleY(1); opacity: 0.3; }
+  50% { transform: rotate(-10deg) scaleY(1.05); opacity: 0.6; }
+  100% { transform: rotate(-20deg) scaleY(0.95); opacity: 0.3; }
+}
+
+/* --- Floating Particles --- */
+.particles {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.particle {
+  position: absolute;
+  border-radius: 50%;
   opacity: 0;
-  animation: shape-float linear infinite;
+  animation: particle-drift linear infinite;
 }
 
-.shape-0 {
-  border-radius: 50%;
-  background: rgba(255,255,255,0.1);
-  border: 1px solid rgba(255,255,255,0.12);
-  backdrop-filter: blur(1px);
+.p-0 {
+  background: rgba(16,185,129,0.5);
+  box-shadow: 0 0 6px rgba(16,185,129,0.3);
 }
 
-.shape-1 {
-  border-radius: 2px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
+.p-1 {
+  background: rgba(59,130,246,0.4);
+  box-shadow: 0 0 6px rgba(59,130,246,0.2);
 }
 
-.shape-2 {
-  border-radius: 0;
-  background: transparent;
-  border: 1px solid rgba(255,255,255,0.08);
+.p-2 {
+  background: rgba(255,255,255,0.3);
+  box-shadow: 0 0 4px rgba(255,255,255,0.15);
 }
 
-.shape-3 {
-  border-radius: 50%;
-  background: transparent;
-  border: 1px solid rgba(255,255,255,0.06);
-}
-
-@keyframes shape-float {
-  0%   { opacity: 0; transform: translateY(0) rotate(0deg) scale(0.5); }
-  10%  { opacity: 0.7; transform: scale(1); }
-  90%  { opacity: 0.3; }
-  100% { opacity: 0; transform: translateY(-160px) rotate(200deg) scale(0.5); }
+@keyframes particle-drift {
+  0%   { opacity: 0; transform: translateY(0) scale(0.5); }
+  15%  { opacity: 0.8; transform: scale(1); }
+  85%  { opacity: 0.3; }
+  100% { opacity: 0; transform: translateY(-200px) scale(0.3); }
 }
 
 /* --- Mountain glow --- */
 .mountain-glow {
   position: absolute;
-  bottom: 60px;
+  bottom: 50px;
   left: 0;
   width: 100%;
-  height: 200px;
-  background: linear-gradient(0deg, rgba(16,185,129,0.08) 0%, transparent 100%);
-  z-index: 4;
+  height: 250px;
+  background:
+    radial-gradient(ellipse at 30% 100%, rgba(16,185,129,0.12) 0%, transparent 60%),
+    radial-gradient(ellipse at 70% 100%, rgba(59,130,246,0.08) 0%, transparent 50%);
+  z-index: 5;
   pointer-events: none;
-  filter: blur(40px);
+  filter: blur(50px);
 }
 
 /* --- Mountain Silhouette --- */
@@ -411,35 +547,50 @@ async function handleLogin() {
   left: 0;
   width: 100%;
   height: 220px;
-  z-index: 5;
+  z-index: 6;
   pointer-events: none;
 }
 
 /* --- Brand Text --- */
 .brand-text {
   position: absolute;
-  bottom: 60px;
+  bottom: 55px;
   left: 55px;
-  z-index: 6;
+  z-index: 7;
   color: white;
   max-width: 540px;
   animation: fade-in-up 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both;
 }
 
 .brand-badge {
-  display: inline-block;
-  padding: 6px 18px;
-  border: 1px solid rgba(255,255,255,0.2);
-  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 20px;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 24px;
   font-family: 'Outfit', sans-serif;
   font-size: 0.6875rem;
   font-weight: 600;
   letter-spacing: 0.22em;
-  color: rgba(255,255,255,0.8);
-  margin-bottom: 26px;
-  backdrop-filter: blur(12px);
-  background: rgba(255,255,255,0.06);
-  box-shadow: 0 0 20px rgba(255,255,255,0.03);
+  color: rgba(255,255,255,0.75);
+  margin-bottom: 28px;
+  backdrop-filter: blur(16px);
+  background: rgba(255,255,255,0.04);
+}
+
+.badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 10px rgba(16,185,129,0.6);
+  animation: dot-blink 3s ease-in-out infinite;
+}
+
+@keyframes dot-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
 }
 
 .brand-text h2 {
@@ -450,25 +601,25 @@ async function handleLogin() {
   margin-bottom: 20px;
   text-transform: uppercase;
   letter-spacing: -0.03em;
-  text-shadow: 0 4px 40px rgba(0,0,0,0.4);
+  text-shadow: 0 4px 40px rgba(0,0,0,0.5);
 }
 
 .title-accent {
-  background: linear-gradient(135deg, #6ee7b7, #3b82f6, #8b5cf6);
+  background: linear-gradient(135deg, #6ee7b7, #38bdf8, #818cf8);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  filter: drop-shadow(0 0 30px rgba(59,130,246,0.3));
+  filter: drop-shadow(0 0 40px rgba(56,189,248,0.3));
 }
 
 .brand-text p {
   font-size: 1.0625rem;
   font-weight: 400;
-  opacity: 0.8;
+  opacity: 0.75;
   margin-bottom: 0;
   line-height: 1.8;
   max-width: 400px;
-  text-shadow: 0 1px 8px rgba(0,0,0,0.3);
+  text-shadow: 0 1px 8px rgba(0,0,0,0.4);
 }
 
 /* --- Stats --- */
@@ -477,13 +628,16 @@ async function handleLogin() {
   align-items: center;
   gap: 0;
   margin-top: 32px;
-  padding: 18px 28px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 18px;
-  backdrop-filter: blur(16px);
+  padding: 20px 30px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 20px;
+  backdrop-filter: blur(20px);
   max-width: 400px;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 8px 32px rgba(0,0,0,0.1);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.05),
+    0 8px 40px rgba(0,0,0,0.15),
+    0 0 0 1px rgba(255,255,255,0.02);
 }
 
 .stat-item {
@@ -497,28 +651,28 @@ async function handleLogin() {
   font-size: 1.75rem;
   letter-spacing: -0.03em;
   color: #fff;
-  text-shadow: 0 0 20px rgba(255,255,255,0.1);
+  text-shadow: 0 0 20px rgba(255,255,255,0.08);
 }
 
 .stat-num[data-suffix]::after {
   content: attr(data-suffix);
   font-size: 1rem;
-  opacity: 0.6;
+  opacity: 0.5;
   margin-left: 1px;
 }
 
 .stat-label {
   font-size: 0.75rem;
   font-weight: 500;
-  color: rgba(255,255,255,0.55);
-  margin-top: 4px;
+  color: rgba(255,255,255,0.45);
+  margin-top: 5px;
   letter-spacing: 0.06em;
 }
 
 .stat-divider {
   width: 1px;
   height: 36px;
-  background: linear-gradient(180deg, transparent, rgba(255,255,255,0.15), transparent);
+  background: linear-gradient(180deg, transparent, rgba(255,255,255,0.1), transparent);
   flex-shrink: 0;
 }
 
@@ -527,7 +681,7 @@ async function handleLogin() {
    ============================================================ */
 .form-side {
   flex: 1;
-  background: linear-gradient(170deg, #ffffff 0%, #f8fafc 30%, #f1f5f9 100%);
+  background: #fafbfc;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -541,9 +695,9 @@ async function handleLogin() {
 .dot-grid {
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(circle, #e2e8f0 0.8px, transparent 0.8px);
-  background-size: 28px 28px;
-  opacity: 0.4;
+  background-image: radial-gradient(circle, #e0e4ea 0.7px, transparent 0.7px);
+  background-size: 26px 26px;
+  opacity: 0.5;
   z-index: 0;
   pointer-events: none;
 }
@@ -552,36 +706,36 @@ async function handleLogin() {
 .blob {
   position: absolute;
   border-radius: 50%;
-  filter: blur(100px);
+  filter: blur(120px);
   pointer-events: none;
   z-index: 1;
-  opacity: 0.5;
+  opacity: 0.45;
 }
 
 .blob-1 {
-  width: 400px;
-  height: 400px;
-  background: rgba(29,78,216,0.08);
-  top: -120px;
-  right: -100px;
+  width: 450px;
+  height: 450px;
+  background: rgba(29,78,216,0.07);
+  top: -150px;
+  right: -120px;
   animation: blob-drift 20s ease-in-out infinite alternate;
 }
 
 .blob-2 {
-  width: 300px;
-  height: 300px;
-  background: rgba(124,58,237,0.06);
-  bottom: 40px;
-  left: -80px;
+  width: 350px;
+  height: 350px;
+  background: rgba(124,58,237,0.05);
+  bottom: 20px;
+  left: -100px;
   animation: blob-drift 24s ease-in-out infinite alternate-reverse;
 }
 
 .blob-3 {
-  width: 200px;
-  height: 200px;
-  background: rgba(16,185,129,0.05);
-  top: 45%;
-  right: 8%;
+  width: 250px;
+  height: 250px;
+  background: rgba(16,185,129,0.04);
+  top: 40%;
+  right: 5%;
   animation: blob-drift 16s ease-in-out infinite alternate;
 }
 
@@ -598,24 +752,25 @@ async function handleLogin() {
   max-width: 420px;
   position: relative;
   z-index: 2;
-  background: rgba(255,255,255,0.65);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255,255,255,0.8);
+  background: rgba(255,255,255,0.7);
+  backdrop-filter: blur(24px) saturate(1.2);
+  -webkit-backdrop-filter: blur(24px) saturate(1.2);
+  border: 1px solid rgba(255,255,255,0.85);
   border-radius: 28px;
   padding: 44px 40px;
   box-shadow:
-    0 0 0 1px rgba(0,0,0,0.02),
-    0 4px 16px rgba(0,0,0,0.04),
-    0 12px 40px rgba(0,0,0,0.03);
+    0 0 0 1px rgba(0,0,0,0.01),
+    0 2px 8px rgba(0,0,0,0.02),
+    0 8px 32px rgba(0,0,0,0.04),
+    0 24px 60px rgba(0,0,0,0.03);
   animation: form-enter 1s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
 }
 
 @keyframes form-enter {
   from {
     opacity: 0;
-    transform: translateY(30px) scale(0.95);
-    filter: blur(6px);
+    transform: translateY(30px) scale(0.96);
+    filter: blur(8px);
   }
   to {
     opacity: 1;
@@ -636,28 +791,39 @@ async function handleLogin() {
   justify-content: center;
   gap: 12px;
   padding: 10px 24px 10px 12px;
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-  border: 1.5px solid #e5e7eb;
+  background: #ffffff;
+  border: 1.5px solid #e8eaef;
   border-radius: 18px;
   font-family: 'Outfit', sans-serif;
   font-weight: 800;
   font-size: 1rem;
   color: var(--bc-primary);
   margin-bottom: 24px;
-  box-shadow: 0 2px 12px rgba(29,78,216,0.06), 0 1px 2px rgba(0,0,0,0.02);
+  box-shadow:
+    0 1px 3px rgba(0,0,0,0.04),
+    0 4px 16px rgba(29,78,216,0.05);
+  transition: box-shadow 0.3s ease;
+}
+
+.logo-badge:hover {
+  box-shadow:
+    0 1px 3px rgba(0,0,0,0.04),
+    0 8px 24px rgba(29,78,216,0.1);
 }
 
 .logo-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
   background: linear-gradient(135deg, #1d4ed8, #6366f1);
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
   font-size: 18px;
-  box-shadow: 0 2px 8px rgba(29,78,216,0.25);
+  box-shadow:
+    0 2px 8px rgba(29,78,216,0.25),
+    inset 0 1px 0 rgba(255,255,255,0.15);
 }
 
 .login-header h2 {
@@ -667,7 +833,7 @@ async function handleLogin() {
   color: var(--bc-text);
   letter-spacing: -0.02em;
   margin-bottom: 12px;
-  background: linear-gradient(135deg, #1d4ed8 0%, #4f46e5 50%, #7c3aed 100%);
+  background: linear-gradient(135deg, #111827 0%, #1e293b 50%, #334155 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -686,13 +852,13 @@ async function handleLogin() {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--bc-success);
-  box-shadow: 0 0 12px rgba(16,185,129,0.6);
+  background: #10b981;
+  box-shadow: 0 0 12px rgba(16,185,129,0.5);
   animation: dot-pulse 2.5s ease-in-out infinite;
 }
 
 @keyframes dot-pulse {
-  0%, 100% { opacity: 1; box-shadow: 0 0 12px rgba(16,185,129,0.6); }
+  0%, 100% { opacity: 1; box-shadow: 0 0 12px rgba(16,185,129,0.5); }
   50% { opacity: 0.4; box-shadow: 0 0 4px rgba(16,185,129,0.2); }
 }
 
@@ -711,48 +877,109 @@ async function handleLogin() {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 800;
-  color: var(--bc-text);
+  color: #475569;
   text-transform: uppercase;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.16em;
   margin-bottom: 10px;
   padding-left: 2px;
 }
 
 .bc-label .el-icon {
-  font-size: 14px;
-  color: var(--bc-text-lighter);
+  font-size: 13px;
+  color: #94a3b8;
 }
 
 .bc-form-group :deep(.el-input__wrapper) {
   border-radius: 14px;
   padding: 12px 18px;
   transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
-  border: 1.5px solid rgba(229,231,235,0.6);
-  background: rgba(255,255,255,0.8);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+  border: 1.5px solid #e5e7eb;
+  background: rgba(255,255,255,0.9);
 }
 
 .bc-form-group :deep(.el-input__wrapper:hover) {
-  border-color: rgba(29,78,216,0.25);
-  box-shadow: 0 4px 16px rgba(29,78,216,0.06);
-  background: rgba(255,255,255,0.95);
+  border-color: rgba(29,78,216,0.2);
+  box-shadow: 0 4px 16px rgba(29,78,216,0.05);
+  background: #ffffff;
 }
 
 .bc-form-group :deep(.el-input__wrapper:focus-within) {
-  border-color: var(--bc-primary);
+  border-color: #3b82f6;
   background: #ffffff;
-  box-shadow: 0 0 0 4px rgba(29,78,216,0.08), 0 4px 20px rgba(29,78,216,0.08);
+  box-shadow: 0 0 0 4px rgba(59,130,246,0.08), 0 4px 20px rgba(59,130,246,0.06);
 }
 
 .bc-form-group :deep(.el-input__inner) {
-  font-size: 1rem;
-  height: 32px;
+  font-size: 0.95rem;
+  height: 30px;
 }
 
 .bc-form-group :deep(.el-input__inner::placeholder) {
-  color: var(--bc-text-lighter);
+  color: #b0b8c4;
+}
+
+/* --- Caps Lock Tip --- */
+.caps-lock-tip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 10px;
+  color: #92400e;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.caps-lock-tip .el-icon {
+  font-size: 14px;
+  color: #f59e0b;
+}
+
+/* --- Captcha --- */
+.captcha-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.captcha-row .el-input {
+  flex: 1;
+}
+
+.captcha-img-wrapper {
+  width: 120px;
+  height: 42px;
+  border-radius: 14px;
+  overflow: hidden;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  border: 1.5px solid #e5e7eb;
+  transition: all 0.25s ease;
+}
+
+.captcha-img-wrapper:hover {
+  border-color: rgba(29,78,216,0.25);
+  box-shadow: 0 2px 8px rgba(29,78,216,0.06);
+}
+
+.captcha-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.captcha-refresh {
+  color: #94a3b8;
 }
 
 /* ============================================================
@@ -769,14 +996,30 @@ async function handleLogin() {
 }
 
 .form-link {
-  color: var(--bc-primary);
+  color: #3b82f6;
   text-decoration: none;
   font-weight: 600;
   transition: all 0.2s;
+  position: relative;
+}
+
+.form-link::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: #3b82f6;
+  transition: width 0.3s ease;
 }
 
 .form-link:hover {
-  color: var(--bc-primary-light);
+  color: #2563eb;
+}
+
+.form-link:hover::after {
+  width: 100%;
 }
 
 /* ============================================================
@@ -784,13 +1027,13 @@ async function handleLogin() {
    ============================================================ */
 .btn-adventure {
   width: 100%;
-  height: 58px;
+  height: 56px;
   border: none;
   cursor: pointer;
   border-radius: 16px;
   font-family: 'Outfit', sans-serif;
   font-weight: 800;
-  font-size: 1.0625rem;
+  font-size: 1rem;
   letter-spacing: 0.04em;
   color: white;
   position: relative;
@@ -802,9 +1045,9 @@ async function handleLogin() {
 .btn-bg {
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 35%, #6366f1 70%, #8b5cf6 100%);
+  background: linear-gradient(135deg, #0f172a 0%, #1e40af 40%, #3b82f6 70%, #6366f1 100%);
   background-size: 300% 300%;
-  animation: gradient-shift 6s ease infinite;
+  animation: gradient-shift 8s ease infinite;
 }
 
 @keyframes gradient-shift {
@@ -819,9 +1062,9 @@ async function handleLogin() {
   background: linear-gradient(
     105deg,
     transparent 25%,
-    rgba(255,255,255,0.1) 42%,
-    rgba(255,255,255,0.18) 50%,
-    rgba(255,255,255,0.1) 58%,
+    rgba(255,255,255,0.08) 42%,
+    rgba(255,255,255,0.15) 50%,
+    rgba(255,255,255,0.08) 58%,
     transparent 75%
   );
   transform: translateX(-130%);
@@ -836,9 +1079,9 @@ async function handleLogin() {
   position: absolute;
   inset: -2px;
   border-radius: 18px;
-  background: linear-gradient(135deg, rgba(29,78,216,0.4), rgba(99,102,241,0.3), rgba(139,92,246,0.4));
+  background: linear-gradient(135deg, rgba(30,64,175,0.4), rgba(59,130,246,0.3), rgba(99,102,241,0.4));
   opacity: 0;
-  filter: blur(12px);
+  filter: blur(16px);
   transition: opacity 0.4s ease;
   z-index: -1;
 }
@@ -849,7 +1092,7 @@ async function handleLogin() {
 
 .btn-adventure:hover {
   transform: translateY(-3px);
-  box-shadow: 0 12px 40px rgba(29,78,216,0.3);
+  box-shadow: 0 16px 48px rgba(30,64,175,0.3);
 }
 
 .btn-adventure:active {
@@ -944,15 +1187,15 @@ async function handleLogin() {
   left: 10%;
   right: 10%;
   height: 1px;
-  background: linear-gradient(90deg, transparent, #d1d5db, transparent);
+  background: linear-gradient(90deg, transparent, #dde1e8, transparent);
 }
 
 .badge-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  color: var(--bc-text-lighter);
-  opacity: 0.55;
+  color: #94a3b8;
+  opacity: 0.5;
   transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   padding: 0 22px;
   cursor: default;
@@ -960,7 +1203,7 @@ async function handleLogin() {
 
 .badge-item:hover {
   opacity: 1;
-  color: var(--bc-primary);
+  color: #3b82f6;
   transform: translateY(-2px);
 }
 
@@ -975,7 +1218,7 @@ async function handleLogin() {
 .badge-divider {
   width: 1px;
   height: 28px;
-  background: linear-gradient(180deg, transparent, #d1d5db, transparent);
+  background: linear-gradient(180deg, transparent, #dde1e8, transparent);
   flex-shrink: 0;
 }
 
@@ -1015,5 +1258,44 @@ async function handleLogin() {
   .form-side { padding: 24px 16px; }
   .form-wrapper { padding: 28px 20px; }
   .login-header { margin-bottom: 28px; }
+}
+
+/* ============================================================
+   HELP DIALOG
+   ============================================================ */
+.help-content {
+  font-size: 0.9rem;
+  line-height: 1.8;
+  color: var(--bc-text);
+}
+
+.help-content ul {
+  margin: 12px 0;
+  padding-left: 20px;
+}
+
+.help-content li {
+  margin-bottom: 8px;
+}
+
+.help-contact {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+  color: var(--bc-text-muted);
+  font-size: 0.85rem;
+}
+
+/* ============================================================
+   VERSION INFO
+   ============================================================ */
+.version-info {
+  position: absolute;
+  bottom: 16px;
+  right: 24px;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  opacity: 0.4;
+  z-index: 2;
 }
 </style>

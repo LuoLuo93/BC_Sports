@@ -13,10 +13,16 @@ public class StickerPrintOrderDetail {
     private String id;
     @TableField("order_id")
     private String orderId;
-    @TableField("article_no")
-    private String articleNo;
-    @TableField("article_name")
-    private String articleName;
+    @TableField("style_number")
+    private String styleNumber;
+    @TableField("material_name")
+    private String materialName;
+    @TableField("material_number")
+    private String materialNumber;
+    @TableField("color")
+    private String color;
+    @TableField("execution_standard")
+    private String executionStandard;
     @TableField("size_code")
     private String sizeCode;
     @TableField("size_name")
@@ -33,6 +39,16 @@ public class StickerPrintOrderDetail {
     private Integer printQty;
     @TableField("sort")
     private Integer sort;
+    @TableField("origin")
+    private String origin;
+    @TableField("manufacturer")
+    private String manufacturer;
+    @TableField("manufacturer_address")
+    private String manufacturerAddress;
+    @TableField("contact_phone")
+    private String contactPhone;
+    @TableField("material_composition")
+    private String materialComposition;
     @TableField("create_time")
     private LocalDateTime createTime;
 }

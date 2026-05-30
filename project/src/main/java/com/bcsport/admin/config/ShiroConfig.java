@@ -1,6 +1,7 @@
 package com.bcsport.admin.config;
 
 import com.bcsport.admin.shiro.UserRealm;
+import com.bcsport.admin.service.ConfigService;
 import org.apache.shiro.authc.credential.HashedCredentialsMatcher;
 import org.apache.shiro.mgt.SecurityManager;
 import org.apache.shiro.spring.security.interceptor.AuthorizationAttributeSourceAdvisor;
@@ -9,15 +10,21 @@ import org.apache.shiro.session.Session;
 import org.apache.shiro.session.SessionException;
 import org.apache.shiro.session.UnknownSessionException;
 import org.apache.shiro.session.mgt.SessionKey;
+import org.apache.shiro.web.servlet.AbstractShiroFilter;
 import org.apache.shiro.web.servlet.SimpleCookie;
 import org.apache.shiro.web.session.mgt.DefaultWebSessionManager;
 import org.apache.shiro.web.mgt.DefaultWebSecurityManager;
+import org.apache.shiro.web.mgt.CookieRememberMeManager;
 import org.springframework.aop.framework.autoproxy.DefaultAdvisorAutoProxyCreator;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import at.pollux.thymeleaf.shiro.dialect.ShiroDialect;
 
 import javax.servlet.Filter;
+import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
+import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -31,7 +38,7 @@ public class ShiroConfig {
      * 配置SecurityManager
      */
     @Bean
-    public DefaultWebSecurityManager securityManager(UserRealm userRealm) {
+    public DefaultWebSecurityManager securityManager(UserRealm userRealm, ConfigService configService) {
         DefaultWebSecurityManager securityManager = new DefaultWebSecurityManager();
 
         // 设置哈希凭证匹配器（MD5 + 2次迭代）
@@ -41,7 +48,10 @@ public class ShiroConfig {
         securityManager.setRealm(userRealm);
 
         // 配置 SessionManager
-        securityManager.setSessionManager(sessionManager());
+        securityManager.setSessionManager(sessionManager(configService));
+
+        // 配置 RememberMe 管理器
+        securityManager.setRememberMeManager(rememberMeManager());
 
         return securityManager;
     }
@@ -50,7 +60,7 @@ public class ShiroConfig {
      * 配置 SessionManager（重写getSession，session不存在时返回null而非抛异常）
      */
     @Bean
-    public DefaultWebSessionManager sessionManager() {
+    public DefaultWebSessionManager sessionManager(ConfigService configService) {
         DefaultWebSessionManager sessionManager = new DefaultWebSessionManager() {
             @Override
             public Session getSession(SessionKey key) throws SessionException {
@@ -62,7 +72,8 @@ public class ShiroConfig {
             }
         };
         sessionManager.setSessionIdCookie(sessionIdCookie());
-        sessionManager.setGlobalSessionTimeout(1800000);
+        int timeoutMinutes = configService.getInt("security.sessionTimeout", 30);
+        sessionManager.setGlobalSessionTimeout(timeoutMinutes * 60 * 1000L);
         sessionManager.setDeleteInvalidSessions(true);
         return sessionManager;
     }
@@ -74,10 +85,44 @@ public class ShiroConfig {
     public SimpleCookie sessionIdCookie() {
         SimpleCookie cookie = new SimpleCookie("JSESSIONID");
         cookie.setHttpOnly(true);
+        cookie.setSecure(true);
         cookie.setMaxAge(-1); // 浏览器关闭即失效
         return cookie;
     }
-    
+
+    /**
+     * 配置 RememberMe Cookie
+     */
+    @Bean
+    public SimpleCookie rememberMeCookie() {
+        SimpleCookie cookie = new SimpleCookie("rememberMe");
+        cookie.setHttpOnly(true);
+        cookie.setSecure(true);
+        cookie.setMaxAge(2592000); // 30天
+        return cookie;
+    }
+
+    /**
+     * 配置 RememberMe 管理器
+     */
+    @Bean
+    public CookieRememberMeManager rememberMeManager() {
+        CookieRememberMeManager manager = new CookieRememberMeManager();
+        manager.setCookie(rememberMeCookie());
+        // 加密密钥：优先从环境变量读取，否则每次启动随机生成
+        String envKey = System.getenv("SHIRO_REMEMBER_ME_KEY");
+        byte[] cipherKey;
+        if (envKey != null && !envKey.isEmpty()) {
+            cipherKey = envKey.getBytes(StandardCharsets.UTF_8);
+        } else {
+            byte[] key = new byte[16];
+            new SecureRandom().nextBytes(key);
+            cipherKey = key;
+        }
+        manager.setCipherKey(cipherKey);
+        return manager;
+    }
+
     /**
      * 配置密码匹配器
      */
@@ -111,6 +156,8 @@ public class ShiroConfig {
         // 公开路径
         filterChainDefinitionMap.put("/login", "anon");
         filterChainDefinitionMap.put("/doLogin", "anon");
+        filterChainDefinitionMap.put("/api/config/public", "anon");
+        filterChainDefinitionMap.put("/api/captcha", "anon");
         filterChainDefinitionMap.put("/assets/**", "anon");
         filterChainDefinitionMap.put("/static/**", "anon");
         filterChainDefinitionMap.put("/css/**", "anon");
@@ -121,9 +168,11 @@ public class ShiroConfig {
         filterChainDefinitionMap.put("/webjars/**", "anon");
         filterChainDefinitionMap.put("/v2/api-docs", "anon");
         filterChainDefinitionMap.put("/swagger-resources/**", "anon");
-        filterChainDefinitionMap.put("/actuator/**", "anon");
+        // Actuator: 仅 health 端点允许匿名访问，其余需认证
+        filterChainDefinitionMap.put("/actuator/health", "anon");
+        filterChainDefinitionMap.put("/actuator/**", "spaAuth");
 
-        // 需要认证的路径（使用 SpaAuthFilter 处理 API 请求返回 JSON 而非重定向）
+        // 需要认证的路径（使用 SpaAuthFilter 处理 API 请求返回 JSON 而非重定向，支持 Remember-Me）
         filterChainDefinitionMap.put("/**", "spaAuth");
         
         shiroFilterFactoryBean.setFilterChainDefinitionMap(filterChainDefinitionMap);
@@ -158,6 +207,16 @@ public class ShiroConfig {
         DefaultAdvisorAutoProxyCreator creator = new DefaultAdvisorAutoProxyCreator();
         creator.setProxyTargetClass(true);
         return creator;
+    }
+
+    /**
+     * 注册 Shiro 过滤器到 Jakarta Servlet 容器（Spring Boot 3.x 兼容）
+     */
+    @Bean
+    public FilterRegistrationBean<jakarta.servlet.Filter> shiroFilterRegistration(
+            ShiroFilterFactoryBean shiroFilterFactoryBean) throws Exception {
+        AbstractShiroFilter shiroFilter = (AbstractShiroFilter) shiroFilterFactoryBean.getObject();
+        return ShiroJakartaBridge.register(shiroFilter);
     }
 
     /**

@@ -39,3 +39,11 @@ export function searchProducts(params) {
 export function getProductBrands() {
   return request.get('/api/sticker/print/product/brands')
 }
+
+export function getStickerDataPage(params) {
+  return request.get('/api/sticker/data/page', { params })
+}
+
+export function getStickerBrands() {
+  return request.get('/api/sticker/data/brands')
+}

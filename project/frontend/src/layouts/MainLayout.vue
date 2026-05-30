@@ -6,11 +6,13 @@
     <!-- Sidebar -->
     <aside class="sidebar" :class="{
       collapsed: menuStore.sidebarCollapsed,
+      'sidebar-light': themeStore.sidebarStyle === 'light',
       'mobile-open': mobileMenuOpen && isMobile,
       'mobile-hidden': isMobile && !mobileMenuOpen
     }">
       <div class="sidebar-header">
-        <el-icon :size="20"><Compass /></el-icon>
+        <img v-if="themeStore.logoUrl" :src="logoFullUrl" class="sidebar-logo" />
+        <el-icon v-else :size="20"><Compass /></el-icon>
         <span v-show="!menuStore.sidebarCollapsed">B.C.SPORTS</span>
       </div>
       <div class="sidebar-menu">
@@ -59,7 +61,7 @@
                 <el-dropdown-item divided command="profile">
                   <el-icon><User /></el-icon>个人中心
                 </el-dropdown-item>
-                <el-dropdown-item command="settings">
+                <el-dropdown-item v-if="hasPermission('system:config:query')" command="settings">
                   <el-icon><Setting /></el-icon>系统设置
                 </el-dropdown-item>
                 <el-dropdown-item divided command="logout">
@@ -114,7 +116,7 @@
 
       <!-- Footer -->
       <footer class="footer">
-        <span>&copy; 2026 BC体育 & 巅峰探索.</span>
+        <span>&copy; 2026 {{ systemName }}</span>
       </footer>
     </div>
   </div>
@@ -126,8 +128,13 @@ import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useMenuStore } from '@/stores/menu'
 import { useTabStore } from '@/stores/tab'
+import { useThemeStore } from '@/stores/theme'
+import { usePermission } from '@/composables/usePermission'
 import { useSessionCheck } from '@/composables/useSessionCheck'
+import { setLoggingOut } from '@/api/request'
 import { useResponsive } from '@/composables/useResponsive'
+import { applyPublicConfig, systemName } from '@/utils/appConfig'
+import { getPublicConfig } from '@/api/config'
 import { ElMessageBox } from 'element-plus'
 import { Fold, User, Setting, SwitchButton, Close, Compass, CircleClose, ArrowDown, Odometer } from '@element-plus/icons-vue'
 import SidebarMenu from '@/components/SidebarMenu.vue'
@@ -141,11 +148,22 @@ const route = useRoute()
 const authStore = useAuthStore()
 const menuStore = useMenuStore()
 const tabStore = useTabStore()
-const { startCheck } = useSessionCheck()
+const themeStore = useThemeStore()
+const { hasPermission } = usePermission()
+const { startCheck, stopCheck } = useSessionCheck()
 const { isMobile, isTablet } = useResponsive()
 
 const mobileMenuOpen = ref(false)
 const tabScrollRef = ref(null)
+
+const apiBase = import.meta.env.VITE_API_BASE || ''
+
+const logoFullUrl = computed(() => {
+  const url = themeStore.logoUrl
+  if (!url) return ''
+  if (url.startsWith('http') || url.startsWith('data:')) return url
+  return apiBase + url
+})
 
 const pathToName = {
   '/': 'Dashboard',
@@ -184,6 +202,19 @@ const cachedViews = computed(() => {
 onMounted(async () => {
   await menuStore.loadMenuTree()
   startCheck()
+  themeStore.applyTheme()
+  try {
+    const res = await getPublicConfig()
+    if (res.code === 200 && res.data) {
+      applyPublicConfig(res.data)
+      const d = res.data
+      if (d['sys.themeMode']) themeStore.themeMode = d['sys.themeMode']
+      if (d['sys.primaryColor']) themeStore.primaryColor = d['sys.primaryColor']
+      if (d['sys.sidebarStyle']) themeStore.sidebarStyle = d['sys.sidebarStyle']
+      if (d['sys.logoUrl']) themeStore.logoUrl = d['sys.logoUrl']
+      themeStore.applyTheme()
+    }
+  } catch { /* ignore */ }
 })
 
 const currentTitle = computed(() => {
@@ -281,6 +312,8 @@ function handleLogout() {
     cancelButtonText: '我再想想',
     type: 'info'
   }).then(() => {
+    setLoggingOut(true)
+    stopCheck()
     authStore.logout()
     menuStore.clearMenu()
     tabStore.clearAll()
@@ -337,8 +370,45 @@ function handleLogout() {
   background-clip: text;
 }
 
+.sidebar-logo {
+  height: 28px;
+  max-width: 160px;
+  object-fit: contain;
+}
+
+.sidebar.collapsed .sidebar-logo {
+  height: 24px;
+  max-width: 32px;
+}
+
 .sidebar.collapsed .sidebar-header .el-icon {
   color: #60a5fa;
+}
+
+/* Light sidebar variant */
+.sidebar.sidebar-light {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  color: #1e293b;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.04);
+}
+
+.sidebar.sidebar-light .sidebar-header {
+  border-bottom-color: #e5e7eb;
+}
+
+.sidebar.sidebar-light .sidebar-header span {
+  background: linear-gradient(135deg, #1d4ed8, #7c3aed);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.sidebar.sidebar-light .sidebar-header .el-icon {
+  color: var(--bc-primary);
+}
+
+.sidebar.sidebar-light .sidebar-menu::after {
+  background: linear-gradient(transparent, rgba(248, 250, 252, 0.3));
 }
 
 .sidebar-menu {

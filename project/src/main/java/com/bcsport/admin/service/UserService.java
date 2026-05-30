@@ -76,6 +76,11 @@ public interface UserService extends IService<User> {
     boolean updateUserWithRoles(UserDTO userDTO, List<String> roleIds);
     
     /**
+     * 更新用户个人资料（仅允许修改昵称、邮箱、手机号）
+     */
+    boolean updateUserProfile(String userId, UserDTO userDTO);
+
+    /**
      * 测试用户角色分配功能
      */
     void testUserRoleAssignment();

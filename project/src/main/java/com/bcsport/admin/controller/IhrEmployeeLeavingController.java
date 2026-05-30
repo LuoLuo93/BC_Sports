@@ -13,7 +13,10 @@ import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.concurrent.ThreadPoolExecutor;
 
 @Slf4j
 @RestController
@@ -29,6 +32,10 @@ public class IhrEmployeeLeavingController {
 
     @Autowired
     private QywxEmployeeLeaveSyncTask qywxEmployeeLeaveSyncTask;
+
+    @Autowired
+    @Qualifier("taskThreadPool")
+    private ThreadPoolExecutor taskThreadPool;
 
     @GetMapping("/page")
     @ApiOperation("分页查询离职员工")
@@ -53,13 +60,13 @@ public class IhrEmployeeLeavingController {
             IhrEmployeeTask.setSyncing(true);
             IhrEmployeeTask.setSyncStartTime(new java.util.Date());
 
-            new Thread(() -> {
+            taskThreadPool.execute(() -> {
                 try {
                     ihrEmployeeTask.syncAllFromManual();
                 } catch (Exception e) {
                     log.error("IHR员工同步异常", e);
                 }
-            }, "ihr-sync-manual-leaving").start();
+            });
         }
         return Result.success("IHR同步已触发，请稍后刷新页面查看数据");
     }

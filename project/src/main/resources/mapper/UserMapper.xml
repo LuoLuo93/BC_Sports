@@ -21,13 +21,18 @@
     </resultMap>
 
     <select id="selectUserPageWithConditions" resultMap="UserVOResultMap">
-        SELECT u.*, d.dept_name,
-               (SELECT LISTAGG(r.role_name, ',') WITHIN GROUP (ORDER BY r.role_name)
-                FROM bc_sports_sys_role r
-                INNER JOIN bc_sports_sys_user_role ur ON r.id = ur.role_id
-                WHERE ur.user_id = u.id AND r.deleted = 0) as role_names
+        SELECT u.id, u.username, u.nickname, u.email, u.phone, u.avatar, u.status,
+               u.last_login_time, u.last_login_ip, u.remark, u.dept_id, u.sort, u.create_time,
+               d.dept_name,
+               ur_agg.role_names
         FROM bc_sports_sys_user u
         LEFT JOIN bc_sports_sys_dept d ON u.dept_id = d.id AND d.deleted = 0
+        LEFT JOIN (
+            SELECT ur.user_id, LISTAGG(r.role_name, ',') WITHIN GROUP (ORDER BY r.role_name) as role_names
+            FROM bc_sports_sys_user_role ur
+            INNER JOIN bc_sports_sys_role r ON r.id = ur.role_id AND r.deleted = 0
+            GROUP BY ur.user_id
+        ) ur_agg ON ur_agg.user_id = u.id
         WHERE u.deleted = 0
         <if test="queryUser.username != null and queryUser.username != ''">
             AND u.username LIKE '%' || #{queryUser.username} || '%'

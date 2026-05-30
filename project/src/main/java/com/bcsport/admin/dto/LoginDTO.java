@@ -2,7 +2,7 @@ package com.bcsport.admin.dto;
 
 import lombok.Data;
 
-import javax.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotBlank;
 
 @Data
 public class LoginDTO {
@@ -14,4 +14,8 @@ public class LoginDTO {
     private String password;
 
     private Boolean rememberMe;
+
+    private String captchaKey;
+
+    private String captchaCode;
 }

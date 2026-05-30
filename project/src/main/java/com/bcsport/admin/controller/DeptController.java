@@ -1,5 +1,6 @@
 package com.bcsport.admin.controller;
 
+import com.bcsport.admin.annotation.OperLog;
 import com.bcsport.admin.common.Result;
 import com.bcsport.admin.dto.DeptDTO;
 import com.bcsport.admin.dto.DeptQueryDTO;
@@ -55,6 +56,7 @@ public class DeptController {
     @PostMapping
     @ApiOperation("新增部门")
     @RequiresPermissions("dept:add")
+    @OperLog(module = "部门管理", operation = "新增部门")
     public Result<?> add(@Validated @RequestBody DeptDTO deptDTO) {
         if (deptService.addDept(deptDTO)) {
             return Result.success("新增部门成功", null);
@@ -68,6 +70,7 @@ public class DeptController {
     @PutMapping("/{id}")
     @ApiOperation("更新部门")
     @RequiresPermissions("dept:edit")
+    @OperLog(module = "部门管理", operation = "更新部门")
     public Result<?> update(@PathVariable String id, @Validated @RequestBody DeptDTO deptDTO) {
         deptDTO.setId(id);
         if (deptService.updateDept(deptDTO)) {
@@ -82,6 +85,7 @@ public class DeptController {
     @DeleteMapping("/{id}")
     @ApiOperation("删除部门")
     @RequiresPermissions("dept:delete")
+    @OperLog(module = "部门管理", operation = "删除部门")
     public Result<?> delete(@PathVariable String id) {
         // 检查是否有子部门
         if (deptService.count(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.bcsport.admin.entity.Dept>()

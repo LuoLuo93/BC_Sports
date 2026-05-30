@@ -9,4 +9,16 @@
             (#{item.id}, #{item.departmentId}, #{item.name}, #{item.parentId}, #{item.type}, GETDATE(), GETDATE())
         </foreach>
     </insert>
+
+    <select id="selectAncestorNames" resultType="java.lang.String">
+        WITH anc AS (
+            SELECT department_id, name, parent_id, 0 AS lvl
+            FROM department WHERE department_id = #{departmentId}
+            UNION ALL
+            SELECT d.department_id, d.name, d.parent_id, a.lvl + 1
+            FROM department d INNER JOIN anc a ON d.department_id = a.parent_id
+        )
+        SELECT name FROM anc WHERE lvl &gt; 0 ORDER BY lvl
+        OPTION (MAXRECURSION 10)
+    </select>
 </mapper>

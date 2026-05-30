@@ -1,9 +1,14 @@
 <template>
   <div class="page-container">
-    <el-card shadow="never">
-      <el-tabs v-model="activeTab">
-        <!-- 打标签 -->
-        <el-tab-pane label="打标签" name="upload">
+    <el-tabs v-model="activeTab" class="qywx-tag-tabs">
+      <!-- 打标签 -->
+      <el-tab-pane label="打标签" name="upload">
+        <el-card shadow="never">
+          <template #header>
+            <div class="card-header-row">
+              <span class="card-header-title">批量打标签</span>
+            </div>
+          </template>
           <div class="upload-drop-zone">
             <el-upload ref="uploadRef" :limit="1" accept=".xlsx,.xls" :auto-upload="false" drag :http-request="handleUpload">
               <el-icon :size="48"><Upload /></el-icon>
@@ -17,11 +22,13 @@
               <el-button type="primary" :loading="batchTagLoading" @click="handleUploadSubmit">开始打标</el-button>
             </div>
           </div>
-        </el-tab-pane>
+        </el-card>
+      </el-tab-pane>
 
-        <!-- 标签集 -->
-        <el-tab-pane label="标签集" name="tags">
-          <el-form :model="tagQuery" inline class="tab-search-form">
+      <!-- 标签集 -->
+      <el-tab-pane label="标签集" name="tags">
+        <el-card shadow="never" class="search-card">
+          <el-form :model="tagQuery" inline>
             <el-form-item label="标签名称">
               <el-input v-model="tagQuery.tagName" placeholder="请输入标签名称" clearable @keyup.enter="handleTagSearch" />
             </el-form-item>
@@ -29,12 +36,20 @@
               <el-button type="primary" :icon="Search" @click="handleTagSearch">搜索</el-button>
               <el-button :icon="RefreshRight" @click="resetTagQuery">重置</el-button>
               <el-button v-if="hasPermission('qywx:tag:sync')" type="success" size="small" :icon="Refresh" :loading="syncLoading" @click="handleSyncTag">同步标签库</el-button>
+              <el-button size="small" @click="toggleExpandAll">{{ isExpandAll ? '折叠全部' : '展开全部' }}</el-button>
               <el-button type="primary" size="small" :icon="Plus" @click="showAddTagDialog">添加标签组</el-button>
             </el-form-item>
           </el-form>
+        </el-card>
 
+        <el-card shadow="never">
+          <template #header>
+            <div class="card-header-row">
+              <span class="card-header-title">企业标签库</span>
+            </div>
+          </template>
           <div class="table-responsive">
-            <el-table v-loading="tagLoading" :data="tagTreeData" row-key="tagId" :tree-props="{ children: 'children' }" border stripe :row-class-name="treeRowClass">
+            <el-table v-if="refreshTable" v-loading="tagLoading" :data="tagTreeData" row-key="tagId" :tree-props="{ children: 'children' }" :default-expand-all="isExpandAll" border stripe :row-class-name="treeRowClass">
               <el-table-column label="标签名称" min-width="200">
                 <template #default="{ row }">
                   <div class="name-cell">
@@ -57,11 +72,13 @@
               </el-table-column>
             </el-table>
           </div>
-        </el-tab-pane>
+        </el-card>
+      </el-tab-pane>
 
-        <!-- 打标签日志 -->
-        <el-tab-pane label="打标签日志" name="records">
-          <el-form :model="recordQuery" inline class="tab-search-form">
+      <!-- 打标签日志 -->
+      <el-tab-pane label="打标签日志" name="records">
+        <el-card shadow="never" class="search-card">
+          <el-form :model="recordQuery" inline>
             <el-form-item label="客户ID">
               <el-input v-model="recordQuery.externalUserid" placeholder="请输入客户ID" clearable @keyup.enter="handleRecordSearch" />
             </el-form-item>
@@ -76,7 +93,14 @@
               <el-button :icon="RefreshRight" @click="resetRecordQuery">重置</el-button>
             </el-form-item>
           </el-form>
+        </el-card>
 
+        <el-card shadow="never">
+          <template #header>
+            <div class="card-header-row">
+              <span class="card-header-title">打标签日志</span>
+            </div>
+          </template>
           <div class="table-responsive">
             <el-table v-loading="recordLoading" :data="recordData" border stripe empty-text="暂无数据">
               <el-table-column type="index" label="#" width="50" align="center" />
@@ -100,9 +124,9 @@
           <div class="pagination-wrapper--sm">
             <el-pagination v-model:current-page="recordQuery.page" v-model:page-size="recordQuery.size" :total="recordTotal" :page-sizes="PAGE_SIZES_LG" layout="total, sizes, prev, pager, next" @size-change="handleRecordSearch" @current-change="loadRecordData" />
           </div>
-        </el-tab-pane>
-      </el-tabs>
-    </el-card>
+        </el-card>
+      </el-tab-pane>
+    </el-tabs>
 
     <el-dialog v-model="addTagDialogVisible" :title="editingGroupId ? '编辑标签组' : '添加标签组'" width="500px" destroy-on-close>
       <el-form :model="addTagForm" label-width="90px">
@@ -129,7 +153,7 @@
 
 <script setup>
 defineOptions({ name: 'CustomerTag' })
-import { ref, reactive, watch, computed, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, watch, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Upload, Folder, Document } from '@element-plus/icons-vue'
 import { Search, RefreshRight, Refresh, Plus, Delete } from '@element-plus/icons-vue'
@@ -143,6 +167,15 @@ const activeTab = ref('upload')
 
 function treeRowClass({ row }) {
   return row.children?.length ? 'tree-parent-row' : 'tree-child-row'
+}
+
+// 树表折叠/展开
+const isExpandAll = ref(true)
+const refreshTable = ref(true)
+function toggleExpandAll() {
+  refreshTable.value = false
+  isExpandAll.value = !isExpandAll.value
+  nextTick(() => { refreshTable.value = true })
 }
 
 // ===== 打标签 =====
@@ -339,8 +372,8 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.tab-search-form {
-  margin-bottom: 12px;
+.qywx-tag-tabs :deep(.el-tabs__header) {
+  margin-bottom: 0;
 }
 .upload-drop-zone {
   padding: 20px;

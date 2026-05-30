@@ -1,11 +1,12 @@
 import { ref, reactive } from 'vue'
+import { defaultPageSize } from '@/utils/appConfig'
 
 export function usePageQuery(apiFn, defaultQuery = {}) {
   const loading = ref(false)
   const tableData = ref([])
   const total = ref(0)
 
-  const query = reactive({ ...defaultQuery, pageNum: 1, pageSize: 10 })
+  const query = reactive({ ...defaultQuery, pageNum: 1, pageSize: defaultPageSize.value })
 
   async function loadData() {
     loading.value = true

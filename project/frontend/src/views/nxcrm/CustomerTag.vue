@@ -1,13 +1,23 @@
 <template>
   <div class="page-container">
-    <el-card shadow="never">
-      <el-tabs v-model="activeTab">
-        <!-- 任务列表 -->
-        <el-tab-pane label="任务列表" name="tasks">
-          <div style="margin-bottom:12px;">
-            <el-button type="primary" :icon="Plus" @click="showCreateDialog">创建任务</el-button>
-            <el-button :icon="RefreshRight" @click="loadTasks">刷新</el-button>
-          </div>
+    <el-tabs v-model="activeTab" class="nxcrm-tag-tabs">
+      <!-- 任务列表 -->
+      <el-tab-pane label="任务列表" name="tasks">
+        <el-card shadow="never" class="search-card">
+          <el-form :model="taskQuery" inline>
+            <el-form-item>
+              <el-button type="primary" :icon="Plus" @click="showCreateDialog">创建任务</el-button>
+              <el-button :icon="RefreshRight" @click="loadTasks">刷新</el-button>
+            </el-form-item>
+          </el-form>
+        </el-card>
+
+        <el-card shadow="never">
+          <template #header>
+            <div class="card-header-row">
+              <span class="card-header-title">打标签任务</span>
+            </div>
+          </template>
           <div class="table-responsive">
             <el-table v-loading="taskLoading" :data="taskData" border stripe @row-click="selectTask">
               <el-table-column type="index" label="#" width="50" align="center" />
@@ -35,21 +45,23 @@
           <div class="pagination-wrapper--sm">
             <el-pagination v-model:current-page="taskQuery.page" v-model:page-size="taskQuery.size" :total="taskTotal" :page-sizes="PAGE_SIZES_LG" layout="total, sizes, prev, pager, next" @size-change="loadTasks" @current-change="loadTasks" />
           </div>
-        </el-tab-pane>
+        </el-card>
+      </el-tab-pane>
 
-        <!-- 任务明细 -->
-        <el-tab-pane label="任务明细" name="details" :disabled="!selectedTask">
-          <div v-if="selectedTask" style="margin-bottom:12px;">
-            <el-descriptions :column="4" border size="small">
-              <el-descriptions-item label="任务名称">{{ selectedTask.taskName }}</el-descriptions-item>
-              <el-descriptions-item label="状态">
-                <el-tag :type="statusTagType(selectedTask.status)" size="small">{{ statusLabel(selectedTask.status) }}</el-tag>
-              </el-descriptions-item>
-              <el-descriptions-item label="成功/失败">{{ selectedTask.successCount }} / {{ selectedTask.failCount }}</el-descriptions-item>
-            </el-descriptions>
-          </div>
-          <el-form v-if="selectedTask" :inline="true" style="margin-bottom:12px;">
+      <!-- 任务明细 -->
+      <el-tab-pane label="任务明细" name="details" :disabled="!selectedTask">
+        <el-card v-if="selectedTask" shadow="never" class="search-card">
+          <el-form :inline="true">
+            <el-form-item label="任务名称">
+              <span>{{ selectedTask.taskName }}</span>
+            </el-form-item>
             <el-form-item label="状态">
+              <el-tag :type="statusTagType(selectedTask.status)" size="small">{{ statusLabel(selectedTask.status) }}</el-tag>
+            </el-form-item>
+            <el-form-item label="成功/失败">
+              <span>{{ selectedTask.successCount }} / {{ selectedTask.failCount }}</span>
+            </el-form-item>
+            <el-form-item label="筛选状态">
               <el-select v-model="detailQuery.status" placeholder="全部" clearable style="width:120px">
                 <el-option label="待处理" :value="0" />
                 <el-option label="成功" :value="1" />
@@ -60,6 +72,14 @@
               <el-button type="primary" :icon="Search" @click="loadDetails">搜索</el-button>
             </el-form-item>
           </el-form>
+        </el-card>
+
+        <el-card v-if="selectedTask" shadow="never">
+          <template #header>
+            <div class="card-header-row">
+              <span class="card-header-title">任务明细</span>
+            </div>
+          </template>
           <div class="table-responsive">
             <el-table v-loading="detailLoading" :data="detailData" border stripe>
               <el-table-column type="index" label="#" width="50" align="center" />
@@ -83,11 +103,13 @@
           <div class="pagination-wrapper--sm">
             <el-pagination v-model:current-page="detailQuery.page" v-model:page-size="detailQuery.size" :total="detailTotal" :page-sizes="PAGE_SIZES_LG" layout="total, sizes, prev, pager, next" @size-change="loadDetails" @current-change="loadDetails" />
           </div>
-        </el-tab-pane>
+        </el-card>
+      </el-tab-pane>
 
         <!-- 会员标签数据 -->
-        <el-tab-pane label="会员标签数据" name="memberTags">
-          <el-form :inline="true" style="margin-bottom:12px;">
+      <el-tab-pane label="会员标签数据" name="memberTags">
+        <el-card shadow="never" class="search-card">
+          <el-form :inline="true">
             <el-form-item label="批次号">
               <el-input v-model="memberTagQuery.batchNo" placeholder="请输入批次号" clearable />
             </el-form-item>
@@ -105,6 +127,14 @@
               <el-button type="warning" @click="handleFillShopId" :loading="fillShopLoading">填充shopId</el-button>
             </el-form-item>
           </el-form>
+        </el-card>
+
+        <el-card shadow="never">
+          <template #header>
+            <div class="card-header-row">
+              <span class="card-header-title">会员标签数据</span>
+            </div>
+          </template>
           <div class="table-responsive">
             <el-table v-loading="memberTagLoading" :data="memberTagData" border stripe>
               <el-table-column type="index" label="#" width="50" align="center" />
@@ -125,9 +155,9 @@
           <div class="pagination-wrapper--sm">
             <el-pagination v-model:current-page="memberTagQuery.page" v-model:page-size="memberTagQuery.size" :total="memberTagTotal" :page-sizes="PAGE_SIZES_LG" layout="total, sizes, prev, pager, next" @size-change="loadMemberTags" @current-change="loadMemberTags" />
           </div>
-        </el-tab-pane>
-      </el-tabs>
-    </el-card>
+        </el-card>
+      </el-tab-pane>
+    </el-tabs>
 
     <!-- 创建任务对话框 -->
     <el-dialog v-model="createDialogVisible" title="创建打标签任务" width="500px" destroy-on-close>
@@ -289,5 +319,7 @@ loadTasks()
 </script>
 
 <style scoped>
-.tab-search-form { margin-bottom: 12px; }
+.nxcrm-tag-tabs :deep(.el-tabs__header) {
+  margin-bottom: 0;
+}
 </style>

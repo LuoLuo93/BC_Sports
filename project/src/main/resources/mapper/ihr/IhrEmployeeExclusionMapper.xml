@@ -28,4 +28,12 @@
         </foreach>
     </insert>
 
+    <select id="selectActiveExclusions" resultType="com.bcsport.admin.entity.ihr.IhrEmployeeExclusion">
+        SELECT id, staff_name, staff_no, exclusion_type, status, reason
+        FROM ihr_employee_exclusion
+        WHERE exclusion_type = #{exclusionType}
+          AND status = 1
+          AND deleted = 0
+    </select>
+
 </mapper>

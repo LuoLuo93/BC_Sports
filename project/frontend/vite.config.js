@@ -21,7 +21,7 @@ export default defineConfig({
     }
   },
   server: {
-    port: 5173,
+    port: 5175,
     proxy: {
       '/api': {
         target: 'http://localhost:8080',
@@ -39,6 +39,11 @@ export default defineConfig({
         cookieDomainRewrite: { '*': '' }
       },
       '/actuator': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+        cookieDomainRewrite: { '*': '' }
+      },
+      '/images': {
         target: 'http://localhost:8080',
         changeOrigin: true,
         cookieDomainRewrite: { '*': '' }

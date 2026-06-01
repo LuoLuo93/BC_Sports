@@ -63,7 +63,7 @@ public class IhrEmployeeTask {
 
     // 同步状态跟踪
     private static volatile boolean isSyncing = false;
-    private static Date syncStartTime = null;
+    private static volatile Date syncStartTime = null;
 
     /**
      * 同步员工ID列表

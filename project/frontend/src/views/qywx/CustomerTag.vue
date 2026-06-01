@@ -26,7 +26,7 @@
       </el-tab-pane>
 
       <!-- 标签集 -->
-      <el-tab-pane label="标签集" name="tags">
+      <el-tab-pane label="标签集" name="tags" lazy>
         <el-card shadow="never" class="search-card">
           <el-form :model="tagQuery" inline>
             <el-form-item label="标签名称">
@@ -76,7 +76,7 @@
       </el-tab-pane>
 
       <!-- 打标签日志 -->
-      <el-tab-pane label="打标签日志" name="records">
+      <el-tab-pane label="打标签日志" name="records" lazy>
         <el-card shadow="never" class="search-card">
           <el-form :model="recordQuery" inline>
             <el-form-item label="客户ID">

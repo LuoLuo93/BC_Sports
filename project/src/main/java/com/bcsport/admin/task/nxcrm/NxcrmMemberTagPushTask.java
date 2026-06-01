@@ -49,8 +49,14 @@ public class NxcrmMemberTagPushTask {
     private ThreadPoolExecutor taskThreadPool;
 
     public void pushMemberTags(Map<String, String> params) {
+        synchronized (NxcrmMemberTagPushTask.class) {
+            if (syncing) {
+                log.warn("NXCRM推送会员标签正在进行中，请勿重复操作");
+                return;
+            }
+            syncing = true;
+        }
         log.info("=== 开始执行: NXCRM推送会员标签 ===");
-        syncing = true;
         try {
             // 1. 参数校验
             int batchSize = DEFAULT_BATCH_SIZE;
@@ -208,7 +214,9 @@ public class NxcrmMemberTagPushTask {
             log.error("=== 失败执行: NXCRM推送会员标签 ===", e);
             throw new RuntimeException(e);
         } finally {
-            syncing = false;
+            synchronized (NxcrmMemberTagPushTask.class) {
+                syncing = false;
+            }
         }
     }
 }

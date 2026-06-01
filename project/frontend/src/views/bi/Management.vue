@@ -38,7 +38,7 @@
       </el-tab-pane>
 
       <!-- 地区管理 -->
-      <el-tab-pane label="地区管理" name="region">
+      <el-tab-pane label="地区管理" name="region" lazy>
         <el-card shadow="never">
           <template #header>
             <div class="card-header-row">
@@ -69,7 +69,7 @@
                   <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">{{ row.status === 1 ? '正常' : '停用' }}</el-tag>
                 </template>
               </el-table-column>
-              <el-table-column label="操作" width="280" align="center">
+              <el-table-column label="操作" width="280" align="right" header-align="right">
                 <template #default="{ row }">
                   <el-button v-if="row.children?.length && hasPermission('bi:region:add')" type="warning" plain size="small" @click="handleRegionAdd(row)">新增子地区</el-button>
                   <el-button v-if="hasPermission('bi:region:edit')" type="primary" plain size="small" @click="handleRegionEdit(row)">编辑</el-button>
@@ -82,7 +82,7 @@
       </el-tab-pane>
 
       <!-- 渠道类型 -->
-      <el-tab-pane label="渠道类型" name="channelType">
+      <el-tab-pane label="渠道类型" name="channelType" lazy>
         <el-card shadow="never">
           <template #header>
             <div class="card-header-row">
@@ -112,7 +112,7 @@
                   <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">{{ row.status === 1 ? '正常' : '停用' }}</el-tag>
                 </template>
               </el-table-column>
-              <el-table-column label="操作" width="280" align="center">
+              <el-table-column label="操作" width="280" align="right" header-align="right">
                 <template #default="{ row }">
                   <el-button v-if="row.children?.length && hasPermission('bi:channelType:add')" type="warning" plain size="small" @click="handleCtAdd(row)">新增子类型</el-button>
                   <el-button v-if="hasPermission('bi:channelType:edit')" type="primary" plain size="small" @click="handleCtEdit(row)">编辑</el-button>
@@ -125,7 +125,7 @@
       </el-tab-pane>
 
       <!-- 渠道性质 -->
-      <el-tab-pane label="渠道性质" name="channelNature">
+      <el-tab-pane label="渠道性质" name="channelNature" lazy>
         <el-card shadow="never">
           <template #header>
             <div class="card-header-row">
@@ -155,7 +155,7 @@
                   <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">{{ row.status === 1 ? '正常' : '停用' }}</el-tag>
                 </template>
               </el-table-column>
-              <el-table-column label="操作" width="280" align="center">
+              <el-table-column label="操作" width="280" align="right" header-align="right">
                 <template #default="{ row }">
                   <el-button v-if="row.children?.length && hasPermission('bi:channelNature:add')" type="warning" plain size="small" @click="handleCnAdd(row)">新增子性质</el-button>
                   <el-button v-if="hasPermission('bi:channelNature:edit')" type="primary" plain size="small" @click="handleCnEdit(row)">编辑</el-button>
@@ -243,7 +243,7 @@
 
 <script setup>
 defineOptions({ name: 'BiManagement' })
-import { ref, reactive, computed, onMounted, nextTick } from 'vue'
+import { ref, reactive, computed, onMounted, nextTick, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getBrandPage, getBrand, createBrand, updateBrand, deleteBrand } from '@/api/brand'
 import { getRegionTree, getRegion, createRegion, updateRegion, deleteRegion } from '@/api/region'
@@ -363,7 +363,15 @@ async function handleCnSubmit() {
   try { if (cnIsEdit.value) { await updateChannelNature(cnEditId.value, { ...cnForm }) } else { await createChannelNature({ ...cnForm }) }; ElMessage.success(cnIsEdit.value ? '更新成功' : '创建成功'); cnDialogVisible.value = false; loadCn() } finally { cnSubmitting.value = false }
 }
 
-onMounted(() => { loadBrands(); loadRegions(); loadCt(); loadCn() })
+const loadedTabs = new Set(['brand'])
+watch(activeTab, (val) => {
+  if (loadedTabs.has(val)) return
+  loadedTabs.add(val)
+  if (val === 'region') loadRegions()
+  else if (val === 'channelType') loadCt()
+  else if (val === 'channelNature') loadCn()
+})
+onMounted(() => { loadBrands() })
 </script>
 
 <style scoped>

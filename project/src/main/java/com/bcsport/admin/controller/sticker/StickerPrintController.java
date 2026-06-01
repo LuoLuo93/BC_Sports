@@ -3,6 +3,7 @@ package com.bcsport.admin.controller.sticker;
 import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.common.Result;
+import com.bcsport.admin.dto.sticker.StickerDataQueryDTO;
 import com.bcsport.admin.dto.sticker.StickerPrintQueryDTO;
 import com.bcsport.admin.entity.sticker.StickerPrintOrder;
 import com.bcsport.admin.service.sticker.StickerPrintService;
@@ -84,11 +85,8 @@ public class StickerPrintController {
     @GetMapping("/product/search")
     @ApiOperation("搜索货品")
     @RequiresPermissions("sticker:print:query")
-    public Result<?> searchProducts(@RequestParam(required = false) String materialNumber,
-                                    @RequestParam(required = false) String styleNumber,
-                                    @RequestParam(required = false) String materialName,
-                                    @RequestParam(required = false) String brandId) {
-        return Result.success(stickerPrintService.searchProducts(materialNumber, styleNumber, materialName, brandId));
+    public Result<?> searchProducts(StickerDataQueryDTO queryDTO) {
+        return Result.success(stickerPrintService.searchProducts(queryDTO.getMaterialNumber(), queryDTO.getStyleNumber(), queryDTO.getMaterialName(), queryDTO.getBrandId()));
     }
 
     @GetMapping("/product/brands")

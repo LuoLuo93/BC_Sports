@@ -196,8 +196,11 @@ public class AuthCacheService {
 
     public String getCaptchaAndDelete(String captchaKey) {
         try {
-            Object val = redisTemplate.opsForValue().get(CAPTCHA_KEY + captchaKey);
-            redisTemplate.delete(CAPTCHA_KEY + captchaKey);
+            // Lua 脚本保证原子性：GET + DEL 在一个操作中完成
+            String luaScript = "local v = redis.call('GET', KEYS[1]) redis.call('DEL', KEYS[1]) return v";
+            Object val = redisTemplate.execute(
+                    new org.springframework.data.redis.core.script.DefaultRedisScript<>(luaScript, String.class),
+                    java.util.Collections.singletonList(CAPTCHA_KEY + captchaKey));
             return val != null ? val.toString() : null;
         } catch (Exception e) {
             log.warn("Redis读取验证码失败, key={}", captchaKey, e);

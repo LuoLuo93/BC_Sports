@@ -9,6 +9,14 @@ export function getQywxSyncStatus() {
   return request.get('/api/ihr/qywx-sync-status')
 }
 
+export function syncQywxFullSync() {
+  return request.post('/api/ihr/qywx-full-sync')
+}
+
+export function getQywxFullSyncStatus() {
+  return request.get('/api/ihr/qywx-full-sync-status')
+}
+
 // IHR Onboarding
 export function getIhrOnboardingPage(params) {
   return request.get('/api/ihr-onboarding/page', { params })

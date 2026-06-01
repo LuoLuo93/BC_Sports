@@ -49,7 +49,7 @@
       </el-tab-pane>
 
       <!-- 任务明细 -->
-      <el-tab-pane label="任务明细" name="details" :disabled="!selectedTask">
+      <el-tab-pane label="任务明细" name="details" :disabled="!selectedTask" lazy>
         <el-card v-if="selectedTask" shadow="never" class="search-card">
           <el-form :inline="true">
             <el-form-item label="任务名称">
@@ -107,7 +107,7 @@
       </el-tab-pane>
 
         <!-- 会员标签数据 -->
-      <el-tab-pane label="会员标签数据" name="memberTags">
+      <el-tab-pane label="会员标签数据" name="memberTags" lazy>
         <el-card shadow="never" class="search-card">
           <el-form :inline="true">
             <el-form-item label="批次号">

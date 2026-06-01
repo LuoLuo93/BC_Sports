@@ -64,7 +64,7 @@
               <el-tag v-else type="info" size="small">否</el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="260" align="center" fixed="right">
+          <el-table-column label="操作" width="260" align="right" header-align="right" fixed="right">
             <template #default="{ row }">
               <template v-if="row.menuType !== 2">
                 <el-button v-if="hasPermission('menu:add')" type="warning" plain size="small" @click="handleAdd(row)">新增子菜单</el-button>

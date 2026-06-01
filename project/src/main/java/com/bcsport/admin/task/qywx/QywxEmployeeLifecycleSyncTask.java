@@ -23,10 +23,6 @@ public class QywxEmployeeLifecycleSyncTask {
         return syncing;
     }
 
-    public static void setSyncing(boolean v) {
-        syncing = v;
-    }
-
     @Autowired
     private QywxFullSyncTask qywxFullSyncTask;
 
@@ -43,9 +39,15 @@ public class QywxEmployeeLifecycleSyncTask {
      * 一键同步员工生命周期所有数据
      */
     public void syncAll() {
+        synchronized (QywxEmployeeLifecycleSyncTask.class) {
+            if (syncing) {
+                log.warn("企业微信员工生命周期整合同步正在进行中，请勿重复操作");
+                return;
+            }
+            syncing = true;
+        }
         log.info("=== 开始执行：企业微信员工生命周期整合同步 ===");
         long totalStartTime = System.currentTimeMillis();
-        syncing = true;
         try {
             int successCount = 0;
             int failCount = 0;
@@ -98,7 +100,9 @@ public class QywxEmployeeLifecycleSyncTask {
             log.error("=== 企业微信员工生命周期整合同步 异常 ===", e);
             throw e;
         } finally {
-            syncing = false;
+            synchronized (QywxEmployeeLifecycleSyncTask.class) {
+                syncing = false;
+            }
         }
     }
 }

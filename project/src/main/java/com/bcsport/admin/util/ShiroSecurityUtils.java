@@ -47,7 +47,8 @@ public class ShiroSecurityUtils implements ApplicationContextAware {
      */
     public static String getCurrentUsername() {
         Subject subject = getSubject();
-        if (subject != null && (subject.isAuthenticated() || subject.isRemembered())) {
+        // TODO: isRemembered 暂时关闭（RememberMe 功能已禁用）
+        if (subject != null && subject.isAuthenticated()) {
             Object principal = subject.getPrincipal();
             if (principal != null) {
                 return principal.toString();

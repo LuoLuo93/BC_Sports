@@ -3,6 +3,7 @@ package com.bcsport.admin.controller.sticker;
 import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.common.Result;
+import com.bcsport.admin.dto.sticker.StickerDataQueryDTO;
 import com.bcsport.admin.service.sticker.StickerPrintService;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,20 +21,15 @@ public class StickerDataController {
 
     @GetMapping("/page")
     @RequiresPermissions("sticker:data:query")
-    public Result<PageResult<Map<String, Object>>> page(
-            @Valid PageQuery pageQuery,
-            @RequestParam(required = false) String materialNumber,
-            @RequestParam(required = false) String styleNumber,
-            @RequestParam(required = false) String materialName,
-            @RequestParam(required = false) String brandId) {
-        boolean noFilter = (materialNumber == null || materialNumber.trim().isEmpty())
-                && (styleNumber == null || styleNumber.trim().isEmpty())
-                && (materialName == null || materialName.trim().isEmpty())
-                && (brandId == null || brandId.trim().isEmpty());
+    public Result<PageResult<Map<String, Object>>> page(@Valid PageQuery pageQuery, StickerDataQueryDTO queryDTO) {
+        boolean noFilter = (queryDTO.getMaterialNumber() == null || queryDTO.getMaterialNumber().trim().isEmpty())
+                && (queryDTO.getStyleNumber() == null || queryDTO.getStyleNumber().trim().isEmpty())
+                && (queryDTO.getMaterialName() == null || queryDTO.getMaterialName().trim().isEmpty())
+                && (queryDTO.getBrandId() == null || queryDTO.getBrandId().trim().isEmpty());
         if (noFilter) {
             return Result.paramError("请至少输入一个搜索条件");
         }
-        PageResult<Map<String, Object>> result = stickerPrintService.searchProducts(pageQuery, materialNumber, styleNumber, materialName, brandId);
+        PageResult<Map<String, Object>> result = stickerPrintService.searchProducts(pageQuery, queryDTO.getMaterialNumber(), queryDTO.getStyleNumber(), queryDTO.getMaterialName(), queryDTO.getBrandId());
         return Result.success(result);
     }
 

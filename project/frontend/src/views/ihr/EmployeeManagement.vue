@@ -22,6 +22,7 @@
             <el-form-item>
               <el-button type="primary" :icon="Search" @click="handleOnboardSearch">搜索</el-button>
               <el-button :icon="RefreshRight" @click="resetOnboardQuery">重置</el-button>
+              <el-button v-if="hasPermission('ihr:onboarding:sync')" type="primary" size="small" :loading="fullSyncLoading" @click="handleFullSync">同步企微信息</el-button>
               <el-button v-if="hasPermission('ihr:onboarding:sync')" type="success" size="small" :icon="Refresh" :loading="ihrSyncLoading" @click="handleSyncIhr">从IHR同步</el-button>
               <el-button v-if="hasPermission('ihr:onboarding:sync')" type="warning" size="small" :icon="Refresh" :loading="qywxSyncLoading" @click="handleSyncQywx">同步到企微</el-button>
             </el-form-item>
@@ -61,7 +62,7 @@
                 <el-tag v-else :type="syncStatusTag(row.syncStatus)" size="small">{{ syncStatusLabel(row.syncStatus) }}</el-tag>
                 </template>
               </el-table-column>
-              <el-table-column prop="syncTime" label="同步时间" width="170" align="center">
+              <el-table-column prop="syncTime" label="同步时间" width="180" align="center">
                 <template #default="{ row }">{{ row.syncTime || '-' }}</template>
               </el-table-column>
               <el-table-column label="操作" width="200" align="center" fixed="right">
@@ -79,7 +80,7 @@
       </el-tab-pane>
 
       <!-- 变动 -->
-      <el-tab-pane label="变动" name="adjustment">
+      <el-tab-pane label="变动" name="adjustment" lazy>
         <el-card shadow="never" class="search-card">
           <el-form :model="adjQuery" inline>
             <el-form-item label="员工姓名">
@@ -137,7 +138,7 @@
                 <el-tag v-else :type="syncStatusTag(row.syncStatus)" size="small">{{ syncStatusLabel(row.syncStatus) }}</el-tag>
                 </template>
               </el-table-column>
-              <el-table-column prop="syncTime" label="同步时间" width="170" align="center">
+              <el-table-column prop="syncTime" label="同步时间" width="180" align="center">
                 <template #default="{ row }">{{ row.syncTime || '-' }}</template>
               </el-table-column>
               <el-table-column label="操作" width="200" align="center" fixed="right">
@@ -155,7 +156,7 @@
       </el-tab-pane>
 
       <!-- 离职 -->
-      <el-tab-pane label="离职" name="leaving">
+      <el-tab-pane label="离职" name="leaving" lazy>
         <el-card shadow="never" class="search-card">
           <el-form :model="leaveQuery" inline>
             <el-form-item label="员工姓名">
@@ -213,7 +214,7 @@
                 <el-tag v-else :type="syncStatusTag(row.syncStatus)" size="small">{{ syncStatusLabel(row.syncStatus) }}</el-tag>
                 </template>
               </el-table-column>
-              <el-table-column prop="syncTime" label="同步时间" width="170" align="center">
+              <el-table-column prop="syncTime" label="同步时间" width="180" align="center">
                 <template #default="{ row }">{{ row.syncTime || '-' }}</template>
               </el-table-column>
               <el-table-column label="操作" width="200" align="center" fixed="right">
@@ -238,7 +239,7 @@ defineOptions({ name: 'IhrEmployee' })
 import { ref, reactive, watch, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useSyncAction } from '@/composables/useSyncAction'
-import { getIhrOnboardingPage, syncIhrOnboarding, syncQywxOnboarding, syncQywxOnboardingByEmployee, getIhrUpdatePage, syncIhrUpdate, syncQywxUpdate, getIhrLeavingPage, syncIhrLeaving, syncQywxLeaving, getIhrSyncStatus, getQywxSyncStatus } from '@/api/ihr'
+import { getIhrOnboardingPage, syncIhrOnboarding, syncQywxOnboarding, syncQywxOnboardingByEmployee, getIhrUpdatePage, syncIhrUpdate, syncQywxUpdate, getIhrLeavingPage, syncIhrLeaving, syncQywxLeaving, getIhrSyncStatus, getQywxSyncStatus, syncQywxFullSync, getQywxFullSyncStatus } from '@/api/ihr'
 import { syncStatusLabel, syncStatusTag } from '@/utils/syncStatus'
 import { Search, RefreshRight, Refresh } from '@element-plus/icons-vue'
 import { usePermission } from '@/composables/usePermission'
@@ -295,6 +296,7 @@ function refreshCurrentTab() {
 
 const { syncLoading: ihrSyncLoading, handleSync: handleSyncIhr, checkStatus: checkIhrStatus } = useSyncAction(syncIhrOnboarding, refreshCurrentTab, '确定从IHR系统同步入职数据？', getIhrSyncStatus)
 const { syncLoading: qywxSyncLoading, handleSync: handleSyncQywx, checkStatus: checkQywxStatus } = useSyncAction(syncQywxOnboarding, refreshCurrentTab, '确定将所有入职员工同步到企业微信？', getQywxSyncStatus)
+const { syncLoading: fullSyncLoading, handleSync: handleFullSync, checkStatus: checkFullSyncStatus } = useSyncAction(syncQywxFullSync, refreshCurrentTab, '确定执行企微一键同步？（部门→成员→详情→扩展属性）', getQywxFullSyncStatus, 'syncing')
 
 async function handleOnboardSyncOne(row) {
   try { const res = await syncQywxOnboardingByEmployee(row.employeesId); ElMessage.success(res.data || '同步成功') } catch { /* interceptor showed error */ } finally { loadOnboardData() }
@@ -313,7 +315,7 @@ watch(activeTab, (val) => {
 })
 
 onMounted(async () => {
-  await Promise.all([checkIhrStatus(), checkQywxStatus()])
+  await Promise.all([checkIhrStatus(), checkQywxStatus(), checkFullSyncStatus()])
   loadOnboardData()
 })
 </script>

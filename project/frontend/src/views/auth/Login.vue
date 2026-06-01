@@ -150,7 +150,8 @@
           </div>
 
           <div class="options-bar">
-            <el-checkbox v-model="form.rememberMe">信任此设备</el-checkbox>
+            <!-- TODO: 信任此设备功能暂时关闭（Redis 连接问题） -->
+            <!-- <el-checkbox v-model="form.rememberMe">信任此设备</el-checkbox> -->
             <a href="javascript:void(0)" class="form-link" @click="helpDialogVisible = true">授权遇到困难?</a>
           </div>
 

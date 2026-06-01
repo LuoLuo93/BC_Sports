@@ -34,7 +34,6 @@ public class QywxCustomerTagTask {
     private static volatile boolean batchTagging = false;
 
     public static boolean isSyncing() { return syncing; }
-    public static void setSyncing(boolean v) { syncing = v; }
     public static boolean isBatchTagging() { return batchTagging; }
 
     private static final int BATCH_SIZE = 100;
@@ -66,8 +65,14 @@ public class QywxCustomerTagTask {
      * 同步企业标签库（定时任务方法）
      */
     public void syncTags() {
+        synchronized (QywxCustomerTagTask.class) {
+            if (syncing) {
+                log.warn("同步企业标签库正在进行中，请勿重复操作");
+                return;
+            }
+            syncing = true;
+        }
         log.info("=== 开始执行: 同步企业标签库 ===");
-        syncing = true;
         try {
             // --- HTTP call: outside transaction ---
             JSONObject result = apiClient.getCorpTagList(null, null);
@@ -129,7 +134,9 @@ public class QywxCustomerTagTask {
             log.error("=== 失败: 同步企业标签库: {} ===", e.getMessage(), e);
             throw e;
         } finally {
-            syncing = false;
+            synchronized (QywxCustomerTagTask.class) {
+                syncing = false;
+            }
         }
     }
 
@@ -141,8 +148,15 @@ public class QywxCustomerTagTask {
     public Map<String, Object> batchTag(List<Map<String, String>> items) {
         String batchNo = "BATCH_" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
         log.info("=== 开始批量打标, 批次号: {}, 共{}条 ===", batchNo, items.size());
-        batchTagging = true;
+        synchronized (QywxCustomerTagTask.class) {
+            if (batchTagging) {
+                log.warn("批量打标正在进行中，请勿重复操作");
+                return Collections.singletonMap("error", "批量打标正在进行中，请勿重复操作");
+            }
+            batchTagging = true;
+        }
 
+        try {
         // 1. 加载标签库 Map<tagName, tagId>
         List<VxCorpTag> corpTags = corpTagMapper.selectAllActive();
         Map<String, String> tagNameToId = corpTags.stream()
@@ -283,7 +297,12 @@ public class QywxCustomerTagTask {
         summary.put("fail", failCount.get());
         summary.put("unmatchedTags", new ArrayList<>(unmatchedTags));
         summary.put("unmatchedCustomers", new ArrayList<>(unmatchedCustomers));
-        return summary;
+            return summary;
+        } finally {
+            synchronized (QywxCustomerTagTask.class) {
+                batchTagging = false;
+            }
+        }
     }
 
     /**
@@ -295,7 +314,9 @@ public class QywxCustomerTagTask {
         } catch (Exception e) {
             log.error("异步批量打标异常: {}", e.getMessage(), e);
         } finally {
-            batchTagging = false;
+            synchronized (QywxCustomerTagTask.class) {
+                batchTagging = false;
+            }
         }
     }
 

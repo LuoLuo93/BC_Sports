@@ -225,10 +225,10 @@ bartender:
 logging:
   config: classpath:logback-spring.xml
   level:
-    com.bcsport.admin: debug
+    com.bcsport.admin: info
+    com.bcsport.admin.mapper: warn
     org.springframework: info
-    org.apache.shiro: debug
-    org.apache.shiro.subject.support.DelegatingSubject: WARN
+    org.apache.shiro: info
 
 # 文件上传配置
 spring.servlet.multipart.max-file-size: 10MB

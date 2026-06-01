@@ -61,7 +61,7 @@
                 <el-tag v-else :type="syncStatusTag(row.syncStatus)" size="small">{{ syncStatusLabel(row.syncStatus) }}</el-tag>
                 </template>
               </el-table-column>
-              <el-table-column prop="syncTime" label="同步时间" width="170" align="center">
+              <el-table-column prop="syncTime" label="同步时间" width="180" align="center">
                 <template #default="{ row }">{{ row.syncTime || '-' }}</template>
               </el-table-column>
               <el-table-column label="操作" width="200" align="center" fixed="right">
@@ -79,7 +79,7 @@
       </el-tab-pane>
 
         <!-- 变动 -->
-        <el-tab-pane label="变动" name="adjustment">
+        <el-tab-pane label="变动" name="adjustment" lazy>
           <el-card shadow="never" class="search-card">
             <el-form :model="adjQuery" inline>
               <el-form-item label="员工姓名">
@@ -138,7 +138,7 @@
                 <el-tag v-else :type="syncStatusTag(row.syncStatus)" size="small">{{ syncStatusLabel(row.syncStatus) }}</el-tag>
                 </template>
               </el-table-column>
-              <el-table-column prop="syncTime" label="同步时间" width="170" align="center">
+              <el-table-column prop="syncTime" label="同步时间" width="180" align="center">
                 <template #default="{ row }">{{ row.syncTime || '-' }}</template>
               </el-table-column>
               <el-table-column label="操作" width="200" align="center" fixed="right">
@@ -156,7 +156,7 @@
       </el-tab-pane>
 
         <!-- 离职 -->
-        <el-tab-pane label="离职" name="leaving">
+        <el-tab-pane label="离职" name="leaving" lazy>
           <el-card shadow="never" class="search-card">
             <el-form :model="leaveQuery" inline>
               <el-form-item label="员工姓名">
@@ -215,7 +215,7 @@
                 <el-tag v-else :type="syncStatusTag(row.syncStatus)" size="small">{{ syncStatusLabel(row.syncStatus) }}</el-tag>
                 </template>
               </el-table-column>
-              <el-table-column prop="syncTime" label="同步时间" width="170" align="center">
+              <el-table-column prop="syncTime" label="同步时间" width="180" align="center">
                 <template #default="{ row }">{{ row.syncTime || '-' }}</template>
               </el-table-column>
               <el-table-column label="操作" width="200" align="center" fixed="right">

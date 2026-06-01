@@ -39,8 +39,14 @@ public class NxcrmTagIncrementSyncTask {
 
     @Transactional(rollbackFor = Exception.class)
     public void syncIncrementTags(Map<String, String> params) {
+        synchronized (NxcrmTagIncrementSyncTask.class) {
+            if (syncing) {
+                log.warn("增量标签同步正在进行中，请勿重复操作");
+                return;
+            }
+            syncing = true;
+        }
         log.info("=== 开始执行: 南讯CRM同步增量标签 ===");
-        syncing = true;
         try {
             Date startTime = parseDate(params, "startTime");
             Date endTime = parseDate(params, "endTime");
@@ -119,7 +125,9 @@ public class NxcrmTagIncrementSyncTask {
             log.error("=== 失败执行: 南讯CRM同步增量标签 ===", e);
             throw e;
         } finally {
-            syncing = false;
+            synchronized (NxcrmTagIncrementSyncTask.class) {
+                syncing = false;
+            }
         }
     }
 

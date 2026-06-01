@@ -1,8 +1,10 @@
 package com.bcsport.admin.controller;
 
 import com.bcsport.admin.annotation.OperLog;
+import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.common.Result;
+import com.bcsport.admin.dto.DictDataQueryDTO;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.bcsport.admin.entity.DictData;
 import com.bcsport.admin.entity.DictType;
@@ -85,11 +87,8 @@ public class DictController {
     @GetMapping("/data/page")
     @ApiOperation("分页查询字典数据")
     @RequiresPermissions("system:dict:query")
-    public Result<PageResult<DictData>> pageData(
-            @RequestParam String dictType,
-            @RequestParam(defaultValue = "1") Integer pageNum,
-            @RequestParam(defaultValue = "10") Integer pageSize) {
-        IPage<DictData> page = dictDataService.pageByDictType(dictType, pageNum, pageSize);
+    public Result<PageResult<DictData>> pageData(@Valid PageQuery pageQuery, @Valid DictDataQueryDTO queryDTO) {
+        IPage<DictData> page = dictDataService.pageByDictType(queryDTO.getDictType(), pageQuery.getPageNum(), pageQuery.getPageSize());
         return Result.success(new PageResult<>(page));
     }
 

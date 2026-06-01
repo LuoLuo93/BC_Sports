@@ -75,10 +75,10 @@ public class AuthController {
         try {
             Subject subject = SecurityUtils.getSubject();
             UsernamePasswordToken token = new UsernamePasswordToken(username, loginDTO.getPassword());
-            // 设置 RememberMe
-            if (Boolean.TRUE.equals(loginDTO.getRememberMe())) {
-                token.setRememberMe(true);
-            }
+            // TODO: RememberMe 功能暂时关闭（Redis 连接问题）
+            // if (Boolean.TRUE.equals(loginDTO.getRememberMe())) {
+            //     token.setRememberMe(true);
+            // }
             subject.login(token);
 
             // 登录成功，清除失败计数

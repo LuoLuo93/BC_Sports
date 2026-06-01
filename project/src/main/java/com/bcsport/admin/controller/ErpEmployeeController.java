@@ -100,22 +100,16 @@ public class ErpEmployeeController {
     @RequiresPermissions("erp:employee:sync")
     public Result<?> syncErp() {
         log.info("手动触发ERP同步");
-        synchronized (ErpEmployeeSyncTask.class) {
-            if (ErpEmployeeSyncTask.isSyncing()) {
-                log.warn("ERP同步正在进行中，请勿重复操作");
-                return Result.error("ERP同步正在进行中，请稍后再试");
-            }
-            ErpEmployeeSyncTask.setSyncing(true);
-            taskThreadPool.execute(() -> {
-                try {
-                    erpSyncTask.syncAll();
-                } catch (Exception e) {
-                    log.error("ERP同步异常", e);
-                } finally {
-                    ErpEmployeeSyncTask.setSyncing(false);
-                }
-            });
+        if (ErpEmployeeSyncTask.isSyncing()) {
+            return Result.error("ERP同步正在进行中，请稍后再试");
         }
+        taskThreadPool.execute(() -> {
+            try {
+                erpSyncTask.syncAll();
+            } catch (Exception e) {
+                log.error("ERP同步异常", e);
+            }
+        });
         return Result.success("ERP同步已触发，请稍后刷新页面查看同步状态");
     }
 

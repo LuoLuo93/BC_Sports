@@ -132,7 +132,7 @@
     </el-dialog>
       </el-tab-pane>
 
-      <el-tab-pane label="执行日志" name="log">
+      <el-tab-pane label="执行日志" name="log" lazy>
         <el-card shadow="never" class="search-card">
           <el-form :model="logQuery" inline>
             <el-form-item label="任务名称">

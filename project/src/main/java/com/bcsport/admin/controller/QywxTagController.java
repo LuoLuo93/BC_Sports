@@ -6,7 +6,10 @@ import cn.hutool.poi.excel.ExcelWriter;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.Result;
+import com.bcsport.admin.dto.QywxTagQueryDTO;
+import com.bcsport.admin.dto.QywxTagRecordQueryDTO;
 import com.bcsport.admin.entity.qywx.VxCorpTag;
 import com.bcsport.admin.entity.qywx.VxCustomerTag;
 import com.bcsport.admin.qywxmapper.VxCorpTagMapper;
@@ -21,6 +24,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.URLEncoder;
@@ -54,16 +58,13 @@ public class QywxTagController {
     @GetMapping("/corp-tags")
     @ApiOperation("获取企业标签库（分页）")
     @RequiresPermissions("qywx:tag:query")
-    public Result<Map<String, Object>> getCorpTags(
-            @RequestParam(required = false) String tagName,
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        if (page < 1) page = 1;
-        if (size < 1) size = 10;
-        if (size > 100) size = 100;
-        int offset = (page - 1) * size;
+    public Result<Map<String, Object>> getCorpTags(@Valid PageQuery pageQuery, QywxTagQueryDTO queryDTO) {
+        String tagName = queryDTO.getTagName();
+        int pageSize = Math.max(Math.min(pageQuery.getPageSize(), 100), 1);
+        int pageNum = Math.max(pageQuery.getPageNum(), 1);
+        int offset = (pageNum - 1) * pageSize;
 
-        List<VxCorpTag> groups = corpTagMapper.selectPageGroups(tagName, offset, size);
+        List<VxCorpTag> groups = corpTagMapper.selectPageGroups(tagName, offset, pageSize);
         long total = corpTagMapper.selectGroupCount(tagName);
 
         List<VxCorpTag> allTags = new ArrayList<>();
@@ -84,9 +85,9 @@ public class QywxTagController {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("records", allTags);
         result.put("total", total);
-        result.put("current", page);
-        result.put("size", size);
-        result.put("pages", (total + size - 1) / size);
+        result.put("current", pageNum);
+        result.put("size", pageSize);
+        result.put("pages", (total + pageSize - 1) / pageSize);
         return Result.success(result);
     }
 
@@ -301,29 +302,20 @@ public class QywxTagController {
     @GetMapping("/records")
     @ApiOperation("查询打标记录（分页）")
     @RequiresPermissions("qywx:tag:query")
-    public Result<Map<String, Object>> getTagRecords(
-            @RequestParam(required = false) String externalUserid,
-            @RequestParam(required = false) String tagId,
-            @RequestParam(required = false) String tagName,
-            @RequestParam(required = false) String batchNo,
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        if (page < 1) page = 1;
-        if (size < 1) size = 20;
-        if (size > 500) size = 500;
-        Page<VxCustomerTag> pageParam = new Page<>(page, size);
+    public Result<Map<String, Object>> getTagRecords(@Valid PageQuery pageQuery, QywxTagRecordQueryDTO queryDTO) {
+        Page<VxCustomerTag> pageParam = pageQuery.toPage();
         QueryWrapper<VxCustomerTag> wrapper = new QueryWrapper<>();
-        if (externalUserid != null && !externalUserid.isEmpty()) {
-            wrapper.eq("externalUserid", externalUserid);
+        if (queryDTO.getExternalUserid() != null && !queryDTO.getExternalUserid().isEmpty()) {
+            wrapper.eq("externalUserid", queryDTO.getExternalUserid());
         }
-        if (tagId != null && !tagId.isEmpty()) {
-            wrapper.eq("tagId", tagId);
+        if (queryDTO.getTagId() != null && !queryDTO.getTagId().isEmpty()) {
+            wrapper.eq("tagId", queryDTO.getTagId());
         }
-        if (tagName != null && !tagName.isEmpty()) {
-            wrapper.like("tagName", tagName);
+        if (queryDTO.getTagName() != null && !queryDTO.getTagName().isEmpty()) {
+            wrapper.like("tagName", queryDTO.getTagName());
         }
-        if (batchNo != null && !batchNo.isEmpty()) {
-            wrapper.eq("batchNo", batchNo);
+        if (queryDTO.getBatchNo() != null && !queryDTO.getBatchNo().isEmpty()) {
+            wrapper.eq("batchNo", queryDTO.getBatchNo());
         }
         wrapper.orderByDesc("createTime");
 

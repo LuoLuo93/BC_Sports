@@ -32,6 +32,7 @@ function onFSChange() {
 
 let scene, camera, renderer
 let modelGroup
+let dustParticles = null
 let animationId = null
 let resizeObserver = null
 let startTime = 0
@@ -392,9 +393,9 @@ function buildEnvironment() {
     opacity: 0.25,
     blending: THREE.AdditiveBlending,
   })
-  const particles = new THREE.Points(pGeo, pMat)
-  particles.userData.isParticles = true
-  scene.add(particles)
+  dustParticles = new THREE.Points(pGeo, pMat)
+  dustParticles.userData.isParticles = true
+  scene.add(dustParticles)
 }
 
 // ─── Lighting ────────────────────────────────
@@ -523,16 +524,14 @@ function animate() {
   }
 
   // Animate dust particles
-  scene.traverse(obj => {
-    if (obj.userData.isParticles && obj.geometry) {
-      const pos = obj.geometry.attributes.position.array
-      for (let i = 1; i < pos.length; i += 3) {
-        pos[i] += 0.002
-        if (pos[i] > 4) pos[i] = 0
-      }
-      obj.geometry.attributes.position.needsUpdate = true
+  if (dustParticles?.geometry) {
+    const pos = dustParticles.geometry.attributes.position.array
+    for (let i = 1; i < pos.length; i += 3) {
+      pos[i] += 0.002
+      if (pos[i] > 4) pos[i] = 0
     }
-  })
+    dustParticles.geometry.attributes.position.needsUpdate = true
+  }
 
   // Slow auto-orbit when not dragging
   if (!isDragging) {

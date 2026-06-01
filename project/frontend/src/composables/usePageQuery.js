@@ -8,14 +8,18 @@ export function usePageQuery(apiFn, defaultQuery = {}) {
 
   const query = reactive({ ...defaultQuery, pageNum: 1, pageSize: defaultPageSize.value })
 
+  let requestId = 0
+
   async function loadData() {
+    const id = ++requestId
     loading.value = true
     try {
       const res = await apiFn(query)
+      if (id !== requestId) return // 过期响应，丢弃
       tableData.value = res.data?.records || []
       total.value = res.data?.total || 0
     } finally {
-      loading.value = false
+      if (id === requestId) loading.value = false
     }
   }
 

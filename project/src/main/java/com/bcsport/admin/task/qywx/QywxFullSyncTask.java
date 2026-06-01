@@ -20,6 +20,8 @@ import org.springframework.stereotype.Component;
 @Component("qywxFullSyncTask")
 public class QywxFullSyncTask {
 
+    private static volatile boolean isSyncing = false;
+
     @Autowired
     private QywxDepartmentTask departmentTask;
 
@@ -36,6 +38,13 @@ public class QywxFullSyncTask {
      * 一键同步所有企业微信数据
      */
     public void syncAll() {
+        synchronized (QywxFullSyncTask.class) {
+            if (isSyncing) {
+                log.warn("企业微信一键同步正在进行中，请勿重复操作");
+                return;
+            }
+            isSyncing = true;
+        }
         log.info("=== 开始执行：企业微信一键同步 ===");
         long totalStartTime = System.currentTimeMillis();
 
@@ -90,6 +99,14 @@ public class QywxFullSyncTask {
         } catch (Exception e) {
             log.error("=== 企业微信一键同步 异常 ===", e);
             throw e;
+        } finally {
+            synchronized (QywxFullSyncTask.class) {
+                isSyncing = false;
+            }
         }
+    }
+
+    public static boolean isSyncing() {
+        return isSyncing;
     }
 }

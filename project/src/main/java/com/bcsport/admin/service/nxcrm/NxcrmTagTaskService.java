@@ -29,6 +29,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.util.*;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -164,6 +165,13 @@ public class NxcrmTagTaskService {
         AtomicInteger failCount = new AtomicInteger(0);
         Semaphore semaphore = new Semaphore(API_CONCURRENCY);
 
+        // 计算总批次数
+        int totalBatches = 0;
+        for (List<NxcrmTagTaskDetail> group : grouped.values()) {
+            totalBatches += (group.size() + BATCH_SIZE - 1) / BATCH_SIZE;
+        }
+        CountDownLatch latch = new CountDownLatch(totalBatches);
+
         for (Map.Entry<String, List<NxcrmTagTaskDetail>> entry : grouped.entrySet()) {
             List<NxcrmTagTaskDetail> group = entry.getValue();
 
@@ -182,9 +190,19 @@ public class NxcrmTagTaskService {
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
                         failCount.addAndGet(batch.size());
+                    } finally {
+                        latch.countDown();
                     }
                 });
             }
+        }
+
+        // 等待所有批次完成
+        try {
+            latch.await();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("等待打标签任务完成被中断, taskId={}", taskId);
         }
 
         task.setSuccessCount(successCount.get());

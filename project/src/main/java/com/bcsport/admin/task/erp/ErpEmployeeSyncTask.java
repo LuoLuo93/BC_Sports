@@ -18,15 +18,18 @@ public class ErpEmployeeSyncTask {
         return syncing;
     }
 
-    public static void setSyncing(boolean v) {
-        syncing = v;
-    }
-
     /**
      * 同步所有待同步人员到ERP
      * TODO: 实现具体ERP API调用逻辑
      */
     public void syncAll() {
+        synchronized (ErpEmployeeSyncTask.class) {
+            if (syncing) {
+                log.warn("ERP人员同步正在进行中，请勿重复操作");
+                return;
+            }
+            syncing = true;
+        }
         log.info("=== 开始执行: ERP人员同步 ===");
 
         try {
@@ -35,7 +38,9 @@ public class ErpEmployeeSyncTask {
             // 2. 根据 sync_type 调用对应的ERP API
             // 3. 根据结果调用 erpSyncService.markSyncSuccess/Failed/Skipped
         } finally {
-            syncing = false;
+            synchronized (ErpEmployeeSyncTask.class) {
+                syncing = false;
+            }
         }
 
         log.info("=== ERP人员同步完成 (skeleton) ===");

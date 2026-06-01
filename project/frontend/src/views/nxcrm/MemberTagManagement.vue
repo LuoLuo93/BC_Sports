@@ -38,7 +38,7 @@
       </el-tab-pane>
 
       <!-- 南讯标签列表 -->
-      <el-tab-pane label="南讯标签列表" name="tagList">
+      <el-tab-pane label="南讯标签列表" name="tagList" lazy>
         <el-card shadow="never" class="search-card">
           <el-form :model="tagQuery" inline>
             <el-form-item label="搜索">
@@ -62,13 +62,7 @@
             <el-table-column prop="tagCode" label="标签编码" width="140" />
             <el-table-column prop="tagName" label="标签名称" min-width="160" />
             <el-table-column prop="tagFolderName" label="所属文件夹" width="140" />
-            <el-table-column prop="valueDataType" label="值类型" width="100" />
-            <el-table-column prop="hasValue" label="有值" width="70" align="center">
-              <template #default="{ row }">
-                <el-tag :type="row.hasValue === 1 ? 'success' : 'info'" size="small">{{ row.hasValue === 1 ? '是' : '否' }}</el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column label="标签值" min-width="200">
+            <el-table-column label="标签值" min-width="400">
               <template #default="{ row }">
                 <span v-if="row.tagValueList && row.tagValueList.length">
                   <el-tag v-for="v in row.tagValueList" :key="v.id" size="small" style="margin:2px">{{ v.tagValueName }}</el-tag>

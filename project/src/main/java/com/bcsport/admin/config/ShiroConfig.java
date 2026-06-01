@@ -50,8 +50,8 @@ public class ShiroConfig {
         // 配置 SessionManager
         securityManager.setSessionManager(sessionManager(configService));
 
-        // 配置 RememberMe 管理器
-        securityManager.setRememberMeManager(rememberMeManager());
+        // TODO: RememberMe 功能暂时关闭（Redis 连接问题）
+        // securityManager.setRememberMeManager(rememberMeManager());
 
         return securityManager;
     }

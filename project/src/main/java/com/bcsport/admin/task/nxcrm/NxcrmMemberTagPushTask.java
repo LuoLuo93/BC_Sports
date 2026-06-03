@@ -10,10 +10,9 @@ import com.bcsport.admin.ihrmapper.NxcrmTagInfoMapper;
 import com.bcsport.admin.ihrmapper.NxcrmTagValueMapper;
 import com.nascent.ecrp.opensdk.domain.customer.tag.TagSetData;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
-
-import jakarta.annotation.Resource;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Semaphore;
@@ -32,19 +31,19 @@ public class NxcrmMemberTagPushTask {
     private static final int DEFAULT_BATCH_SIZE = 1000;
     private static final int API_CONCURRENCY = 3;
 
-    @Resource
+    @Autowired
     private NxcrmTagInfoMapper tagInfoMapper;
 
-    @Resource
+    @Autowired
     private NxcrmTagValueMapper tagValueMapper;
 
-    @Resource
+    @Autowired
     private NxcrmMemberTagDetailMapper memberTagDetailMapper;
 
-    @Resource
+    @Autowired
     private NxCrmApiClient nxCrmApiClient;
 
-    @Resource
+    @Autowired
     @Qualifier("taskThreadPool")
     private ThreadPoolExecutor taskThreadPool;
 

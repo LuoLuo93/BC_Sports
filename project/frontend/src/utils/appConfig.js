@@ -1,5 +1,15 @@
 import { ref } from 'vue'
 
+export const PAGE_SIZES = [10, 20, 50]
+export const PAGE_SIZES_LG = [20, 50, 100]
+
+export const SYNC_STATUS = {
+  NOT_SYNCED: 0,
+  SYNCED: 1,
+  FAILED: 2,
+  SKIPPED: 3
+}
+
 export const defaultPageSize = ref(20)
 export const dateFormat = ref('yyyy-MM-dd HH:mm:ss')
 export const timezone = ref('GMT+8')

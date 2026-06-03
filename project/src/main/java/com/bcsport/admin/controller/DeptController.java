@@ -4,6 +4,8 @@ import com.bcsport.admin.annotation.OperLog;
 import com.bcsport.admin.common.Result;
 import com.bcsport.admin.dto.DeptDTO;
 import com.bcsport.admin.dto.DeptQueryDTO;
+import com.bcsport.admin.entity.Dept;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.bcsport.admin.service.DeptService;
 import com.bcsport.admin.vo.DeptVO;
 import io.swagger.annotations.Api;
@@ -88,8 +90,8 @@ public class DeptController {
     @OperLog(module = "部门管理", operation = "删除部门")
     public Result<?> delete(@PathVariable String id) {
         // 检查是否有子部门
-        if (deptService.count(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.bcsport.admin.entity.Dept>()
-                .eq(com.bcsport.admin.entity.Dept::getParentId, id)) > 0) {
+        if (deptService.count(new LambdaQueryWrapper<Dept>()
+                .eq(Dept::getParentId, id)) > 0) {
             return Result.error("存在下级部门，不允许删除");
         }
         

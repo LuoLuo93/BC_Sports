@@ -4,10 +4,9 @@ import com.bcsport.admin.entity.ihr.NxcrmTagCategory;
 import com.bcsport.admin.ihrmapper.NxcrmTagCategoryMapper;
 import com.nascent.ecrp.opensdk.domain.customer.tag.CustomerTagCategory;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
-
-import jakarta.annotation.Resource;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -15,10 +14,10 @@ import java.util.List;
 @Component("nxcrmTagCategorySyncTask")
 public class NxcrmTagCategorySyncTask {
 
-    @Resource
+    @Autowired
     private NxCrmApiClient nxCrmApiClient;
 
-    @Resource
+    @Autowired
     private NxcrmTagCategoryMapper tagCategoryMapper;
 
     @Transactional(rollbackFor = Exception.class)

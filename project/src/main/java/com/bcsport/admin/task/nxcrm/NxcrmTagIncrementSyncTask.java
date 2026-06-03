@@ -7,10 +7,9 @@ import com.bcsport.admin.ihrmapper.NxcrmTagValueMapper;
 import com.nascent.ecrp.opensdk.domain.customer.tag.IncrementTagInfo;
 import com.nascent.ecrp.opensdk.domain.customer.tag.IncrementTagValueInfo;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
-
-import jakarta.annotation.Resource;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -28,13 +27,13 @@ public class NxcrmTagIncrementSyncTask {
 
     public static boolean isSyncing() { return syncing; }
 
-    @Resource
+    @Autowired
     private NxCrmApiClient nxCrmApiClient;
 
-    @Resource
+    @Autowired
     private NxcrmTagInfoMapper tagInfoMapper;
 
-    @Resource
+    @Autowired
     private NxcrmTagValueMapper tagValueMapper;
 
     @Transactional(rollbackFor = Exception.class)

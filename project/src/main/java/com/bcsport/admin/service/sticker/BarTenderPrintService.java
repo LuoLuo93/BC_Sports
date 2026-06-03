@@ -68,7 +68,11 @@ public class BarTenderPrintService {
 
     private RestTemplate getRestTemplate() {
         if (restTemplate == null) {
-            restTemplate = new RestTemplate();
+            org.springframework.http.client.SimpleClientHttpRequestFactory factory =
+                new org.springframework.http.client.SimpleClientHttpRequestFactory();
+            factory.setConnectTimeout(5000);   // 5秒连接超时
+            factory.setReadTimeout(30000);     // 30秒读取超时
+            restTemplate = new RestTemplate(factory);
         }
         return restTemplate;
     }

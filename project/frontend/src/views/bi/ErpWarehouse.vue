@@ -130,8 +130,10 @@
         <el-form-item label="备注"><el-input v-model="form.remark" type="textarea" :rows="3" placeholder="请输入备注" /></el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitting" @click="handleSubmit">确定</el-button>
+        <div class="dialog-footer">
+          <el-button class="btn-cancel" @click="dialogVisible = false">取消</el-button>
+          <el-button class="btn-confirm" type="primary" :loading="submitting" @click="handleSubmit">确定</el-button>
+        </div>
       </template>
     </el-dialog>
   </div>
@@ -145,7 +147,7 @@ import { getErpWarehousePage, getErpWarehouse, createErpWarehouse, updateErpWare
 import { Plus, Search, RefreshRight } from '@element-plus/icons-vue'
 import { usePermission } from '@/composables/usePermission'
 import { usePageQuery } from '@/composables/usePageQuery'
-import { PAGE_SIZES } from '@/utils/constants'
+import { PAGE_SIZES } from '@/utils/appConfig'
 
 const { hasPermission } = usePermission()
 

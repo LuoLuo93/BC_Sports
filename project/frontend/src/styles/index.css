@@ -325,6 +325,7 @@ html {
   backdrop-filter: blur(8px) saturate(1.2);
   -webkit-backdrop-filter: blur(8px) saturate(1.2);
   background-color: rgba(15, 23, 42, 0.35) !important;
+  overflow: hidden;
 }
 
 /* Dialog entrance - cinematic */
@@ -1056,6 +1057,53 @@ html {
 /* ========== Color Utilities ========== */
 .text-success { color: var(--bc-success); }
 .text-danger { color: var(--bc-danger); }
+
+/* ========== Dialog 统一样式 ========== */
+.el-dialog {
+  border-radius: 12px !important;
+  overflow: hidden;
+}
+.el-dialog__header {
+  padding: 16px 20px !important;
+  margin-right: 0 !important;
+  border-bottom: 1px solid #f3f4f6;
+}
+.el-dialog__title {
+  font-weight: 600;
+  font-size: 15px;
+}
+.el-dialog__body {
+  padding: 20px !important;
+}
+.el-dialog__footer {
+  padding: 12px 20px 16px !important;
+  border-top: 1px solid #f3f4f6;
+}
+
+/* 弹窗底部按钮 */
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+.dialog-footer .btn-cancel {
+  border-radius: 8px;
+  padding: 8px 24px;
+  font-weight: 500;
+}
+.dialog-footer .btn-confirm {
+  border-radius: 8px;
+  padding: 8px 32px;
+  font-weight: 500;
+  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  border: none;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);
+  transition: all 0.2s ease;
+}
+.dialog-footer .btn-confirm:hover {
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.5);
+  transform: translateY(-1px);
+}
 .text-muted { color: var(--bc-text-muted); }
 
 .bg-primary-soft { background: var(--bc-bg-primary-soft); }

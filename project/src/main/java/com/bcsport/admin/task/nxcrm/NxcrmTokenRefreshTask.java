@@ -1,15 +1,14 @@
 package com.bcsport.admin.task.nxcrm;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-
-import jakarta.annotation.Resource;
 
 @Slf4j
 @Component("nxcrmTokenRefreshTask")
 public class NxcrmTokenRefreshTask {
 
-    @Resource
+    @Autowired
     private NxCrmApiClient nxCrmApiClient;
 
     public void refreshToken() {

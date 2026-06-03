@@ -28,7 +28,7 @@ public class PageQuery implements Serializable {
     private Integer pageSize = 10;
 
     /**
-     * 排序字段
+     * 排序字段（仅允许字母、数字、下划线）
      */
     private String orderBy;
 
@@ -47,9 +47,14 @@ public class PageQuery implements Serializable {
         com.baomidou.mybatisplus.extension.plugins.pagination.Page<T> page =
             new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(safePageNum, safePageSize);
         if (orderBy != null && !orderBy.trim().isEmpty()) {
-            page.addOrder("asc".equalsIgnoreCase(orderDirection)
-                ? com.baomidou.mybatisplus.core.metadata.OrderItem.asc(orderBy)
-                : com.baomidou.mybatisplus.core.metadata.OrderItem.desc(orderBy));
+            // 防 SQL 注入：仅允许字母、数字、下划线
+            String safeOrderBy = orderBy.trim().replaceAll("[^a-zA-Z0-9_]", "");
+            if (!safeOrderBy.isEmpty()) {
+                String direction = "asc".equalsIgnoreCase(orderDirection) ? "asc" : "desc";
+                page.addOrder("asc".equals(direction)
+                    ? com.baomidou.mybatisplus.core.metadata.OrderItem.asc(safeOrderBy)
+                    : com.baomidou.mybatisplus.core.metadata.OrderItem.desc(safeOrderBy));
+            }
         }
         return page;
     }

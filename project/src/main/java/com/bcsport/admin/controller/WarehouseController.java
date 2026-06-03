@@ -6,9 +6,9 @@ import com.bcsport.admin.service.WarehouseService;
 import com.bcsport.admin.vo.WarehouseVO;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,10 +21,10 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/warehouse")
 @Api(tags = "仓库管理")
-@RequiredArgsConstructor
 public class WarehouseController {
 
-    private final WarehouseService warehouseService;
+    @Autowired
+    private WarehouseService warehouseService;
 
     /**
      * 获取仓库列表

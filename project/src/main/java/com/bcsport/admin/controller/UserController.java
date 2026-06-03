@@ -5,6 +5,7 @@ import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.common.Result;
 import com.bcsport.admin.dto.PasswordDTO;
 import com.bcsport.admin.dto.UserDTO;
+import com.bcsport.admin.dto.UserQueryDTO;
 import com.bcsport.admin.annotation.OperLog;
 import com.bcsport.admin.entity.User;
 import com.bcsport.admin.util.ShiroSecurityUtils;
@@ -91,7 +92,7 @@ public class UserController {
     @GetMapping("/page")
     @ApiOperation("分页查询用户列表")
     @RequiresPermissions("user:query")
-    public Result<PageResult<UserVO>> pageUsers(PageQuery pageQuery, com.bcsport.admin.dto.UserQueryDTO queryUser) {
+    public Result<PageResult<UserVO>> pageUsers(PageQuery pageQuery, UserQueryDTO queryUser) {
         PageResult<UserVO> pageResult = userService.pageUsers(pageQuery, queryUser);
         return Result.success(pageResult);
     }

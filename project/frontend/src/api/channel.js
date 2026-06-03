@@ -70,3 +70,19 @@ export function updateEntityChannel(id, data) {
 export function deleteEntityChannel(id) {
   return request.delete(`/api/entity-channel/${id}`)
 }
+
+export function getEntityChannelListByEntity(externalId, entityType) {
+  return request.get('/api/entity-channel/list-by-entity', { params: { externalId, entityType } })
+}
+
+export function batchSaveEntityChannel(externalId, entityType, data) {
+  return request.post('/api/entity-channel/batch-save', data, { params: { externalId, entityType } })
+}
+
+export function getEntityChannelTemplate() {
+  return request.get('/api/entity-channel/template', { responseType: 'blob' })
+}
+
+export function importEntityChannel(data) {
+  return request.post('/api/entity-channel/import', data, { timeout: 300000 })
+}

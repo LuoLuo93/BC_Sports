@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
+import com.bcsport.admin.common.exception.BusinessException;
 import com.bcsport.admin.dto.sticker.StickerPrintQueryDTO;
 import com.bcsport.admin.entity.sticker.StickerPrintOrder;
 import com.bcsport.admin.entity.sticker.StickerPrintOrderDetail;
@@ -136,7 +137,7 @@ public class StickerPrintService {
     public void updateOrder(String orderId, StickerPrintOrder order) {
         StickerPrintOrder existing = orderMapper.selectById(orderId);
         if (existing == null || existing.getStatus() != 0) {
-            throw new RuntimeException("只有草稿状态才能编辑");
+            throw new BusinessException("只有草稿状态才能编辑");
         }
         order.setId(orderId);
         order.setUpdateTime(LocalDateTime.now());
@@ -151,7 +152,7 @@ public class StickerPrintService {
     public void submitOrder(String orderId) {
         StickerPrintOrder order = orderMapper.selectById(orderId);
         if (order == null || order.getStatus() != 0) {
-            throw new RuntimeException("只有草稿状态才能提交");
+            throw new BusinessException("只有草稿状态才能提交");
         }
         order.setStatus(1);
         order.setUpdateTime(LocalDateTime.now());
@@ -162,7 +163,7 @@ public class StickerPrintService {
     public void reviewOrder(String orderId, Integer status, String reviewRemark) {
         StickerPrintOrder order = orderMapper.selectById(orderId);
         if (order == null || order.getStatus() != 1) {
-            throw new RuntimeException("只有待审核状态才能审核");
+            throw new BusinessException("只有待审核状态才能审核");
         }
         order.setStatus(status);
         order.setReviewer(ShiroSecurityUtils.getCurrentUsername());
@@ -176,7 +177,7 @@ public class StickerPrintService {
     public void deleteOrder(String orderId) {
         StickerPrintOrder order = orderMapper.selectById(orderId);
         if (order == null || order.getStatus() != 0) {
-            throw new RuntimeException("只有草稿状态才能删除");
+            throw new BusinessException("只有草稿状态才能删除");
         }
         order.setDeleted(1);
         orderMapper.updateById(order);
@@ -186,7 +187,7 @@ public class StickerPrintService {
     public boolean bartenderPrint(String orderId) {
         StickerPrintOrder order = orderMapper.selectById(orderId);
         if (order == null || order.getStatus() != 2) {
-            throw new RuntimeException("只有已审核的申请单才能打印");
+            throw new BusinessException("只有已审核的申请单才能打印");
         }
         List<StickerPrintOrderDetail> details = detailMapper.selectList(
             new LambdaQueryWrapper<StickerPrintOrderDetail>()
@@ -194,7 +195,7 @@ public class StickerPrintService {
                 .orderByAsc(StickerPrintOrderDetail::getSort)
         );
         if (details.isEmpty()) {
-            throw new RuntimeException("申请单无明细");
+            throw new BusinessException("申请单无明细");
         }
         boolean ok = barTenderPrintService.printOrder(order.getOrderNo(), details);
         if (ok) {

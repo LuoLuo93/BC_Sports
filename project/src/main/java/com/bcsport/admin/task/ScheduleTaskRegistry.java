@@ -70,6 +70,8 @@ public class ScheduleTaskRegistry {
         register("nxcrm.fill.shopId", "NXCRM-填充shopId", "nxcrmTagScheduleTask", "fillShopId", "按nasOuid查询会员店铺信息并更新shopId", MODULE_NXCRM, 2);
         register("nxcrm.tag.category.sync", "NXCRM-同步标签分类", "nxcrmTagCategorySyncTask", "syncTagCategories", "从南讯CRM同步标签分类列表", MODULE_NXCRM, 3);
         register("nxcrm.order.sync", "NXCRM-同步订单", "nxcrmOrderSyncTask", "syncOrders", "从IHR同步订单到南讯CRM", MODULE_NXCRM, 4);
+        register("nxcrm.vip.sync", "NXCRM-同步会员(基本信息+等级)", "nxcrmVipSyncTask", "syncVips", "从NXVipInfo同步会员基本信息及等级到南讯CRM", MODULE_NXCRM, 7);
+        register("nxcrm.vip.unbind", "NXCRM-会员解绑", "nxcrmUnbindTask", "unbindMembers", "从NxcrmUnbindQueue读取待解绑会员(nasOuid+shopId)并调用南讯解绑接口", MODULE_NXCRM, 8);
         register("nxcrm.tag.increment.sync", "NXCRM-同步增量标签", "nxcrmTagIncrementSyncTask", "syncIncrementTags", "从南讯CRM同步增量标签数据", MODULE_NXCRM, 5,
             new ParamDef("startTime", "开始时间", "date"),
             new ParamDef("endTime", "结束时间", "date"));

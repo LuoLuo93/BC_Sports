@@ -170,8 +170,10 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="createDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="createSubmitting" @click="handleCreate">创建</el-button>
+        <div class="dialog-footer">
+          <el-button class="btn-cancel" @click="createDialogVisible = false">取消</el-button>
+          <el-button class="btn-confirm" type="primary" :loading="createSubmitting" @click="handleCreate">创建</el-button>
+        </div>
       </template>
     </el-dialog>
   </div>
@@ -182,7 +184,7 @@ defineOptions({ name: 'NxcrmCustomerTag' })
 import { ref, reactive, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Plus, RefreshRight, Search } from '@element-plus/icons-vue'
-import { PAGE_SIZES_LG } from '@/utils/constants'
+import { PAGE_SIZES_LG } from '@/utils/appConfig'
 import { getNxcrmTagTasks, createNxcrmTagTask, executeNxcrmTagTask, getNxcrmTaskDetails, getNxcrmMemberTags, fillNxcrmShopId } from '@/api/nxcrm'
 
 const activeTab = ref('tasks')

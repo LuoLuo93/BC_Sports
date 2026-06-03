@@ -69,7 +69,7 @@ public class AuthController {
         long lockSeconds = authCacheService.getLockRemainSeconds(username);
         if (lockSeconds > 0) {
             long minutes = (lockSeconds + 59) / 60;
-            return Result.error("账号已锁定，请 " + minutes + " 分钟后再试");
+            return Result.error("账号已锁定，请稍后再试");
         }
 
         try {
@@ -113,11 +113,11 @@ public class AuthController {
             if (failCount >= maxRetry) {
                 authCacheService.lockAccount(username, lockMinutes);
                 log.warn("用户 {} 连续登录失败 {} 次，已锁定 {} 分钟", username, failCount, lockMinutes);
-                return Result.error("连续登录失败 " + failCount + " 次，账号已锁定 " + lockMinutes + " 分钟");
+                return Result.error("登录失败次数过多，账号已暂时锁定");
             }
 
             log.error("登录失败: username={}, 剩余尝试次数={}", username, maxRetry - failCount);
-            return Result.error("用户名或密码错误，还剩 " + (maxRetry - failCount) + " 次尝试机会");
+            return Result.error("用户名或密码错误");
         }
     }
     

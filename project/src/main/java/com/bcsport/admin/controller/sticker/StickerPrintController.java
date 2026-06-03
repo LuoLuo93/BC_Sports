@@ -68,7 +68,19 @@ public class StickerPrintController {
     @ApiOperation("审核打印单")
     @RequiresPermissions("sticker:print:review")
     public Result<?> review(@PathVariable String orderId, @RequestBody Map<String, String> body) {
-        Integer status = Integer.valueOf(body.get("status"));
+        String statusStr = body.get("status");
+        if (statusStr == null || statusStr.isBlank()) {
+            return Result.paramError("审核状态不能为空");
+        }
+        int status;
+        try {
+            status = Integer.parseInt(statusStr);
+        } catch (NumberFormatException e) {
+            return Result.paramError("审核状态格式错误");
+        }
+        if (status != 2 && status != 3) {
+            return Result.paramError("审核状态只能是 2(通过) 或 3(驳回)");
+        }
         String reviewRemark = body.get("reviewRemark");
         stickerPrintService.reviewOrder(orderId, status, reviewRemark);
         return Result.success("审核完成");

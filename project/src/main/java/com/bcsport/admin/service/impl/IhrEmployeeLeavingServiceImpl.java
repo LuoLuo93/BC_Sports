@@ -74,7 +74,7 @@ public class IhrEmployeeLeavingServiceImpl implements IhrEmployeeLeavingService 
     }
 
     @Override
-    @Transactional(transactionManager = "ihrTransactionManager")
+    @Transactional(transactionManager = "ihrTransactionManager", rollbackFor = Exception.class)
     public void markSyncSuccess(String employeeId, String staffName, String staffNo) {
         IhrEmployeeLeavingStatus status = new IhrEmployeeLeavingStatus();
         status.setEmployeeId(employeeId);
@@ -86,7 +86,7 @@ public class IhrEmployeeLeavingServiceImpl implements IhrEmployeeLeavingService 
     }
 
     @Override
-    @Transactional(transactionManager = "ihrTransactionManager")
+    @Transactional(transactionManager = "ihrTransactionManager", rollbackFor = Exception.class)
     public void markSyncFailed(String employeeId, String staffName, String staffNo, String errorMessage) {
         IhrEmployeeLeavingStatus status = new IhrEmployeeLeavingStatus();
         status.setEmployeeId(employeeId);
@@ -100,7 +100,7 @@ public class IhrEmployeeLeavingServiceImpl implements IhrEmployeeLeavingService 
     }
 
     @Override
-    @Transactional(transactionManager = "ihrTransactionManager")
+    @Transactional(transactionManager = "ihrTransactionManager", rollbackFor = Exception.class)
     public void markSyncSkipped(String employeeId, String staffName, String staffNo) {
         IhrEmployeeLeavingStatus status = new IhrEmployeeLeavingStatus();
         status.setEmployeeId(employeeId);

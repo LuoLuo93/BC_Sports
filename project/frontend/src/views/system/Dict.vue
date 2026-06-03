@@ -92,8 +92,10 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="typeDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="typeSubmitting" @click="handleSubmitType">确定</el-button>
+        <div class="dialog-footer">
+          <el-button class="btn-cancel" @click="typeDialogVisible = false">取消</el-button>
+          <el-button class="btn-confirm" type="primary" :loading="typeSubmitting" @click="handleSubmitType">确定</el-button>
+        </div>
       </template>
     </el-dialog>
 
@@ -120,8 +122,10 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dataDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="dataSubmitting" @click="handleSubmitData">确定</el-button>
+        <div class="dialog-footer">
+          <el-button class="btn-cancel" @click="dataDialogVisible = false">取消</el-button>
+          <el-button class="btn-confirm" type="primary" :loading="dataSubmitting" @click="handleSubmitData">确定</el-button>
+        </div>
       </template>
     </el-dialog>
   </div>
@@ -139,7 +143,7 @@ import {
 import { Plus } from '@element-plus/icons-vue'
 import { usePermission } from '@/composables/usePermission'
 import { usePageQuery } from '@/composables/usePageQuery'
-import { PAGE_SIZES } from '@/utils/constants'
+import { PAGE_SIZES } from '@/utils/appConfig'
 
 const { hasPermission } = usePermission()
 

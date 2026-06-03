@@ -103,19 +103,20 @@ spring:
         max-pool-prepared-statement-per-connection-size: 20
         filters: stat,wall,slf4j
         connection-properties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=5000
-  # Redis 配置
-  redis:
-    host: localhost
-    port: 6379
-    password: ''
-    database: 0
-    timeout: 10000ms
-    lettuce:
-      pool:
-        max-active: 8
-        max-wait: 30000ms
-        max-idle: 8
-        min-idle: 2
+  # Redis 配置（Spring Boot 3.x 使用 spring.data.redis 前缀）
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: ''
+      database: 0
+      timeout: 10000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-wait: 30000ms
+          max-idle: 8
+          min-idle: 2
   # Thymeleaf 配置
   thymeleaf:
     prefix: classpath:/templates/
@@ -168,7 +169,7 @@ shiro:
         /js/** anon
         /images/** anon
         /favicon.ico anon
-        /** authc
+        "/**" authc
 
 # Knife4j 配置
 knife4j:
@@ -218,8 +219,8 @@ nxcrm:
 
 # BarTender打印配置
 bartender:
-  enabled: false
-  url: http://192.168.x.x:5153/Integration/StickerPrint
+  enabled: true
+  url: http://192.168.194.98:5153/Integration/StickerPrint
 
 # 日志配置 - 使用logback-spring.xml配置文件
 logging:

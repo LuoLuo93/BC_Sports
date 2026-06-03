@@ -144,8 +144,10 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="addTagDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="addTagSubmitting" @click="handleAddTagGroup">确定</el-button>
+        <div class="dialog-footer">
+          <el-button class="btn-cancel" @click="addTagDialogVisible = false">取消</el-button>
+          <el-button class="btn-confirm" type="primary" :loading="addTagSubmitting" @click="handleAddTagGroup">确定</el-button>
+        </div>
       </template>
     </el-dialog>
   </div>
@@ -159,7 +161,7 @@ import { Upload, Folder, Document } from '@element-plus/icons-vue'
 import { Search, RefreshRight, Refresh, Plus, Delete } from '@element-plus/icons-vue'
 import { usePermission } from '@/composables/usePermission'
 import { useSyncAction } from '@/composables/useSyncAction'
-import { PAGE_SIZES_LG } from '@/utils/constants'
+import { PAGE_SIZES_LG } from '@/utils/appConfig'
 import { getCorpTags, syncQywxTags, getQywxTagSyncStatus, getTagTemplate, uploadTagData, getTagRecords, addCorpTagGroup, editCorpTagGroup, deleteCorpTagGroup } from '@/api/qywx'
 
 const { hasPermission } = usePermission()

@@ -208,8 +208,10 @@
     <el-dialog v-model="showBatchQtyDialog" title="批量设置打印数量" width="300px">
       <el-input-number v-model="batchQty" :min="1" :max="999" controls-position="right" style="width:100%" />
       <template #footer>
-        <el-button @click="showBatchQtyDialog = false">取消</el-button>
-        <el-button type="primary" @click="confirmBatchQty">确认</el-button>
+        <div class="dialog-footer">
+          <el-button class="btn-cancel" @click="showBatchQtyDialog = false">取消</el-button>
+          <el-button class="btn-confirm" type="primary" @click="confirmBatchQty">确认</el-button>
+        </div>
       </template>
     </el-dialog>
 
@@ -227,8 +229,10 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="reviewVisible = false">取消</el-button>
-        <el-button type="primary" @click="confirmReview">确认</el-button>
+        <div class="dialog-footer">
+          <el-button class="btn-cancel" @click="reviewVisible = false">取消</el-button>
+          <el-button class="btn-confirm" type="primary" @click="confirmReview">确认</el-button>
+        </div>
       </template>
     </el-dialog>
 
@@ -259,8 +263,10 @@
         <div v-if="!sizeAssignOptions.length" class="sa-empty">无可用尺码</div>
       </div>
       <template #footer>
-        <el-button @click="showSizeAssignDialog = false">取消</el-button>
-        <el-button type="primary" @click="confirmSizeAssign">确认 ({{ sizeAssignCheckedCount }})</el-button>
+        <div class="dialog-footer">
+          <el-button class="btn-cancel" @click="showSizeAssignDialog = false">取消</el-button>
+          <el-button class="btn-confirm" type="primary" @click="confirmSizeAssign">确认 ({{ sizeAssignCheckedCount }})</el-button>
+        </div>
       </template>
     </el-dialog>
   </div>

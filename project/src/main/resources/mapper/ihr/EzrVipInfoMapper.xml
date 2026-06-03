@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bcsport.admin.ihrmapper.EzrVipInfoMapper">
+
+    <resultMap id="ezrVipInfoMap" type="com.bcsport.admin.entity.ihr.EzrVipInfo">
+        <result column="customerName"            property="customerName"/>
+        <result column="birthday"                property="birthday"/>
+        <result column="cardReceiveTime"         property="cardReceiveTime"/>
+        <result column="sgRecruitTime"           property="sgRecruitTime"/>
+        <result column="bindMobile"              property="bindMobile"/>
+        <result column="city"                    property="city"/>
+        <result column="sex"                     property="sex"/>
+        <result column="unionid"                 property="unionid"/>
+        <result column="cardReceivePlatform"     property="cardReceivePlatform"/>
+        <result column="cardReceiveShopType"     property="cardReceiveShopType"/>
+        <result column="platform"                property="platform"/>
+        <result column="sgRecruitState"          property="sgRecruitState"/>
+        <result column="outSgExclusiveShopId"    property="outSgExclusiveShopId"/>
+        <result column="outSgExclusiveGuideId"   property="outSgExclusiveGuideId"/>
+        <result column="grade"                   property="grade"/>
+    </resultMap>
+
+    <!--
+        数据源：BC_SPORTS_IHR.NXVipInfo（单表，不再关联 YZMobile）
+        说明：南讯所需 nasOuid 直接使用 bindMobile（业务约定，在 Converter 层赋值）
+
+        B2 修复：DISTINCT 是行级去重，对"同 bindMobile 不同其他字段"的多行无效。
+        改用 ROW_NUMBER() OVER (PARTITION BY bindMobile ...) 按 bindMobile 严格去重，
+        每个手机号只保留一行（最新领卡记录：cardReceiveTime DESC, sgRecruitTime DESC 兜底）。
+    -->
+    <select id="selectEzrVipInfoPaged" resultMap="ezrVipInfoMap">
+        SELECT
+               t.customerName,
+               t.birthday,
+               t.cardReceiveTime,
+               t.sgRecruitTime,
+               t.bindMobile,
+               t.city,
+               t.sex,
+               t.unionid,
+               t.cardReceivePlatform,
+               t.cardReceiveShopType,
+               11 AS platform,
+               t.sgRecruitState,
+               t.outSgExclusiveShopId,
+               t.outSgExclusiveGuideId,
+               t.grade
+        FROM (
+            SELECT
+                   a.customerName,
+                   a.birthday,
+                   a.cardReceiveTime,
+                   a.sgRecruitTime,
+                   a.bindMobile,
+                   a.city,
+                   a.sex,
+                   a.unionid,
+                   a.cardReceivePlatform,
+                   a.cardReceiveShopType,
+                   a.sgRecruitState,
+                   a.outSgExclusiveShopId,
+                   a.outSgExclusiveGuideId,
+                   a.grade,
+                   ROW_NUMBER() OVER (
+                       PARTITION BY a.bindMobile
+                       ORDER BY a.cardReceiveTime DESC, a.sgRecruitTime DESC
+                   ) AS rn
+            FROM NXVipInfo a
+            WHERE a.outSgExclusiveShopId = #{shopId}
+        ) t
+        WHERE t.rn = 1
+        ORDER BY t.bindMobile
+        OFFSET #{offset} ROWS FETCH NEXT #{limit} ROWS ONLY
+    </select>
+
+    <select id="selectDistinctShopList" resultType="java.lang.String">
+        SELECT DISTINCT a.outSgExclusiveShopId
+        FROM NXVipInfo a
+        WHERE a.outSgExclusiveShopId IS NOT NULL
+          AND a.outSgExclusiveShopId &lt;&gt; ''
+    </select>
+
+</mapper>

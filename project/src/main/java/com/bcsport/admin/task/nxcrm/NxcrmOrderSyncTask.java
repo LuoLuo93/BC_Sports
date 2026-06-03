@@ -6,10 +6,9 @@ import com.bcsport.admin.ihrmapper.NanXOrderMapper;
 import com.nascent.ecrp.opensdk.domain.trade.OrderDetailVo;
 import com.nascent.ecrp.opensdk.domain.trade.TradeDetailVo;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
-
-import jakarta.annotation.Resource;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -24,13 +23,13 @@ public class NxcrmOrderSyncTask {
     private static final int ORDER_PAGE_SIZE = 1000;
     private static final int MAX_RETRY = 3;
 
-    @Resource
+    @Autowired
     private NanXOrderMapper nanXOrderMapper;
 
-    @Resource
+    @Autowired
     private NxCrmApiClient nxCrmApiClient;
 
-    @Resource
+    @Autowired
     @Qualifier("taskThreadPool")
     private ThreadPoolExecutor taskThreadPool;
 

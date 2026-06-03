@@ -230,6 +230,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useTabStore } from '@/stores/tab'
 import { getPublicConfig } from '@/api/config'
+import { getCaptcha } from '@/api/auth'
 import { applyPublicConfig } from '@/utils/appConfig'
 import { User, Key, Location, WarningFilled, Orange, Coffee, IceCreamRound, Refresh } from '@element-plus/icons-vue'
 
@@ -303,9 +304,8 @@ function particleStyle(i) {
 
 async function loadCaptcha() {
   try {
-    const res = await fetch('/api/captcha', { credentials: 'include' })
-    const data = await res.json()
-    if (data.code === 200 && data.data) {
+    const data = await getCaptcha()
+    if (data.data) {
       captchaKey.value = data.data.captchaKey
       captchaImage.value = data.data.captchaImage
     }

@@ -2,6 +2,7 @@ package com.bcsport.admin.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.bcsport.admin.common.exception.BusinessException;
 import com.bcsport.admin.dto.MenuDTO;
 import com.bcsport.admin.entity.Menu;
 import com.bcsport.admin.mapper.MenuMapper;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.UUID;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -91,7 +93,7 @@ public class MenuServiceImpl extends ServiceImpl<MenuMapper, Menu> implements Me
     public boolean addMenu(MenuDTO menuDTO) {
         Menu menu = BeanCopyUtils.copy(menuDTO, Menu.class);
         if (menu.getId() == null || menu.getId().isEmpty()) {
-            menu.setId(java.util.UUID.randomUUID().toString().replace("-", ""));
+            menu.setId(UUID.randomUUID().toString().replace("-", ""));
         }
 
         // 设置默认值（审计字段由MybatisPlusAutoFillHandler 自动填充）
@@ -120,7 +122,7 @@ public class MenuServiceImpl extends ServiceImpl<MenuMapper, Menu> implements Me
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteMenu(String id) {
         if (hasChildren(id)) {
-            throw new RuntimeException("该菜单下有子菜单，无法删除");
+            throw new BusinessException("该菜单下有子菜单，无法删除");
         }
 
         // 使用 MyBatis-Plus 逻辑删除（@TableLogic 自动处理）

@@ -13,6 +13,7 @@ import com.bcsport.admin.entity.ScheduleJob;
 import com.bcsport.admin.mapper.ScheduleJobMapper;
 import com.bcsport.admin.service.ScheduleJobService;
 import com.bcsport.admin.task.ScheduleTaskRegistry;
+import org.springframework.transaction.annotation.Transactional;
 import com.bcsport.admin.util.BeanCopyUtils;
 import com.bcsport.admin.util.CronUtils;
 import com.bcsport.admin.vo.ScheduleJobVO;
@@ -120,6 +121,7 @@ public class ScheduleJobServiceImpl extends ServiceImpl<ScheduleJobMapper, Sched
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public boolean addJob(ScheduleJobDTO dto) {
         if (!CronUtils.isValid(dto.getCronExpression())) {
             throw new BusinessException("Cron表达式不合法");
@@ -146,6 +148,7 @@ public class ScheduleJobServiceImpl extends ServiceImpl<ScheduleJobMapper, Sched
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public boolean updateJob(ScheduleJobDTO dto) {
         if (!CronUtils.isValid(dto.getCronExpression())) {
             throw new BusinessException("Cron表达式不合法");
@@ -183,12 +186,14 @@ public class ScheduleJobServiceImpl extends ServiceImpl<ScheduleJobMapper, Sched
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public boolean deleteJob(String id) {
         scheduleConfig.removeTask(id);
         return removeById(id);
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public boolean pauseJob(String id) {
         ScheduleJob job = getById(id);
         if (job == null) {
@@ -200,6 +205,7 @@ public class ScheduleJobServiceImpl extends ServiceImpl<ScheduleJobMapper, Sched
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public boolean resumeJob(String id) {
         ScheduleJob job = getById(id);
         if (job == null) {

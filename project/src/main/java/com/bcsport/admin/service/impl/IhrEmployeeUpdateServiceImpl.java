@@ -73,7 +73,7 @@ public class IhrEmployeeUpdateServiceImpl implements IhrEmployeeUpdateService {
     }
 
     @Override
-    @Transactional(transactionManager = "ihrTransactionManager")
+    @Transactional(transactionManager = "ihrTransactionManager", rollbackFor = Exception.class)
     public void markSyncSuccess(String staffId, String staffName, String staffNo) {
         IhrEmployeeUpdateStatus status = new IhrEmployeeUpdateStatus();
         status.setStaffId(staffId);
@@ -85,7 +85,7 @@ public class IhrEmployeeUpdateServiceImpl implements IhrEmployeeUpdateService {
     }
 
     @Override
-    @Transactional(transactionManager = "ihrTransactionManager")
+    @Transactional(transactionManager = "ihrTransactionManager", rollbackFor = Exception.class)
     public void markSyncFailed(String staffId, String staffName, String staffNo, String errorMessage) {
         IhrEmployeeUpdateStatus status = new IhrEmployeeUpdateStatus();
         status.setStaffId(staffId);
@@ -99,7 +99,7 @@ public class IhrEmployeeUpdateServiceImpl implements IhrEmployeeUpdateService {
     }
 
     @Override
-    @Transactional(transactionManager = "ihrTransactionManager")
+    @Transactional(transactionManager = "ihrTransactionManager", rollbackFor = Exception.class)
     public void markSyncSkipped(String staffId, String staffName, String staffNo) {
         IhrEmployeeUpdateStatus status = new IhrEmployeeUpdateStatus();
         status.setStaffId(staffId);

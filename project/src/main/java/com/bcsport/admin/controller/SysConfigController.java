@@ -50,6 +50,7 @@ public class SysConfigController {
         map.put("sys.dateFormat", configService.getString("sys.dateFormat", "yyyy-MM-dd HH:mm:ss"));
         map.put("sys.timezone", configService.getString("sys.timezone", "GMT+8"));
         map.put("security.captchaEnabled", String.valueOf(configService.getBoolean("security.captchaEnabled", true)));
+        map.put("sys.logoUrl", configService.getString("sys.logoUrl", ""));
         return Result.success(map);
     }
 
@@ -104,7 +105,7 @@ public class SysConfigController {
             return Result.success(url);
         } catch (IOException e) {
             log.error("[Config] Logo上传失败", e);
-            return Result.error("上传失败: " + e.getMessage());
+            return Result.error("上传失败，请检查文件格式和大小");
         }
     }
 }

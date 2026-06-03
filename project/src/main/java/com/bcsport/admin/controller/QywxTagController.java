@@ -15,6 +15,7 @@ import com.bcsport.admin.entity.qywx.VxCustomerTag;
 import com.bcsport.admin.qywxmapper.VxCorpTagMapper;
 import com.bcsport.admin.qywxmapper.VxCustomerTagMapper;
 import com.bcsport.admin.task.qywx.QywxCustomerTagTask;
+import com.bcsport.admin.task.qywx.QywxApiClient;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
@@ -49,7 +50,7 @@ public class QywxTagController {
     private VxCustomerTagMapper customerTagMapper;
 
     @Autowired
-    private com.bcsport.admin.task.qywx.QywxApiClient qywxApiClient;
+    private QywxApiClient qywxApiClient;
 
     @Autowired
     @Qualifier("taskThreadPool")

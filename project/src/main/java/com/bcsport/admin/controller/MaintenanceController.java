@@ -48,7 +48,7 @@ public class MaintenanceController {
             return Result.success("缓存已清除", null);
         } catch (Exception e) {
             log.error("[维护] 清除缓存失败", e);
-            return Result.error("清除缓存失败: " + e.getMessage());
+            return Result.error("清除缓存失败，请稍后重试");
         }
     }
 

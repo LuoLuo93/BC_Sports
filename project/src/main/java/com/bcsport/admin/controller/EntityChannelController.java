@@ -13,8 +13,20 @@ import io.swagger.annotations.ApiOperation;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+
+import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashMap;
+import java.util.Collections;
+import java.util.Map;
+
+import cn.hutool.poi.excel.ExcelUtil;
+import cn.hutool.poi.excel.ExcelWriter;
 
 /**
  * 实体渠道配置控制器
@@ -95,5 +107,96 @@ public class EntityChannelController {
     public Result<?> delete(@PathVariable String id) {
         boolean success = entityChannelService.deleteEntityChannel(id);
         return success ? Result.success("删除成功") : Result.error("删除失败");
+    }
+
+    /**
+     * 按实体查询所有渠道配置
+     */
+    @GetMapping("/list-by-entity")
+    @ApiOperation("按实体查询所有渠道配置")
+    @RequiresPermissions("bi:entity:query")
+    public Result<?> listByEntity(@RequestParam String externalId, @RequestParam String entityType) {
+        return Result.success(entityChannelService.listByEntity(externalId, entityType));
+    }
+
+    /**
+     * 批量保存实体渠道配置
+     */
+    @PostMapping("/batch-save")
+    @ApiOperation("批量保存实体渠道配置")
+    @RequiresPermissions("bi:entity:edit")
+    @OperLog(module = "实体渠道", operation = "批量保存实体渠道")
+    public Result<?> batchSave(@RequestParam String externalId, @RequestParam String entityType, @RequestBody java.util.List<EntityChannelDTO> list) {
+        boolean success = entityChannelService.batchSave(externalId, entityType, list);
+        return success ? Result.success("保存成功") : Result.error("保存失败");
+    }
+
+    /**
+     * 下载批量导入模板
+     */
+    @GetMapping("/template")
+    @ApiOperation("下载批量导入模板")
+    @RequiresPermissions("bi:entity:add")
+    public void downloadTemplate(HttpServletResponse response) throws IOException {
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        response.setHeader("Content-Disposition",
+                "attachment; filename=" + URLEncoder.encode("实体渠道配置导入模板.xlsx", StandardCharsets.UTF_8.name()));
+
+        ExcelWriter writer = ExcelUtil.getWriter(true);
+        try {
+            writer.addHeaderAlias("entityType", "实体类型(store/customer)");
+            writer.addHeaderAlias("externalId", "外部ID(ERP编码)");
+            writer.addHeaderAlias("entityName", "实体名称");
+            writer.addHeaderAlias("brandName", "品牌名称");
+            writer.addHeaderAlias("regionLevel1Name", "一级地区");
+            writer.addHeaderAlias("regionLevel2Name", "二级地区");
+            writer.addHeaderAlias("channelTypeName", "渠道类型");
+            writer.addHeaderAlias("channelDefName", "渠道定义");
+            writer.addHeaderAlias("channelNatureName", "渠道性质");
+            writer.addHeaderAlias("businessTypeName", "销售类型");
+
+            Map<String, Object> sample = new LinkedHashMap<>();
+            sample.put("entityType", "store");
+            sample.put("externalId", "D001");
+            sample.put("entityName", "深圳旗舰店");
+            sample.put("brandName", "BC");
+            sample.put("regionLevel1Name", "广东省");
+            sample.put("regionLevel2Name", "深圳市");
+            sample.put("channelTypeName", "零售渠道");
+            sample.put("channelDefName", "专卖店");
+            sample.put("channelNatureName", "直营");
+            sample.put("businessTypeName", "零售");
+            writer.write(Collections.singletonList(sample));
+            writer.flush(response.getOutputStream());
+        } finally {
+            writer.close();
+        }
+    }
+
+    /**
+     * 上传Excel批量导入实体渠道配置
+     */
+    @PostMapping("/import")
+    @ApiOperation("批量导入实体渠道配置")
+    @RequiresPermissions("bi:entity:add")
+    @OperLog(module = "实体渠道", operation = "批量导入实体渠道")
+    public Result<Map<String, Object>> importExcel(@RequestParam("file") MultipartFile file) {
+        if (file.isEmpty()) {
+            return Result.paramError("请上传Excel文件");
+        }
+        // 文件大小限制：与 application.yml 中 spring.servlet.multipart.max-file-size 保持一致
+        if (file.getSize() > 10 * 1024 * 1024) {
+            return Result.paramError("文件大小不能超过10MB");
+        }
+        String originalFilename = file.getOriginalFilename();
+        if (originalFilename == null || (!originalFilename.endsWith(".xlsx") && !originalFilename.endsWith(".xls"))) {
+            return Result.paramError("仅支持.xlsx或.xls格式的Excel文件");
+        }
+        try {
+            Map<String, Object> result = entityChannelService.importFromExcel(file);
+            return Result.success(result);
+        } catch (Exception e) {
+            return Result.error("导入失败：" + e.getMessage());
+        }
     }
 }

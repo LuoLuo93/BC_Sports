@@ -15,6 +15,7 @@ import com.bcsport.admin.mapper.RoleMenuMapper;
 import com.bcsport.admin.service.AuthCacheService;
 import com.bcsport.admin.service.RoleService;
 import com.bcsport.admin.util.BeanCopyUtils;
+import com.bcsport.admin.util.ShiroSecurityUtils;
 import com.bcsport.admin.vo.RoleVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -166,7 +167,7 @@ public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements Ro
                         roleMenu.setRoleId(roleId);
                         roleMenu.setMenuId(menuId);
                         roleMenu.setCreateTime(LocalDateTime.now());
-                        roleMenu.setCreateBy(com.bcsport.admin.util.ShiroSecurityUtils.getCurrentUserId());
+                        roleMenu.setCreateBy(ShiroSecurityUtils.getCurrentUserId());
                         return roleMenu;
                     })
                     .collect(Collectors.toList());

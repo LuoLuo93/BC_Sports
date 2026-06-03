@@ -50,10 +50,14 @@ public class DashboardController {
         vo.setUserCount(userMapper.selectCount(
                 new LambdaQueryWrapper<User>().eq(User::getDeleted, 0)));
 
-        // 在线用户数（Redis session keys）
+        // 在线用户数（使用 SCAN 代替 KEYS 避免阻塞 Redis）
         try {
-            Set<String> keys = redisTemplate.keys("auth:session:*");
-            vo.setOnlineUserCount(keys != null ? keys.size() : 0);
+            int count = 0;
+            var cursor = redisTemplate.scan(
+                    org.springframework.data.redis.core.ScanOptions.scanOptions().match("auth:session:*").count(100).build());
+            while (cursor.hasNext()) { cursor.next(); count++; }
+            cursor.close();
+            vo.setOnlineUserCount(count);
         } catch (Exception e) {
             vo.setOnlineUserCount(0);
         }

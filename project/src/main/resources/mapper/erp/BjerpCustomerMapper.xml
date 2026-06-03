@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bcsport.admin.erpmapper.BjerpCustomerMapper">
+
+    <sql id="searchCustomersWhere">
+        <where>
+            <if test="code != null and code != ''">
+                AND CODE LIKE '%' || #{code} || '%' ESCAPE '\'
+            </if>
+            <if test="name != null and name != ''">
+                <choose>
+                    <when test="code != null and code != ''">OR NAME LIKE '%' || #{name} || '%' ESCAPE '\'</when>
+                    <otherwise>AND NAME LIKE '%' || #{name} || '%' ESCAPE '\'</otherwise>
+                </choose>
+            </if>
+        </where>
+    </sql>
+
+    <select id="countCustomers" resultType="long">
+        SELECT COUNT(*) FROM WMS_CUSTOMER
+        <include refid="searchCustomersWhere"/>
+    </select>
+
+    <select id="searchCustomers" resultType="java.util.Map">
+        SELECT * FROM (
+            SELECT CODE, NAME, ROW_NUMBER() OVER (ORDER BY CODE) AS RN
+            FROM WMS_CUSTOMER
+            <include refid="searchCustomersWhere"/>
+        ) WHERE RN &gt; #{offset} AND RN &lt;= #{offset} + #{pageSize}
+    </select>
+
+    <select id="listAllCustomers" resultType="java.util.Map">
+        SELECT CODE, NAME FROM WMS_CUSTOMER ORDER BY CODE
+    </select>
+
+</mapper>

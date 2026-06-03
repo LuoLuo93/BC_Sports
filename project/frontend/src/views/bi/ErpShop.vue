@@ -138,8 +138,10 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitting" @click="handleSubmit">确定</el-button>
+        <div class="dialog-footer">
+          <el-button class="btn-cancel" @click="dialogVisible = false">取消</el-button>
+          <el-button class="btn-confirm" type="primary" :loading="submitting" @click="handleSubmit">确定</el-button>
+        </div>
       </template>
     </el-dialog>
   </div>
@@ -153,7 +155,7 @@ import { getErpShopPage, getErpShop, createErpShop, updateErpShop, deleteErpShop
 import { Plus, Search, RefreshRight } from '@element-plus/icons-vue'
 import { usePermission } from '@/composables/usePermission'
 import { usePageQuery } from '@/composables/usePageQuery'
-import { PAGE_SIZES } from '@/utils/constants'
+import { PAGE_SIZES } from '@/utils/appConfig'
 
 const { hasPermission } = usePermission()
 

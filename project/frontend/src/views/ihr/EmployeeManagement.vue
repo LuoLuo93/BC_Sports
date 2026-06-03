@@ -243,7 +243,7 @@ import { getIhrOnboardingPage, syncIhrOnboarding, syncQywxOnboarding, syncQywxOn
 import { syncStatusLabel, syncStatusTag } from '@/utils/syncStatus'
 import { Search, RefreshRight, Refresh } from '@element-plus/icons-vue'
 import { usePermission } from '@/composables/usePermission'
-import { PAGE_SIZES } from '@/utils/constants'
+import { PAGE_SIZES } from '@/utils/appConfig'
 
 const { hasPermission } = usePermission()
 const activeTab = ref('onboarding')

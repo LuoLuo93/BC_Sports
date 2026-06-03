@@ -35,4 +35,19 @@ public interface EntityChannelService {
      * 删除实体渠道配置（逻辑删除完
      */
     boolean deleteEntityChannel(String id);
+
+    /**
+     * 按实体查询所有渠道配置
+     */
+    java.util.List<EntityChannelVO> listByEntity(String externalId, String entityType);
+
+    /**
+     * 批量保存实体渠道配置（更新已有、新增新条目、删除移除的）
+     */
+    boolean batchSave(String externalId, String entityType, java.util.List<EntityChannelDTO> list);
+
+    /**
+     * 从Excel导入实体渠道配置（名称自动解析为ID）
+     */
+    java.util.Map<String, Object> importFromExcel(org.springframework.web.multipart.MultipartFile file) throws Exception;
 }

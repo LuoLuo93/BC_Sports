@@ -71,8 +71,10 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitting" @click="handleSubmit">确定</el-button>
+        <div class="dialog-footer">
+          <el-button class="btn-cancel" @click="dialogVisible = false">取消</el-button>
+          <el-button class="btn-confirm" type="primary" :loading="submitting" @click="handleSubmit">确定</el-button>
+        </div>
       </template>
     </el-dialog>
 
@@ -91,8 +93,10 @@
         :default-expand-all="true"
       />
       <template #footer>
-        <el-button @click="permDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="permSubmitting" @click="handlePermSubmit">确定</el-button>
+        <div class="dialog-footer">
+          <el-button class="btn-cancel" @click="permDialogVisible = false">取消</el-button>
+          <el-button class="btn-confirm" type="primary" :loading="permSubmitting" @click="handlePermSubmit">确定</el-button>
+        </div>
       </template>
     </el-dialog>
 </template>

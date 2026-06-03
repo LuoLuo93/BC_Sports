@@ -10,10 +10,14 @@ import com.bcsport.admin.dto.UserQueryDTO;
 import com.bcsport.admin.entity.User;
 import com.bcsport.admin.entity.UserRole;
 import com.bcsport.admin.entity.Role;
+import com.bcsport.admin.entity.Dept;
+import com.bcsport.admin.mapper.RoleMapper;
+import com.bcsport.admin.mapper.DeptMapper;
 import com.bcsport.admin.mapper.UserMapper;
 import com.bcsport.admin.mapper.UserRoleMapper;
 import com.bcsport.admin.service.AuthCacheService;
 import com.bcsport.admin.service.UserService;
+import com.bcsport.admin.common.exception.BusinessException;
 import com.bcsport.admin.util.BeanCopyUtils;
 import com.bcsport.admin.util.ShiroSecurityUtils;
 import com.bcsport.admin.util.PasswordUtil;
@@ -26,6 +30,7 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -44,10 +49,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     private AuthCacheService authCacheService;
     
     @Autowired
-    private com.bcsport.admin.mapper.RoleMapper roleMapper;
+    private RoleMapper roleMapper;
     
     @Autowired
-    private com.bcsport.admin.mapper.DeptMapper deptMapper;
+    private DeptMapper deptMapper;
     
     @Override
     public PageResult<UserVO> pageUsers(PageQuery pageQuery, UserQueryDTO queryUser) {
@@ -69,7 +74,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         }
         UserVO vo = BeanCopyUtils.copy(user, UserVO.class);
         if (StringUtils.hasText(vo.getDeptId())) {
-            com.bcsport.admin.entity.Dept dept = deptMapper.selectById(vo.getDeptId());
+            Dept dept = deptMapper.selectById(vo.getDeptId());
             if (dept != null) {
                 vo.setDeptName(dept.getDeptName());
             }
@@ -89,7 +94,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     public boolean addUser(User user) {
         User existingUser = getByUsername(user.getUsername());
         if (existingUser != null) {
-            throw new RuntimeException("用户名已存在");
+            throw new BusinessException("用户名已存在");
         }
         String salt = PasswordUtil.generateSalt();
         String encryptedPassword = PasswordUtil.encryptPassword(user.getPassword(), salt);
@@ -130,14 +135,14 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     public boolean changePassword(String id, String oldPassword, String newPassword) {
         User user = userMapper.selectById(id);
         if (user == null) {
-            throw new RuntimeException("用户不存在");
+            throw new BusinessException("用户不存在");
         }
         boolean verified = PasswordUtil.verifyPassword(oldPassword, user.getSalt(), user.getPassword());
         if (!verified) {
-            throw new RuntimeException("当前密码验证不通过，请重新输入");
+            throw new BusinessException("当前密码验证不通过，请重新输入");
         }
         if (oldPassword.equals(newPassword)) {
-            throw new RuntimeException("新密码不能与旧密码完全一致，请设置一个新密码");
+            throw new BusinessException("新密码不能与旧密码完全一致，请设置一个新密码");
         }
         String salt = PasswordUtil.generateSalt();
         String encryptedPassword = PasswordUtil.encryptPassword(newPassword, salt);
@@ -170,11 +175,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             List<UserRole> userRoleList = roleIds.stream()
                     .map(roleId -> {
                         UserRole userRole = new UserRole();
-                        userRole.setId(java.util.UUID.randomUUID().toString().replace("-", ""));
+                        userRole.setId(UUID.randomUUID().toString().replace("-", ""));
                         userRole.setUserId(userId);
                         userRole.setRoleId(roleId);
                         userRole.setCreateTime(LocalDateTime.now());
-                        userRole.setCreateBy(com.bcsport.admin.util.ShiroSecurityUtils.getCurrentUserId());
+                        userRole.setCreateBy(ShiroSecurityUtils.getCurrentUserId());
                         return userRole;
                     })
                     .collect(Collectors.toList());

@@ -35,7 +35,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { PAGE_SIZES } from '@/utils/constants'
+import { PAGE_SIZES } from '@/utils/appConfig'
 
 const props = defineProps({
   title: { type: String, default: '' },

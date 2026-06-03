@@ -44,7 +44,12 @@ public class UserRealm extends AuthorizingRealm {
     protected AuthorizationInfo doGetAuthorizationInfo(PrincipalCollection principals) {
         String username = (String) principals.getPrimaryPrincipal();
         User user = userService.getByUsername(username);
-        
+
+        // 防止用户已被删除但 session 仍存在的情况
+        if (user == null) {
+            return new SimpleAuthorizationInfo();
+        }
+
         SimpleAuthorizationInfo authorizationInfo = new SimpleAuthorizationInfo();
         
         // 从数据库查询角色和权限

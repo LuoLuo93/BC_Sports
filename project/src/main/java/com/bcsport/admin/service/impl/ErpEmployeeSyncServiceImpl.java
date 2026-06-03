@@ -146,7 +146,7 @@ public class ErpEmployeeSyncServiceImpl implements ErpEmployeeSyncService {
     }
 
     @Override
-    @Transactional(transactionManager = "ihrTransactionManager")
+    @Transactional(transactionManager = "ihrTransactionManager", rollbackFor = Exception.class)
     public void markSyncSuccess(String syncType, String employeeId, String staffName, String staffNo) {
         ErpEmployeeSyncStatus status = new ErpEmployeeSyncStatus();
         status.setSyncType(syncType);
@@ -159,7 +159,7 @@ public class ErpEmployeeSyncServiceImpl implements ErpEmployeeSyncService {
     }
 
     @Override
-    @Transactional(transactionManager = "ihrTransactionManager")
+    @Transactional(transactionManager = "ihrTransactionManager", rollbackFor = Exception.class)
     public void markSyncFailed(String syncType, String employeeId, String staffName, String staffNo, String errorMessage) {
         ErpEmployeeSyncStatus status = new ErpEmployeeSyncStatus();
         status.setSyncType(syncType);
@@ -174,7 +174,7 @@ public class ErpEmployeeSyncServiceImpl implements ErpEmployeeSyncService {
     }
 
     @Override
-    @Transactional(transactionManager = "ihrTransactionManager")
+    @Transactional(transactionManager = "ihrTransactionManager", rollbackFor = Exception.class)
     public void markSyncSkipped(String syncType, String employeeId, String staffName, String staffNo) {
         ErpEmployeeSyncStatus status = new ErpEmployeeSyncStatus();
         status.setSyncType(syncType);

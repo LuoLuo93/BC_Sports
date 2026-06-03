@@ -125,8 +125,8 @@
       </el-form>
       <template #footer>
         <div class="dialog-footer">
-          <el-button @click="dialogVisible = false">取 消</el-button>
-          <el-button type="primary" :loading="submitting" @click="handleSubmit">{{ isEdit ? '保存修改' : '确认创建' }}</el-button>
+          <el-button class="btn-cancel" @click="dialogVisible = false">取 消</el-button>
+          <el-button class="btn-confirm" type="primary" :loading="submitting" @click="handleSubmit">{{ isEdit ? '保存修改' : '确认创建' }}</el-button>
         </div>
       </template>
     </el-dialog>
@@ -212,8 +212,10 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="paramDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="confirmRunWithParams">确认执行</el-button>
+        <div class="dialog-footer">
+          <el-button class="btn-cancel" @click="paramDialogVisible = false">取消</el-button>
+          <el-button class="btn-confirm" type="primary" @click="confirmRunWithParams">确认执行</el-button>
+        </div>
       </template>
     </el-dialog>
   </div>
@@ -227,7 +229,7 @@ import { getScheduleJobPage, getScheduleJob, createScheduleJob, updateScheduleJo
 import { Plus, Search, RefreshRight, Check } from '@element-plus/icons-vue'
 import { usePermission } from '@/composables/usePermission'
 import { usePageQuery } from '@/composables/usePageQuery'
-import { PAGE_SIZES } from '@/utils/constants'
+import { PAGE_SIZES } from '@/utils/appConfig'
 import { useDictStore } from '@/stores/dict'
 
 const { hasPermission } = usePermission()
@@ -468,10 +470,5 @@ onUnmounted(() => { if (runPollTimer) clearInterval(runPollTimer) })
   margin-top: 6px;
   font-size: 12px;
   color: var(--el-color-success);
-}
-.dialog-footer {
-  display: flex;
-  justify-content: center;
-  gap: 12px;
 }
 </style>

@@ -1,6 +1,7 @@
 package com.bcsport.admin.util;
 
 import com.bcsport.admin.common.PageResult;
+import com.bcsport.admin.common.exception.BusinessException;
 import org.springframework.beans.BeanUtils;
 
 import java.util.Collections;
@@ -27,7 +28,7 @@ public class BeanCopyUtils {
             BeanUtils.copyProperties(source, target);
             return target;
         } catch (Exception e) {
-            throw new RuntimeException("属性拷贝失败", e);
+            throw new BusinessException("属性拷贝失败", e);
         }
     }
 

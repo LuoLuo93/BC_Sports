@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bcsport.admin.ihrmapper.NxcrmUnbindQueueMapper">
+
+    <resultMap id="unbindQueueMap" type="com.bcsport.admin.entity.ihr.NxcrmUnbindQueue">
+        <id     column="id"          property="id"/>
+        <result column="shopId"      property="shopId"/>
+        <result column="nasOuid"     property="nasOuid"/>
+        <result column="mobile"      property="mobile"/>
+        <result column="status"      property="status"/>
+        <result column="retryCount"  property="retryCount"/>
+        <result column="createTime"  property="createTime"/>
+        <result column="processTime" property="processTime"/>
+        <result column="errorMsg"    property="errorMsg"/>
+    </resultMap>
+
+    <!--
+        扫描待处理(0) + 已失败(2)的记录，下次执行自动重试。
+        retryCount >= 9（已重试 3 轮 × 3 次/轮）的记录不再捞取，避免无限重试。
+    -->
+    <select id="selectPendingPaged" resultMap="unbindQueueMap">
+        SELECT id, shopId, nasOuid, mobile, status, retryCount,
+               createTime, processTime, errorMsg
+        FROM NxcrmUnbindQueue
+        WHERE status IN (0, 2)
+          AND (retryCount IS NULL OR retryCount &lt; 9)
+        ORDER BY status, id
+        OFFSET #{offset} ROWS FETCH NEXT #{limit} ROWS ONLY
+    </select>
+
+    <update id="updateStatusById">
+        UPDATE NxcrmUnbindQueue
+        SET status      = #{status},
+            retryCount  = #{retryCount},
+            processTime = #{processTime},
+            errorMsg    = #{errorMsg}
+        WHERE id = #{id}
+    </update>
+
+</mapper>

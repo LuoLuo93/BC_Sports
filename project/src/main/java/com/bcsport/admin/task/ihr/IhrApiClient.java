@@ -251,7 +251,11 @@ public class IhrApiClient {
      * GET 请求，返回 JSONObject
      */
     public JSONObject getJsonObject(String path) {
-        return JSONUtil.parseObj(get(path));
+        String body = get(path);
+        if (body == null || body.isBlank()) {
+            throw new RuntimeException("IHR API 返回空响应: " + path);
+        }
+        return JSONUtil.parseObj(body);
     }
 
     /**

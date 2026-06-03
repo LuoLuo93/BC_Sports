@@ -1,7 +1,7 @@
 <template>
   <div class="page-container">
     <!-- 搜索栏 -->
-    <el-card shadow="never" class="search-card">
+    <el-card shadow="never" class="search-card search-card--compact">
       <el-form :model="query" inline>
         <el-form-item label="用户名">
           <el-input v-model="query.username" placeholder="请输入用户名" clearable @keyup.enter="loadData" />
@@ -42,14 +42,14 @@
           <el-table-column prop="phone" label="手机号" width="130" />
           <el-table-column label="部门" width="120">
             <template #default="{ row }">
-              <el-tag v-if="row.deptName" size="small" type="info">{{ row.deptName }}</el-tag>
+              <span v-if="row.deptName" class="dept-tag">{{ row.deptName }}</span>
               <span v-else>-</span>
             </template>
           </el-table-column>
           <el-table-column label="角色" min-width="160">
             <template #default="{ row }">
               <div v-if="row.roleNames?.length" class="role-tags">
-                <el-tag v-for="name in row.roleNames.split(',')" :key="name" size="small" effect="plain" round>{{ name }}</el-tag>
+                <span v-for="name in row.roleNames.split(',')" :key="name" class="role-tag">{{ name }}</span>
               </div>
               <span v-else>-</span>
             </template>
@@ -96,61 +96,99 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="resetPwdVisible = false">取消</el-button>
-        <el-button type="primary" :loading="resetPwdSubmitting" @click="handleResetPwdSubmit">确定</el-button>
+        <div class="dialog-footer">
+          <el-button class="btn-cancel" @click="resetPwdVisible = false">取消</el-button>
+          <el-button class="btn-confirm" type="primary" :loading="resetPwdSubmitting" @click="handleResetPwdSubmit">确定</el-button>
+        </div>
       </template>
     </el-dialog>
 
     <!-- 新增/编辑弹窗 -->
-    <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑用户' : '新增用户'" width="560px" destroy-on-close>
-      <el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
-        <el-form-item label="用户名" prop="username">
-          <el-input v-model="form.username" placeholder="请输入用户名" />
-        </el-form-item>
-        <el-form-item v-if="!isEdit" label="密码" prop="password">
-          <el-input v-model="form.password" type="password" show-password placeholder="请输入密码" />
-        </el-form-item>
-        <el-form-item label="昵称" prop="nickname">
-          <el-input v-model="form.nickname" placeholder="请输入昵称" />
-        </el-form-item>
-        <el-form-item label="邮箱">
-          <el-input v-model="form.email" placeholder="请输入邮箱" />
-        </el-form-item>
-        <el-form-item label="手机号">
-          <el-input v-model="form.phone" placeholder="请输入手机号" />
-        </el-form-item>
-        <el-form-item label="部门">
-          <el-tree-select
-            v-model="form.deptId"
-            :data="deptOptions"
-            :props="{ label: 'deptName', value: 'id', children: 'children' }"
-            placeholder="请选择部门"
-            check-strictly
-            clearable
-            class="w-full"
-          />
-        </el-form-item>
+    <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑用户' : '新增用户'" width="720px" class="user-dialog" destroy-on-close>
+      <el-form ref="formRef" :model="form" :rules="rules" label-width="80px" class="user-form">
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="用户名" prop="username">
+              <el-input v-model="form.username" placeholder="请输入用户名" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item v-if="!isEdit" label="密码" prop="password">
+              <el-input v-model="form.password" type="password" show-password placeholder="请输入密码" />
+            </el-form-item>
+            <el-form-item v-else label="昵称" prop="nickname">
+              <el-input v-model="form.nickname" placeholder="请输入昵称" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="20" v-if="!isEdit">
+          <el-col :span="12">
+            <el-form-item label="确认密码" prop="confirmPassword">
+              <el-input v-model="form.confirmPassword" type="password" show-password placeholder="请再次输入密码" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="昵称" prop="nickname">
+              <el-input v-model="form.nickname" placeholder="请输入昵称" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="邮箱">
+              <el-input v-model="form.email" placeholder="请输入邮箱" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="手机号">
+              <el-input v-model="form.phone" placeholder="请输入手机号" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="部门">
+              <el-tree-select
+                v-model="form.deptId"
+                :data="deptOptions"
+                :props="{ label: 'deptName', value: 'id', children: 'children' }"
+                placeholder="请选择部门"
+                check-strictly
+                clearable
+                class="w-full"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="排序">
+              <el-input-number v-model="form.sort" :min="0" :max="9999" class="w-full" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="状态">
+              <el-radio-group v-model="form.status">
+                <el-radio :value="1">正常</el-radio>
+                <el-radio :value="0">停用</el-radio>
+              </el-radio-group>
+            </el-form-item>
+          </el-col>
+        </el-row>
         <el-form-item label="角色">
-          <el-checkbox-group v-model="form.roleIds">
+          <el-checkbox-group v-model="form.roleIds" class="role-checkbox-group">
             <el-checkbox v-for="role in roleList" :key="role.id" :value="role.id">{{ role.roleName }}</el-checkbox>
           </el-checkbox-group>
-        </el-form-item>
-        <el-form-item label="排序">
-          <el-input-number v-model="form.sort" :min="0" :max="9999" />
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-radio-group v-model="form.status">
-            <el-radio :value="1">正常</el-radio>
-            <el-radio :value="0">停用</el-radio>
-          </el-radio-group>
         </el-form-item>
         <el-form-item label="备注">
           <el-input v-model="form.remark" type="textarea" :rows="3" placeholder="请输入备注" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitting" @click="handleSubmit">确定</el-button>
+        <div class="dialog-footer">
+          <el-button class="btn-cancel" @click="dialogVisible = false">取消</el-button>
+          <el-button class="btn-confirm" type="primary" :loading="submitting" @click="handleSubmit">确定</el-button>
+        </div>
       </template>
     </el-dialog>
   </div>
@@ -164,7 +202,7 @@ import { getUserPage, getUser, createUser, updateUser, deleteUser, resetPassword
 import { Plus, Search, RefreshRight } from '@element-plus/icons-vue'
 import { usePermission } from '@/composables/usePermission'
 import { usePageQuery } from '@/composables/usePageQuery'
-import { PAGE_SIZES } from '@/utils/constants'
+import { PAGE_SIZES } from '@/utils/appConfig'
 import { useRefStore } from '@/stores/reference'
 
 const { hasPermission } = usePermission()
@@ -181,7 +219,7 @@ const roleList = ref([])
 const deptOptions = ref([])
 
 const defaultForm = () => ({
-  username: '', password: '', nickname: '', email: '', phone: '',
+  username: '', password: '', confirmPassword: '', nickname: '', email: '', phone: '',
   deptId: '', roleIds: [], sort: 0, status: 1, remark: ''
 })
 const form = reactive(defaultForm())
@@ -189,6 +227,10 @@ const form = reactive(defaultForm())
 const rules = computed(() => ({
   username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
   password: isEdit.value ? [] : [{ required: true, message: '请输入密码', trigger: 'blur' }],
+  confirmPassword: isEdit.value ? [] : [
+    { required: true, message: '请再次输入密码', trigger: 'blur' },
+    { validator: (rule, value, callback) => value !== form.password ? callback(new Error('两次密码不一致')) : callback(), trigger: 'blur' }
+  ],
   nickname: [{ required: true, message: '请输入昵称', trigger: 'blur' }]
 }))
 
@@ -265,7 +307,8 @@ async function handleSubmit() {
     if (isEdit.value) {
       await updateUser(editId.value, { ...form })
     } else {
-      await createUser({ ...form })
+      const { confirmPassword, ...data } = form
+      await createUser(data)
     }
     ElMessage.success(isEdit.value ? '更新成功' : '创建成功')
     dialogVisible.value = false
@@ -282,9 +325,97 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* 搜索栏紧凑 */
+.search-card--compact :deep(.el-card__body) {
+  padding: 10px 16px;
+}
+.search-card--compact :deep(.el-form-item) {
+  margin-bottom: 0;
+}
+.search-card--compact :deep(.el-form-item__label) {
+  font-size: 13px;
+}
+.search-card--compact :deep(.el-input__wrapper) {
+  padding: 4px 10px;
+}
+
 .role-tags {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
 }
+.role-tag {
+  display: inline-block;
+  padding: 2px 10px;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #047857;
+}
+.dept-tag {
+  display: inline-block;
+  padding: 2px 10px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #1d4ed8;
+}
+
+/* 角色选择 */
+.role-checkbox-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.role-checkbox-group .el-checkbox {
+  margin-right: 0;
+  padding: 6px 16px;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.role-checkbox-group .el-checkbox:hover {
+  background: #d1fae5;
+  border-color: #6ee7b7;
+}
+
+.role-checkbox-group .el-checkbox.is-checked {
+  background: #10b981;
+  border-color: #10b981;
+}
+
+.role-checkbox-group .el-checkbox.is-checked .el-checkbox__label {
+  color: #fff;
+}
+
+.role-checkbox-group .el-checkbox__label {
+  font-weight: 500;
+  color: #047857;
+}
+
+.role-checkbox-group .el-checkbox__inner {
+  display: none;
+}
+
+/* label 样式 */
+.user-form :deep(.el-form-item__label) {
+  font-weight: 500;
+  color: #374151;
+}
+
+/* 行间距 */
+.user-form :deep(.el-row) {
+  margin-bottom: 8px;
+}
+.user-form :deep(.el-form-item) {
+  margin-bottom: 18px;
+}
 </style>
+

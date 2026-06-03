@@ -832,7 +832,6 @@ html, body {
 .bc-btn-secondary:hover {
     background: #e2e8f0 !important;
     color: #1e293b !important;
-    transform: translateY(-1px);
 }
 
 /* æˆåŠŸçŠ¶æ€æŒ‰é’® */
@@ -845,7 +844,6 @@ html, body {
 
 .bc-btn-success:hover {
     box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
-    transform: translateY(-1px);
 }
 
 .bc-form-grid {
@@ -994,7 +992,7 @@ td.text-end .bc-table-actions {
     color: var(--primary-color);
     margin: 0 4px;
 }
-/* ±í¸ñ²Ù×÷°´Å¥¼¯ */
+/* ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å¥ï¿½ï¿½ */
 .bc-table-actions {
     display: flex;
     gap: 0.5rem;
@@ -1075,7 +1073,6 @@ td.text-end .bc-table-actions {
     background: #f8fafc;
     color: #0f172a;
     border-color: #cbd5e1;
-    transform: translateY(-1px);
 }
 
 .bc-pagination-container .page-item.disabled .page-link {

@@ -15,3 +15,7 @@ export function getSessionInfo() {
 export function checkSession() {
   return request.get('/api/session/check')
 }
+
+export function getCaptcha() {
+  return request.get('/api/captcha')
+}

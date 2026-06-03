@@ -6,6 +6,7 @@ import com.bcsport.admin.common.Result;
 import com.bcsport.admin.dto.BrandDTO;
 import com.bcsport.admin.dto.BrandQueryDTO;
 import com.bcsport.admin.entity.Brand;
+import com.bcsport.admin.mapper.BrandMapper;
 import com.bcsport.admin.service.BrandService;
 import com.bcsport.admin.vo.BrandVO;
 import io.swagger.annotations.Api;
@@ -28,7 +29,7 @@ public class BrandController {
     private BrandService brandService;
     
     @Autowired
-    private com.bcsport.admin.mapper.BrandMapper brandMapper;
+    private BrandMapper brandMapper;
 
     /**
      * 分页查询品牌列表
@@ -46,7 +47,7 @@ public class BrandController {
     @GetMapping("/list")
     @ApiOperation("查询品牌列表（下拉框使用）")
     @RequiresPermissions("bi:brand:query")
-    public Result<List<com.bcsport.admin.vo.BrandVO>> listBrands() {
+    public Result<List<BrandVO>> listBrands() {
         return Result.success(brandService.listEnabledBrands());
     }
 

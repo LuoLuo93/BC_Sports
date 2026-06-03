@@ -7,6 +7,7 @@ import com.bcsport.admin.task.qywx.QywxEmployeeLifecycleSyncTask;
 import com.bcsport.admin.task.qywx.QywxFullSyncTask;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
+import org.apache.shiro.authz.annotation.RequiresPermissions;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -59,6 +60,7 @@ public class IhrSyncStatusController {
 
     @PostMapping("/qywx-full-sync")
     @ApiOperation("一键同步企微信息")
+    @RequiresPermissions("ihr:onboarding:sync")
     public Result<?> qywxFullSync() {
         if (QywxFullSyncTask.isSyncing()) {
             return Result.error("企微一键同步正在进行中，请等待完成");

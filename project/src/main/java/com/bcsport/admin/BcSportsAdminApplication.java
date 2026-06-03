@@ -19,7 +19,7 @@ public class BcSportsAdminApplication {
         SpringApplication.run(BcSportsAdminApplication.class, args);
         System.out.println("=================================");
         System.out.println("BC体育后台管理系统启动成功");
-        System.out.println("访问地址: http://localhost:8080");
+        System.out.println("访问地址: http://localhost:5175");
         System.out.println("API文档: http://localhost:8080/doc.html");
         System.out.println("=================================");
     }

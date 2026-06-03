@@ -178,7 +178,6 @@
     background: var(--bc-gray-50);
     color: var(--bc-text-primary);
     border-color: var(--bc-gray-300);
-    transform: translateY(-1px);
 }
 
 .bc-pagination-container .page-item.disabled .page-link {
@@ -439,7 +438,6 @@
     display: flex;
     align-items: center;
     gap: var(--bc-space-2);
-    flex-wrap: wrap;
 }
 
 .bc-toolbar-dense-actions .btn[class*="bc-btn-"] {

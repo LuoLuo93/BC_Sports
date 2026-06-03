@@ -1,5 +1,14 @@
 import request from './request'
 
+// ERP Store (店仓 - 数据源: bjerp C_STORE)
+export function getErpStorePage(params) {
+  return request.get('/api/erp-store/page', { params })
+}
+
+export function getErpStoreListAll() {
+  return request.get('/api/erp-store/list-all')
+}
+
 // ERP Shop
 export function getErpShopPage(params) {
   return request.get('/api/erp-shop/page', { params })
@@ -50,27 +59,11 @@ export function getEnabledErpWarehouseList() {
   return request.get('/api/erp-warehouse/list-enabled')
 }
 
-// ERP Customer
+// ERP Customer (bjerp WMS_CUSTOMER)
 export function getErpCustomerPage(params) {
   return request.get('/api/erp-customer/page', { params })
 }
 
-export function getErpCustomer(id) {
-  return request.get(`/api/erp-customer/${id}`)
-}
-
-export function createErpCustomer(data) {
-  return request.post('/api/erp-customer', data)
-}
-
-export function updateErpCustomer(id, data) {
-  return request.put(`/api/erp-customer/${id}`, data)
-}
-
-export function deleteErpCustomer(id) {
-  return request.delete(`/api/erp-customer/${id}`)
-}
-
-export function getEnabledErpCustomerList() {
-  return request.get('/api/erp-customer/list-enabled')
+export function getErpCustomerListAll() {
+  return request.get('/api/erp-customer/list-all')
 }

@@ -80,4 +80,19 @@ public interface ErpEmployeeSyncStatusMapper extends BaseMapper<ErpEmployeeSyncS
     );
 
     void upsertByEmployeeIdAndType(@Param("entity") ErpEmployeeSyncStatus entity);
+
+    /**
+     * 查询待同步的入职人员（effective sync status = 0 或 2）
+     */
+    List<ErpEmployeeVO> selectPendingOnboardings();
+
+    /**
+     * 查询待同步的变更人员（effective sync status = 0 或 2）
+     */
+    List<ErpEmployeeVO> selectPendingUpdates();
+
+    /**
+     * 查询待同步的离职人员（sync_status = 0, 2 或 null）
+     */
+    List<ErpEmployeeVO> selectPendingLeavings();
 }

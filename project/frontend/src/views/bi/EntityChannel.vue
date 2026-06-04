@@ -89,7 +89,7 @@
               <span v-else>-</span>
             </template>
           </el-table-column>
-          <el-table-column label="渠道性质/销售类型" min-width="140">
+          <el-table-column label="渠道性质/经营类型" min-width="140">
             <template #default="{ row }">
               <template v-if="row.channelNatureName">
                 <span>{{ row.channelNatureName }}</span>

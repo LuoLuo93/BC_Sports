@@ -132,7 +132,7 @@ public class ErpEmployeeController {
         try {
             String error = erpSyncTask.syncSingle(syncType, employeeId);
             if (error != null) {
-                return Result.success(error);
+                return Result.error(error);
             }
             return Result.success("同步成功");
         } catch (Exception e) {

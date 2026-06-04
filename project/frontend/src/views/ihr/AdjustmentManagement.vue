@@ -38,6 +38,13 @@
           <el-table-column prop="staffNo" label="员工编号" min-width="110" />
           <el-table-column prop="mobileNo" label="手机号" width="130" />
           <el-table-column prop="departmentName" label="部门" min-width="140" />
+          <el-table-column label="员工状态" width="100" align="center">
+            <template #default="{ row }">
+              <el-tag :type="row.staffStatus === 'IN_SERVICE' ? 'success' : 'danger'" size="small">
+                {{ row.staffStatus === 'IN_SERVICE' ? '在职' : '离职' }}
+              </el-tag>
+            </template>
+          </el-table-column>
           <el-table-column label="同步状态" width="110" align="center">
             <template #default="{ row }">
               <el-tag :type="syncStatusTag(row.syncStatus)" size="small">{{ syncStatusLabel(row.syncStatus) }}</el-tag>
@@ -48,7 +55,7 @@
           </el-table-column>
           <el-table-column label="操作" width="200" align="center" fixed="right">
             <template #default="{ row }">
-              <el-button v-if="hasPermission('ihr:update:sync')" type="primary" plain size="small" @click="handleSyncOne(row)">同步企微</el-button>
+              <el-button v-if="row.syncStatus !== 'success' && row.staffStatus === 'IN_SERVICE' && hasPermission('ihr:update:sync')" type="primary" plain size="small" @click="handleSyncOne(row)">同步企微</el-button>
             </template>
           </el-table-column>
         </el-table>

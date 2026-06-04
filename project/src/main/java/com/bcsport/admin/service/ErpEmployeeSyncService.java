@@ -13,7 +13,7 @@ public interface ErpEmployeeSyncService {
 
     PageResult<ErpEmployeeVO> pageLeavings(PageQuery pageQuery, ErpEmployeeQueryDTO queryDTO);
 
-    void markSyncSuccess(String syncType, String employeeId, String staffName, String staffNo);
+    void markSyncSuccess(String syncType, String employeeId, String staffName, String staffNo, Long erpObjectId);
 
     void markSyncFailed(String syncType, String employeeId, String staffName, String staffNo, String errorMessage);
 

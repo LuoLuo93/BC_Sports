@@ -66,7 +66,7 @@
               </el-table-column>
               <el-table-column label="操作" width="200" align="center" fixed="right">
                 <template #default="{ row }">
-                  <el-button v-if="row.syncStatus !== 'success' && hasPermission('erp:employee:sync')" type="primary" plain size="small" @click="handleOnboardSyncOne(row)">同步ERP</el-button>
+                  <el-button v-if="row.syncStatus !== 1 && (row.staffStatus === 'IN_SERVICE' || row.staffStatus === 'PROBATION') && hasPermission('erp:employee:sync')" type="primary" plain size="small" @click="handleOnboardSyncOne(row)">同步ERP</el-button>
                 </template>
               </el-table-column>
             </el-table>
@@ -143,7 +143,7 @@
               </el-table-column>
               <el-table-column label="操作" width="200" align="center" fixed="right">
                 <template #default="{ row }">
-                  <el-button v-if="row.syncStatus !== 'success' && hasPermission('erp:employee:sync')" type="primary" plain size="small" @click="handleAdjSyncOne(row)">同步ERP</el-button>
+                  <el-button v-if="row.syncStatus !== 1 && (row.staffStatus === 'IN_SERVICE' || row.staffStatus === 'PROBATION') && hasPermission('erp:employee:sync')" type="primary" plain size="small" @click="handleAdjSyncOne(row)">同步ERP</el-button>
                 </template>
               </el-table-column>
             </el-table>
@@ -220,7 +220,7 @@
               </el-table-column>
               <el-table-column label="操作" width="200" align="center" fixed="right">
                 <template #default="{ row }">
-                  <el-button v-if="row.syncStatus !== 'success' && hasPermission('erp:employee:sync')" type="primary" plain size="small" @click="handleLeaveSyncOne(row)">同步ERP</el-button>
+                  <!-- ERP离职接口未提供，暂不显示同步按钮 -->
                 </template>
               </el-table-column>
             </el-table>

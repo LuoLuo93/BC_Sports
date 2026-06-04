@@ -22,6 +22,7 @@ public class ErpEmployeeSyncStatus implements Serializable {
     private String staffName;
     private String staffNo;
     private Integer syncStatus;
+    private Long erpObjectId;      // 伯俊ERP返回的objectid，用于后续修改
     private Date syncTime;
     private String errorMessage;
     private Date createTime;

@@ -85,7 +85,7 @@
                 <el-tree-select v-model="row.channelNatureId" :data="channelNatureTree" :props="{ label: 'natureName', value: 'id', children: 'children' }" placeholder="选择" size="small" check-strictly clearable style="width:100%" @change="(val) => { validateParentSelect(val, channelNatureTree, row, 'channelNatureId'); row.businessTypeId = '' }" />
               </template>
             </el-table-column>
-            <el-table-column label="销售类型" min-width="100">
+            <el-table-column label="经营类型" min-width="100">
               <template #default="{ row }">
                 <el-tree-select v-model="row.businessTypeId" :data="getBusinessTypes(row.channelNatureId)" :props="{ label: 'natureName', value: 'id', children: 'children' }" placeholder="选择" size="small" check-strictly clearable style="width:100%" :disabled="!row.channelNatureId" @change="(val) => { if (val && hasChildren(getBusinessTypes(row.channelNatureId), val)) { row.businessTypeId = ''; ElMessage.warning('请选择子节点') } }" />
               </template>

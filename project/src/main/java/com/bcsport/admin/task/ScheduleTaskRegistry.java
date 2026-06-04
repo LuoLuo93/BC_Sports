@@ -19,6 +19,7 @@ public class ScheduleTaskRegistry {
     public static final String MODULE_YDKL = "YDKL";
     public static final String MODULE_OTHER = "OTHER";
     public static final String MODULE_NXCRM = "NXCRM";
+    public static final String MODULE_BJERP = "BJERP";
 
     private static final Map<String, TaskOption> TASK_MAP = new LinkedHashMap<>();
 
@@ -64,6 +65,11 @@ public class ScheduleTaskRegistry {
         register("ydkl.sync.all", "云盯客流-一键同步", "ydSyncAllTask", "syncAll", "一键同步：客流数据→天气数据", MODULE_YDKL, 3);
         // register("ydkl.customerflow.sync", "云盯客流-同步客流数据", "ydCustomerFlowTask", "sync", "从云盯API同步昨日门店客流数据", MODULE_YDKL, 1);
         //  register("ydkl.weather.sync", "云盯客流-同步天气数据", "ydWeatherTask", "sync", "从云盯API同步昨日门店天气数据", MODULE_YDKL, 2);
+
+
+
+        // === BJERP 伯俊ERP模块 ===
+        register("bjerp.employee.sync", "伯俊ERP-人员同步", "erpEmployeeSyncTask", "syncAll", "将待同步人员(入职/变更/离职)同步到伯俊ERP", MODULE_BJERP, 1);
 
         // === NXCRM 南讯CRM模块 ===
         register("nxcrm.token.refresh", "NXCRM-刷新Token", "nxcrmTokenRefreshTask", "refreshToken", "刷新南讯CRM AccessToken", MODULE_NXCRM, 1);

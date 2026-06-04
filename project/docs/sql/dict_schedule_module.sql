@@ -20,4 +20,7 @@ VALUES ('DD_SCH_MOD_DEMO', 'sys_schedule_module', '示例',       'DEMO', 4, 1, 
 INSERT INTO bc_sports_sys_dict_data (id, dict_type, dict_label, dict_value, sort, status, remark, create_time, update_time, create_by, update_by, deleted)
 VALUES ('DD_SCH_MOD_OTHER','sys_schedule_module', '其他',       'OTHER',5, 1, '其他自定义模块', SYSTIMESTAMP, SYSTIMESTAMP, 'admin', 'admin', 0);
 
+INSERT INTO bc_sports_sys_dict_data (id, dict_type, dict_label, dict_value, sort, status, remark, create_time, update_time, create_by, update_by, deleted)
+VALUES ('DD_SCH_MOD_BJERP','sys_schedule_module', '伯俊ERP',   'BJERP', 6, 1, '伯俊ERP人员同步', SYSTIMESTAMP, SYSTIMESTAMP, 'admin', 'admin', 0);
+
 COMMIT;

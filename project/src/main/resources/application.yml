@@ -8,6 +8,9 @@ spring:
     name: bc-sports-admin
   profiles:
     active: dev
+  devtools:
+    restart:
+      enabled: false
   # 数据源配置
   datasource:
     type: com.alibaba.druid.pool.DruidDataSource
@@ -216,6 +219,12 @@ nxcrm:
   #group-id: 81000091
   #app-secret: C3EE07B4D087B2B4E6C1F3C56EEA8B74
   #server-url: https://sandbox-open.vecrp.com
+
+# 伯俊ERP接口配置（该用户必须具有表操作权限）
+bjerp:
+  api-url: http://192.168.5.174:7777/servlets/binserv/Rest
+  app-key: ${BJERP_APP_KEY:bcapitest@northland-pro.com.cn}       # 伯俊登录邮箱
+  app-secret: ${BJERP_APP_SECRET:northland2047.}  # 伯俊登录密码
 
 # BarTender打印配置
 bartender:

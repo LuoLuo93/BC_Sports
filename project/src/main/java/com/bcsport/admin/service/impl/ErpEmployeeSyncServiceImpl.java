@@ -147,13 +147,14 @@ public class ErpEmployeeSyncServiceImpl implements ErpEmployeeSyncService {
 
     @Override
     @Transactional(transactionManager = "ihrTransactionManager", rollbackFor = Exception.class)
-    public void markSyncSuccess(String syncType, String employeeId, String staffName, String staffNo) {
+    public void markSyncSuccess(String syncType, String employeeId, String staffName, String staffNo, Long erpObjectId) {
         ErpEmployeeSyncStatus status = new ErpEmployeeSyncStatus();
         status.setSyncType(syncType);
         status.setEmployeeId(employeeId);
         status.setStaffName(staffName);
         status.setStaffNo(staffNo);
         status.setSyncStatus(1);
+        status.setErpObjectId(erpObjectId);
         status.setSyncTime(new Date());
         mapper.upsertByEmployeeIdAndType(status);
     }

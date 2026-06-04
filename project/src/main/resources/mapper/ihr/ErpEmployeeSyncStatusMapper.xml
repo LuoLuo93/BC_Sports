@@ -217,6 +217,82 @@
         <include refid="leavingJoin" />
     </select>
 
+    <!-- ==================== 待同步查询（syncAll使用） ==================== -->
+
+    <!-- 待同步的入职人员：终端店铺部门+排除已离职 -->
+    <select id="selectPendingOnboardings" resultType="com.bcsport.admin.vo.ErpEmployeeVO">
+        WITH dept_tree AS (
+            SELECT CAST(department_id AS NVARCHAR(50)) AS department_id
+            FROM department WHERE name LIKE '%终端店铺%'
+            UNION ALL
+            SELECT CAST(d.department_id AS NVARCHAR(50))
+            FROM department d INNER JOIN dept_tree dt ON CAST(d.parent_id AS NVARCHAR(50)) = dt.department_id
+        )
+        SELECT
+            ea_latest.employees_id AS employeeId,
+            ei.staff_name AS staffName,
+            ei.staff_no AS staffNo
+        FROM (
+            SELECT employees_id, MAX(sync_date) AS sync_date
+            FROM employee_additions
+            GROUP BY employees_id
+        ) ea_latest
+        INNER JOIN employee_information ei ON ea_latest.employees_id = ei.id
+        LEFT JOIN erp_employee_sync_status es ON ea_latest.employees_id = es.employee_id AND es.sync_type = 'ONBOARDING'
+        WHERE <include refid="onboardingEffectiveSyncStatus"/> IN (0, 2)
+        AND ei.staff_status != 'LEAVED'
+        AND ei.department_id IN (SELECT department_id FROM dept_tree)
+    </select>
+
+    <!-- 待同步的变更人员：终端店铺部门 -->
+    <select id="selectPendingUpdates" resultType="com.bcsport.admin.vo.ErpEmployeeVO">
+        WITH dept_tree AS (
+            SELECT CAST(department_id AS NVARCHAR(50)) AS department_id
+            FROM department WHERE name LIKE '%终端店铺%'
+            UNION ALL
+            SELECT CAST(d.department_id AS NVARCHAR(50))
+            FROM department d INNER JOIN dept_tree dt ON CAST(d.parent_id AS NVARCHAR(50)) = dt.department_id
+        )
+        SELECT
+            em_latest.staff_id AS employeeId,
+            ei.staff_name AS staffName,
+            ei.staff_no AS staffNo
+        FROM (
+            SELECT staff_id, MAX(sync_date) AS sync_date
+            FROM employee_modifications
+            GROUP BY staff_id
+        ) em_latest
+        INNER JOIN employee_information ei ON em_latest.staff_id = ei.id
+        LEFT JOIN erp_employee_sync_status es ON em_latest.staff_id = es.employee_id AND es.sync_type = 'UPDATE'
+        WHERE <include refid="updateEffectiveSyncStatus"/> IN (0, 2)
+        AND NOT EXISTS (
+            SELECT 1 FROM employee_additions ea
+            WHERE ea.employees_id = em_latest.staff_id
+            AND CONVERT(DATE, ea.sync_date) = CONVERT(DATE, em_latest.sync_date)
+        )
+        AND ei.department_id IN (SELECT department_id FROM dept_tree)
+    </select>
+
+    <!-- 待同步的离职人员：终端店铺部门 -->
+    <select id="selectPendingLeavings" resultType="com.bcsport.admin.vo.ErpEmployeeVO">
+        WITH dept_tree AS (
+            SELECT CAST(department_id AS NVARCHAR(50)) AS department_id
+            FROM department WHERE name LIKE '%终端店铺%'
+            UNION ALL
+            SELECT CAST(d.department_id AS NVARCHAR(50))
+            FROM department d INNER JOIN dept_tree dt ON CAST(d.parent_id AS NVARCHAR(50)) = dt.department_id
+        )
+        SELECT
+            ei.id AS employeeId,
+            ei.staff_name AS staffName,
+            ei.staff_no AS staffNo
+        FROM employee_information ei
+        LEFT JOIN erp_employee_sync_status es ON ei.id = es.employee_id AND es.sync_type = 'LEAVING'
+        WHERE ei.leave_date IS NOT NULL
+        AND ISNULL(es.sync_status, 0) IN (0, 2)
+        AND ei.department_id IN (SELECT department_id FROM dept_tree)
+    </select>
+
     <!-- ==================== Upsert ==================== -->
 
     <insert id="upsertByEmployeeIdAndType">
@@ -228,12 +304,13 @@
                 staff_name = #{entity.staffName},
                 staff_no = #{entity.staffNo},
                 sync_status = #{entity.syncStatus},
+                erp_object_id = #{entity.erpObjectId},
                 sync_time = #{entity.syncTime},
                 error_message = #{entity.errorMessage},
                 update_time = GETDATE()
         WHEN NOT MATCHED THEN
-            INSERT (sync_type, employee_id, staff_name, staff_no, sync_status, sync_time, error_message, create_time, update_time)
-            VALUES (#{entity.syncType}, #{entity.employeeId}, #{entity.staffName}, #{entity.staffNo}, #{entity.syncStatus}, #{entity.syncTime}, #{entity.errorMessage}, GETDATE(), GETDATE());
+            INSERT (sync_type, employee_id, staff_name, staff_no, sync_status, erp_object_id, sync_time, error_message, create_time, update_time)
+            VALUES (#{entity.syncType}, #{entity.employeeId}, #{entity.staffName}, #{entity.staffNo}, #{entity.syncStatus}, #{entity.erpObjectId}, #{entity.syncTime}, #{entity.errorMessage}, GETDATE(), GETDATE());
     </insert>
 
 </mapper>

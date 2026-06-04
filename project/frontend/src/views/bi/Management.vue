@@ -145,7 +145,7 @@
                     <el-icon v-else class="icon-doc" :size="14"><Document /></el-icon>
                     <span>{{ row.natureName }}</span>
                     <el-tag v-if="row.children?.length" size="small" type="primary" effect="plain" class="level-tag">渠道性质</el-tag>
-                    <el-tag v-else size="small" type="info" effect="plain" class="level-tag">销售类型</el-tag>
+                    <el-tag v-else size="small" type="info" effect="plain" class="level-tag">经营类型</el-tag>
                   </div>
                 </template>
               </el-table-column>

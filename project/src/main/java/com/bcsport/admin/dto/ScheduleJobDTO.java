@@ -38,4 +38,7 @@ public class ScheduleJobDTO {
 
     @ApiModelProperty("任务参数(JSON)")
     private String params;
+
+    @ApiModelProperty("推送策略(ALWAYS/FAIL_ONLY/DISABLED)")
+    private String notifyStrategy;
 }

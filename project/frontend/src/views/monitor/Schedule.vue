@@ -54,6 +54,14 @@
           </el-table-column>
           <el-table-column prop="sort" label="排序" width="70" align="center" />
           <el-table-column prop="remark" label="描述" min-width="180" show-overflow-tooltip />
+          <el-table-column label="推送策略" width="110" align="center">
+            <template #default="{ row }">
+              <el-tag v-if="row.notifyStrategy === 'ALWAYS'" type="success" size="small">总是推送</el-tag>
+              <el-tag v-else-if="row.notifyStrategy === 'FAIL_ONLY'" type="warning" size="small">仅失败</el-tag>
+              <el-tag v-else-if="row.notifyStrategy === 'DISABLED'" type="info" size="small">不推送</el-tag>
+              <span v-else class="text-placeholder">默认</span>
+            </template>
+          </el-table-column>
           <el-table-column label="操作" width="300" align="center" fixed="right">
             <template #default="{ row }">
               <el-button v-if="row.status === 1 && hasPermission('monitor:schedule:edit')" type="warning" plain size="small" :disabled="runningJobs.has(row.id)" @click="handlePause(row)">暂停</el-button>
@@ -122,6 +130,14 @@
 
         <el-form-item label="描述"><el-input v-model="form.remark" type="textarea" :rows="2" placeholder="请输入描述" /></el-form-item>
         <el-form-item label="排序"><el-input-number v-model="form.sort" :min="0" :max="9999" /></el-form-item>
+        <el-form-item label="推送策略">
+          <el-select v-model="form.notifyStrategy" placeholder="使用全局默认" clearable class="w-full">
+            <el-option label="总是推送" value="ALWAYS" />
+            <el-option label="仅失败推送" value="FAIL_ONLY" />
+            <el-option label="不推送" value="DISABLED" />
+          </el-select>
+          <div class="cron-hint">不选则使用全局默认策略（仅失败推送）</div>
+        </el-form-item>
       </el-form>
       <template #footer>
         <div class="dialog-footer">
@@ -313,7 +329,7 @@ async function loadTaskOptions() {
   taskOptions.value = res.data || []
 }
 
-const defaultForm = () => ({ jobName: '', taskKey: '', cronExpression: '', sort: 0, remark: '' })
+const defaultForm = () => ({ jobName: '', taskKey: '', cronExpression: '', sort: 0, remark: '', notifyStrategy: '' })
 const form = reactive(defaultForm())
 const rules = {
   jobName: [{ required: true, message: '请输入任务名称', trigger: 'blur' }],

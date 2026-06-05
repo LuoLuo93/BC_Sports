@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.bcsport.admin.entity.ScheduleJob;
 import com.bcsport.admin.entity.ScheduleLog;
 import com.bcsport.admin.service.ScheduleLogService;
+import com.bcsport.admin.service.notify.NotifyManager;
 import com.bcsport.admin.task.ScheduleTaskRegistry;
 import com.bcsport.admin.util.CronUtils;
 import lombok.extern.slf4j.Slf4j;
@@ -45,6 +46,9 @@ public class ScheduleConfig {
 
     @Autowired
     private ScheduleLogService logService;
+
+    @Autowired
+    private NotifyManager notifyManager;
 
     private ThreadPoolTaskScheduler taskScheduler;
 
@@ -174,21 +178,24 @@ public class ScheduleConfig {
 
     private Runnable createRunnable(ScheduleJob job, ScheduleTaskRegistry.TaskOption option, String triggerType) {
         return () -> {
-            long startTime = System.currentTimeMillis();
+            long startMillis = System.currentTimeMillis();
+            LocalDateTime startTime = LocalDateTime.now();
             ScheduleLog scheduleLog = new ScheduleLog();
             scheduleLog.setId(IdWorker.getIdStr());
             scheduleLog.setJobId(job.getId());
             scheduleLog.setJobName(job.getJobName());
             scheduleLog.setTriggerType(triggerType);
-            scheduleLog.setExecuteTime(LocalDateTime.now());
+            scheduleLog.setExecuteTime(startTime);
             scheduleLog.setCreateBy("system");
 
             String lockKey = getLockKey(option);
             ReentrantLock runningLock = runningLocks.computeIfAbsent(lockKey, key -> new ReentrantLock());
             boolean locked = false;
+            boolean skipped = false;  // 标记是否被跳过
             try {
                 locked = runningLock.tryLock();
                 if (!locked) {
+                    skipped = true;
                     scheduleLog.setStatus(0);
                     scheduleLog.setErrorMsg("Task skipped because module is already running: " + lockKey);
                     log.warn("定时任务跳过: [{}] {}, lockKey={}", job.getId(), job.getJobName(), lockKey);
@@ -213,8 +220,9 @@ public class ScheduleConfig {
                 Throwable cause = e instanceof java.lang.reflect.InvocationTargetException ? e.getCause() : e;
                 log.error("定时任务执行失败: [{}] {}", job.getJobName(), cause != null ? cause.getMessage() : e.getMessage(), e);
             } finally {
-                scheduleLog.setFinishTime(LocalDateTime.now());
-                scheduleLog.setDuration(System.currentTimeMillis() - startTime);
+                LocalDateTime endTime = LocalDateTime.now();
+                scheduleLog.setFinishTime(endTime);
+                scheduleLog.setDuration(System.currentTimeMillis() - startMillis);
                 try {
                     logService.saveLog(scheduleLog);
                 } finally {
@@ -225,6 +233,27 @@ public class ScheduleConfig {
                         runningJobIds.remove(job.getId());
                         runningJobNames.remove(job.getId());
                         runningJobStartTimes.remove(job.getId());
+                    }
+                }
+
+                // 根据推送策略发送通知（跳过的任务不推送）
+                if (!skipped) {
+                    try {
+                        String notifyStrategy = job.getNotifyStrategy();
+                        boolean shouldNotify = shouldNotify(notifyStrategy, scheduleLog.getStatus());
+                        if (shouldNotify) {
+                            notifyManager.sendTaskResult(
+                                    job.getJobName(),
+                                    scheduleLog.getStatus(),
+                                    triggerType,
+                                    startTime,
+                                    endTime,
+                                    scheduleLog.getDuration(),
+                                    scheduleLog.getErrorMsg()
+                            );
+                        }
+                    } catch (Exception e) {
+                        log.warn("发送通知失败: {}", e.getMessage());
                     }
                 }
             }
@@ -265,6 +294,30 @@ public class ScheduleConfig {
         } catch (Exception e) {
             log.warn("解析任务参数失败: {}", paramsJson, e);
             return null;
+        }
+    }
+
+    /**
+     * 判断是否需要发送通知
+     * @param notifyStrategy 推送策略 (ALWAYS/FAIL_ONLY/DISABLED/null)
+     * @param status 执行状态 (1=成功, 0=失败)
+     * @return true=需要推送
+     */
+    private boolean shouldNotify(String notifyStrategy, Integer status) {
+        // 未配置策略时，默认不推送（由用户自行选择）
+        if (notifyStrategy == null || notifyStrategy.isBlank()) {
+            return false;
+        }
+
+        switch (notifyStrategy) {
+            case "ALWAYS":
+                return true;
+            case "FAIL_ONLY":
+                return status != null && status == 0;
+            case "DISABLED":
+                return false;
+            default:
+                return false;
         }
     }
 

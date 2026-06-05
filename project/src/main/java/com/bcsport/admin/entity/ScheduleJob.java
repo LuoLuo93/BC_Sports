@@ -44,4 +44,8 @@ public class ScheduleJob extends BaseEntity {
     @ApiModelProperty("任务参数(JSON)")
     @TableField("PARAMS")
     private String params;
+
+    @ApiModelProperty("推送策略(ALWAYS/FAIL_ONLY/DISABLED)")
+    @TableField("notify_strategy")
+    private String notifyStrategy;
 }

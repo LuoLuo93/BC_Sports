@@ -174,6 +174,66 @@
           </el-form>
         </el-tab-pane>
 
+        <!-- 通知配置 -->
+        <el-tab-pane label="通知配置" name="notify">
+          <el-form label-width="160px" class="settings-form" v-loading="loading">
+            <el-divider content-position="left">企业微信群机器人</el-divider>
+
+            <el-form-item label="Webhook URL">
+              <el-input
+                v-model="form['schedule.notify.webhookUrl']"
+                placeholder="https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxx"
+                style="max-width: 500px"
+              >
+                <template #append>
+                  <el-button @click="testWebhook" :loading="testLoading">测试</el-button>
+                </template>
+              </el-input>
+              <div class="form-tip">
+                企业微信群机器人的 Webhook 地址，用于接收定时任务执行通知。
+                <br>获取方式：群聊 → 右上角「...」→「群机器人」→「添加」→ 复制 Webhook 地址
+              </div>
+            </el-form-item>
+
+            <el-form-item label="默认推送策略">
+              <el-select v-model="form['schedule.notify.defaultStrategy']" style="max-width: 200px">
+                <el-option label="不推送" value="DISABLED" />
+                <el-option label="仅失败推送" value="FAIL_ONLY" />
+                <el-option label="总是推送" value="ALWAYS" />
+              </el-select>
+              <div class="form-tip">新建定时任务时的默认推送策略（可在任务中单独修改）</div>
+            </el-form-item>
+
+            <el-divider content-position="left">消息格式预览</el-divider>
+
+            <div class="notify-preview">
+              <div class="preview-card success">
+                <div class="preview-title">✅ 任务成功通知</div>
+                <div class="preview-content">
+                  <div>任务名称：iHR员工同步</div>
+                  <div>执行状态：成功</div>
+                  <div>触发类型：CRON定时</div>
+                  <div>开始时间：2026-06-05 10:00:00</div>
+                  <div>结束时间：2026-06-05 10:00:02</div>
+                  <div>执行耗时：2.3s</div>
+                </div>
+              </div>
+              <div class="preview-card fail">
+                <div class="preview-title">❌ 任务失败通知</div>
+                <div class="preview-content">
+                  <div>任务名称：南讯CRM会员标签推送</div>
+                  <div>执行状态：失败</div>
+                  <div>触发类型：手动触发</div>
+                  <div>开始时间：2026-06-05 10:05:00</div>
+                  <div>结束时间：2026-06-05 10:05:45</div>
+                  <div>执行耗时：45.2s</div>
+                  <div>错误信息：API调用失败...</div>
+                </div>
+              </div>
+            </div>
+          </el-form>
+        </el-tab-pane>
+
         <!-- 系统维护 -->
         <el-tab-pane label="系统维护" name="maintenance">
           <div class="maintenance-section">
@@ -293,7 +353,9 @@ const form = reactive({
   'sys.themeMode': 'light',
   'sys.primaryColor': '#1d4ed8',
   'sys.sidebarStyle': 'dark',
-  'sys.logoUrl': ''
+  'sys.logoUrl': '',
+  'schedule.notify.webhookUrl': '',
+  'schedule.notify.defaultStrategy': 'FAIL_ONLY'
 })
 
 // 维护相关
@@ -302,6 +364,9 @@ const healthInfo = ref(null)
 const cacheClearing = ref(false)
 const logCleaning = ref(false)
 const logCleanDays = ref(30)
+
+// 通知测试
+const testLoading = ref(false)
 
 const uploadHeaders = computed(() => {
   const token = document.cookie.match(/JSESSIONID=[^;]+/)?.[0]
@@ -376,6 +441,32 @@ async function checkHealth() {
     // handled by interceptor
   } finally {
     healthLoading.value = false
+  }
+}
+
+async function testWebhook() {
+  const url = form['schedule.notify.webhookUrl']
+  if (!url) {
+    ElMessage.warning('请先输入 Webhook URL')
+    return
+  }
+  if (!url.startsWith('https://qyapi.weixin.qq.com/')) {
+    ElMessage.warning('Webhook URL 格式不正确，应以 https://qyapi.weixin.qq.com/ 开头')
+    return
+  }
+
+  testLoading.value = true
+  try {
+    const res = await request.post('/api/notify/test-webhook', { webhookUrl: url })
+    if (res.code === 200) {
+      ElMessage.success('测试消息已发送，请查看企业微信群')
+    } else {
+      ElMessage.error(res.message || '测试失败')
+    }
+  } catch {
+    // handled by interceptor
+  } finally {
+    testLoading.value = false
   }
 }
 
@@ -610,5 +701,47 @@ function handleLogoSuccess(response) {
   gap: 6px;
   color: #8c939d;
   font-size: 13px;
+}
+
+/* ===== Notify Preview ===== */
+.notify-preview {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+  max-width: 640px;
+}
+
+.preview-card {
+  border-radius: 12px;
+  padding: 16px;
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.preview-card.success {
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border: 1px solid #86efac;
+}
+
+.preview-card.fail {
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  border: 1px solid #fca5a5;
+}
+
+.preview-title {
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 8px;
+  color: #1f2937;
+}
+
+.preview-content {
+  color: #4b5563;
+}
+
+.preview-content div {
+  padding-left: 12px;
+  border-left: 3px solid #d1d5db;
+  margin-bottom: 4px;
 }
 </style>

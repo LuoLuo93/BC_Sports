@@ -48,6 +48,9 @@ public class ScheduleJobVO {
     @ApiModelProperty("任务参数(JSON)")
     private String params;
 
+    @ApiModelProperty("推送策略(ALWAYS/FAIL_ONLY/DISABLED)")
+    private String notifyStrategy;
+
     @ApiModelProperty("参数定义")
     private List<Map<String, String>> paramDefs;
 

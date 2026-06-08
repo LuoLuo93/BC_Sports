@@ -70,3 +70,5 @@ project/frontend/node_modules/
 # Temp scripts
 kill*.bat
 *.security
+# Allow TLS override file
+!project/tls-override.security

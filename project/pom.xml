@@ -130,11 +130,11 @@
             <version>5.2.5</version>
         </dependency>
 
-        <!-- Knife4j API 文档 -->
+        <!-- Knife4j API 文档 (Spring Boot 3.x 版本) -->
         <dependency>
             <groupId>com.github.xiaoymin</groupId>
-            <artifactId>knife4j-spring-boot-starter</artifactId>
-            <version>${knife4j.version}</version>
+            <artifactId>knife4j-openapi3-jakarta-spring-boot-starter</artifactId>
+            <version>4.5.0</version>
         </dependency>
 
         <!-- Spring Boot DevTools (开发环境) -->

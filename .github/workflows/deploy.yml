@@ -46,9 +46,8 @@ jobs:
           $javaOpts = "-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8 -Duser.language=zh -Duser.region=CN"
           $tlsParam = ""
           if (Test-Path "tls-override.security") {
-            $tlsParam = "-Djava.security.properties=./tls-override.security"
+            $tlsParam = '-Djava.security.properties=./tls-override.security'
           }
-          Start-Process -FilePath "java" `
-            -ArgumentList "$javaOpts $tlsParam -jar target/bc-sports-admin-1.0.0.jar --spring.profiles.active=prod" `
-            -WindowStyle Hidden
+          $allArgs = "$javaOpts $tlsParam -jar target/bc-sports-admin-1.0.0.jar --spring.profiles.active=prod"
+          Start-Process -FilePath "java" -ArgumentList $allArgs -WindowStyle Hidden
           Write-Host "Service started"

@@ -136,6 +136,12 @@
             <artifactId>knife4j-openapi3-jakarta-spring-boot-starter</artifactId>
             <version>4.5.0</version>
         </dependency>
+        <!-- Swagger 2 兼容层 (让旧注解 @ApiModelProperty 等继续工作) -->
+        <dependency>
+            <groupId>io.swagger</groupId>
+            <artifactId>swagger-annotations</artifactId>
+            <version>1.6.11</version>
+        </dependency>
 
         <!-- Spring Boot DevTools (开发环境) -->
         <dependency>

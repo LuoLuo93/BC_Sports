@@ -23,13 +23,13 @@ public class User extends BaseEntity {
     /**
      * 校验分组：新增
      */
-    public interface Create extends javax.validation.groups.Default {
+    public interface Create extends jakarta.validation.groups.Default {
     }
 
     /**
      * 校验分组：更新
      */
-    public interface Update extends javax.validation.groups.Default {
+    public interface Update extends jakarta.validation.groups.Default {
     }
 
     /**

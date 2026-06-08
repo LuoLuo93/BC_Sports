@@ -15,7 +15,7 @@ spring:
   datasource:
     type: com.alibaba.druid.pool.DruidDataSource
     driver-class-name: oracle.jdbc.OracleDriver
-    url: jdbc:oracle:thin:@//localhost:1521/freepdb1
+    url: jdbc:oracle:thin:@//192.168.104.167:1521/freepdb1
     username: ${DB_USERNAME:BC_ERP_MANAGE}
     password: ${DB_PASSWORD:123456}
     druid:

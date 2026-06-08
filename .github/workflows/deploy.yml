@@ -22,7 +22,7 @@ jobs:
           npm run build
 
       - name: 构建后端
-        run: mvnd clean package -DskipTests -q
+        run: mvnd clean package -DskipTests -q -U
 
       - name: 停止旧服务
         shell: powershell

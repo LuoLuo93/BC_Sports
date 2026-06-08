@@ -1,10 +1,14 @@
 package com.bcsport.admin.controller;
 
 import com.bcsport.admin.common.Result;
+import com.bcsport.admin.config.csrf.CsrfFilter;
 import com.bcsport.admin.dto.LoginDTO;
+import com.bcsport.admin.entity.User;
 import com.bcsport.admin.annotation.OperLog;
 import com.bcsport.admin.service.AuthCacheService;
 import com.bcsport.admin.service.ConfigService;
+import com.bcsport.admin.service.UserService;
+import com.bcsport.admin.util.BCryptPasswordUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.authc.UsernamePasswordToken;
@@ -16,6 +20,8 @@ import org.apache.shiro.web.mgt.DefaultWebSecurityManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
 
 /**
  * 认证控制器
@@ -29,6 +35,9 @@ public class AuthController {
 
     @Autowired
     private ConfigService configService;
+
+    @Autowired
+    private UserService userService;
     
     /**
      * 登录页面
@@ -101,6 +110,20 @@ public class AuthController {
 
             // 绑定新会话
             authCacheService.bindUserSession(username, currentSessionId);
+
+            // 检查是否需要迁移密码（从 MD5 到 BCrypt）
+            // 直接查库判断 passwordNew 字段，不依赖 Session 属性传递（认证阶段 Session 可能不可用）
+            try {
+                User user = userService.getByUsername(username);
+                if (user != null && (user.getPasswordNew() == null || user.getPasswordNew().isEmpty())) {
+                    String newBCryptPassword = BCryptPasswordUtil.encrypt(loginDTO.getPassword());
+                    userService.migratePassword(user.getId(), newBCryptPassword);
+                    log.info("用户 {} 密码已从 MD5 迁移到 BCrypt", username);
+                }
+            } catch (Exception e) {
+                log.error("用户 {} 密码迁移失败: {}", username, e.getMessage());
+                // 迁移失败不影响登录
+            }
 
             log.info("用户登录成功: {}", username);
             return Result.success("登录成功", null);
@@ -400,6 +423,21 @@ public class AuthController {
     @GetMapping("/erp/employee-management")
     public String erpEmployeeManagementPage() {
         return "erp/employee-management";
+    }
+
+    /**
+     * 获取 CSRF Token
+     *
+     * 生成并返回 CSRF Token，存储到 Shiro Session 中
+     * 注意：必须使用 Shiro Session 而非 Servlet Session，避免 Servlet 容器覆盖 JSESSIONID Cookie
+     */
+    @GetMapping("/api/csrf")
+    @ResponseBody
+    public Result<String> getCsrfToken() {
+        Session session = SecurityUtils.getSubject().getSession();
+        String token = UUID.randomUUID().toString();
+        session.setAttribute(CsrfFilter.CSRF_TOKEN_ATTR, token);
+        return Result.success(token);
     }
 
 }

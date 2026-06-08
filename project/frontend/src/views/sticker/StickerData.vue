@@ -55,7 +55,7 @@
           v-model:current-page="query.pageNum"
           v-model:page-size="query.pageSize"
           :total="total"
-          :page-sizes="[20, 50, 100, 200]"
+          :page-sizes="PAGE_SIZES_LG"
           layout="total, sizes, prev, pager, next"
           @size-change="() => { query.pageNum = 1; loadData() }"
           @current-change="loadData"

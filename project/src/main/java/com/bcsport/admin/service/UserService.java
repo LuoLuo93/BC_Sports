@@ -84,4 +84,12 @@ public interface UserService extends IService<User> {
      * 测试用户角色分配功能
      */
     void testUserRoleAssignment();
+
+    /**
+     * 迁移用户密码到 BCrypt
+     *
+     * @param userId           用户ID
+     * @param newBCryptPassword BCrypt 加密后的密码
+     */
+    void migratePassword(String userId, String newBCryptPassword);
 }

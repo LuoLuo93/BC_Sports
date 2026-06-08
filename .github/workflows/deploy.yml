@@ -1,0 +1,54 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    defaults:
+      run:
+        working-directory: project
+
+    steps:
+      - name: 拉取最新代码
+        uses: actions/checkout@v4
+
+      - name: 构建前端
+        run: |
+          cd frontend
+          npm install
+          npm run build
+
+      - name: 构建后端
+        run: mvn clean package -DskipTests -q
+
+      - name: 停止旧服务
+        shell: powershell
+        run: |
+          $connections = netstat -aon | Select-String ":8080 " | Select-String "LISTENING"
+          if ($connections) {
+            $connections | ForEach-Object {
+              $pid = ($_ -split '\s+')[-1]
+              Write-Host "停止进程 PID: $pid"
+              Stop-Process -Id $pid -Force
+            }
+            Write-Host "等待端口释放..."
+            Start-Sleep -Seconds 3
+          } else {
+            Write-Host "端口 8080 无进程运行"
+          }
+
+      - name: 启动新服务
+        shell: powershell
+        run: |
+          $javaOpts = "-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8 -Duser.language=zh -Duser.region=CN"
+          $tlsParam = ""
+          if (Test-Path "tls-override.security") {
+            $tlsParam = "-Djava.security.properties=./tls-override.security"
+          }
+          Start-Process -FilePath "java" `
+            -ArgumentList "$javaOpts $tlsParam -jar target/bc-sports-admin-1.0.0.jar --spring.profiles.active=prod" `
+            -WindowStyle Hidden
+          Write-Host "服务已启动"

@@ -47,6 +47,11 @@ public class User extends BaseEntity {
     private String password;
 
     /**
+     * BCrypt 加密密码（用于渐进式迁移）
+     */
+    private String passwordNew;
+
+    /**
      * 盐
      */
     private String salt;

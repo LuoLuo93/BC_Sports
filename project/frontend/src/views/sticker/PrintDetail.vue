@@ -95,7 +95,7 @@
           v-model:current-page="detailPage"
           v-model:page-size="detailSize"
           :total="order.details.length"
-          :page-sizes="[20, 50, 100]"
+          :page-sizes="PAGE_SIZES_LG"
           layout="total, sizes, prev, pager, next"
           size="small"
           style="margin-top:8px;justify-content:flex-end"

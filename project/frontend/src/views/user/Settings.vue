@@ -91,7 +91,7 @@
 
             <el-form-item label="会话超时(分钟)">
               <el-input-number v-model.number="form['security.sessionTimeout']" :min="10" :max="1440" />
-              <div class="form-tip">超过此时间未操作自动登出</div>
+              <div class="form-tip">超过此时间未操作自动登出，同时影响 CSRF Token 有效期</div>
             </el-form-item>
 
             <el-form-item label="验证码开关">

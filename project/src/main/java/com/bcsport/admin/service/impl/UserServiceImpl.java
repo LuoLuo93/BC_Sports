@@ -18,6 +18,7 @@ import com.bcsport.admin.mapper.UserRoleMapper;
 import com.bcsport.admin.service.AuthCacheService;
 import com.bcsport.admin.service.UserService;
 import com.bcsport.admin.common.exception.BusinessException;
+import com.bcsport.admin.util.BCryptPasswordUtil;
 import com.bcsport.admin.util.BeanCopyUtils;
 import com.bcsport.admin.util.ShiroSecurityUtils;
 import com.bcsport.admin.util.PasswordUtil;
@@ -96,10 +97,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         if (existingUser != null) {
             throw new BusinessException("用户名已存在");
         }
-        String salt = PasswordUtil.generateSalt();
-        String encryptedPassword = PasswordUtil.encryptPassword(user.getPassword(), salt);
-        user.setSalt(salt);
+        // 使用 BCrypt 加密新密码
+        String encryptedPassword = BCryptPasswordUtil.encrypt(user.getPassword());
         user.setPassword(encryptedPassword);
+        user.setPasswordNew(encryptedPassword); // 新用户直接使用 BCrypt
         user.setStatus(1); // 默认启用
         return userMapper.insert(user) > 0;
     }
@@ -121,12 +122,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean resetPassword(String id, String newPassword) {
-        String salt = PasswordUtil.generateSalt();
-        String encryptedPassword = PasswordUtil.encryptPassword(newPassword, salt);
+        // 使用 BCrypt 加密新密码
+        String encryptedPassword = BCryptPasswordUtil.encrypt(newPassword);
         User user = new User();
         user.setId(id);
-        user.setSalt(salt);
         user.setPassword(encryptedPassword);
+        user.setPasswordNew(encryptedPassword); // 同时更新 BCrypt 字段
         return userMapper.updateById(user) > 0;
     }
     
@@ -137,19 +138,31 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         if (user == null) {
             throw new BusinessException("用户不存在");
         }
-        boolean verified = PasswordUtil.verifyPassword(oldPassword, user.getSalt(), user.getPassword());
+
+        // 验证旧密码（支持 BCrypt 和 MD5 两种格式）
+        boolean verified = false;
+        String passwordNew = user.getPasswordNew();
+        if (passwordNew != null && !passwordNew.isEmpty() && BCryptPasswordUtil.isBCryptFormat(passwordNew)) {
+            // 使用 BCrypt 验证
+            verified = BCryptPasswordUtil.matches(oldPassword, passwordNew);
+        } else {
+            // 使用旧的 MD5 验证
+            verified = PasswordUtil.verifyPassword(oldPassword, user.getSalt(), user.getPassword());
+        }
+
         if (!verified) {
             throw new BusinessException("当前密码验证不通过，请重新输入");
         }
         if (oldPassword.equals(newPassword)) {
             throw new BusinessException("新密码不能与旧密码完全一致，请设置一个新密码");
         }
-        String salt = PasswordUtil.generateSalt();
-        String encryptedPassword = PasswordUtil.encryptPassword(newPassword, salt);
+
+        // 使用 BCrypt 加密新密码
+        String encryptedPassword = BCryptPasswordUtil.encrypt(newPassword);
         User updateUser = new User();
         updateUser.setId(id);
-        updateUser.setSalt(salt);
         updateUser.setPassword(encryptedPassword);
+        updateUser.setPasswordNew(encryptedPassword);
         return userMapper.updateById(updateUser) > 0;
     }
     
@@ -231,8 +244,18 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
     @Override
     public void testUserRoleAssignment() {
-        // Implementation excluded to keep file length manageable, 
+        // Implementation excluded to keep file length manageable,
         // essentially test is deprecated or can be simplified.
         log.info("测试用户角色分配功能...");
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void migratePassword(String userId, String newBCryptPassword) {
+        User updateUser = new User();
+        updateUser.setId(userId);
+        updateUser.setPasswordNew(newBCryptPassword);
+        userMapper.updateById(updateUser);
+        log.info("用户 {} 密码已迁移到 BCrypt", userId);
     }
 }

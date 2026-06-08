@@ -5,6 +5,9 @@ import com.bcsport.admin.mapper.MenuMapper;
 import com.bcsport.admin.mapper.UserRoleMapper;
 import com.bcsport.admin.service.AuthCacheService;
 import com.bcsport.admin.service.UserService;
+import com.bcsport.admin.util.BCryptPasswordUtil;
+import com.bcsport.admin.util.PasswordUtil;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.shiro.authc.*;
 import org.apache.shiro.authz.AuthorizationInfo;
 import org.apache.shiro.authz.SimpleAuthorizationInfo;
@@ -14,7 +17,6 @@ import org.apache.shiro.util.ByteSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -22,21 +24,22 @@ import java.util.stream.Collectors;
 /**
  * 用户Realm - 认证和授权
  */
+@Slf4j
 @Component
 public class UserRealm extends AuthorizingRealm {
-    
+
     @Autowired
     private UserService userService;
-    
+
     @Autowired
     private UserRoleMapper userRoleMapper;
-    
+
     @Autowired
     private MenuMapper menuMapper;
 
     @Autowired
     private AuthCacheService authCacheService;
-    
+
     /**
      * 授权（获取用户角色和权限）
      */
@@ -51,7 +54,7 @@ public class UserRealm extends AuthorizingRealm {
         }
 
         SimpleAuthorizationInfo authorizationInfo = new SimpleAuthorizationInfo();
-        
+
         // 从数据库查询角色和权限
         if ("admin".equals(username)) {
             authorizationInfo.addRole("admin");
@@ -76,41 +79,63 @@ public class UserRealm extends AuthorizingRealm {
                     .collect(Collectors.toSet());
             authorizationInfo.setStringPermissions(permissionSet);
         }
-        
+
         return authorizationInfo;
     }
-    
+
     /**
      * 认证（验证用户身份）
+     *
+     * 支持渐进式迁移：
+     * 1. 优先使用 passwordNew 字段（BCrypt）
+     * 2. 如果 passwordNew 为空，使用旧的 password 字段（MD5）
+     * 3. BCryptCredentialsMatcher 会自动处理两种格式的验证
+     * 4. 登录成功后，在 AuthController 中处理密码迁移
      */
     @Override
     protected AuthenticationInfo doGetAuthenticationInfo(AuthenticationToken token) throws AuthenticationException {
-        UsernamePasswordToken usernamePasswordToken = (UsernamePasswordToken) token;
-        String username = usernamePasswordToken.getUsername();
-        
+        UsernamePasswordToken upToken = (UsernamePasswordToken) token;
+        String username = upToken.getUsername();
+
         // 从数据库查询用户信息
         User user = userService.getByUsername(username);
-        
+
         if (user == null) {
             throw new UnknownAccountException("用户不存在：" + username);
         }
-        
+
         if (user.getStatus() != null && user.getStatus() == 0) {
             throw new LockedAccountException("账号已被禁用: " + username);
         }
-        
-        // 设置加密盐值
+
+        // 优先使用 BCrypt 密码
+        String passwordNew = user.getPasswordNew();
+        if (passwordNew != null && !passwordNew.isEmpty() && BCryptPasswordUtil.isBCryptFormat(passwordNew)) {
+            // BCrypt 格式，返回给 BCryptCredentialsMatcher 验证
+            return new SimpleAuthenticationInfo(username, passwordNew, getName());
+        }
+
+        // 回退到旧的 MD5 格式
+        String oldPassword = user.getPassword();
+        if (oldPassword == null || oldPassword.isEmpty()) {
+            throw new IncorrectCredentialsException("用户名或密码错误");
+        }
+
+        // 设置盐值，返回给 BCryptCredentialsMatcher 验证
         ByteSource credentialsSalt = null;
         if (user.getSalt() != null && !user.getSalt().trim().isEmpty()) {
             credentialsSalt = ByteSource.Util.bytes(user.getSalt());
         }
-        
-        // 返回认证信息，Shiro会自动根据ShiroConfig中配置的matcher进行密码校验
-        return new SimpleAuthenticationInfo(
-                username, 
-                user.getPassword(), 
-                credentialsSalt, 
+
+        // 返回 MD5 凭证信息，BCryptCredentialsMatcher 会用 MD5 方式验证
+        // 登录成功后，AuthController 会通过检查 passwordNew 字段判断是否需要迁移
+        SimpleAuthenticationInfo info = new SimpleAuthenticationInfo(
+                username,
+                oldPassword,
+                credentialsSalt,
                 getName()
         );
+
+        return info;
     }
 }

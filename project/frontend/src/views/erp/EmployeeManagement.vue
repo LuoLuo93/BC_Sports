@@ -245,7 +245,7 @@ import { getIhrSyncStatus } from '@/api/ihr'
 import { syncStatusLabel, syncStatusTag } from '@/utils/syncStatus'
 import { Search, RefreshRight, Refresh } from '@element-plus/icons-vue'
 import { usePermission } from '@/composables/usePermission'
-import { PAGE_SIZES } from '@/utils/appConfig'
+import { PAGE_SIZES, defaultPageSize } from '@/utils/appConfig'
 
 const { hasPermission } = usePermission()
 const activeTab = ref('onboarding')
@@ -254,7 +254,7 @@ const activeTab = ref('onboarding')
 const onboardLoading = ref(false)
 const onboardData = ref([])
 const onboardTotal = ref(0)
-const onboardQuery = reactive({ staffName: '', staffNo: '', syncStatus: undefined, pageNum: 1, pageSize: PAGE_SIZES[0] })
+const onboardQuery = reactive({ staffName: '', staffNo: '', syncStatus: undefined, pageNum: 1, pageSize: defaultPageSize.value })
 
 async function loadOnboardData() {
   onboardLoading.value = true
@@ -267,7 +267,7 @@ function resetOnboardQuery() { onboardQuery.staffName = ''; onboardQuery.staffNo
 const adjLoading = ref(false)
 const adjData = ref([])
 const adjTotal = ref(0)
-const adjQuery = reactive({ staffName: '', staffNo: '', syncStatus: undefined, pageNum: 1, pageSize: PAGE_SIZES[0] })
+const adjQuery = reactive({ staffName: '', staffNo: '', syncStatus: undefined, pageNum: 1, pageSize: defaultPageSize.value })
 
 async function loadAdjData() {
   adjLoading.value = true
@@ -280,7 +280,7 @@ function resetAdjQuery() { adjQuery.staffName = ''; adjQuery.staffNo = ''; adjQu
 const leaveLoading = ref(false)
 const leaveData = ref([])
 const leaveTotal = ref(0)
-const leaveQuery = reactive({ staffName: '', staffNo: '', syncStatus: undefined, pageNum: 1, pageSize: PAGE_SIZES[0] })
+const leaveQuery = reactive({ staffName: '', staffNo: '', syncStatus: undefined, pageNum: 1, pageSize: defaultPageSize.value })
 
 async function loadLeaveData() {
   leaveLoading.value = true

@@ -29,7 +29,7 @@
             <ArrowDown />
           </el-icon>
         </div>
-        <transition name="submenu">
+        <transition :name="isAutoExpanding ? '' : 'submenu'">
           <div class="submenu" v-show="openMenus.includes(menu.id) && !collapsed">
             <sidebar-menu
               :menus="menu.children"
@@ -74,6 +74,7 @@ const props = defineProps({
 const router = useRouter()
 const route = useRoute()
 const openMenus = ref([])
+const isAutoExpanding = ref(false)
 
 const currentPath = computed(() => route.path)
 
@@ -117,36 +118,41 @@ function toggleMenu(menu) {
 
 // Auto-expand parent menus when current route matches a child
 function autoExpandForRoute() {
-  const current = route.path
-  const findAndExpand = (menus, ancestors = []) => {
-    for (const menu of menus) {
-      if (menu.visible !== 1 || menu.menuType === 2) continue
+  isAutoExpanding.value = true
+  try {
+    const current = route.path
+    const findAndExpand = (menus, ancestors = []) => {
+      for (const menu of menus) {
+        if (menu.visible !== 1 || menu.menuType === 2) continue
 
-      const isDirectMatch = menu.path && (
-        current === menu.path ||
-        current.startsWith(menu.path + '/') ||
-        current.startsWith(menu.path + '?')
-      )
+        const isDirectMatch = menu.path && (
+          current === menu.path ||
+          current.startsWith(menu.path + '/') ||
+          current.startsWith(menu.path + '?')
+        )
 
-      if (isDirectMatch) {
-        // Expand all ancestors
-        for (const ancestor of ancestors) {
-          if (!openMenus.value.includes(ancestor.id)) {
-            openMenus.value.push(ancestor.id)
+        if (isDirectMatch) {
+          // Expand all ancestors
+          for (const ancestor of ancestors) {
+            if (!openMenus.value.includes(ancestor.id)) {
+              openMenus.value.push(ancestor.id)
+            }
           }
+          return true
         }
-        return true
-      }
 
-      if (menu.children?.length) {
-        const found = findAndExpand(menu.children, [...ancestors, menu])
-        if (found) return true
+        if (menu.children?.length) {
+          const found = findAndExpand(menu.children, [...ancestors, menu])
+          if (found) return true
+        }
       }
+      return false
     }
-    return false
-  }
 
-  findAndExpand(props.menus)
+    findAndExpand(props.menus)
+  } finally {
+    nextTick(() => { isAutoExpanding.value = false })
+  }
 }
 
 function navigate(path) {
@@ -158,7 +164,7 @@ function navigate(path) {
 
 // Watch route changes to auto-expand
 watch(() => route.path, () => {
-  nextTick(() => autoExpandForRoute())
+  autoExpandForRoute()
 }, { immediate: true })
 </script>
 

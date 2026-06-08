@@ -1,11 +1,19 @@
-import request from './request'
+import request, { refreshCsrfToken, clearCsrfToken } from './request'
 
-export function login(data) {
-  return request.post('/doLogin', data)
+export async function login(data) {
+  const res = await request.post('/doLogin', data)
+  // 登录成功后获取 CSRF Token
+  await refreshCsrfToken()
+  return res
 }
 
-export function logout() {
-  return request.post('/doLogout')
+export async function logout() {
+  try {
+    await request.post('/doLogout')
+  } finally {
+    // 登出时清除 CSRF Token
+    clearCsrfToken()
+  }
 }
 
 export function getSessionInfo() {
@@ -18,4 +26,8 @@ export function checkSession() {
 
 export function getCaptcha() {
   return request.get('/api/captcha')
+}
+
+export function getCsrfToken() {
+  return request.get('/api/csrf')
 }

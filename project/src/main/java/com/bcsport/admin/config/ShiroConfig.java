@@ -1,8 +1,8 @@
 package com.bcsport.admin.config;
 
+import com.bcsport.admin.shiro.BCryptCredentialsMatcher;
 import com.bcsport.admin.shiro.UserRealm;
 import com.bcsport.admin.service.ConfigService;
-import org.apache.shiro.authc.credential.HashedCredentialsMatcher;
 import org.apache.shiro.mgt.SecurityManager;
 import org.apache.shiro.spring.security.interceptor.AuthorizationAttributeSourceAdvisor;
 import org.apache.shiro.spring.web.ShiroFilterFactoryBean;
@@ -11,6 +11,7 @@ import org.apache.shiro.session.SessionException;
 import org.apache.shiro.session.UnknownSessionException;
 import org.apache.shiro.session.mgt.SessionKey;
 import org.apache.shiro.web.servlet.AbstractShiroFilter;
+import org.apache.shiro.web.servlet.Cookie;
 import org.apache.shiro.web.servlet.SimpleCookie;
 import org.apache.shiro.web.session.mgt.DefaultWebSessionManager;
 import org.apache.shiro.web.mgt.DefaultWebSecurityManager;
@@ -41,8 +42,8 @@ public class ShiroConfig {
     public DefaultWebSecurityManager securityManager(UserRealm userRealm, ConfigService configService) {
         DefaultWebSecurityManager securityManager = new DefaultWebSecurityManager();
 
-        // 设置哈希凭证匹配器（MD5 + 2次迭代）
-        userRealm.setCredentialsMatcher(hashedCredentialsMatcher());
+        // 设置 BCrypt 凭证匹配器（支持渐进式迁移）
+        userRealm.setCredentialsMatcher(new BCryptCredentialsMatcher());
 
         // 设置Realm
         securityManager.setRealm(userRealm);
@@ -71,7 +72,7 @@ public class ShiroConfig {
                 }
             }
         };
-        sessionManager.setSessionIdCookie(sessionIdCookie());
+        sessionManager.setSessionIdCookie(sessionIdCookie(configService));
         int timeoutMinutes = configService.getInt("security.sessionTimeout", 30);
         sessionManager.setGlobalSessionTimeout(timeoutMinutes * 60 * 1000L);
         sessionManager.setDeleteInvalidSessions(true);
@@ -82,11 +83,14 @@ public class ShiroConfig {
      * 配置 Session Cookie
      */
     @Bean
-    public SimpleCookie sessionIdCookie() {
+    public SimpleCookie sessionIdCookie(ConfigService configService) {
         SimpleCookie cookie = new SimpleCookie("JSESSIONID");
         cookie.setHttpOnly(true);
-        cookie.setSecure(true);
+        cookie.setSecure(configService.getBoolean("security.cookie.secure", false));
         cookie.setMaxAge(-1); // 浏览器关闭即失效
+        // SameSite 从配置读取，开发环境默认 LAX，生产环境设为 STRICT
+        String sameSite = configService.getString("security.cookie.sameSite", "LAX");
+        cookie.setSameSite(Cookie.SameSiteOptions.valueOf(sameSite.toUpperCase()));
         return cookie;
     }
 
@@ -94,10 +98,10 @@ public class ShiroConfig {
      * 配置 RememberMe Cookie
      */
     @Bean
-    public SimpleCookie rememberMeCookie() {
+    public SimpleCookie rememberMeCookie(ConfigService configService) {
         SimpleCookie cookie = new SimpleCookie("rememberMe");
         cookie.setHttpOnly(true);
-        cookie.setSecure(true);
+        cookie.setSecure(configService.getBoolean("security.cookie.secure", false));
         cookie.setMaxAge(2592000); // 30天
         return cookie;
     }
@@ -106,9 +110,9 @@ public class ShiroConfig {
      * 配置 RememberMe 管理器
      */
     @Bean
-    public CookieRememberMeManager rememberMeManager() {
+    public CookieRememberMeManager rememberMeManager(ConfigService configService) {
         CookieRememberMeManager manager = new CookieRememberMeManager();
-        manager.setCookie(rememberMeCookie());
+        manager.setCookie(rememberMeCookie(configService));
         // 加密密钥：优先从环境变量读取，否则每次启动随机生成
         String envKey = System.getenv("SHIRO_REMEMBER_ME_KEY");
         byte[] cipherKey;
@@ -123,21 +127,6 @@ public class ShiroConfig {
         return manager;
     }
 
-    /**
-     * 配置密码匹配器
-     */
-    @Bean
-    public HashedCredentialsMatcher hashedCredentialsMatcher() {
-        HashedCredentialsMatcher matcher = new HashedCredentialsMatcher();
-        // 设置加密算法
-        matcher.setHashAlgorithmName("md5");
-        // 设置加密迭代次数（与PasswordUtil保持一致）
-        matcher.setHashIterations(2);
-        // 是否存储为16进制
-        matcher.setStoredCredentialsHexEncoded(true);
-        return matcher;
-    }
-    
     /**
      * 配置ShiroFilterFactoryBean
      */

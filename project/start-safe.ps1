@@ -21,8 +21,8 @@ Write-Host "[2/2] Starting BC Sports Admin..." -ForegroundColor Yellow
 Write-Host ""
 Write-Host "=====================================" -ForegroundColor Green
 Write-Host "  Starting service:" -ForegroundColor Green
-Write-Host "  - Max memory: 4GB" -ForegroundColor Green
-Write-Host "  - Initial memory: 2GB" -ForegroundColor Green
+Write-Host "  - Initial memory: 4GB" -ForegroundColor Green
+Write-Host "  - Max memory: 8GB" -ForegroundColor Green
 Write-Host "  URL: http://192.168.5.180:8080" -ForegroundColor Green
 Write-Host "  Press Ctrl+C to stop" -ForegroundColor Green
 Write-Host "=====================================" -ForegroundColor Green

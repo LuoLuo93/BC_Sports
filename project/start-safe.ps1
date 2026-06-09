@@ -21,8 +21,8 @@ Write-Host "[2/2] Starting BC Sports Admin..." -ForegroundColor Yellow
 Write-Host ""
 Write-Host "=====================================" -ForegroundColor Green
 Write-Host "  Starting service:" -ForegroundColor Green
-Write-Host "  - Initial memory: 4GB" -ForegroundColor Green
-Write-Host "  - Max memory: 8GB" -ForegroundColor Green
+Write-Host "  - Initial memory: 8GB" -ForegroundColor Green
+Write-Host "  - Max memory: 16GB" -ForegroundColor Green
 Write-Host "  URL: http://192.168.5.180:8080" -ForegroundColor Green
 Write-Host "  Press Ctrl+C to stop" -ForegroundColor Green
 Write-Host "=====================================" -ForegroundColor Green
@@ -30,4 +30,4 @@ Write-Host ""
 
 # Start Java using cmd (more reliable)
 Set-Location $projectDir
-cmd /c "java -Djava.security.properties=./tls-override.security -Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8 -Duser.language=zh -Duser.region=CN -Xms4g -Xmx8g -jar target/bc-sports-admin-1.0.0.jar --spring.profiles.active=prod"
+cmd /c "java -Djava.security.properties=./tls-override.security -Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8 -Duser.language=zh -Duser.region=CN -Xms8g -Xmx16g -jar target/bc-sports-admin-1.0.0.jar --spring.profiles.active=prod"

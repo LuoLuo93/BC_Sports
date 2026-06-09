@@ -50,7 +50,7 @@ jobs:
         shell: powershell
         run: |
           # Build the command
-          $cmd = "java -Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8 -Duser.language=zh -Duser.region=CN -Xms4g -Xmx8g"
+          $cmd = "java -Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8 -Duser.language=zh -Duser.region=CN -Xms8g -Xmx16g"
           if (Test-Path "tls-override.security") {
             $cmd = "$cmd -Djava.security.properties=./tls-override.security"
           }

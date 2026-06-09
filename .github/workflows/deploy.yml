@@ -43,11 +43,27 @@ jobs:
       - name: Start New Service
         shell: powershell
         run: |
-          $javaOpts = "-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8 -Duser.language=zh -Duser.region=CN"
-          $tlsParam = ""
+          # Build the command
+          $cmd = "java -Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8 -Duser.language=zh -Duser.region=CN"
           if (Test-Path "tls-override.security") {
-            $tlsParam = '-Djava.security.properties=./tls-override.security'
+            $cmd = "$cmd -Djava.security.properties=./tls-override.security"
           }
-          $allArgs = "$javaOpts $tlsParam -jar target/bc-sports-admin-1.0.0.jar --spring.profiles.active=prod"
-          Start-Process -FilePath "java" -ArgumentList $allArgs -WindowStyle Hidden
-          Write-Host "Service started"
+          $cmd = "$cmd -jar target/bc-sports-admin-1.0.0.jar --spring.profiles.active=prod"
+
+          Write-Host "Starting service with command: $cmd"
+
+          # Use cmd /c to start the process (more reliable)
+          Start-Process -FilePath "cmd" -ArgumentList "/c", "$cmd" -WindowStyle Hidden
+
+          # Wait for service to start
+          Write-Host "Waiting for service to start (20 seconds)..."
+          Start-Sleep -Seconds 20
+
+          # Check if service started
+          $javaProcess = Get-Process -Name "java" -ErrorAction SilentlyContinue
+          if ($javaProcess) {
+            Write-Host "Service started successfully! PID: $($javaProcess.Id)"
+          } else {
+            Write-Host "ERROR: Service failed to start!"
+            exit 1
+          }

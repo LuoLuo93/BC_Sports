@@ -19,6 +19,7 @@ public class CsrfFilterConfig {
      *
      * 优先级设置为 HIGHEST_PRECEDENCE + 2，在 XSS 过滤器之后执行
      * 过滤 API 请求和登录/登出请求
+     * 排除文件上传接口（multipart/form-data 请求）
      */
     @Bean
     public FilterRegistrationBean<CsrfFilter> csrfFilterRegistration() {

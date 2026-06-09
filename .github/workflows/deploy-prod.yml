@@ -12,23 +12,21 @@ jobs:
         working-directory: project
 
     steps:
-      # 1. 停止旧服务（在 checkout 之前，避免文件锁定）
+      # 1. 停止旧服务
       - name: Stop Old Service
         shell: powershell
         run: |
-          Write-Host "Stopping old service..."
-          # 停止 Windows 服务（如果存在）
+          Write-Host "Stopping old production service..."
           $nssmPath = "D:\tools\nssm.exe"
           if (Test-Path $nssmPath) {
             & $nssmPath stop "BC-Sports-Admin" 2>$null
           }
-          # 杀掉残留的 Java 进程
           taskkill /F /IM java.exe 2>$null
           Start-Sleep -Seconds 3
           Write-Host "Done"
         continue-on-error: true
 
-      # 2. 拉取最新代码
+      # 2. 拉取代码
       - name: Checkout Code
         uses: actions/checkout@v4
 
@@ -50,7 +48,7 @@ jobs:
           }
           Write-Host "Backend build completed"
 
-      # 5. 安装 NSSM 并创建 Windows 服务
+      # 5. 创建 Windows 服务
       - name: Setup Windows Service
         shell: powershell
         run: |
@@ -58,10 +56,10 @@ jobs:
           $projectDir = "D:\B.C.Sports\actions-runner\_work\BC_Sports\BC_Sports\project"
           $nssmPath = "D:\tools\nssm.exe"
 
-          # 刷新环境变量（确保 java 在 PATH 中）
+          # 刷新环境变量
           $env:PATH = [Environment]::GetEnvironmentVariable("PATH", "Machine") + ";" + [Environment]::GetEnvironmentVariable("PATH", "User")
 
-          # 检查 java 是否可用
+          # 检查 java
           $javaPath = (Get-Command java -ErrorAction SilentlyContinue).Source
           if (-not $javaPath) {
             Write-Host "ERROR: java not found in PATH!"
@@ -69,48 +67,35 @@ jobs:
           }
           Write-Host "Java found at: $javaPath"
 
-          # 下载 NSSM（如果不存在）
-          if (-not (Test-Path $nssmPath)) {
-            Write-Host "Downloading NSSM..."
-            New-Item -ItemType Directory -Force -Path "D:\tools"
-            # 配置 TLS 1.2
-            [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-            Invoke-WebRequest -Uri "https://nssm.cc/release/nssm-2.24.zip" -OutFile "D:\tools\nssm.zip"
-            Expand-Archive -Path "D:\tools\nssm.zip" -DestinationPath "D:\tools" -Force
-            Copy-Item "D:\tools\nssm-2.24\win64\nssm.exe" $nssmPath
-          }
-
           # 停止并删除旧服务
           Write-Host "Removing old service if exists..."
           & $nssmPath stop $serviceName 2>$null
           & $nssmPath remove $serviceName confirm 2>$null
 
-          # 创建新服务（使用完整 java 路径）
-          Write-Host "Creating new service..."
+          # 创建新服务（生产环境使用 prod profile）
+          Write-Host "Creating new production service..."
           & $nssmPath install $serviceName $javaPath "-Djava.security.properties=./tls-override.security -Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8 -Duser.language=zh -Duser.region=CN -Xms8g -Xmx16g -jar target/bc-sports-admin-1.0.0.jar --spring.profiles.active=prod"
           & $nssmPath set $serviceName AppDirectory $projectDir
           & $nssmPath set $serviceName DisplayName "BC Sports Admin System"
-          & $nssmPath set $serviceName Description "BC Sports Admin Backend Service"
+          & $nssmPath set $serviceName Description "BC Sports Admin Backend Service - Production"
           & $nssmPath set $serviceName Start SERVICE_AUTO_START
-          & $nssmPath set $serviceName AppStdout "$projectDir\logs\service-stdout.log"
-          & $nssmPath set $serviceName AppStderr "$projectDir\logs\service-stderr.log"
+          & $nssmPath set $serviceName AppStdout "$projectDir\logs\prod-service-stdout.log"
+          & $nssmPath set $serviceName AppStderr "$projectDir\logs\prod-service-stderr.log"
 
           # 启动服务
-          Write-Host "Starting service..."
+          Write-Host "Starting production service..."
           & $nssmPath start $serviceName
 
-          # 等待服务启动
           Start-Sleep -Seconds 10
 
-          # 验证服务状态
           $service = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
           if ($service -and $service.Status -eq "Running") {
-            Write-Host "Service installed and started successfully!"
+            Write-Host "Production service installed and started successfully!"
           } else {
-            Write-Host "WARNING: Service may not have started. Check service status."
+            Write-Host "WARNING: Service may not have started."
           }
 
-      # 6. 验证服务运行
+      # 6. 验证服务
       - name: Verify Service
         shell: powershell
         run: |
@@ -121,24 +106,23 @@ jobs:
             Start-Sleep -Seconds 5
             $waited += 5
 
-            $listening = netstat -ano | Select-String ":8080 " | Select-String "LISTENING"
+            $listening = netstat -ano | Select-String ":9091 " | Select-String "LISTENING"
             if ($listening) {
-              Write-Host "Service is running on port 8080!"
+              Write-Host "Production service is running on port 9091!"
               return
             }
 
             Write-Host "Waiting for service... ($waited/$maxWait seconds)"
           }
 
-          Write-Host "WARNING: Service may not be listening on port 8080"
-          Get-Content logs\service-stderr.log -Tail 20 -ErrorAction SilentlyContinue
+          Write-Host "WARNING: Service may not be listening on port 9091"
 
       # 7. 健康检查
       - name: Health Check
         shell: powershell
         run: |
           try {
-            $response = Invoke-WebRequest -Uri "http://localhost:8080/actuator/health" -UseBasicParsing -TimeoutSec 10
+            $response = Invoke-WebRequest -Uri "http://localhost:9091/actuator/health" -UseBasicParsing -TimeoutSec 10
             if ($response.StatusCode -eq 200) {
               Write-Host "Health check passed!"
               Write-Host "Response: $($response.Content)"
@@ -155,8 +139,8 @@ jobs:
         run: |
           Write-Host ""
           Write-Host "====================================="
-          Write-Host "  Deployment completed!"
-          Write-Host "  URL: http://192.168.5.180:8080"
-          Write-Host "  API Docs: http://192.168.5.180:8080/doc.html"
-          Write-Host "  Service: BC-Sports-Admin (Windows Service)"
+          Write-Host "  Production Deployment completed!"
+          Write-Host "  URL: http://192.168.5.180:9091"
+          Write-Host "  API Docs: http://192.168.5.180:9091/doc.html"
+          Write-Host "  Service: BC-Sports-Admin"
           Write-Host "====================================="

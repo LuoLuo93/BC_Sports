@@ -1,0 +1,19 @@
+# 生产环境配置
+server:
+  port: 9091
+
+spring:
+  datasource:
+    # 生产环境 Oracle（待确认地址）
+    url: jdbc:oracle:thin:@//192.168.104.167:1521/freepdb1
+
+# 生产环境日志级别
+logging:
+  level:
+    com.bcsport.admin: INFO
+    com.bcsport.admin.mapper: WARN
+    org.springframework: WARN
+    org.apache.shiro: WARN
+
+# 生产环境上传路径
+bc.upload.path: D:/B.C.Sports/actions-runner/_work/BC_Sports/BC_Sports/project/src/main/resources/static/images

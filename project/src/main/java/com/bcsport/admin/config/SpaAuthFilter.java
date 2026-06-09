@@ -33,8 +33,8 @@ public class SpaAuthFilter extends FormAuthenticationFilter {
             return true;
         }
 
-        // 页面请求：重定向到 SPA 入口（Vue Router 处理前端路由）
-        WebUtils.issueRedirect(request, response, "/");
+        // 页面请求：重定向到登录页
+        WebUtils.issueRedirect(request, response, "/login");
         return false;
     }
 

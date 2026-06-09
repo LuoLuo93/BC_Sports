@@ -369,8 +369,7 @@ const logCleanDays = ref(30)
 const testLoading = ref(false)
 
 const uploadHeaders = computed(() => {
-  const token = document.cookie.match(/JSESSIONID=[^;]+/)?.[0]
-  return token ? { 'X-Requested-With': 'XMLHttpRequest', Cookie: token } : {}
+  return {}
 })
 
 const logoFullUrl = computed(() => {

@@ -73,6 +73,8 @@ jobs:
           if (-not (Test-Path $nssmPath)) {
             Write-Host "Downloading NSSM..."
             New-Item -ItemType Directory -Force -Path "D:\tools"
+            # 配置 TLS 1.2
+            [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
             Invoke-WebRequest -Uri "https://nssm.cc/release/nssm-2.24.zip" -OutFile "D:\tools\nssm.zip"
             Expand-Archive -Path "D:\tools\nssm.zip" -DestinationPath "D:\tools" -Force
             Copy-Item "D:\tools\nssm-2.24\win64\nssm.exe" $nssmPath

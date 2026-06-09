@@ -1,6 +1,7 @@
 import axios from 'axios'
 
 const actuator = axios.create({
+  baseURL: '/bcsports',
   timeout: 10000,
   withCredentials: true
 })

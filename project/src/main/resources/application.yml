@@ -12,7 +12,7 @@ spring:
   application:
     name: bc-sports-admin
   profiles:
-    active: dev
+    active: ${SPRING_PROFILES_ACTIVE:dev}
   devtools:
     restart:
       enabled: false

@@ -1,10 +1,9 @@
-# 生产环境配置
+# 生产环境配置（覆盖 application.yml 中的默认值）
 server:
   port: 9091
 
 spring:
   datasource:
-    # 生产环境 Oracle（待确认地址）
     url: jdbc:oracle:thin:@//192.168.104.167:1521/freepdb1
 
 # 生产环境日志级别

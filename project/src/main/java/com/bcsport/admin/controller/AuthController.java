@@ -204,10 +204,16 @@ public class AuthController {
     @GetMapping("/api/csrf")
     @ResponseBody
     public Result<String> getCsrfToken() {
-        Session session = SecurityUtils.getSubject().getSession();
-        String token = UUID.randomUUID().toString();
-        session.setAttribute(CsrfFilter.CSRF_TOKEN_ATTR, token);
-        return Result.success(token);
+        try {
+            Session session = SecurityUtils.getSubject().getSession();
+            String token = UUID.randomUUID().toString();
+            session.setAttribute(CsrfFilter.CSRF_TOKEN_ATTR, token);
+            return Result.success(token);
+        } catch (Exception e) {
+            log.warn("获取 CSRF Token 失败: {}", e.getMessage());
+            // 返回一个新 Token，不存储到 Session
+            return Result.success(UUID.randomUUID().toString());
+        }
     }
 
 }

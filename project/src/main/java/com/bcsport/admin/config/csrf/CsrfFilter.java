@@ -59,6 +59,13 @@ public class CsrfFilter implements Filter {
             return;
         }
 
+        // 文件上传请求豁免（multipart/form-data）
+        String contentType = httpRequest.getContentType();
+        if (contentType != null && contentType.startsWith("multipart/")) {
+            chain.doFilter(request, response);
+            return;
+        }
+
         // 获取 Shiro Session（避免使用 Servlet Session，防止 JSESSIONID Cookie 被覆盖）
         String sessionToken = null;
         try {

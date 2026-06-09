@@ -17,7 +17,11 @@ jobs:
         shell: powershell
         run: |
           Write-Host "Stopping any running Java processes..."
-          taskkill /F /IM java.exe 2>$null
+          try {
+            taskkill /F /IM java.exe 2>$null
+          } catch {
+            Write-Host "Could not stop Java process (may need admin rights)"
+          }
           Start-Sleep -Seconds 3
           Write-Host "Done"
 

@@ -2,8 +2,11 @@
 # Usage: .\check-service.ps1
 # Run this script with Windows Task Scheduler to auto-restart if service is down
 
+# Project directory (change this to your actual path)
+$projectDir = "D:\B.C.Sports\actions-runner\_work\BC_Sports\BC_Sports\project"
+
 $url = "http://localhost:8080/actuator/health"
-$logFile = ".\monitor.log"
+$logFile = "$projectDir\monitor.log"
 
 function Write-Log {
     param($message)
@@ -22,10 +25,10 @@ function Start-Service {
         Start-Sleep -Seconds 2
     }
 
-    # Start new service
-    $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
-    Set-Location $scriptPath
+    # Switch to project directory
+    Set-Location $projectDir
 
+    # Start new service
     $javaArgs = @(
         "-Djava.security.properties=./tls-override.security",
         "-Dfile.encoding=UTF-8",

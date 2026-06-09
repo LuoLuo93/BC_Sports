@@ -2,6 +2,9 @@
 # Usage: .\monitor.ps1
 # This script monitors the Java service and auto-restarts if it crashes
 
+# Project directory (change this to your actual path)
+$projectDir = "D:\B.C.Sports\actions-runner\_work\BC_Sports\BC_Sports\project"
+
 $checkInterval = 60  # Check every 60 seconds
 $url = "http://localhost:8080/actuator/health"
 $maxFailures = 3     # Restart after 3 consecutive failures
@@ -11,6 +14,7 @@ Write-Host "=====================================" -ForegroundColor Cyan
 Write-Host "  BC Sports Admin - Service Monitor" -ForegroundColor Cyan
 Write-Host "=====================================" -ForegroundColor Cyan
 Write-Host ""
+Write-Host "Project directory: $projectDir" -ForegroundColor Gray
 Write-Host "Check interval: $checkInterval seconds" -ForegroundColor Gray
 Write-Host "Health check URL: $url" -ForegroundColor Gray
 Write-Host "Max failures before restart: $maxFailures" -ForegroundColor Gray
@@ -29,10 +33,10 @@ function Start-Service {
         Start-Sleep -Seconds 2
     }
 
-    # Start new service
-    $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
-    Set-Location $scriptPath
+    # Switch to project directory
+    Set-Location $projectDir
 
+    # Start new service
     $javaArgs = @(
         "-Djava.security.properties=./tls-override.security",
         "-Dfile.encoding=UTF-8",

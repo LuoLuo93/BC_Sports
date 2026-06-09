@@ -250,7 +250,7 @@ spring.servlet.multipart.max-file-size: 10MB
 spring.servlet.multipart.max-request-size: 50MB
 
 # 上传文件存储路径
-bc.upload.path: E:/work/BC_Sport/BcSportsDataManageSystem/project/src/main/resources/static/images
+bc.upload.path: D:/B.C.Sports/actions-runner/_work/BC_Sports/BC_Sports/project/src/main/resources/static/images
 
 # Actuator 监控
 management:

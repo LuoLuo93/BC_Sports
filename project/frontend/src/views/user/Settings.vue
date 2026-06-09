@@ -154,7 +154,7 @@
               <div class="logo-upload-area">
                 <el-upload
                   class="logo-uploader"
-                  action="/api/config/upload-logo"
+                  action="/bcsports/api/config/upload-logo"
                   :headers="uploadHeaders"
                   :show-file-list="false"
                   accept="image/png,image/jpeg,image/svg+xml"

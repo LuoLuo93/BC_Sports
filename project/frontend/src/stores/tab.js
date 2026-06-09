@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 
-const MAX_TABS = 15
+const MAX_TABS = 8
 
 export const useTabStore = defineStore('tab', {
   state: () => ({

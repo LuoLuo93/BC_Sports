@@ -23,7 +23,8 @@ Write-Host "=====================================" -ForegroundColor Green
 Write-Host "  Starting service:" -ForegroundColor Green
 Write-Host "  - Initial memory: 8GB" -ForegroundColor Green
 Write-Host "  - Max memory: 16GB" -ForegroundColor Green
-Write-Host "  URL: http://192.168.5.180:8080" -ForegroundColor Green
+Write-Host "  URL: http://localhost:8080/bcsports" -ForegroundColor Green
+Write-Host "  API Docs: http://localhost:8080/bcsports/doc.html" -ForegroundColor Green
 Write-Host "  Press Ctrl+C to stop" -ForegroundColor Green
 Write-Host "=====================================" -ForegroundColor Green
 Write-Host ""

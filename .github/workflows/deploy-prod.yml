@@ -67,10 +67,14 @@ jobs:
           }
           Write-Host "Java found at: $javaPath"
 
-          # 停止并删除旧服务
+          # 停止并删除旧服务（忽略错误）
           Write-Host "Removing old service if exists..."
-          & $nssmPath stop $serviceName 2>$null
-          & $nssmPath remove $serviceName confirm 2>$null
+          try {
+            & $nssmPath stop $serviceName 2>$null
+          } catch {}
+          try {
+            & $nssmPath remove $serviceName confirm 2>$null
+          } catch {}
 
           # 创建新服务（生产环境使用 prod profile）
           Write-Host "Creating new production service..."

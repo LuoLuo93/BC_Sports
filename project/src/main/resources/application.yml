@@ -24,9 +24,9 @@ spring:
     username: ${DB_USERNAME:BC_ERP_MANAGE}
     password: ${DB_PASSWORD:123456}
     druid:
-      initial-size: 5
-      min-idle: 5
-      max-active: 20
+      initial-size: 10
+      min-idle: 10
+      max-active: 50
       max-wait: 60000
       time-between-eviction-runs-millis: 60000
       min-evictable-idle-time-millis: 300000
@@ -47,9 +47,9 @@ spring:
       username: ${IHR_DB_USERNAME:sa}
       password: ${IHR_DB_PASSWORD:northland2047.}
       druid:
-        initial-size: 3
-        min-idle: 3
-        max-active: 20
+        initial-size: 10
+        min-idle: 10
+        max-active: 50
         max-wait: 60000
         time-between-eviction-runs-millis: 60000
         min-evictable-idle-time-millis: 300000
@@ -71,9 +71,9 @@ spring:
       username: ${QYWX_DB_USERNAME:sa}
       password: ${QYWX_DB_PASSWORD:northland2047.}
       druid:
-        initial-size: 3
-        min-idle: 3
-        max-active: 10
+        initial-size: 10
+        min-idle: 10
+        max-active: 30
         max-wait: 60000
         time-between-eviction-runs-millis: 30000
         min-evictable-idle-time-millis: 300000

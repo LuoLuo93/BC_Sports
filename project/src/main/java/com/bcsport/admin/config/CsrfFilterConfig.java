@@ -25,7 +25,7 @@ public class CsrfFilterConfig {
     public FilterRegistrationBean<CsrfFilter> csrfFilterRegistration() {
         FilterRegistrationBean<CsrfFilter> registration = new FilterRegistrationBean<>();
         registration.setFilter(new CsrfFilter());
-        registration.addUrlPatterns("/api/*", "/doLogin", "/doLogout");
+        registration.addUrlPatterns("/bcsports/api/*", "/bcsports/doLogin", "/bcsports/doLogout");
         registration.setName("csrfFilter");
         registration.setOrder(Ordered.HIGHEST_PRECEDENCE + 2);
         registration.setEnabled(true);

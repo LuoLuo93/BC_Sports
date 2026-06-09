@@ -1,7 +1,7 @@
 server:
   port: 8080
   servlet:
-    context-path: /
+    context-path: /bcsports
   tomcat:
     max-threads: 200
     min-spare-threads: 20
@@ -168,17 +168,17 @@ shiro:
   filter:
     chain-definition-manager:
       chain-definitions:
-        /login anon
-        /doLogin anon
-        /api/config/public anon
-        /assets/** anon
-        /static/** anon
-        /css/** anon
-        /js/** anon
-        /images/** anon
-        /favicon.ico anon
-        /index.avif anon
-        /index.html anon
+        /bcsports/login anon
+        /bcsports/doLogin anon
+        /bcsports/api/config/public anon
+        /bcsports/assets/** anon
+        /bcsports/static/** anon
+        /bcsports/css/** anon
+        /bcsports/js/** anon
+        /bcsports/images/** anon
+        /bcsports/favicon.ico anon
+        /bcsports/index.avif anon
+        /bcsports/index.html anon
         "/**" authc
 
 # Knife4j 配置

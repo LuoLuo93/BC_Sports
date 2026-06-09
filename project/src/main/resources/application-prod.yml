@@ -1,6 +1,8 @@
 # 生产环境配置（覆盖 application.yml 中的默认值）
 server:
   port: 9091
+  servlet:
+    context-path: /bcsports
 
 spring:
   datasource:

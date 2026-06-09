@@ -126,7 +126,7 @@ jobs:
         shell: powershell
         run: |
           try {
-            $response = Invoke-WebRequest -Uri "http://localhost:9091/actuator/health" -UseBasicParsing -TimeoutSec 10
+            $response = Invoke-WebRequest -Uri "http://localhost:9091/bcsports/actuator/health" -UseBasicParsing -TimeoutSec 10
             if ($response.StatusCode -eq 200) {
               Write-Host "Health check passed!"
               Write-Host "Response: $($response.Content)"
@@ -144,7 +144,7 @@ jobs:
           Write-Host ""
           Write-Host "====================================="
           Write-Host "  Production Deployment completed!"
-          Write-Host "  URL: http://192.168.5.180:9091"
-          Write-Host "  API Docs: http://192.168.5.180:9091/doc.html"
+          Write-Host "  URL: http://192.168.5.180:9091/bcsports"
+          Write-Host "  API Docs: http://192.168.5.180:9091/bcsports/doc.html"
           Write-Host "  Service: BC-Sports-Admin"
           Write-Host "====================================="

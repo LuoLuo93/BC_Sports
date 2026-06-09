@@ -22,20 +22,20 @@ public class CorsConfig implements WebMvcConfigurer {
             "http://127.0.0.1:5176"
         };
 
-        registry.addMapping("/api/**")
+        registry.addMapping("/bcsports/api/**")
                 .allowedOrigins(devOrigins)
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
                 .allowCredentials(true)
                 .maxAge(3600);
 
-        registry.addMapping("/doLogin")
+        registry.addMapping("/bcsports/doLogin")
                 .allowedOrigins(devOrigins)
                 .allowedMethods("POST", "OPTIONS")
                 .allowedHeaders("*")
                 .allowCredentials(true);
 
-        registry.addMapping("/doLogout")
+        registry.addMapping("/bcsports/doLogout")
                 .allowedOrigins(devOrigins)
                 .allowedMethods("POST", "OPTIONS")
                 .allowedHeaders("*")

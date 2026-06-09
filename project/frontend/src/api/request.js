@@ -4,6 +4,7 @@ import router from '@/router'
 import { ElMessage } from 'element-plus'
 
 const request = axios.create({
+  baseURL: '/bcsports',
   timeout: 60000,
   withCredentials: true
 })

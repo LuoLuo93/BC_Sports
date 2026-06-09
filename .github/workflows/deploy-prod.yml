@@ -34,6 +34,11 @@ jobs:
       - name: Build Frontend
         run: |
           cd frontend
+          # 清理前端缓存
+          Remove-Item -Recurse -Force node_modules\.vite -ErrorAction SilentlyContinue
+          Remove-Item -Recurse -Force ..\src\main\resources\static\assets -ErrorAction SilentlyContinue
+          Remove-Item -Force ..\src\main\resources\static\index.html -ErrorAction SilentlyContinue
+          # 安装依赖并构建
           npm install
           npm run build
           Write-Host "Frontend build completed"

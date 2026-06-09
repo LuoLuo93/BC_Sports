@@ -40,12 +40,12 @@ public class AuthController {
     private UserService userService;
     
     /**
-     * 登录页面
+     * 登录页面 - 返回 Vue SPA 入口
      */
     @GetMapping("/login")
     public String loginPage() {
         log.info("访问登录页面");
-        return "common/login";
+        return "forward:/index.html";
     }
     
     /**
@@ -171,258 +171,28 @@ public class AuthController {
     }
     
     /**
-     * 首页
+     * 首页 - 返回 Vue SPA 入口
      */
     @GetMapping({"/", "/index"})
     public String index() {
-        return "common/index";
+        return "forward:/index.html";
     }
     
     /**
-     * 菜单管理页面
+     * 所有页面路由 - 统一返回 Vue SPA 入口，由 Vue Router 处理前端路由
      */
-    @GetMapping("/system/menu")
-    public String menuPage() {
-        return "system/menu";
-    }
-    
-    /**
-     * 用户管理页面
-     */
-    @GetMapping("/system/user")
-    public String userPage() {
-        return "system/user";
-    }
-    
-    /**
-     * 角色管理页面
-     */
-    @GetMapping("/system/role")
-    public String rolePage() {
-        return "system/role";
-    }
-
-    /**
-     * 基础数据管理页面（品牌/地区/渠道类型/渠道性质）
-     */
-    @GetMapping("/bi/management")
-    public String biManagementPage() {
-        return "bi/bi-management";
-    }
-
-    /**
-     * 品牌管理页面 - 重定向到基础数据管理
-     */
-    @GetMapping("/bi/brand")
-    public String brandPage() {
-        return "redirect:/bi/management?tab=brand";
-    }
-
-    /**
-     * 部门管理页面
-     */
-    @GetMapping("/system/dept")
-    public String deptPage() {
-        return "system/dept";
-    }
-    
-    /**
-     * 数据字典页面
-     */
-    @GetMapping("/system/dict")
-    public String dictPage() {
-        return "system/dict";
-    }
-    
-    /**
-     * 数据统计页面
-     */
-    @GetMapping("/statistics")
-    public String statisticsPage() {
-        return "statistics/statistics";
-    }
-    
-    /**
-     * 报表管理页面
-     */
-    @GetMapping("/report")
-    public String reportPage() {
-        return "statistics/report";
-    }
-    
-    /**
-     * 消息通知页面
-     */
-    @GetMapping("/message")
-    public String messagePage() {
-        return "message/message";
-    }
-    
-    /**
-     * 帮助中心页面
-     */
-    @GetMapping("/help")
-    public String helpPage() {
-        return "help";
-    }
-    
-    /**
-     * 个人中心页面
-     */
-    @GetMapping("/profile")
-    public String profilePage() {
-        return "user/profile";
-    }
-    
-    /**
-     * 系统设置页面
-     */
-    @GetMapping("/settings")
-    public String settingsPage() {
-        return "settings";
-    }
-    
-    /**
-     * 403页面
-     */
-    @GetMapping("/403")
-    public String forbidden() {
-        return "403";
-    }
-
-    @GetMapping("/bi/region")
-    public String region() {
-        return "redirect:/bi/management?tab=region";
-    }
-
-    /**
-     * 渠道类型管理页面 - 重定向到基础数据管理
-     */
-    @GetMapping("/bi/channel-type")
-    public String channelTypePage() {
-        return "redirect:/bi/management?tab=channelType";
-    }
-
-    /**
-     * 渠道性质管理页面 - 重定向到基础数据管理
-     */
-    @GetMapping("/bi/channel-nature")
-    public String channelNaturePage() {
-        return "redirect:/bi/management?tab=channelNature";
-    }
-
-    /**
-     * 实体渠道配置页面
-     */
-    @GetMapping("/bi/entity-channel")
-    public String entityChannelPage() {
-        return "bi/entity-channel";
-    }
-
-    @GetMapping("/bi/entity-channel/form")
-    public String entityChannelFormPage(@RequestParam(required = false) String id, org.springframework.ui.Model model) {
-        model.addAttribute("editId", id != null ? id : "");
-        return "bi/entity-channel-form";
-    }
-
-    /**
-     * ERP 店铺管理页面
-     */
-    @GetMapping("/bi/erp-shop")
-    public String erpShopPage() {
-        return "bi/erp-shop";
-    }
-
-    /**
-     * ERP 仓库管理页面
-     */
-    @GetMapping("/bi/erp-warehouse")
-    public String erpWarehousePage() {
-        return "bi/erp-warehouse";
-    }
-
-    /**
-     * ERP 客户管理页面
-     */
-    @GetMapping("/bi/erp-customer")
-    public String erpCustomerPage() {
-        return "bi/erp-customer";
-    }
-
-    /**
-     * 定时任务管理页面
-     */
-    @GetMapping("/monitor/schedule")
-    public String schedulePage() {
-        return "monitor/schedule";
-    }
-
-    /**
-     * 企微客户标签管理页面
-     */
-    @GetMapping("/qywx/customer-tag")
-    public String customerTagPage() {
-        return "qywx/customer-tag";
-    }
-
-    /**
-     * IHR入职排除页面
-     */
-    @GetMapping("/ihr/onboarding-exclusion")
-    public String onboardingExclusionPage(org.springframework.ui.Model model) {
-        model.addAttribute("exclusionType", 1);
-        model.addAttribute("pageTitle", "入职排除");
-        return "ihr/exclusion";
-    }
-
-    /**
-     * IHR离职排除页面
-     */
-    @GetMapping("/ihr/leaving-exclusion")
-    public String leavingExclusionPage(org.springframework.ui.Model model) {
-        model.addAttribute("exclusionType", 2);
-        model.addAttribute("pageTitle", "离职排除");
-        return "ihr/exclusion";
-    }
-
-    /**
-     * IHR人员入职管理页面
-     */
-    @GetMapping("/ihr/onboarding-management")
-    public String onboardingManagementPage() {
-        return "ihr/onboarding-management";
-    }
-
-    /**
-     * IHR人员调整管理页面
-     */
-    @GetMapping("/ihr/adjustment-management")
-    public String adjustmentManagementPage() {
-        return "ihr/adjustment-management";
-    }
-
-    /**
-     * IHR人员离职管理页面
-     */
-    @GetMapping("/ihr/leaving-management")
-    public String leavingManagementPage() {
-        return "ihr/leaving-management";
-    }
-
-    /**
-     * IHR人员管理页面（入职/调整/离职三合一）
-     */
-    @GetMapping("/ihr/employee-management")
-    public String ihrEmployeeManagementPage() {
-        return "ihr/employee-management";
-    }
-
-    /**
-     * ERP人员管理页面
-     */
-    @GetMapping("/erp/employee-management")
-    public String erpEmployeeManagementPage() {
-        return "erp/employee-management";
+    @GetMapping({
+        "/system/menu", "/system/user", "/system/role", "/system/dept", "/system/dict",
+        "/bi/management", "/bi/brand", "/bi/region", "/bi/channel-type", "/bi/channel-nature",
+        "/bi/entity-channel", "/bi/entity-channel/form", "/bi/erp-shop", "/bi/erp-warehouse", "/bi/erp-customer",
+        "/statistics", "/report", "/message", "/help", "/profile", "/settings", "/403",
+        "/monitor/schedule", "/qywx/customer-tag",
+        "/ihr/onboarding-exclusion", "/ihr/leaving-exclusion",
+        "/ihr/onboarding-management", "/ihr/adjustment-management", "/ihr/leaving-management", "/ihr/employee-management",
+        "/erp/employee-management"
+    })
+    public String vuePage() {
+        return "forward:/index.html";
     }
 
     /**

@@ -177,6 +177,8 @@ shiro:
         /js/** anon
         /images/** anon
         /favicon.ico anon
+        /index.avif anon
+        /index.html anon
         "/**" authc
 
 # Knife4j 配置

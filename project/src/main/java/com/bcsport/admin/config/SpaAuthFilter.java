@@ -46,6 +46,7 @@ public class SpaAuthFilter extends FormAuthenticationFilter {
         // 静态资源放行
         if (uri.startsWith("/assets/") || uri.endsWith(".js") || uri.endsWith(".css")
                 || uri.endsWith(".ico") || uri.endsWith(".png") || uri.endsWith(".jpg")
+                || uri.endsWith(".avif") || uri.endsWith(".webp")
                 || uri.endsWith(".svg") || uri.endsWith(".woff") || uri.endsWith(".woff2")
                 || uri.endsWith(".ttf") || uri.endsWith(".eot")) {
             return true;

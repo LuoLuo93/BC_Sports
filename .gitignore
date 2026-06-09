@@ -61,8 +61,9 @@ cookies2.txt
 # Frontend build output
 project/src/main/resources/static/assets/
 project/src/main/resources/static/images/
-project/src/main/resources/static/index.html
-project/src/main/resources/static/index.avif
+# Allow index.html and index.avif for Vue SPA
+# project/src/main/resources/static/index.html
+# project/src/main/resources/static/index.avif
 
 # Node modules
 project/frontend/node_modules/

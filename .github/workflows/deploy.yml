@@ -17,14 +17,9 @@ jobs:
         shell: powershell
         run: |
           Write-Host "Stopping any running Java processes..."
-          $processes = Get-Process -Name "java" -ErrorAction SilentlyContinue
-          if ($processes) {
-            $processes | Stop-Process -Force
-            Write-Host "Stopped $($processes.Count) Java process(es)"
-            Start-Sleep -Seconds 3
-          } else {
-            Write-Host "No running Java processes found"
-          }
+          taskkill /F /IM java.exe 2>$null
+          Start-Sleep -Seconds 3
+          Write-Host "Done"
 
       # 2. 拉取最新代码
       - name: Checkout Code

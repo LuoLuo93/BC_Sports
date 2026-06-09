@@ -49,18 +49,11 @@ jobs:
       - name: Start New Service
         shell: powershell
         run: |
-          # Build the command
-          $cmd = "java -Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8 -Duser.language=zh -Duser.region=CN -Xms8g -Xmx16g"
-          if (Test-Path "tls-override.security") {
-            $cmd = "$cmd -Djava.security.properties=./tls-override.security"
-          }
-          $cmd = "$cmd -jar target/bc-sports-admin-1.0.0.jar --spring.profiles.active=prod"
-
-          Write-Host "Starting service..."
-          Start-Process -FilePath "cmd" -ArgumentList "/c", "$cmd" -WindowStyle Hidden
+          Write-Host "Starting service using start.bat..."
+          Start-Process -FilePath "cmd" -ArgumentList "/c", "start.bat" -WindowStyle Hidden
 
           # Wait for service to start with timeout
-          $maxWait = 60
+          $maxWait = 90
           $waited = 0
           $started = $false
 
@@ -71,9 +64,12 @@ jobs:
             # Check if Java process exists
             $javaProcess = Get-Process -Name "java" -ErrorAction SilentlyContinue
             if (-not $javaProcess) {
-              Write-Host "ERROR: Java process died! Check logs."
-              Get-Content logs\admin.log -Tail 50
-              exit 1
+              Write-Host "WARNING: Java process not found after $waited seconds..."
+              if ($waited -ge 30) {
+                Write-Host "ERROR: Java process died! Check logs."
+                Get-Content logs\admin.log -Tail 50
+                exit 1
+              }
             }
 
             # Check if port 8080 is listening
@@ -81,7 +77,9 @@ jobs:
             if ($listening) {
               $started = $true
               Write-Host "Service started successfully after $waited seconds!"
-              Write-Host "PID: $($javaProcess.Id)"
+              if ($javaProcess) {
+                Write-Host "PID: $($javaProcess.Id)"
+              }
               break
             }
 

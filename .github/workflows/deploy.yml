@@ -16,9 +16,14 @@ jobs:
       - name: Stop Old Service
         shell: powershell
         run: |
-          Write-Host "Stopping any running Java processes..."
-          $result = cmd /c "taskkill /F /IM java.exe 2>&1"
-          Write-Host $result
+          Write-Host "Stopping old service..."
+          # 停止 Windows 服务（如果存在）
+          $nssmPath = "D:\tools\nssm.exe"
+          if (Test-Path $nssmPath) {
+            & $nssmPath stop "BC-Sports-Admin" 2>$null
+          }
+          # 杀掉残留的 Java 进程
+          taskkill /F /IM java.exe 2>$null
           Start-Sleep -Seconds 3
           Write-Host "Done"
         continue-on-error: true
@@ -45,59 +50,91 @@ jobs:
           }
           Write-Host "Backend build completed"
 
-      # 5. 启动新服务
-      - name: Start New Service
+      # 5. 安装 NSSM 并创建 Windows 服务
+      - name: Setup Windows Service
         shell: powershell
         run: |
-          Write-Host "Starting service using start.bat..."
-          Start-Process -FilePath "cmd" -ArgumentList "/c", "start.bat" -WindowStyle Hidden
+          $serviceName = "BC-Sports-Admin"
+          $projectDir = "D:\B.C.Sports\actions-runner\_work\BC_Sports\BC_Sports\project"
+          $nssmPath = "D:\tools\nssm.exe"
 
-          # Wait for service to start with timeout
-          $maxWait = 90
+          # 刷新环境变量（确保 java 在 PATH 中）
+          $env:PATH = [Environment]::GetEnvironmentVariable("PATH", "Machine") + ";" + [Environment]::GetEnvironmentVariable("PATH", "User")
+
+          # 检查 java 是否可用
+          $javaPath = (Get-Command java -ErrorAction SilentlyContinue).Source
+          if (-not $javaPath) {
+            Write-Host "ERROR: java not found in PATH!"
+            exit 1
+          }
+          Write-Host "Java found at: $javaPath"
+
+          # 下载 NSSM（如果不存在）
+          if (-not (Test-Path $nssmPath)) {
+            Write-Host "Downloading NSSM..."
+            New-Item -ItemType Directory -Force -Path "D:\tools"
+            Invoke-WebRequest -Uri "https://nssm.cc/release/nssm-2.24.zip" -OutFile "D:\tools\nssm.zip"
+            Expand-Archive -Path "D:\tools\nssm.zip" -DestinationPath "D:\tools" -Force
+            Copy-Item "D:\tools\nssm-2.24\win64\nssm.exe" $nssmPath
+          }
+
+          # 停止并删除旧服务
+          Write-Host "Removing old service if exists..."
+          & $nssmPath stop $serviceName 2>$null
+          & $nssmPath remove $serviceName confirm 2>$null
+
+          # 创建新服务（使用完整 java 路径）
+          Write-Host "Creating new service..."
+          & $nssmPath install $serviceName $javaPath "-Djava.security.properties=./tls-override.security -Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8 -Duser.language=zh -Duser.region=CN -Xms8g -Xmx16g -jar target/bc-sports-admin-1.0.0.jar --spring.profiles.active=prod"
+          & $nssmPath set $serviceName AppDirectory $projectDir
+          & $nssmPath set $serviceName DisplayName "BC Sports Admin System"
+          & $nssmPath set $serviceName Description "BC Sports Admin Backend Service"
+          & $nssmPath set $serviceName Start SERVICE_AUTO_START
+          & $nssmPath set $serviceName AppStdout "$projectDir\logs\service-stdout.log"
+          & $nssmPath set $serviceName AppStderr "$projectDir\logs\service-stderr.log"
+
+          # 启动服务
+          Write-Host "Starting service..."
+          & $nssmPath start $serviceName
+
+          # 等待服务启动
+          Start-Sleep -Seconds 10
+
+          # 验证服务状态
+          $service = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
+          if ($service -and $service.Status -eq "Running") {
+            Write-Host "Service installed and started successfully!"
+          } else {
+            Write-Host "WARNING: Service may not have started. Check service status."
+          }
+
+      # 6. 验证服务运行
+      - name: Verify Service
+        shell: powershell
+        run: |
+          $maxWait = 60
           $waited = 0
-          $started = $false
 
           while ($waited -lt $maxWait) {
             Start-Sleep -Seconds 5
             $waited += 5
 
-            # Check if Java process exists
-            $javaProcess = Get-Process -Name "java" -ErrorAction SilentlyContinue
-            if (-not $javaProcess) {
-              Write-Host "WARNING: Java process not found after $waited seconds..."
-              if ($waited -ge 30) {
-                Write-Host "ERROR: Java process died! Check logs."
-                Get-Content logs\admin.log -Tail 50
-                exit 1
-              }
-            }
-
-            # Check if port 8080 is listening
             $listening = netstat -ano | Select-String ":8080 " | Select-String "LISTENING"
             if ($listening) {
-              $started = $true
-              Write-Host "Service started successfully after $waited seconds!"
-              if ($javaProcess) {
-                Write-Host "PID: $($javaProcess.Id)"
-              }
-              break
+              Write-Host "Service is running on port 8080!"
+              return
             }
 
-            Write-Host "Waiting for service to start... ($waited/$maxWait seconds)"
+            Write-Host "Waiting for service... ($waited/$maxWait seconds)"
           }
 
-          if (-not $started) {
-            Write-Host "ERROR: Service failed to start within $maxWait seconds!"
-            Get-Content logs\admin.log -Tail 50
-            exit 1
-          }
+          Write-Host "WARNING: Service may not be listening on port 8080"
+          Get-Content logs\service-stderr.log -Tail 20 -ErrorAction SilentlyContinue
 
-      # 6. 健康检查
+      # 7. 健康检查
       - name: Health Check
         shell: powershell
         run: |
-          Start-Sleep -Seconds 5
-
           try {
             $response = Invoke-WebRequest -Uri "http://localhost:8080/actuator/health" -UseBasicParsing -TimeoutSec 10
             if ($response.StatusCode -eq 200) {
@@ -110,32 +147,6 @@ jobs:
             Write-Host "WARNING: Health check failed: $($_.Exception.Message)"
           }
 
-      # 7. 设置自动重启任务计划（忽略域信任错误）
-      - name: Setup Auto Restart
-        shell: powershell
-        run: |
-          try {
-            $taskName = "BC-Sports-AutoRestart"
-            $scriptPath = "D:\B.C.Sports\actions-runner\_work\BC_Sports\BC_Sports\project\check-service.ps1"
-
-            # 删除旧任务（如果存在）
-            $existingTask = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
-            if ($existingTask) {
-              Unregister-ScheduledTask -TaskName $taskName -Confirm:$false
-              Write-Host "Removed existing task: $taskName"
-            }
-
-            # 创建新任务（每 5 分钟检查一次）
-            $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Bypass -WindowStyle Hidden -File $scriptPath"
-            $trigger = New-ScheduledTaskTrigger -RepetitionInterval (New-TimeSpan -Minutes 5) -At "00:00" -Once
-            Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Description "BC Sports Admin Auto Restart" -RunLevel Highest
-
-            Write-Host "Auto restart task scheduled: $taskName"
-          } catch {
-            Write-Host "WARNING: Could not create scheduled task: $($_.Exception.Message)"
-            Write-Host "Please create the task manually on the server"
-          }
-
       # 8. 部署完成
       - name: Deploy Complete
         shell: powershell
@@ -145,5 +156,5 @@ jobs:
           Write-Host "  Deployment completed!"
           Write-Host "  URL: http://192.168.5.180:8080"
           Write-Host "  API Docs: http://192.168.5.180:8080/doc.html"
-          Write-Host "  Auto Restart: Every 5 minutes"
+          Write-Host "  Service: BC-Sports-Admin (Windows Service)"
           Write-Host "====================================="

@@ -114,26 +114,31 @@ jobs:
             Write-Host "WARNING: Health check failed: $($_.Exception.Message)"
           }
 
-      # 7. 设置自动重启任务计划
+      # 7. 设置自动重启任务计划（忽略域信任错误）
       - name: Setup Auto Restart
         shell: powershell
         run: |
-          $taskName = "BC-Sports-AutoRestart"
-          $scriptPath = "D:\B.C.Sports\actions-runner\_work\BC_Sports\BC_Sports\project\check-service.ps1"
+          try {
+            $taskName = "BC-Sports-AutoRestart"
+            $scriptPath = "D:\B.C.Sports\actions-runner\_work\BC_Sports\BC_Sports\project\check-service.ps1"
 
-          # 删除旧任务（如果存在）
-          $existingTask = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
-          if ($existingTask) {
-            Unregister-ScheduledTask -TaskName $taskName -Confirm:$false
-            Write-Host "Removed existing task: $taskName"
+            # 删除旧任务（如果存在）
+            $existingTask = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+            if ($existingTask) {
+              Unregister-ScheduledTask -TaskName $taskName -Confirm:$false
+              Write-Host "Removed existing task: $taskName"
+            }
+
+            # 创建新任务（每 5 分钟检查一次）
+            $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Bypass -WindowStyle Hidden -File $scriptPath"
+            $trigger = New-ScheduledTaskTrigger -RepetitionInterval (New-TimeSpan -Minutes 5) -At "00:00" -Once
+            Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Description "BC Sports Admin Auto Restart" -RunLevel Highest
+
+            Write-Host "Auto restart task scheduled: $taskName"
+          } catch {
+            Write-Host "WARNING: Could not create scheduled task: $($_.Exception.Message)"
+            Write-Host "Please create the task manually on the server"
           }
-
-          # 创建新任务（每 5 分钟检查一次）
-          $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Bypass -WindowStyle Hidden -File $scriptPath"
-          $trigger = New-ScheduledTaskTrigger -RepetitionInterval (New-TimeSpan -Minutes 5) -At "00:00" -Once
-          Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Description "BC Sports Admin Auto Restart" -RunLevel Highest
-
-          Write-Host "Auto restart task scheduled: $taskName"
 
       # 8. 部署完成
       - name: Deploy Complete

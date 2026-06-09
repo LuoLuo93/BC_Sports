@@ -30,4 +30,4 @@ Write-Host ""
 
 # Start Java using cmd (more reliable)
 Set-Location $projectDir
-cmd /c "java -Djava.security.properties=./tls-override.security -Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8 -Duser.language=zh -Duser.region=CN -Xms2g -Xmx4g -jar target/bc-sports-admin-1.0.0.jar --spring.profiles.active=prod"
+cmd /c "java -Djava.security.properties=./tls-override.security -Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8 -Duser.language=zh -Duser.region=CN -Xms4g -Xmx8g -jar target/bc-sports-admin-1.0.0.jar --spring.profiles.active=prod"

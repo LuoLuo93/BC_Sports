@@ -17,13 +17,11 @@ jobs:
         shell: powershell
         run: |
           Write-Host "Stopping any running Java processes..."
-          try {
-            taskkill /F /IM java.exe 2>$null
-          } catch {
-            Write-Host "Could not stop Java process (may need admin rights)"
-          }
+          $result = cmd /c "taskkill /F /IM java.exe 2>&1"
+          Write-Host $result
           Start-Sleep -Seconds 3
           Write-Host "Done"
+        continue-on-error: true
 
       # 2. 拉取最新代码
       - name: Checkout Code

@@ -12,6 +12,14 @@ jobs:
         working-directory: project
 
     steps:
+      - name: Stop Java Process Before Checkout
+        shell: powershell
+        run: |
+          Write-Host "Stopping any running Java processes..."
+          taskkill /F /IM java.exe 2>$null
+          Start-Sleep -Seconds 3
+          Write-Host "Done"
+
       - name: 拉取最新代码
         uses: actions/checkout@v4
 

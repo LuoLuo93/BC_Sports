@@ -160,6 +160,8 @@
                   accept="image/png,image/jpeg,image/svg+xml"
                   :on-success="handleLogoSuccess"
                   :before-upload="beforeLogoUpload"
+                  with-credentials
+                  name="file"
                 >
                   <img v-if="form['sys.logoUrl']" :src="logoFullUrl" class="logo-preview" />
                   <div v-else class="logo-placeholder">

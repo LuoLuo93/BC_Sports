@@ -27,27 +27,7 @@ export default defineConfig({
   server: {
     port: 5175,
     proxy: {
-      '/bcsports/api': {
-        target: 'http://localhost:8080',
-        changeOrigin: true,
-        cookieDomainRewrite: { '*': '' }
-      },
-      '/bcsports/doLogin': {
-        target: 'http://localhost:8080',
-        changeOrigin: true,
-        cookieDomainRewrite: { '*': '' }
-      },
-      '/bcsports/doLogout': {
-        target: 'http://localhost:8080',
-        changeOrigin: true,
-        cookieDomainRewrite: { '*': '' }
-      },
-      '/bcsports/actuator': {
-        target: 'http://localhost:8080',
-        changeOrigin: true,
-        cookieDomainRewrite: { '*': '' }
-      },
-      '/bcsports/images': {
+      '/bcsports': {
         target: 'http://localhost:8080',
         changeOrigin: true,
         cookieDomainRewrite: { '*': '' }

@@ -3,6 +3,7 @@ package com.bcsport.admin.config;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.bcsport.admin.entity.ScheduleJob;
 import com.bcsport.admin.entity.ScheduleLog;
+import com.bcsport.admin.service.ConfigService;
 import com.bcsport.admin.service.ScheduleLogService;
 import com.bcsport.admin.service.notify.NotifyManager;
 import com.bcsport.admin.task.ScheduleTaskRegistry;
@@ -49,6 +50,9 @@ public class ScheduleConfig {
 
     @Autowired
     private NotifyManager notifyManager;
+
+    @Autowired
+    private ConfigService configService;
 
     private ThreadPoolTaskScheduler taskScheduler;
 
@@ -304,9 +308,9 @@ public class ScheduleConfig {
      * @return true=需要推送
      */
     private boolean shouldNotify(String notifyStrategy, Integer status) {
-        // 未配置策略时，默认不推送（由用户自行选择）
+        // 未配置策略时，使用全局默认策略
         if (notifyStrategy == null || notifyStrategy.isBlank()) {
-            return false;
+            notifyStrategy = configService.getString("schedule.notify.defaultStrategy", "DISABLED");
         }
 
         switch (notifyStrategy) {

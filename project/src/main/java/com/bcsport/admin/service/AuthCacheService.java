@@ -3,6 +3,7 @@ package com.bcsport.admin.service;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -24,6 +25,9 @@ public class AuthCacheService {
 
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
+
+    @Autowired
+    private StringRedisTemplate stringRedisTemplate;
 
     @Autowired
     private ConfigService configService;
@@ -188,7 +192,7 @@ public class AuthCacheService {
 
     public void putCaptcha(String captchaKey, String code) {
         try {
-            redisTemplate.opsForValue().set(CAPTCHA_KEY + captchaKey, code, 10, TimeUnit.MINUTES);
+            stringRedisTemplate.opsForValue().set(CAPTCHA_KEY + captchaKey, code, 10, TimeUnit.MINUTES);
         } catch (Exception e) {
             log.warn("Redis写入验证码失败, key={}", captchaKey, e);
         }
@@ -198,10 +202,10 @@ public class AuthCacheService {
         try {
             // Lua 脚本保证原子性：GET + DEL 在一个操作中完成
             String luaScript = "local v = redis.call('GET', KEYS[1]) redis.call('DEL', KEYS[1]) return v";
-            Object val = redisTemplate.execute(
+            String val = stringRedisTemplate.execute(
                     new org.springframework.data.redis.core.script.DefaultRedisScript<>(luaScript, String.class),
                     java.util.Collections.singletonList(CAPTCHA_KEY + captchaKey));
-            return val != null ? val.toString() : null;
+            return val;
         } catch (Exception e) {
             log.warn("Redis读取验证码失败, key={}", captchaKey, e);
             return null;

@@ -12,7 +12,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration
 public class UploadResourceConfig implements WebMvcConfigurer {
 
-    @Value("${bc.upload.path:E:/work/BC_Sport/BcSportsDataManageSystem/project/src/main/resources/static/images}")
+    @Value("${bc.upload.path:E:/work/BC_Sport/uploads}")
     private String uploadPath;
 
     @Override

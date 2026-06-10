@@ -35,7 +35,7 @@ public class SysConfigController {
     @Autowired
     private ConfigService configService;
 
-    @Value("${bc.upload.path:E:/work/BC_Sport/BcSportsDataManageSystem/project/src/main/resources/static/images}")
+    @Value("${bc.upload.path:E:/work/BC_Sport/uploads}")
     private String uploadBasePath;
 
     /**

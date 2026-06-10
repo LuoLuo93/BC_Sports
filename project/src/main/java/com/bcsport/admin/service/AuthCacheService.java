@@ -188,7 +188,7 @@ public class AuthCacheService {
 
     public void putCaptcha(String captchaKey, String code) {
         try {
-            redisTemplate.opsForValue().set(CAPTCHA_KEY + captchaKey, code, 5, TimeUnit.MINUTES);
+            redisTemplate.opsForValue().set(CAPTCHA_KEY + captchaKey, code, 10, TimeUnit.MINUTES);
         } catch (Exception e) {
             log.warn("Redis写入验证码失败, key={}", captchaKey, e);
         }

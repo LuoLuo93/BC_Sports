@@ -1,1 +1,0 @@
-import{r as e}from"./index-B2d_zyti.js";function t(){let t=e();return{hasPermission:e=>t.hasPermission(e)}}export{t};

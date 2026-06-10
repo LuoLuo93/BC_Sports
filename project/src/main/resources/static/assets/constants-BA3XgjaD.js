@@ -1,1 +1,0 @@
-var e=[10,20,50],t=[20,50,100];export{t as n,e as t};

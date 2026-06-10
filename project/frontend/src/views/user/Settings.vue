@@ -154,14 +154,10 @@
               <div class="logo-upload-area">
                 <el-upload
                   class="logo-uploader"
-                  action="/bcsports/api/config/upload-logo"
-                  :headers="uploadHeaders"
+                  :http-request="handleLogoUpload"
                   :show-file-list="false"
                   accept="image/png,image/jpeg,image/svg+xml"
-                  :on-success="handleLogoSuccess"
                   :before-upload="beforeLogoUpload"
-                  with-credentials
-                  name="file"
                 >
                   <img v-if="form['sys.logoUrl']" :src="logoFullUrl" class="logo-preview" />
                   <div v-else class="logo-placeholder">
@@ -370,15 +366,11 @@ const logCleanDays = ref(30)
 // 通知测试
 const testLoading = ref(false)
 
-const uploadHeaders = computed(() => {
-  return {}
-})
-
 const logoFullUrl = computed(() => {
   const url = form['sys.logoUrl']
-  if (!url) return ''
+  if (!url || url === 'undefined' || url === 'null') return ''
   if (url.startsWith('http') || url.startsWith('data:')) return url
-  return apiBase + url
+  return url.startsWith('/bcsports') ? url : '/bcsports' + url
 })
 
 async function loadConfigs() {
@@ -405,7 +397,7 @@ async function handleSave() {
   try {
     const data = {}
     Object.keys(form).forEach(key => {
-      data[key] = String(form[key])
+      data[key] = form[key] == null ? '' : String(form[key])
     })
     const res = await updateConfigs(data)
     if (res.code === 200) {
@@ -413,7 +405,7 @@ async function handleSave() {
       if (data['sys.themeMode']) themeStore.themeMode = data['sys.themeMode']
       if (data['sys.primaryColor']) themeStore.primaryColor = data['sys.primaryColor']
       if (data['sys.sidebarStyle']) themeStore.sidebarStyle = data['sys.sidebarStyle']
-      if (data['sys.logoUrl'] !== undefined) themeStore.logoUrl = data['sys.logoUrl']
+      if (data['sys.logoUrl'] !== undefined && data['sys.logoUrl'] !== '' && data['sys.logoUrl'] !== 'undefined') themeStore.logoUrl = data['sys.logoUrl']
       themeStore.applyTheme()
     }
   } catch (e) {
@@ -537,12 +529,19 @@ function beforeLogoUpload(file) {
   return true
 }
 
-function handleLogoSuccess(response) {
-  if (response.code === 200 && response.data) {
-    form['sys.logoUrl'] = response.data
-    ElMessage.success('Logo 上传成功')
-  } else {
-    ElMessage.error(response.message || '上传失败')
+async function handleLogoUpload({ file }) {
+  const formData = new FormData()
+  formData.append('file', file)
+  try {
+    const res = await request.post('/api/config/upload-logo', formData)
+    if (res.code === 200 && res.data) {
+      form['sys.logoUrl'] = res.data
+      ElMessage.success('Logo 上传成功')
+    } else {
+      ElMessage.error(res.message || '上传失败')
+    }
+  } catch (e) {
+    // interceptor handles error messages
   }
 }
 </script>

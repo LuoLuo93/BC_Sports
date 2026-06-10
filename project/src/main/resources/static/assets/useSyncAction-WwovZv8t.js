@@ -1,1 +1,0 @@
-import{xt as e}from"./echarts-DR-rrwXD.js";import{n as t,r as n}from"./element-plus-BBZFIKg6.js";function r(r,i,a=`确定执行同步操作？`){let o=e(!1);async function s(){await t.confirm(a,`提示`,{type:`warning`}),o.value=!0;try{await r(),n.success(`同步任务已触发`),i?.()}finally{o.value=!1}}return{syncLoading:o,handleSync:s}}export{r as t};

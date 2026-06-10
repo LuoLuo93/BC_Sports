@@ -1,1 +1,0 @@
-function e(e){return e?e.replace(`T`,` `).substring(0,19):`-`}export{e as t};

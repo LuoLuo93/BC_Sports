@@ -161,9 +161,10 @@ const logoTimestamp = ref(Date.now())
 
 const logoFullUrl = computed(() => {
   const url = themeStore.logoUrl
-  if (!url) return ''
+  if (!url || url === 'undefined' || url === 'null') return ''
   if (url.startsWith('http') || url.startsWith('data:')) return url
-  return apiBase + url + '?t=' + logoTimestamp.value
+  const fullUrl = url.startsWith('/bcsports') ? url : '/bcsports' + url
+  return fullUrl + '?t=' + logoTimestamp.value
 })
 
 watch(() => themeStore.logoUrl, () => { logoTimestamp.value = Date.now() })

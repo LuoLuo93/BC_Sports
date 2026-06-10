@@ -251,8 +251,8 @@ logging:
 spring.servlet.multipart.max-file-size: 10MB
 spring.servlet.multipart.max-request-size: 50MB
 
-# 上传文件存储路径
-bc.upload.path: D:/B.C.Sports/actions-runner/_work/BC_Sports/BC_Sports/project/src/main/resources/static/images
+# 上传文件存储路径（CI 环境通过 BC_UPLOAD_PATH 环境变量覆盖）
+bc.upload.path: ${BC_UPLOAD_PATH:E:/work/BC_Sport/BcSportsDataManageSystem/project/src/main/resources/static/images}
 
 # Actuator 监控
 management:

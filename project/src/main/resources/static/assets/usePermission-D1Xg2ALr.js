@@ -1,1 +1,0 @@
-import{r as e}from"./index-DXGMSA6k.js";function t(){let t=e();return{hasPermission:e=>t.hasPermission(e)}}export{t};

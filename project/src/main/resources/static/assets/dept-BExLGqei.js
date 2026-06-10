@@ -1,1 +1,0 @@
-import{a as e}from"./index-Bl8XmAkt.js";function t(t){return e.get(`/api/dept/list`,{params:t})}function n(t){return e.get(`/api/dept/${t}`)}function r(t){return e.post(`/api/dept`,t)}function i(t,n){return e.put(`/api/dept/${t}`,n)}function a(t){return e.delete(`/api/dept/${t}`)}export{i as a,t as i,a as n,n as r,r as t};

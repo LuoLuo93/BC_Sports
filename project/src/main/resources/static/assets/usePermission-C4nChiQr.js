@@ -1,1 +1,0 @@
-import{r as e}from"./index-CtyV6p0h.js";function t(){let t=e();return{hasPermission:e=>t.hasPermission(e)}}export{t};

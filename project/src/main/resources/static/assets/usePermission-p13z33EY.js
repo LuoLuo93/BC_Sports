@@ -1,1 +1,0 @@
-import{r as e}from"./index-DhlGVC4p.js";function t(){let t=e();return{hasPermission:e=>t.hasPermission(e)}}export{t};

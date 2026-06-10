@@ -1,1 +1,0 @@
-import{r as e}from"./index-DLe75gcR.js";function t(){let t=e();return{hasPermission:e=>t.hasPermission(e)}}export{t};

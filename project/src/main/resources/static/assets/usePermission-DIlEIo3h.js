@@ -1,1 +1,0 @@
-import{r as e}from"./index-BE_9xg4C.js";function t(){let t=e();return{hasPermission:e=>t.hasPermission(e)}}export{t};

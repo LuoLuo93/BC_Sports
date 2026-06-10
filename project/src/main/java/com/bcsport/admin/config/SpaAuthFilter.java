@@ -2,13 +2,11 @@ package com.bcsport.admin.config;
 
 import org.apache.shiro.subject.Subject;
 import org.apache.shiro.web.filter.authc.FormAuthenticationFilter;
-import org.apache.shiro.web.util.WebUtils;
 
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
 
 /**
  * SPA 认证过滤器
@@ -19,12 +17,13 @@ public class SpaAuthFilter extends FormAuthenticationFilter {
     @Override
     protected boolean onAccessDenied(ServletRequest request, ServletResponse response) throws Exception {
         HttpServletRequest req = (HttpServletRequest) request;
+        HttpServletResponse resp = (HttpServletResponse) response;
         String uri = req.getRequestURI();
 
         // API 请求：返回 401 JSON
         if (uri.startsWith("/api/") || uri.equals("/doLogin") || uri.equals("/doLogout")) {
-            response.setContentType("application/json;charset=UTF-8");
-            response.getWriter().write("{\"code\":401,\"message\":\"未登录或会话已过期\",\"data\":null,\"timestamp\":" + System.currentTimeMillis() + "}");
+            resp.setContentType("application/json;charset=UTF-8");
+            resp.getWriter().write("{\"code\":401,\"message\":\"未登录或会话已过期\",\"data\":null,\"timestamp\":" + System.currentTimeMillis() + "}");
             return false;
         }
 
@@ -33,8 +32,10 @@ public class SpaAuthFilter extends FormAuthenticationFilter {
             return true;
         }
 
-        // 页面请求：重定向到登录页
-        WebUtils.issueRedirect(request, response, "/login");
+        // 页面请求：返回 401 JSON（前端处理跳转）
+        resp.setContentType("application/json;charset=UTF-8");
+        resp.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        resp.getWriter().write("{\"code\":401,\"message\":\"未登录或会话已过期\",\"data\":null}");
         return false;
     }
 

@@ -1,1 +1,0 @@
-import{a as e}from"./index-QAlCIfis.js";function t(){return e.get(`/api/menu/tree`)}function n(){return e.get(`/api/menu/userTree`)}function r(t){return e.get(`/api/menu/${t}`)}function i(t){return e.post(`/api/menu`,t)}function a(t,n){return e.put(`/api/menu/${t}`,n)}function o(t){return e.delete(`/api/menu/${t}`)}export{n as a,t as i,o as n,a as o,r,i as t};

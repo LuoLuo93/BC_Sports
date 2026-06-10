@@ -1,1 +1,0 @@
-import{B as e,I as t,_ as n,p as r}from"./runtime-core.esm-bundler-Dx8HoZQV.js";import{t as i}from"./index-C7fLUN7x.js";var a={},o={class:`page-placeholder`};function s(i,a){let s=e(`el-empty`);return t(),r(`div`,o,[n(s,{description:`定时任务管理 - 开发中`})])}var c=i(a,[[`render`,s]]);export{c as default};

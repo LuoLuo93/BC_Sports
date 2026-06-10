@@ -333,7 +333,10 @@ async function handleLogin() {
     router.push('/')
   } catch (e) {
     errorMsg.value = e.message || '凭据检验未通过，请核对后重试'
-    if (captchaEnabled.value) loadCaptcha()
+    if (captchaEnabled.value) {
+      form.value.captchaCode = ''
+      await loadCaptcha()
+    }
   } finally {
     loading.value = false
   }

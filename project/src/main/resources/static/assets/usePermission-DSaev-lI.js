@@ -1,1 +1,0 @@
-import{r as e}from"./index-CeaWyxCp.js";function t(){let t=e();return{hasPermission:e=>t.hasPermission(e)}}export{t};

@@ -16,21 +16,33 @@ import java.nio.charset.StandardCharsets;
  * XSS 请求包装器
  *
  * 对所有请求参数和请求体进行 XSS 清洗
+ * 注意：multipart/form-data 请求不缓存请求体，避免破坏文件上传
  */
 public class XssHttpServletRequestWrapper extends HttpServletRequestWrapper {
 
-    /** 缓存的请求体 */
+    /** 缓存的请求体（multipart 请求为 null） */
     private byte[] cachedBody;
+
+    /** 是否为 multipart 请求 */
+    private final boolean isMultipart;
 
     public XssHttpServletRequestWrapper(HttpServletRequest request) throws IOException {
         super(request);
-        // 缓存请求体
-        this.cachedBody = StreamUtils.copyToByteArray(request.getInputStream());
+        String contentType = request.getContentType();
+        this.isMultipart = contentType != null && contentType.startsWith("multipart/");
+        if (!isMultipart) {
+            // 仅对非 multipart 请求缓存请求体
+            this.cachedBody = StreamUtils.copyToByteArray(request.getInputStream());
+        }
     }
 
     @Override
     public ServletInputStream getInputStream() throws IOException {
-        // 对请求体进行 XSS 清洗
+        // multipart 请求直接返回原始流，由 Spring 解析
+        if (isMultipart) {
+            return super.getInputStream();
+        }
+        // 对非 multipart 请求体进行 XSS 清洗
         String body = new String(cachedBody, StandardCharsets.UTF_8);
         String cleanedBody = XssCleaner.clean(body);
 

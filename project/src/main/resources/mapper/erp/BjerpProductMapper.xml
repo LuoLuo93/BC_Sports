@@ -37,7 +37,7 @@
                 product.colorsalias AS COLOR,
                 product.PRICELIST AS PRICE,
                 'GB 18401-2010' AS EXECUTION_STANDARD,
-                '6901234567890' AS EAN13,
+                '6901234567892' AS EAN13,
                 '中国' AS ORIGIN,
                 'B.C.SPORTS' AS MANUFACTURER,
                 '福建省厦门市思明区体育路88号' AS MANUFACTURER_ADDRESS,

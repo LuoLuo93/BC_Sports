@@ -43,6 +43,7 @@ export default defineConfig({
           if (id.includes('node_modules/element-plus')) return 'element-plus'
           if (id.includes('node_modules/echarts') || id.includes('node_modules/vue-echarts')) return 'echarts'
           if (id.includes('node_modules/three')) return 'three'
+          if (id.includes('node_modules/fabric')) return 'fabric'
           if (id.includes('node_modules/vue/') || id.includes('node_modules/vue-router/') || id.includes('node_modules/pinia/')) return 'vue-vendor'
         }
       }

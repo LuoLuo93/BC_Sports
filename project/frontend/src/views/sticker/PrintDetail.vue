@@ -5,7 +5,7 @@
       <div class="form-header">
         <el-button type="warning" size="small" @click="$router.push('/sticker/print')">返回列表</el-button>
         <span class="form-header-title">查看申请单</span>
-        <el-button v-if="order.status === 2" type="primary" size="small" @click="handlePrint">打印贴纸</el-button>
+        <span v-if="order.status === 2" style="color:#f97316;font-size:12px;font-weight:600">已审核</span>
         <span v-else></span>
       </div>
 
@@ -102,14 +102,6 @@
         />
       </div>
     </div>
-
-    <div id="print-area" class="print-area">
-      <div class="sticker-grid">
-        <template v-for="(item, idx) in printItems" :key="idx">
-          <StickerTemplate :item="item" :index="idx" />
-        </template>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -117,7 +109,6 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { getPrintOrder } from '@/api/sticker'
-import StickerTemplate from './StickerTemplate.vue'
 
 const route = useRoute()
 const order = ref({ details: [] })
@@ -137,26 +128,14 @@ const statusTagType = (s) => STATUS_TAG[s] || 'info'
 
 const totalPrintQty = computed(() => (order.value.details || []).reduce((sum, d) => sum + (d.printQty || 0), 0))
 
-const printItems = computed(() => {
-  const items = []
-  for (const d of (order.value.details || [])) {
-    for (let i = 0; i < (d.printQty || 1); i++) {
-      items.push(d)
-    }
-  }
-  return items
-})
-
 async function loadData() {
   const { data } = await getPrintOrder(route.params.orderId)
   order.value = data
 }
 
-function handlePrint() {
-  window.print()
-}
-
-onMounted(loadData)
+onMounted(() => {
+  loadData()
+})
 </script>
 
 <style scoped>
@@ -189,6 +168,12 @@ onMounted(loadData)
   font-size: 16px;
   font-weight: 600;
   color: #111827;
+}
+
+.header-print-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .form-info-row {
@@ -277,22 +262,4 @@ onMounted(loadData)
   border-radius: 4px;
 }
 
-.print-area {
-  display: none;
-}
-@media print {
-  body * { visibility: hidden; }
-  .print-area, .print-area * { visibility: visible; }
-  .print-area {
-    display: block;
-    position: absolute;
-    left: 0;
-    top: 0;
-  }
-  .sticker-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0;
-  }
-}
 </style>

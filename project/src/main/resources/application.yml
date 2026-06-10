@@ -238,6 +238,20 @@ bartender:
   enabled: true
   url: http://192.168.194.98:5153/Integration/StickerPrint
 
+# ZPL 直连打印配置（斑马打印机 TCP/IP）
+zpl:
+  printer:
+    timeout: ${ZPL_PRINTER_TIMEOUT:5000}
+  printers:
+    - name: "60x40 打印机"
+      ip: ${ZPL_PRINTER_1_IP:192.168.1.100}
+      port: ${ZPL_PRINTER_1_PORT:9100}
+      tagSize: "60x40"
+    - name: "80x50 打印机"
+      ip: ${ZPL_PRINTER_2_IP:192.168.1.101}
+      port: ${ZPL_PRINTER_2_PORT:9100}
+      tagSize: "80x50"
+
 # 日志配置 - 使用logback-spring.xml配置文件
 logging:
   config: classpath:logback-spring.xml

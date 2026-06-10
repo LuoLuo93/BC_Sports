@@ -137,7 +137,7 @@
 
 <script setup>
 defineOptions({ name: 'Dashboard' })
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, nextTick } from 'vue'
 import '@/utils/echarts'
 import VChart from 'vue-echarts'
 
@@ -154,6 +154,10 @@ function toggleFullscreen() {
 onMounted(() => {
   document.addEventListener('fullscreenchange', () => {
     isFullscreen.value = !!document.fullscreenElement
+    // 退出全屏后强制重排，修复布局和 ECharts 尺寸
+    requestAnimationFrame(() => {
+      window.dispatchEvent(new Event('resize'))
+    })
   })
 })
 
@@ -404,6 +408,10 @@ onMounted(() => {
   clockTimer = setInterval(updateTime, 1000)
   playKpiAnimations()
   pollTimer = setInterval(refreshData, 30000)
+  // 布局完成后强制 ECharts 重算尺寸，修复右列图表初始显示不全
+  nextTick(() => {
+    setTimeout(() => window.dispatchEvent(new Event('resize')), 100)
+  })
 })
 onUnmounted(() => {
   clearInterval(clockTimer)
@@ -586,7 +594,7 @@ onUnmounted(() => {
   color: rgba(14,165,233,0.55); background: rgba(14,165,233,0.06);
   padding: 2px 8px; border-radius: 10px; letter-spacing: 0.5px; font-weight: 500;
 }
-.panel-body { padding: 4px 10px 10px; flex: 1; min-height: 0; }
+.panel-body { padding: 4px 10px 10px; flex: 1; min-height: 0; position: relative; }
 .panel-body :deep(.echarts) { width: 100% !important; height: 100% !important; }
 
 /* ─── Responsive ────────────────────── */

@@ -31,7 +31,7 @@
               <el-button v-if="row.status === 0 && hasPermission('sticker:print:edit')" type="warning" plain size="small" @click="handleSubmit(row)">提交</el-button>
               <el-button v-if="row.status === 0 && hasPermission('sticker:print:delete')" type="danger" plain size="small" @click="handleDelete(row)">删除</el-button>
               <el-button v-if="row.status === 1 && hasPermission('sticker:print:review')" type="success" plain size="small" @click="handleReview(row)">审核</el-button>
-              <el-button v-if="row.status === 2 && hasPermission('sticker:print:execute')" type="primary" plain size="small" @click="handleBarTenderPrint(row)">打印</el-button>
+              <el-button v-if="row.status === 2 && hasPermission('sticker:print:execute')" type="warning" plain size="small" @click="handlePrintPreview(row)">打印预览</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -424,6 +424,10 @@ async function handleEdit(row) {
 
 function handleView(row) {
   router.push(`/sticker/print/${row.id}`)
+}
+
+function handlePrintPreview(row) {
+  router.push(`/sticker/print/${row.id}/preview`)
 }
 
 async function handleSubmit(row) {

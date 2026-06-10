@@ -45,6 +45,8 @@ const routes = [
       { path: 'sticker/print', name: 'StickerPrintList', component: () => import('@/views/sticker/PrintApplication.vue'), meta: { pageTitle: '贴纸打印' } },
       { path: 'sticker/print/:orderId', name: 'StickerPrintDetail', component: () => import('@/views/sticker/PrintDetail.vue'), meta: { pageTitle: '申请单详情' } },
       { path: 'sticker/data', name: 'StickerData', component: () => import('@/views/sticker/StickerData.vue'), meta: { pageTitle: '贴纸资料维护' } },
+      { path: 'sticker/template', name: 'StickerTemplateList', component: () => import('@/views/sticker/TemplateList.vue'), meta: { pageTitle: '打印模板管理' } },
+      { path: 'sticker/template/designer', name: 'StickerTemplateDesigner', component: () => import('@/views/sticker/TemplateDesigner.vue'), meta: { pageTitle: '标签设计器' } },
       // Monitor
       { path: 'monitor/schedule', name: 'Schedule', component: () => import('@/views/monitor/Schedule.vue'), meta: { pageTitle: '定时任务' } },
       { path: 'monitor/system', name: 'SystemMonitor', component: () => import('@/views/monitor/SystemMonitor.vue'), meta: { pageTitle: '系统监控' } },
@@ -58,6 +60,7 @@ const routes = [
       { path: 'settings', name: 'Settings', component: () => import('@/views/user/Settings.vue'), meta: { pageTitle: '系统设置' } }
     ]
   },
+  { path: '/sticker/print/:orderId/preview', name: 'StickerPrintPreview', component: () => import('@/views/sticker/PrintPreview.vue'), meta: { pageTitle: '打印预览' } },
   { path: '/403', name: 'Forbidden', component: () => import('@/views/error/403.vue'), meta: { requiresAuth: false } },
   { path: '/:pathMatch(.*)*', name: 'NotFound', component: () => import('@/views/error/404.vue'), meta: { requiresAuth: false } }
 ]

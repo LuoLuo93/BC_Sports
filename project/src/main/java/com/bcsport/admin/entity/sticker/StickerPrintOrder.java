@@ -39,6 +39,8 @@ public class StickerPrintOrder {
     private LocalDateTime printTime;
     @TableField("print_by")
     private String printBy;
+    @TableField("template_id")
+    private String templateId;
     @TableField(exist = false)
     private List<StickerPrintOrderDetail> details;
 }

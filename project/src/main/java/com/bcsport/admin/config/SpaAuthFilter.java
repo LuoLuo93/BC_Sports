@@ -32,10 +32,20 @@ public class SpaAuthFilter extends FormAuthenticationFilter {
             return true;
         }
 
-        // 页面请求：返回 401 JSON（前端处理跳转）
-        resp.setContentType("application/json;charset=UTF-8");
-        resp.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-        resp.getWriter().write("{\"code\":401,\"message\":\"未登录或会话已过期\",\"data\":null}");
+        // AJAX 请求：返回 401 JSON
+        String xRequestedWith = req.getHeader("X-Requested-With");
+        String accept = req.getHeader("Accept");
+        if ("XMLHttpRequest".equals(xRequestedWith)
+                || (accept != null && accept.contains("application/json"))) {
+            resp.setContentType("application/json;charset=UTF-8");
+            resp.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            resp.getWriter().write("{\"code\":401,\"message\":\"未登录或会话已过期\",\"data\":null}");
+            return false;
+        }
+
+        // 页面请求：重定向到登录页
+        resp.setStatus(HttpServletResponse.SC_FOUND);
+        resp.setHeader("Location", req.getContextPath() + "/login");
         return false;
     }
 

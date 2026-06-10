@@ -16,5 +16,5 @@ logging:
     org.springframework: WARN
     org.apache.shiro: WARN
 
-# 生产环境上传路径
-bc.upload.path: D:/B.C.Sports/actions-runner/_work/BC_Sports/BC_Sports/project/src/main/resources/static/images
+# 生产环境上传路径（必须在项目外部，避免重新部署时文件丢失）
+bc.upload.path: D:/B.C.Sports/uploads

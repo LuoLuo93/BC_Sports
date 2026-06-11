@@ -251,7 +251,7 @@
               <el-option v-for="p in qzPrinterList" :key="p" :label="p" :value="p" />
             </el-select>
             <div style="font-size:12px;color:#909399;margin-top:4px">
-              请确保已安装 <a href="https://qz.io/download/" target="_blank">QZ Tray</a>
+              请确保已安装 QZ Tray，<a href="https://qz.io/download/" target="_blank" style="color:#409eff">点击下载 QZ Tray</a>
             </div>
           </el-form-item>
           <el-form-item label="模板">

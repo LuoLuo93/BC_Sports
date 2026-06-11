@@ -139,7 +139,7 @@ function buildStickerHTML(item) {
 body{width:${labelW}mm;height:${labelH}mm;overflow:hidden;position:relative;background:#fff}
 .s{width:${labelW}mm;height:${labelH}mm;position:relative}
 .barcode{display:block;width:100%;height:100%}
-</style>
+<\/style>
 </head><body>
 <div class="s">${inner}</div>
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"><\/script>

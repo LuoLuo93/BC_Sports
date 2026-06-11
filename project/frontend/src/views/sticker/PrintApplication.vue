@@ -5,11 +5,11 @@
       <el-card shadow="never">
         <div style="display:flex;justify-content:space-between;margin-bottom:16px">
           <el-radio-group v-model="query.status" @change="loadData">
-            <el-radio-button :label="null">全部</el-radio-button>
-            <el-radio-button :label="0">草稿</el-radio-button>
-            <el-radio-button :label="1">待审核</el-radio-button>
-            <el-radio-button :label="2">已审核</el-radio-button>
-            <el-radio-button :label="3">已驳回</el-radio-button>
+            <el-radio-button :value="null">全部</el-radio-button>
+            <el-radio-button :value="0">草稿</el-radio-button>
+            <el-radio-button :value="1">待审核</el-radio-button>
+            <el-radio-button :value="2">已审核</el-radio-button>
+            <el-radio-button :value="3">已驳回</el-radio-button>
           </el-radio-group>
           <el-button v-if="hasPermission('sticker:print:add')" type="primary" @click="handleCreate">新建申请</el-button>
         </div>
@@ -221,8 +221,8 @@
       <el-form :model="reviewForm" label-width="80px">
         <el-form-item label="审核结果">
           <el-radio-group v-model="reviewForm.status">
-            <el-radio :label="2">通过</el-radio>
-            <el-radio :label="3">驳回</el-radio>
+            <el-radio :value="2">通过</el-radio>
+            <el-radio :value="3">驳回</el-radio>
           </el-radio-group>
         </el-form-item>
         <el-form-item label="审核意见">
@@ -247,11 +247,11 @@
         <el-alert v-if="qzError" :title="qzError" type="error" show-icon style="margin-bottom:16px" />
         <el-form label-width="100px">
           <el-form-item label="打印机">
-            <el-select v-model="qzSelectedPrinter" placeholder="选择打印机" style="width:100%" @click="loadQzPrinters">
+            <el-select v-model="qzSelectedPrinter" placeholder="选择打印机" style="width:100%">
               <el-option v-for="p in qzPrinterList" :key="p" :label="p" :value="p" />
             </el-select>
             <div style="font-size:12px;color:#909399;margin-top:4px">
-              请确保已安装 QZ Tray，<a href="https://qz.io/download/" target="_blank" style="color:#409eff">点击下载 QZ Tray</a>
+              请确保已安装 QZ Tray（推荐 v2.0.11），<a href="https://github.com/qzind/tray/releases/tag/v2.0.11" target="_blank" style="color:#409eff">点击下载 QZ Tray</a>
             </div>
           </el-form-item>
           <el-form-item label="模板">
@@ -580,13 +580,16 @@ async function handleQzPrint(row) {
 
 async function loadQzPrinters() {
   try {
+    console.log('正在获取打印机列表...')
     const list = await getPrinters()
+    console.log('打印机列表:', list)
     qzPrinterList.value = list
     if (list.length > 0 && !qzSelectedPrinter.value) {
       qzSelectedPrinter.value = list[0]
     }
   } catch (e) {
-    qzError.value = '获取打印机列表失败'
+    console.error('获取打印机列表失败:', e)
+    qzError.value = '获取打印机列表失败: ' + (e.message || e)
   }
 }
 

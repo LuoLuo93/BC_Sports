@@ -54,6 +54,10 @@ Thumbs.db
 cookies.txt
 cookies2.txt
 
+# QZ Tray private key (never commit)
+project/src/main/resources/certs/qz-private.p12
+project/src/main/resources/certs/qz-keystore.jks
+
 # Database init files (optional, uncomment if you don't want to commit)
 # bc_sport_final_init.sql
 # init_channel_tables.sql

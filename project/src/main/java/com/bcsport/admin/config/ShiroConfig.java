@@ -157,6 +157,8 @@ public class ShiroConfig {
         filterChainDefinitionMap.put("/webjars/**", "anon");
         filterChainDefinitionMap.put("/v2/api-docs", "anon");
         filterChainDefinitionMap.put("/swagger-resources/**", "anon");
+        // QZ Tray 签名服务（前端静默打印需要匿名访问）
+        filterChainDefinitionMap.put("/api/qz/**", "anon");
         // Actuator: 仅 health 端点允许匿名访问，其余需认证
         filterChainDefinitionMap.put("/actuator/health", "anon");
         filterChainDefinitionMap.put("/actuator/**", "spaAuth");

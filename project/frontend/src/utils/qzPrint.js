@@ -1,44 +1,56 @@
 /**
  * QZ Tray 打印工具
  * 实现无弹窗连续打印 ZPL 标签
+ * 通过 npm 安装 qz-tray@2.2.6，内置 RSVP/Sha256 依赖
+ * 配合后端自签名证书实现静默打印
  */
+import qz from 'qz-tray'
 import { generateZPL } from './zplGenerator'
 
-let qz = null
+// 使用浏览器原生 Promise
+qz.api.setPromiseType(resolver => new Promise(resolver))
+
+// 配置证书（从后端获取）
+qz.security.setCertificatePromise((resolve, reject) => {
+  fetch('/bcsports/api/qz/certificate')
+    .then(r => r.text())
+    .then(resolve)
+    .catch(reject)
+})
+
+// 配置签名（从后端获取）
+qz.security.setSignaturePromise(hash => (resolve, reject) => {
+  fetch('/bcsports/api/qz/sign', {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: hash
+  })
+    .then(r => r.text())
+    .then(resolve)
+    .catch(reject)
+})
 
 /**
- * 动态加载 QZ Tray 库
+ * 连接 QZ Tray（全局只连一次）
  */
-async function loadQZ() {
-  if (qz) return qz
+let connected = false
 
-  try {
-    // 尝试从 CDN 加载
-    const module = await import('https://cdn.jsdelivr.net/npm/qz-tray@2.2.4/qz-tray.js')
-    qz = module.default || window.qz
-    return qz
-  } catch (e) {
-    throw new Error('请先安装 QZ Tray 客户端: https://qz.io/download/')
-  }
-}
-
-/**
- * 连接 QZ Tray
- */
 export async function connectQZ() {
-  const qzInstance = await loadQZ()
-  if (!qzInstance.websocket.isActive()) {
-    await qzInstance.websocket.connect()
+  if (connected && qz.websocket.isActive()) {
+    return qz
   }
-  return qzInstance
+  await qz.websocket.connect()
+  connected = true
+  return qz
 }
 
 /**
  * 断开连接
  */
 export async function disconnectQZ() {
-  if (qz && qz.websocket.isActive()) {
+  if (connected && qz.websocket.isActive()) {
     await qz.websocket.disconnect()
+    connected = false
   }
 }
 
@@ -47,7 +59,15 @@ export async function disconnectQZ() {
  */
 export async function getPrinters() {
   await connectQZ()
-  return await qz.printers.list()
+
+  try {
+    const list = await qz.printers.find()
+    console.log('打印机列表:', list)
+    return Array.isArray(list) ? list : []
+  } catch (e) {
+    console.error('获取打印机列表失败:', e)
+    throw e
+  }
 }
 
 /**

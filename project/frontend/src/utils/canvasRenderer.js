@@ -178,6 +178,7 @@ function drawRect(ctx, el, x, y, dpi) {
 // ─── Canvas 转 ZPL ^GFA 位图 ──────────
 /**
  * 将 Canvas 转换为 ZPL ^GFA 命令
+ * 使用 RLE 压缩减少数据量
  * @param {HTMLCanvasElement} canvas
  * @returns {string} ZPL ^GFA 命令
  */
@@ -188,10 +189,11 @@ export function canvasToZplGFA(canvas) {
   const imageData = ctx.getImageData(0, 0, width, height)
   const pixels = imageData.data
 
-  // 转换为黑白位图（阈值 128）
+  // 转换为黑白位图
+  // Zebra ^GFA: 1 = 白色(不打印), 0 = 黑色(打印)
   const bytesPerRow = Math.ceil(width / 8)
   const totalBytes = bytesPerRow * height
-  const bitmap = new Uint8Array(totalBytes)
+  const bitmap = new Uint8Array(totalBytes) // 初始化为 0（全黑）
 
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
@@ -199,9 +201,9 @@ export function canvasToZplGFA(canvas) {
       const r = pixels[pixelIndex]
       const g = pixels[pixelIndex + 1]
       const b = pixels[pixelIndex + 2]
-      // 灰度 < 128 为黑色（1），否则为白色（0）
-      const isBlack = (r + g + b) / 3 < 128
-      if (isBlack) {
+      // 灰度 >= 128 为白色（设置 bit=1），< 128 为黑色（bit=0）
+      const isWhite = (r + g + b) / 3 >= 128
+      if (isWhite) {
         const byteIndex = y * bytesPerRow + Math.floor(x / 8)
         const bitIndex = 7 - (x % 8)
         bitmap[byteIndex] |= (1 << bitIndex)
@@ -209,13 +211,64 @@ export function canvasToZplGFA(canvas) {
     }
   }
 
-  // 转换为十六进制字符串
-  let hexData = ''
-  for (let i = 0; i < bitmap.length; i++) {
-    hexData += bitmap[i].toString(16).padStart(2, '0').toUpperCase()
-  }
+  // RLE 压缩编码
+  const compressed = rleCompress(bitmap)
 
   // 生成 ^GFA 命令
-  // ^GFA,total_bytes,bytes_per_row,bitmap_data
-  return `^GFA,${totalBytes},${bytesPerRow},${hexData}`
+  return `^GFA,${totalBytes},${bytesPerRow},${compressed}`
+}
+
+// ─── RLE 压缩 ─────────────────────────
+/**
+ * Zebra RLE 压缩
+ * 格式：
+ * - 单字节: h = 十六进制值
+ * - 重复: <count><h> — count 用 Zebra 编码
+ */
+function rleCompress(bitmap) {
+  let result = ''
+  let i = 0
+
+  while (i < bitmap.length) {
+    // 查找连续相同字节
+    let count = 1
+    while (i + count < bitmap.length && bitmap[i + count] === bitmap[i] && count < 255) {
+      count++
+    }
+
+    const hex = bitmap[i].toString(16).padStart(2, '0').toUpperCase()
+
+    if (count === 1) {
+      result += hex
+    } else if (count === 2) {
+      result += hex + hex
+    } else {
+      // Zebra RLE: count 用特殊字符编码
+      result += zebraRleCount(count) + hex
+    }
+
+    i += count
+  }
+
+  return result
+}
+
+// ─── Zebra RLE 重复次数编码 ────────────
+function zebraRleCount(count) {
+  if (count < 20) {
+    // 1-19: ASCII 32+count (space=1, !=2, "=3, ...)
+    return String.fromCharCode(32 + count)
+  } else if (count < 280) {
+    // 20-279: 两个字符
+    const high = Math.floor(count / 20) + 32
+    const low = (count % 20) + 32
+    return String.fromCharCode(high) + String.fromCharCode(low)
+  } else {
+    // 280+: 三个字符
+    const c1 = Math.floor(count / 280) + 32
+    const remainder = count % 280
+    const c2 = Math.floor(remainder / 20) + 32
+    const c3 = (remainder % 20) + 32
+    return String.fromCharCode(c1) + String.fromCharCode(c2) + String.fromCharCode(c3)
+  }
 }

@@ -15,6 +15,21 @@ function escapeZpl(str) {
   return str.replace(/\^/g, '').replace(/~/g, '')
 }
 
+// ─── 检测是否包含非 ASCII 字符（中文/日文/韩文等）──
+function hasNonAscii(str) {
+  return /[^\x00-\x7F]/.test(str)
+}
+
+// ─── 生成字体命令 ─────────────────────
+// ASCII 用 ^A0（内置字体），非 ASCII 用 ^A@（TrueType 字体）
+function fontCmd(height, width, content) {
+  if (hasNonAscii(content)) {
+    // ^A@N,h,w,fontName — 使用下载到打印机的 TrueType 字体
+    return `^A@N,${height},0,SIMSUN`
+  }
+  return `^A0,${height},${width}`
+}
+
 // ─── 数据解析 ─────────────────────────
 /**
  * 解析元素内容，替换 {{field}} 为实际数据
@@ -34,8 +49,9 @@ function generateTextZPL(x, y, el, content, dpi) {
   const safeContent = escapeZpl(content)
   const fontHeight = mmToDots(el.fontSize || 3, dpi)
   const fontWidth = Math.round(fontHeight * 0.6)
+  const fCmd = fontCmd(fontHeight, fontWidth, safeContent)
   let zpl = `^FO${x},${y}`
-  zpl += `^A0,${fontHeight},${fontWidth}`
+  zpl += fCmd
   // 对齐方式（ZPL 不直接支持，通过 ^FB 域块实现）
   if (el.textAlign === 'center' || el.textAlign === 'right') {
     const blockWidth = mmToDots(el.width || 50, dpi)
@@ -45,7 +61,7 @@ function generateTextZPL(x, y, el, content, dpi) {
   // 加粗通过重复偏移打印模拟
   if (el.fontWeight === 'bold') {
     zpl += `^FD${safeContent}^FS\n`
-    zpl += `^FO${x + 1},${y}^A0,${fontHeight},${fontWidth}^FD${safeContent}^FS`
+    zpl += `^FO${x + 1},${y}${fCmd}^FD${safeContent}^FS`
   } else {
     zpl += `^FD${safeContent}^FS`
   }

@@ -24,8 +24,8 @@ function hasNonAscii(str) {
 // ASCII 用 ^A0（内置字体），非 ASCII 用 ^A@（TrueType 字体）
 function fontCmd(height, width, content) {
   if (hasNonAscii(content)) {
-    // ^A@E,h,w — 使用通过 ^CW 映射的 TrueType 字体（标识符 E）
-    return `^A@E,${height},${width}`
+    // ^A@N,h,w — 使用通过 ^CW 映射的 TrueType 字体（N=Normal 方向）
+    return `^A@N,${height},${width}`
   }
   return `^A0,${height},${width}`
 }
@@ -151,7 +151,7 @@ export function generateZPL(template, dataItem = {}) {
 
   let zpl = '^XA\n'
   zpl += `^CI28\n` // UTF-8 编码
-  zpl += `^CWE,SimSun.TTF\n` // 映射中文字体到标识符 E
+  zpl += `^CWE,E:SimSun.TTF\n` // 从 Flash 加载中文字体到标识符 E
   zpl += `^PW${labelWidthDots}\n`
   zpl += `^LL${labelHeightDots}\n`
   zpl += `^PR8,8,8\n` // 打印速度

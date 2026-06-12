@@ -25,7 +25,7 @@ function hasNonAscii(str) {
 function fontCmd(height, width, content) {
   if (hasNonAscii(content)) {
     // ^A@N,h,w,fontName — 使用下载到打印机的 TrueType 字体
-    return `^A@N,${height},0,SIMSUN`
+    return `^A@N,${height},0,SimSun.TTF`
   }
   return `^A0,${height},${width}`
 }

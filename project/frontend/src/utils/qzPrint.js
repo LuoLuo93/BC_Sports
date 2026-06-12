@@ -3,9 +3,11 @@
  * 实现无弹窗连续打印 ZPL 标签
  * 通过 npm 安装 qz-tray@2.2.6，内置 RSVP/Sha256 依赖
  * 配合后端自签名证书实现静默打印
+ *
+ * 使用图片模式打印（Canvas 渲染 + ^GFA），不依赖打印机字体
  */
 import qz from 'qz-tray'
-import { generateZPL } from './zplGenerator'
+import { generateImageZPL } from './zplGenerator'
 
 // 使用浏览器原生 Promise
 qz.api.setPromiseType(resolver => new Promise(resolver))
@@ -71,18 +73,7 @@ export async function getPrinters() {
 }
 
 /**
- * 使用 QZ Tray 打印 ZPL
- * @param {string} printerName - 打印机名称
- * @param {string[]} zplArray - ZPL 指令数组
- */
-export async function printZPL(printerName, zplArray) {
-  await connectQZ()
-  const config = qz.configs.create(printerName)
-  await qz.print(config, zplArray)
-}
-
-/**
- * 批量打印订单明细
+ * 使用 QZ Tray 打印 ZPL（图片模式）
  * @param {string} printerName - 打印机名称
  * @param {Object} template - 模板对象
  * @param {Array} details - 明细数组（每项含 printQty）
@@ -103,7 +94,7 @@ export async function printOrderDetails(printerName, template, details, onProgre
     throw new Error('没有可打印的标签')
   }
 
-  // 批量生成 ZPL
+  // 准备模板参数
   const tpl = {
     labelWidth: template.labelWidth || 60,
     labelHeight: template.labelHeight || 40,
@@ -115,8 +106,8 @@ export async function printOrderDetails(printerName, template, details, onProgre
     offsetY: template.offsetY || 0
   }
 
-  // 分批打印（每批 50 张，避免数据过大）
-  const BATCH_SIZE = 50
+  // 分批打印（每批 10 张，图片模式数据量较大）
+  const BATCH_SIZE = 10
   const batches = []
   for (let i = 0; i < items.length; i += BATCH_SIZE) {
     batches.push(items.slice(i, i + BATCH_SIZE))
@@ -125,8 +116,15 @@ export async function printOrderDetails(printerName, template, details, onProgre
   const config = qz.configs.create(printerName)
 
   for (let i = 0; i < batches.length; i++) {
-    const batchZpl = batches[i].map(item => generateZPL(tpl, item))
-    await qz.print(config, batchZpl)
+    // 生成图片模式 ZPL（异步，需要 Canvas 渲染）
+    const zplParts = []
+    for (const item of batches[i]) {
+      const zpl = await generateImageZPL(tpl, item)
+      zplParts.push(zpl)
+    }
+    const batchZpl = zplParts.join('')
+
+    await qz.print(config, [batchZpl])
 
     if (onProgress) {
       const printed = Math.min((i + 1) * BATCH_SIZE, items.length)

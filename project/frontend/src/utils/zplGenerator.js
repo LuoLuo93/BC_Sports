@@ -1,7 +1,12 @@
 /**
  * ZPL II 标签指令生成器
  * 将模板元素列表 + 数据生成斑马打印机 ZPL 指令
+ * 支持两种模式：
+ * 1. 原生 ZPL 命令（需要打印机有对应字体）
+ * 2. 图片模式（Canvas 渲染 + ^GFA，不依赖打印机字体）
  */
+
+import { renderLabelToCanvas, canvasToZplGFA } from './canvasRenderer'
 
 // ─── 坐标换算 ─────────────────────────
 // mm → dots
@@ -201,6 +206,50 @@ export function generateZPL(template, dataItem = {}) {
  */
 export function generateBatchZPL(template, dataList) {
   return dataList.map(item => generateZPL(template, item)).join('\n')
+}
+
+// ─── 图片模式 ZPL 生成（Canvas 渲染 + ^GFA）──────────
+/**
+ * 用 Canvas 渲染标签并生成图片模式 ZPL
+ * 不依赖打印机字体，支持中文和任意语言
+ * @param {Object} template - 模板对象
+ * @param {Object} dataItem - 数据项
+ * @returns {Promise<string>} ZPL II 指令字符串
+ */
+export async function generateImageZPL(template, dataItem = {}) {
+  const { labelWidth, labelHeight, dpi = 203 } = template
+
+  const labelWidthDots = mmToDots(labelWidth, dpi)
+  const labelHeightDots = mmToDots(labelHeight, dpi)
+
+  // Canvas 渲染标签
+  const canvas = await renderLabelToCanvas(template, dataItem)
+
+  // 转换为 ZPL ^GFA 位图命令
+  const gfaCmd = canvasToZplGFA(canvas)
+
+  // 组装完整 ZPL
+  let zpl = '^XA\n'
+  zpl += `^PW${labelWidthDots}\n`
+  zpl += `^LL${labelHeightDots}\n`
+  zpl += `^PR8,8,8\n` // 打印速度
+  zpl += `^MD10\n`    // 浓度
+  zpl += `^FO0,0\n`   // 从左上角开始
+  zpl += gfaCmd + '\n'
+  zpl += '^XZ\n'
+
+  return zpl
+}
+
+/**
+ * 批量生成图片模式 ZPL（一个订单多条明细）
+ */
+export async function generateBatchImageZPL(template, dataList) {
+  const results = []
+  for (const item of dataList) {
+    results.push(await generateImageZPL(template, item))
+  }
+  return results.join('\n')
 }
 
 // ─── 可用的数据字段（与 StickerPrintOrderDetail 实体对齐）────────

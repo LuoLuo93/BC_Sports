@@ -105,25 +105,24 @@ export async function printOrderDetails(printerName, template, details, onProgre
 
   const config = qz.configs.create(printerName)
 
-  // 逐张打印
+  // 先渲染所有标签为图片
+  const printData = []
   for (let i = 0; i < items.length; i++) {
-    // 渲染标签为 Canvas
     const canvas = await renderLabelToCanvas(tpl, items[i])
-
-    // 转为 PNG 数据 URL
     const dataUrl = canvas.toDataURL('image/png')
-
-    // 用 QZ Tray 打印图片
-    await qz.print(config, [{
+    printData.push({
       type: 'image',
       format: 'image',
       data: dataUrl
-    }])
+    })
 
     if (onProgress) {
       onProgress(i + 1, items.length)
     }
   }
+
+  // 一次性发送所有图片到打印机（只触发一次安全确认）
+  await qz.print(config, printData)
 
   return items.length
 }

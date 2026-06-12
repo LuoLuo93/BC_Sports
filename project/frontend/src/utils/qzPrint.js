@@ -1,13 +1,10 @@
 /**
  * QZ Tray 打印工具
- * 实现无弹窗连续打印 ZPL 标签
- * 通过 npm 安装 qz-tray@2.2.6，内置 RSVP/Sha256 依赖
- * 配合后端自签名证书实现静默打印
- *
- * 使用图片模式打印（Canvas 渲染 + ^GFA），不依赖打印机字体
+ * 使用图片模式打印（HTML 渲染 + html2canvas + QZ Tray 图片打印）
+ * 与 BarTender 原理一致，不依赖打印机字体
  */
 import qz from 'qz-tray'
-import { generateImageZPL } from './zplGenerator'
+import { renderLabelToCanvas } from './labelRenderer'
 
 // 使用浏览器原生 Promise
 qz.api.setPromiseType(resolver => new Promise(resolver))
@@ -73,7 +70,7 @@ export async function getPrinters() {
 }
 
 /**
- * 使用 QZ Tray 打印 ZPL（图片模式）
+ * 批量打印订单明细（图片模式）
  * @param {string} printerName - 打印机名称
  * @param {Object} template - 模板对象
  * @param {Array} details - 明细数组（每项含 printQty）
@@ -106,29 +103,25 @@ export async function printOrderDetails(printerName, template, details, onProgre
     offsetY: template.offsetY || 0
   }
 
-  // 分批打印（每批 10 张，图片模式数据量较大）
-  const BATCH_SIZE = 10
-  const batches = []
-  for (let i = 0; i < items.length; i += BATCH_SIZE) {
-    batches.push(items.slice(i, i + BATCH_SIZE))
-  }
-
   const config = qz.configs.create(printerName)
 
-  for (let i = 0; i < batches.length; i++) {
-    // 生成图片模式 ZPL（异步，需要 Canvas 渲染）
-    const zplParts = []
-    for (const item of batches[i]) {
-      const zpl = await generateImageZPL(tpl, item)
-      zplParts.push(zpl)
-    }
-    const batchZpl = zplParts.join('')
+  // 逐张打印
+  for (let i = 0; i < items.length; i++) {
+    // 渲染标签为 Canvas
+    const canvas = await renderLabelToCanvas(tpl, items[i])
 
-    await qz.print(config, [batchZpl])
+    // 转为 PNG 数据 URL
+    const dataUrl = canvas.toDataURL('image/png')
+
+    // 用 QZ Tray 打印图片
+    await qz.print(config, [{
+      type: 'image',
+      format: 'image',
+      data: dataUrl
+    }])
 
     if (onProgress) {
-      const printed = Math.min((i + 1) * BATCH_SIZE, items.length)
-      onProgress(printed, items.length)
+      onProgress(i + 1, items.length)
     }
   }
 

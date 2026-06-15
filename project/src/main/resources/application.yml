@@ -8,6 +8,11 @@ server:
     max-connections: 8192
     accept-count: 100
 
+# 贴纸打印 Agent 共享密钥（C# 客户端通过 X-API-Key 请求头携带）。
+# 默认 local-dev-key 便于本地联调；生产环境用环境变量 AGENT_API_KEY 覆盖，不在仓库存明文。
+agent:
+  api-key: ${AGENT_API_KEY:local-dev-key}
+
 spring:
   application:
     name: bc-sports-admin

@@ -105,24 +105,42 @@ export async function printOrderDetails(printerName, template, details, onProgre
 
   const config = qz.configs.create(printerName)
 
-  // 先渲染所有标签为图片
-  const printData = []
-  for (let i = 0; i < items.length; i++) {
-    const canvas = await renderLabelToCanvas(tpl, items[i])
-    const dataUrl = canvas.toDataURL('image/png')
-    printData.push({
-      type: 'image',
-      format: 'image',
-      data: dataUrl
-    })
-
-    if (onProgress) {
-      onProgress(i + 1, items.length)
-    }
+  // 分批打印（每批 10 张，避免内存溢出和打印机过载）
+  const BATCH_SIZE = 10
+  const batches = []
+  for (let i = 0; i < items.length; i += BATCH_SIZE) {
+    batches.push(items.slice(i, i + BATCH_SIZE))
   }
 
-  // 一次性发送所有图片到打印机（只触发一次安全确认）
-  await qz.print(config, printData)
+  let printed = 0
+  for (let b = 0; b < batches.length; b++) {
+    const batch = batches[b]
+    const printData = []
+
+    // 渲染当前批次的标签
+    for (const item of batch) {
+      const canvas = await renderLabelToCanvas(tpl, item)
+      const dataUrl = canvas.toDataURL('image/png')
+      printData.push({
+        type: 'image',
+        format: 'image',
+        data: dataUrl
+      })
+    }
+
+    // 发送当前批次到打印机
+    await qz.print(config, printData)
+    printed += batch.length
+
+    if (onProgress) {
+      onProgress(printed, items.length)
+    }
+
+    // 批次间延迟，让打印机处理完再发下一批
+    if (b < batches.length - 1) {
+      await new Promise(resolve => setTimeout(resolve, 500))
+    }
+  }
 
   return items.length
 }

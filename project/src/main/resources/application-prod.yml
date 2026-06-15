@@ -18,3 +18,7 @@ logging:
 
 # 生产环境上传路径（必须在项目外部，避免重新部署时文件丢失）
 bc.upload.path: D:/B.C.Sports/uploads
+
+# 贴纸打印 Agent 共享密钥：生产环境通过环境变量 AGENT_API_KEY 注入，不在仓库存明文
+agent:
+  api-key: ${AGENT_API_KEY}

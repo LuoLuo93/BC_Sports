@@ -159,6 +159,12 @@ public class ShiroConfig {
         filterChainDefinitionMap.put("/swagger-resources/**", "anon");
         // QZ Tray 签名服务（前端静默打印需要匿名访问）
         filterChainDefinitionMap.put("/api/qz/**", "anon");
+        // 贴纸打印 Agent 端点：仅对 C# 客户端使用的 4 个端点放行（其余 agent/print 端点仍走 spaAuth 供管理后台使用）
+        // 由 AgentApiKeyInterceptor 校验 X-API-Key
+        filterChainDefinitionMap.put("/api/agent/register", "anon");
+        filterChainDefinitionMap.put("/api/agent/heartbeat", "anon");
+        filterChainDefinitionMap.put("/api/print/pull", "anon");
+        filterChainDefinitionMap.put("/api/print/result", "anon");
         // Actuator: 仅 health 端点允许匿名访问，其余需认证
         filterChainDefinitionMap.put("/actuator/health", "anon");
         filterChainDefinitionMap.put("/actuator/**", "spaAuth");

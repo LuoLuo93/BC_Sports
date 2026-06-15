@@ -20,7 +20,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.List;
@@ -84,6 +86,18 @@ public class StickerPrintService {
             if (!Boolean.TRUE.equals(queryDTO.getViewAll())) {
                 String username = ShiroSecurityUtils.getCurrentUsername();
                 wrapper.eq(StickerPrintOrder::getCreateBy, username);
+            }
+            if (queryDTO.getOrderNo() != null && !queryDTO.getOrderNo().isBlank()) {
+                wrapper.like(StickerPrintOrder::getOrderNo, queryDTO.getOrderNo());
+            }
+            if (queryDTO.getApplicant() != null && !queryDTO.getApplicant().isBlank()) {
+                wrapper.like(StickerPrintOrder::getApplicant, queryDTO.getApplicant());
+            }
+            if (queryDTO.getStartDate() != null && !queryDTO.getStartDate().isBlank()) {
+                wrapper.apply("create_time >= TO_DATE({0}, 'YYYY-MM-DD')", queryDTO.getStartDate());
+            }
+            if (queryDTO.getEndDate() != null && !queryDTO.getEndDate().isBlank()) {
+                wrapper.apply("create_time <= TO_DATE({0}, 'YYYY-MM-DD') + 1", queryDTO.getEndDate());
             }
         } else {
             String username = ShiroSecurityUtils.getCurrentUsername();

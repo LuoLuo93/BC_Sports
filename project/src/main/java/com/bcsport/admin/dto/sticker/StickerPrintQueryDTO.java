@@ -11,4 +11,16 @@ public class StickerPrintQueryDTO {
 
     @ApiModelProperty("查看全部（默认仅自己）")
     private Boolean viewAll;
+
+    @ApiModelProperty("申请单号")
+    private String orderNo;
+
+    @ApiModelProperty("申请人")
+    private String applicant;
+
+    @ApiModelProperty("申请日期-开始")
+    private String startDate;
+
+    @ApiModelProperty("申请日期-结束")
+    private String endDate;
 }

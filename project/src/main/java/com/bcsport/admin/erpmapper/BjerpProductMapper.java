@@ -15,4 +15,6 @@ public interface BjerpProductMapper {
     Map<String, Object> getProductByEan13(@Param("ean13") String ean13);
 
     List<Map<String, Object>> getBrands();
+
+    List<Map<String, Object>> getKinds();
 }

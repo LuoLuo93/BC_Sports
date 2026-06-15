@@ -34,6 +34,8 @@
                 product.VIRTUALNAME AS STYLE_NUMBER,
                 product.M_DIM1_ID AS BRAND_ID,
                 brand.ATTRIBNAME AS BRAND_NAME,
+                product.M_DIM4_ID AS KIND_ID,
+                Kind.ATTRIBNAME AS KIND_NAME,
                 product.colorsalias AS COLOR,
                 product.PRICELIST AS PRICE,
                 'GB 18401-2010' AS EXECUTION_STANDARD,
@@ -47,6 +49,7 @@
                 product.SIZES AS SIZES
                 FROM M_PRODUCT product
                 LEFT JOIN M_DIM brand ON product.M_DIM1_ID = brand.ID
+                LEFT JOIN M_DIM Kind ON product.M_DIM4_ID = Kind.ID
                 <include refid="searchProductsWhere"/>
             ) TMP
         ) WHERE RN &gt; #{offset} AND RN &lt;= #{offset} + #{pageSize}
@@ -58,6 +61,8 @@
                product.VIRTUALNAME    AS STYLE_NUMBER,
                product.M_DIM1_ID      AS BRAND_ID,
                brand.ATTRIBNAME       AS BRAND_NAME,
+               product.M_DIM4_ID      AS KIND_ID,
+               Kind.ATTRIBNAME        AS KIND_NAME,
                product.colorsalias    AS COLOR,
                product.PRICELIST      AS PRICE,
                CAST(NULL AS VARCHAR2(100))  AS EXECUTION_STANDARD,
@@ -66,11 +71,16 @@
                product.SIZES          AS SIZES
         FROM M_PRODUCT product
         LEFT JOIN M_DIM brand ON product.M_DIM1_ID = brand.ID
+        LEFT JOIN M_DIM Kind ON product.M_DIM4_ID = Kind.ID
         WHERE product.name = #{ean13}
     </select>
 
     <select id="getBrands" resultType="java.util.Map">
         SELECT ID, ATTRIBNAME FROM M_DIM WHERE M_DIMDEF_ID = 1  and DIMFLAG = 'DIM1' ORDER BY ATTRIBCODE ASC
+    </select>
+
+    <select id="getKinds" resultType="java.util.Map">
+        SELECT ID, ATTRIBNAME FROM M_DIM WHERE M_DIMDEF_ID = 4 and DIMFLAG = 'DIM4' ORDER BY ATTRIBCODE ASC
     </select>
 
 </mapper>

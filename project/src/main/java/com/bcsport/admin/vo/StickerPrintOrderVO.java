@@ -91,6 +91,12 @@ public class StickerPrintOrderVO {
         @ApiModelProperty("品牌名称")
         private String brandName;
 
+        @ApiModelProperty("类别ID")
+        private String kindId;
+
+        @ApiModelProperty("类别名称")
+        private String kindName;
+
         @ApiModelProperty("价格")
         private BigDecimal price;
 

@@ -33,6 +33,10 @@ public class StickerPrintOrderDetail {
     private String ean13;
     @TableField("brand_name")
     private String brandName;
+    @TableField("kind_id")
+    private String kindId;
+    @TableField("kind_name")
+    private String kindName;
     @TableField("price")
     private BigDecimal price;
     @TableField("print_qty")

@@ -3,15 +3,24 @@
     <!-- ========== 列表视图 ========== -->
     <template v-if="!formVisible">
       <el-card shadow="never">
-        <div style="display:flex;justify-content:space-between;margin-bottom:16px">
-          <el-radio-group v-model="query.status" @change="loadData">
-            <el-radio-button :value="null">全部</el-radio-button>
-            <el-radio-button :value="0">草稿</el-radio-button>
-            <el-radio-button :value="1">待审核</el-radio-button>
-            <el-radio-button :value="2">已审核</el-radio-button>
-            <el-radio-button :value="3">已驳回</el-radio-button>
-          </el-radio-group>
+        <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
           <el-button v-if="hasPermission('sticker:print:add')" type="primary" @click="handleCreate">新建申请</el-button>
+        </div>
+        <div style="display:flex;gap:12px;margin-bottom:16px;align-items:center;flex-wrap:wrap">
+          <el-input v-model="query.orderNo" placeholder="申请单号" size="default" clearable style="width:260px" @keyup.enter="loadData" />
+          <el-input v-model="query.applicant" placeholder="申请人" size="default" clearable style="width:200px" @keyup.enter="loadData" />
+          <el-select v-model="query.status" placeholder="单据状态" size="default" clearable style="width:140px" @change="loadData">
+            <el-option label="全部" :value="null" />
+            <el-option label="草稿" :value="0" />
+            <el-option label="待审核" :value="1" />
+            <el-option label="已审核" :value="2" />
+            <el-option label="已驳回" :value="3" />
+          </el-select>
+          <el-date-picker v-model="query.startDate" type="date" placeholder="开始日期" size="default" value-format="YYYY-MM-DD" style="width:195px" />
+          <span style="color:#999">-</span>
+          <el-date-picker v-model="query.endDate" type="date" placeholder="结束日期" size="default" value-format="YYYY-MM-DD" style="width:195px" />
+          <el-button type="primary" @click="loadData">查询</el-button>
+          <el-button @click="handleResetQuery">重置</el-button>
         </div>
 
         <el-table v-loading="loading" :data="tableData" border stripe>
@@ -108,6 +117,7 @@
               <el-table-column prop="STYLE_NUMBER" label="款号" width="170" show-overflow-tooltip fixed="left" class-name="col-key" />
               <el-table-column prop="MATERIAL_NAME" label="商品名称" width="200" show-overflow-tooltip fixed="left" class-name="col-key" />
               <el-table-column prop="BRAND_NAME" label="品牌" width="120" show-overflow-tooltip />
+              <el-table-column prop="KIND_NAME" label="类别" width="100" show-overflow-tooltip />
               <el-table-column prop="COLOR" label="颜色" width="90" />
               <el-table-column prop="PRICE" label="价格" width="120">
                 <template #default="{ row }">{{ row.PRICE != null ? Number(row.PRICE).toFixed(5) : '-' }}</template>
@@ -152,6 +162,7 @@
               <el-table-column prop="styleNumber" label="款号" width="170" show-overflow-tooltip fixed="left" class-name="col-key" />
               <el-table-column prop="materialName" label="货品名称" width="200" show-overflow-tooltip fixed="left" class-name="col-key" />
               <el-table-column prop="brandName" label="品牌" width="120" />
+              <el-table-column prop="kindName" label="类别" width="100" />
               <el-table-column prop="color" label="颜色" width="90" />
               <el-table-column prop="price" label="价格" width="120">
                 <template #default="{ row }">{{ row.price ? Number(row.price).toFixed(5) : '-' }}</template>
@@ -347,7 +358,7 @@ const router = useRouter()
 const loading = ref(false)
 const tableData = ref([])
 const total = ref(0)
-const query = reactive({ page: 1, size: 20, status: null })
+const query = reactive({ page: 1, size: 20, status: null, orderNo: '', applicant: '', startDate: '', endDate: '' })
 
 // ─── Form (replaces dialog) ────────────────────────────
 const formVisible = ref(false)
@@ -437,12 +448,27 @@ const statusTagType = (s) => STATUS_TAG[s] || 'info'
 async function loadData() {
   loading.value = true
   try {
-    const { data } = await getPrintOrderPage({ page: query.page, size: query.size, status: query.status, viewAll: viewAll.value })
+    const params = { page: query.page, size: query.size, status: query.status, viewAll: viewAll.value }
+    if (query.orderNo) params.orderNo = query.orderNo
+    if (query.applicant) params.applicant = query.applicant
+    if (query.startDate) params.startDate = query.startDate
+    if (query.endDate) params.endDate = query.endDate
+    const { data } = await getPrintOrderPage(params)
     tableData.value = data.records || []
     total.value = data.total || 0
   } finally {
     loading.value = false
   }
+}
+
+function handleResetQuery() {
+  query.orderNo = ''
+  query.applicant = ''
+  query.startDate = ''
+  query.endDate = ''
+  query.status = null
+  query.page = 1
+  loadData()
 }
 
 function handleCreate() {
@@ -734,6 +760,8 @@ function confirmProductSelect() {
       color: p.COLOR || '',
       ean13: p.EAN13 || '',
       brandName: p.BRAND_NAME || '',
+      kindId: p.KIND_ID || '',
+      kindName: p.KIND_NAME || '',
       price: p.PRICE || 0,
       executionStandard: p.EXECUTION_STANDARD || '',
       origin: p.ORIGIN || '',
@@ -817,6 +845,8 @@ function confirmSizeAssign() {
       color: orig.color,
       ean13: orig.ean13,
       brandName: orig.brandName,
+      kindId: orig.kindId,
+      kindName: orig.kindName,
       price: orig.price,
       executionStandard: orig.executionStandard,
       origin: orig.origin,

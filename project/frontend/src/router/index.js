@@ -46,6 +46,8 @@ const routes = [
       { path: 'sticker/print/:orderId', name: 'StickerPrintDetail', component: () => import('@/views/sticker/PrintDetail.vue'), meta: { pageTitle: '申请单详情' } },
       { path: 'sticker/data', name: 'StickerData', component: () => import('@/views/sticker/StickerData.vue'), meta: { pageTitle: '贴纸资料维护' } },
       { path: 'sticker/template', name: 'StickerTemplateList', component: () => import('@/views/sticker/TemplateList.vue'), meta: { pageTitle: '打印模板管理' } },
+      { path: 'sticker/brand-template', name: 'BrandTemplateMatch', component: () => import('@/views/sticker/BrandTemplateMatch.vue'), meta: { pageTitle: '品牌模板关系' } },
+      { path: 'sticker/agent', name: 'AgentMonitor', component: () => import('@/views/sticker/AgentMonitor.vue'), meta: { pageTitle: 'Agent 监控' } },
       { path: 'sticker/template/designer', name: 'StickerTemplateDesigner', component: () => import('@/views/sticker/TemplateDesigner.vue'), meta: { pageTitle: '标签设计器' } },
       // Monitor
       { path: 'monitor/schedule', name: 'Schedule', component: () => import('@/views/monitor/Schedule.vue'), meta: { pageTitle: '定时任务' } },

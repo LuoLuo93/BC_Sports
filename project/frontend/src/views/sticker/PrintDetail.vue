@@ -58,6 +58,7 @@
           <el-table-column prop="styleNumber" label="款号" width="170" show-overflow-tooltip fixed="left" class-name="col-key" />
           <el-table-column prop="materialName" label="货品名称" width="200" show-overflow-tooltip fixed="left" class-name="col-key" />
           <el-table-column prop="brandName" label="品牌" width="120" />
+          <el-table-column prop="kindName" label="类别" width="100" />
           <el-table-column prop="color" label="颜色" width="90" />
           <el-table-column prop="price" label="价格" width="120">
             <template #default="{ row }">{{ row.price ? Number(row.price).toFixed(5) : '-' }}</template>

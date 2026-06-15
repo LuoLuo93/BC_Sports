@@ -31,4 +31,7 @@ public class PrintAgent {
 
     @TableField("update_time")
     private LocalDateTime updateTime;
+
+    @TableField("ip_address")
+    private String ipAddress;
 }

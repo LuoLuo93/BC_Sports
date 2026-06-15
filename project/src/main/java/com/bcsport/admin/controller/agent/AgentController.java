@@ -10,6 +10,7 @@ import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.Map;
 
@@ -26,7 +27,7 @@ public class AgentController {
 
     @PostMapping("/register")
     @ApiOperation("Agent 注册")
-    public Result<?> register(@RequestBody Map<String, Object> body) {
+    public Result<?> register(@RequestBody Map<String, Object> body, HttpServletRequest request) {
         String agentId = (String) body.get("agentId");
         String agentName = (String) body.get("agentName");
         List<String> printers = (List<String>) body.get("printers");
@@ -36,7 +37,8 @@ public class AgentController {
         }
 
         String printersStr = printers != null ? String.join(",", printers) : "";
-        agentService.register(agentId, agentName, printersStr);
+        String ipAddress = request.getRemoteAddr();
+        agentService.register(agentId, agentName, printersStr, ipAddress);
         return Result.success("注册成功");
     }
 

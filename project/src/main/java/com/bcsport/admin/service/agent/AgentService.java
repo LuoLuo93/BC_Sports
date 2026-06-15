@@ -15,7 +15,7 @@ public class AgentService {
     @Autowired
     private PrintAgentMapper agentMapper;
 
-    public void register(String agentId, String agentName, String printers) {
+    public void register(String agentId, String agentName, String printers, String ipAddress) {
         PrintAgent existing = agentMapper.selectOne(
             new LambdaQueryWrapper<PrintAgent>()
                 .eq(PrintAgent::getAgentId, agentId)
@@ -24,6 +24,7 @@ public class AgentService {
         if (existing != null) {
             existing.setAgentName(agentName);
             existing.setPrinters(printers);
+            existing.setIpAddress(ipAddress);
             existing.setStatus(1);
             existing.setLastHeartbeat(LocalDateTime.now());
             existing.setUpdateTime(LocalDateTime.now());
@@ -33,6 +34,7 @@ public class AgentService {
             agent.setAgentId(agentId);
             agent.setAgentName(agentName);
             agent.setPrinters(printers);
+            agent.setIpAddress(ipAddress);
             agent.setStatus(1);
             agent.setLastHeartbeat(LocalDateTime.now());
             agent.setCreateTime(LocalDateTime.now());

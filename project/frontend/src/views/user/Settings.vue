@@ -232,6 +232,27 @@
           </el-form>
         </el-tab-pane>
 
+        <!-- Agent 配置 -->
+        <el-tab-pane label="Agent 配置" name="agent">
+          <el-form label-width="140px" class="settings-form" v-loading="loading">
+            <el-divider content-position="left">贴纸打印 Agent</el-divider>
+
+            <el-form-item label="API Key">
+              <div style="display:flex;align-items:center;gap:8px">
+                <code style="user-select:all;padding:2px 8px;background:#f5f7fa;border-radius:4px;font-size:13px;min-width:200px">
+                  {{ keyRevealed ? form['agent.api-key'] : maskKey(form['agent.api-key']) }}
+                </code>
+                <el-button size="small" @click="keyRevealed = !keyRevealed">
+                  {{ keyRevealed ? '隐藏' : '显示' }}
+                </el-button>
+                <el-button size="small" @click="copyApiKey">复制</el-button>
+                <el-button size="small" type="warning" @click="regenerateApiKey">重新生成</el-button>
+              </div>
+              <div class="form-tip">C# 客户端（StickerPrintAgent）通过 X-API-Key 请求头携带此密钥。重新生成后所有已注册 Agent 需更新密钥。</div>
+            </el-form-item>
+          </el-form>
+        </el-tab-pane>
+
         <!-- 系统维护 -->
         <el-tab-pane label="系统维护" name="maintenance">
           <div class="maintenance-section">
@@ -353,8 +374,62 @@ const form = reactive({
   'sys.sidebarStyle': 'dark',
   'sys.logoUrl': '',
   'schedule.notify.webhookUrl': '',
-  'schedule.notify.defaultStrategy': 'FAIL_ONLY'
+  'schedule.notify.defaultStrategy': 'FAIL_ONLY',
+  'agent.api-key': ''
 })
+
+// Agent API Key
+const keyRevealed = ref(false)
+
+function maskKey(key) {
+  if (!key) return '（未配置）'
+  if (key.length <= 8) return '****'
+  return key.substring(0, 4) + '****' + key.substring(key.length - 4)
+}
+
+async function copyApiKey() {
+  if (!form['agent.api-key']) {
+    ElMessage.warning('暂无 API Key 可复制')
+    return
+  }
+  try {
+    await navigator.clipboard.writeText(form['agent.api-key'])
+    ElMessage.success('已复制到剪贴板')
+  } catch {
+    const ta = document.createElement('textarea')
+    ta.value = form['agent.api-key']
+    document.body.appendChild(ta)
+    ta.select()
+    document.execCommand('copy')
+    document.body.removeChild(ta)
+    ElMessage.success('已复制到剪贴板')
+  }
+}
+
+function generateRandomKey() {
+  return crypto.randomUUID ? crypto.randomUUID().replace(/-/g, '') :
+    'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'.replace(/x/g, () => Math.floor(Math.random() * 16).toString(16))
+}
+
+async function regenerateApiKey() {
+  try {
+    await ElMessageBox.confirm(
+      '重新生成后所有已注册 Agent 需要更新密钥才能继续工作，确定吗？',
+      '确认重新生成',
+      { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' }
+    )
+  } catch { return }
+
+  form['agent.api-key'] = generateRandomKey()
+  keyRevealed.value = true
+  // 立即保存到后端
+  try {
+    await updateConfigs({ 'agent.api-key': form['agent.api-key'] })
+    ElMessage.success('API Key 已重新生成，请通知各 Agent 更新密钥')
+  } catch {
+    ElMessage.error('保存失败')
+  }
+}
 
 // 维护相关
 const healthLoading = ref(false)

@@ -42,6 +42,7 @@
               <el-button v-if="row.status === 1 && hasPermission('sticker:print:review')" type="success" plain size="small" @click="handleReview(row)">审核</el-button>
               <el-button v-if="row.status === 2 && hasPermission('sticker:print:execute')" type="warning" plain size="small" @click="handlePrintPreview(row)">打印预览</el-button>
               <el-button v-if="row.status === 2 && hasPermission('sticker:print:execute')" type="primary" plain size="small" @click="handleQzPrint(row)">QZ打印</el-button>
+              <el-button v-if="row.status === 2 && hasPermission('sticker:print:execute')" type="success" plain size="small" @click="handleAgentPrint(row)">Agent打印</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -290,6 +291,41 @@
       </template>
     </el-dialog>
 
+    <!-- Agent 打印 -->
+    <el-dialog v-model="agentPrintVisible" title="Agent 打印" width="550px" :close-on-click-modal="false">
+      <div v-if="agentLoading" style="text-align:center;padding:20px">
+        <el-icon class="is-loading" :size="24"><Loading /></el-icon>
+        <p style="margin-top:10px;color:#909399">正在加载 Agent 列表...</p>
+      </div>
+      <template v-else>
+        <p style="margin-bottom:12px;color:#606266;font-size:13px">
+          选择一个在线的 Agent 下发打印任务（共 <b>{{ agentOrderDetailCount }}</b> 条明细）
+        </p>
+        <el-table :data="agentList" border size="small" highlight-current-row
+          @current-change="handleAgentSelect" style="width:100%">
+          <el-table-column prop="agentId" label="Agent ID" width="120" />
+          <el-table-column prop="agentName" label="名称" width="120" />
+          <el-table-column prop="ipAddress" label="IP 地址" width="130" />
+          <el-table-column prop="status" label="状态" width="80" align="center">
+            <template #default="{ row }">
+              <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
+                {{ row.status === 1 ? '在线' : '离线' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+        </el-table>
+      </template>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button class="btn-cancel" @click="agentPrintVisible = false">取消</el-button>
+          <el-button class="btn-confirm" type="primary" @click="confirmAgentPrint"
+            :loading="agentPrinting" :disabled="!selectedAgent">
+            {{ agentPrinting ? '下发中...' : '下发打印任务' }}
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
+
     <!-- 尺码赋值 -->
     <el-dialog v-model="showSizeAssignDialog" title="尺码赋值" width="520px" class="size-assign-dialog" destroy-on-close>
       <div class="sa-header">
@@ -331,7 +367,8 @@ import { ref, reactive, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, onBeforeRouteLeave } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Loading } from '@element-plus/icons-vue'
-import { getPrintOrderPage, getPrintOrder, getTemplateList, createPrintOrder, updatePrintOrder, submitPrintOrder, reviewPrintOrder, deletePrintOrder, bartenderPrint, searchProducts, getProductBrands } from '@/api/sticker'
+import request from '@/api/request'
+import { getPrintOrderPage, getPrintOrder, getTemplateList, createPrintOrder, updatePrintOrder, submitPrintOrder, reviewPrintOrder, deletePrintOrder, bartenderPrint, searchProducts, getProductBrands, createAgentPrintTasks } from '@/api/sticker'
 import { usePermission } from '@/composables/usePermission'
 import { useAuthStore } from '@/stores/auth'
 import { connectQZ, getPrinters, printOrderDetails } from '@/utils/qzPrint'
@@ -429,6 +466,15 @@ const qzOrderTotal = computed(() => {
 })
 const qzOrderDetails = computed(() => qzOrder.value?.details?.length || 0)
 const qzPrintProgress = computed(() => qzOrderTotal.value ? Math.round((qzPrinted.value / qzOrderTotal.value) * 100) : 0)
+
+// Agent Print
+const agentPrintVisible = ref(false)
+const agentLoading = ref(false)
+const agentPrinting = ref(false)
+const agentList = ref([])
+const selectedAgent = ref(null)
+const agentOrder = ref(null)
+const agentOrderDetailCount = computed(() => agentOrder.value?.details?.length || 0)
 
 // Size assign
 const showSizeAssignDialog = ref(false)
@@ -648,6 +694,67 @@ async function confirmQzPrint() {
     ElMessage.error('打印失败: ' + (e.message || '未知错误'))
   } finally {
     qzPrinting.value = false
+  }
+}
+
+// ─── Agent 打印 ──────────────────────
+async function handleAgentPrint(row) {
+  agentOrder.value = null
+  selectedAgent.value = null
+  agentPrinting.value = false
+
+  // 加载订单详情
+  try {
+    const { data } = await getPrintOrder(row.id)
+    agentOrder.value = data
+  } catch {
+    ElMessage.error('获取订单详情失败')
+    return
+  }
+
+  // 加载 Agent 列表
+  agentLoading.value = true
+  try {
+    const { data } = await request.get('/api/agent/list')
+    agentList.value = data || []
+  } catch {
+    agentList.value = []
+    ElMessage.error('获取 Agent 列表失败')
+  } finally {
+    agentLoading.value = false
+  }
+
+  agentPrintVisible.value = true
+}
+
+function handleAgentSelect(row) {
+  selectedAgent.value = row
+}
+
+async function confirmAgentPrint() {
+  if (!selectedAgent.value) {
+    ElMessage.warning('请选择一个 Agent')
+    return
+  }
+  if (selectedAgent.value.status !== 1) {
+    ElMessage.warning('只能选择在线的 Agent')
+    return
+  }
+
+  agentPrinting.value = true
+  try {
+    const res = await createAgentPrintTasks(agentOrder.value.id, selectedAgent.value.agentId)
+    if (res.code === 200) {
+      const taskCount = typeof res.data === 'string' ? res.data.split(',').length : agentOrderDetailCount.value
+      ElMessage.success(`已下发 ${taskCount} 个打印任务到 ${selectedAgent.value.agentName || selectedAgent.value.agentId}`)
+      agentPrintVisible.value = false
+    } else {
+      ElMessage.error(res.message || '下发失败')
+    }
+  } catch (e) {
+    ElMessage.error('下发失败: ' + (e.message || '未知错误'))
+  } finally {
+    agentPrinting.value = false
   }
 }
 

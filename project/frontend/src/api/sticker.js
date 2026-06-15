@@ -88,3 +88,8 @@ export function setDefaultTemplate(id) {
 export function getDefaultTemplate() {
   return request.get('/api/sticker/template/default')
 }
+
+// ─── Agent 打印 ──────────────────────
+export function createAgentPrintTasks(orderId, agentId) {
+  return request.post(`/api/print/create-tasks/${orderId}?agentId=${encodeURIComponent(agentId)}`)
+}

@@ -20,6 +20,7 @@ public class ScheduleTaskRegistry {
     public static final String MODULE_OTHER = "OTHER";
     public static final String MODULE_NXCRM = "NXCRM";
     public static final String MODULE_BJERP = "BJERP";
+    public static final String MODULE_TICKET = "TICKET";
 
     private static final Map<String, TaskOption> TASK_MAP = new LinkedHashMap<>();
 
@@ -82,6 +83,9 @@ public class ScheduleTaskRegistry {
             new ParamDef("startTime", "开始时间", "date"),
             new ParamDef("endTime", "结束时间", "date"));
         register("nxcrm.member.tag.push", "NXCRM-推送会员标签", "nxcrmMemberTagPushTask", "pushMemberTags", "从IHR读取会员标签数据并推送到南讯CRM", MODULE_NXCRM, 6);
+
+        // === 贴纸打印模块 ===
+        register("ticket.agent.checkOffline", "贴纸打印-检测Agent离线", "agentService", "checkOffline", "检测心跳超时的Agent并标记为离线", MODULE_TICKET, 1);
 
         // === 示例任务 ===
         register("demoTask.noParams", "示例任务-无参数", "demoTask", "noParams", "演示定时任务基本功能", MODULE_DEMO, 1);

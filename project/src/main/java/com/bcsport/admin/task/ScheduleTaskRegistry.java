@@ -86,6 +86,7 @@ public class ScheduleTaskRegistry {
 
         // === 贴纸打印模块 ===
         register("ticket.agent.checkOffline", "贴纸打印-检测Agent离线", "agentService", "checkOffline", "检测心跳超时的Agent并标记为离线", MODULE_TICKET, 1);
+        register("ticket.task.checkStuck", "贴纸打印-巡检卡住任务", "printTaskService", "checkStuckTasks", "巡检长时间未拉取/未回报的打印任务并告警", MODULE_TICKET, 2);
 
         // === 示例任务 ===
         register("demoTask.noParams", "示例任务-无参数", "demoTask", "noParams", "演示定时任务基本功能", MODULE_DEMO, 1);

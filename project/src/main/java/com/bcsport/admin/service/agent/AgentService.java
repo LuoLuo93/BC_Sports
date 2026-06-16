@@ -56,22 +56,41 @@ public class AgentService {
         }
     }
 
+    /** 心跳超过该秒数即视为离线（与 checkOffline 保持一致）。 */
+    private static final int HEARTBEAT_TIMEOUT_SECONDS = 30;
+
+    /**
+     * 列出全部 Agent，并按最后心跳实时重算在线/离线状态（仅用于展示，不写库），
+     * 避免存储的 status 滞后导致页面显示“假在线”。监控页刷新、下发时选 Agent 均以此为准。
+     */
     public List<PrintAgent> listAll() {
-        return agentMapper.selectList(
+        List<PrintAgent> agents = agentMapper.selectList(
             new LambdaQueryWrapper<PrintAgent>()
                 .orderByDesc(PrintAgent::getLastHeartbeat)
         );
+        agents.forEach(this::applyLiveStatus);
+        return agents;
+    }
+
+    /** 根据最后心跳实时判定在线状态（心跳在 HEARTBEAT_TIMEOUT_SECONDS 内视为在线）。 */
+    private void applyLiveStatus(PrintAgent agent) {
+        if (agent == null) return;
+        LocalDateTime hb = agent.getLastHeartbeat();
+        boolean alive = hb != null && hb.isAfter(LocalDateTime.now().minusSeconds(HEARTBEAT_TIMEOUT_SECONDS));
+        agent.setStatus(alive ? 1 : 0);
     }
 
     public PrintAgent getByAgentId(String agentId) {
-        return agentMapper.selectOne(
+        PrintAgent agent = agentMapper.selectOne(
             new LambdaQueryWrapper<PrintAgent>()
                 .eq(PrintAgent::getAgentId, agentId)
         );
+        applyLiveStatus(agent);
+        return agent;
     }
 
     public void checkOffline() {
-        LocalDateTime threshold = LocalDateTime.now().minusSeconds(30);
+        LocalDateTime threshold = LocalDateTime.now().minusSeconds(HEARTBEAT_TIMEOUT_SECONDS);
         List<PrintAgent> agents = agentMapper.selectList(
             new LambdaQueryWrapper<PrintAgent>()
                 .eq(PrintAgent::getStatus, 1)

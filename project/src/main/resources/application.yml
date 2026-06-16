@@ -12,6 +12,11 @@ server:
 # 默认 local-dev-key 便于本地联调；生产环境用环境变量 AGENT_API_KEY 覆盖，不在仓库存明文。
 agent:
   api-key: ${AGENT_API_KEY:local-dev-key}
+  task:
+    # 任务派发后超过该分钟数未回报视为卡住，触发重派；必须大于单任务最大物理打印耗时，否则可能误重派导致重复打印
+    stuck-minutes: ${AGENT_TASK_STUCK_MINUTES:5}
+    # 单个任务最大重派次数，超过则标记失败不再下发
+    max-redispatch: ${AGENT_TASK_MAX_REDISPATCH:3}
 
 spring:
   application:

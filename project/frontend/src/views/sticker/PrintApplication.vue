@@ -40,9 +40,9 @@
               <el-button v-if="row.status === 0 && hasPermission('sticker:print:edit')" type="warning" plain size="small" @click="handleSubmit(row)">提交</el-button>
               <el-button v-if="row.status === 0 && hasPermission('sticker:print:delete')" type="danger" plain size="small" @click="handleDelete(row)">删除</el-button>
               <el-button v-if="row.status === 1 && hasPermission('sticker:print:review')" type="success" plain size="small" @click="handleReview(row)">审核</el-button>
+              <el-button v-if="row.status === 2 && hasPermission('sticker:print:execute')" type="primary" size="small" @click="handleAgentPrint(row)">打印</el-button>
               <el-button v-if="row.status === 2 && hasPermission('sticker:print:execute')" type="warning" plain size="small" @click="handlePrintPreview(row)">打印预览</el-button>
-              <el-button v-if="row.status === 2 && hasPermission('sticker:print:execute')" type="primary" plain size="small" @click="handleQzPrint(row)">QZ打印</el-button>
-              <el-button v-if="row.status === 2 && hasPermission('sticker:print:execute')" type="success" plain size="small" @click="handleAgentPrint(row)">Agent打印</el-button>
+              <el-button v-if="row.status === 2 && hasPermission('sticker:print:execute')" plain size="small" @click="handleQzPrint(row)">QZ打印</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -291,8 +291,8 @@
       </template>
     </el-dialog>
 
-    <!-- Agent 打印 -->
-    <el-dialog v-model="agentPrintVisible" title="Agent 打印" width="550px" :close-on-click-modal="false">
+    <!-- 打印（通过 Agent 下发） -->
+    <el-dialog v-model="agentPrintVisible" title="打印 · 选择 Agent" width="550px" :close-on-click-modal="false">
       <div v-if="agentLoading" style="text-align:center;padding:20px">
         <el-icon class="is-loading" :size="24"><Loading /></el-icon>
         <p style="margin-top:10px;color:#909399">正在加载 Agent 列表...</p>
@@ -368,7 +368,7 @@ import { useRouter, onBeforeRouteLeave } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Loading } from '@element-plus/icons-vue'
 import request from '@/api/request'
-import { getPrintOrderPage, getPrintOrder, getTemplateList, createPrintOrder, updatePrintOrder, submitPrintOrder, reviewPrintOrder, deletePrintOrder, bartenderPrint, searchProducts, getProductBrands, createAgentPrintTasks } from '@/api/sticker'
+import { getPrintOrderPage, getPrintOrder, getTemplateList, createPrintOrder, updatePrintOrder, submitPrintOrder, reviewPrintOrder, deletePrintOrder, searchProducts, getProductBrands, createAgentPrintTasks } from '@/api/sticker'
 import { usePermission } from '@/composables/usePermission'
 import { useAuthStore } from '@/stores/auth'
 import { connectQZ, getPrinters, printOrderDetails } from '@/utils/qzPrint'
@@ -595,17 +595,6 @@ async function confirmReview() {
   ElMessage.success('审核完成')
   reviewVisible.value = false
   loadData()
-}
-
-async function handleBarTenderPrint(row) {
-  await ElMessageBox.confirm(`确认打印申请单 ${row.orderNo}？`, '打印确认')
-  try {
-    await bartenderPrint(row.id)
-    ElMessage.success('打印指令已发送')
-    loadData()
-  } catch (e) {
-    ElMessage.error('打印失败')
-  }
 }
 
 // ─── QZ Tray 打印 ────────────────────────────────────────

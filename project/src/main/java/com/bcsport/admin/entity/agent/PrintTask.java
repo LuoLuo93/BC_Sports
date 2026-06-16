@@ -68,6 +68,9 @@ public class PrintTask {
     @TableField("print_time")
     private LocalDateTime printTime;
 
+    @TableField("dispatch_time")
+    private LocalDateTime dispatchTime;
+
     @TableField("retry_count")
     private Integer retryCount;
 }

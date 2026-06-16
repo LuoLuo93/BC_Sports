@@ -8,14 +8,20 @@ import com.bcsport.admin.entity.sticker.StickerPrintOrderDetail;
 import com.bcsport.admin.mapper.agent.PrintTaskMapper;
 import com.bcsport.admin.mapper.sticker.StickerPrintOrderDetailMapper;
 import com.bcsport.admin.mapper.sticker.StickerPrintOrderMapper;
+import com.bcsport.admin.common.exception.BusinessException;
 import com.bcsport.admin.service.sticker.BrandTemplateMatchService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 public class PrintTaskService {
 
@@ -34,21 +40,92 @@ public class PrintTaskService {
     @Autowired
     private ObjectMapper objectMapper;
 
+    /** 任务派发后超过该时长仍未回报，视为 Agent 崩溃/丢失，允许重新派发。
+     *  必须大于单任务最大物理打印耗时（含大数量批次），否则会误重派正在打印的任务导致重复打印。
+     *  改用 dispatch_time（真实派发时刻）而非 create_time 计时，避免排队等待时间被错误计入阈值。 */
+    @Value("${agent.task.stuck-minutes:5}")
+    private int stuckMinutes;
+
+    /** 单个任务最多重新派发次数，超过则标记失败，避免无限重发导致重复打印。 */
+    @Value("${agent.task.max-redispatch:3}")
+    private int maxRedispatch;
+
+    /** status=0 任务超过该分钟数仍未被拉取，巡检任务告警（agentId 配错 / Agent 长时间离线）。 */
+    private static final int PENDING_WARN_MINUTES = 15;
+
     public List<PrintTask> pullTasks(String agentId) {
+        LocalDateTime stuckBefore = LocalDateTime.now().minusMinutes(stuckMinutes);
+
+        // status=0(待打印) 直接拉取；
+        // status=1(已派发) 但 dispatch_time 超过阈值仍未回报，视为 Agent 异常，重新派发。
         List<PrintTask> tasks = taskMapper.selectList(
             new LambdaQueryWrapper<PrintTask>()
                 .eq(PrintTask::getAgentId, agentId)
-                .eq(PrintTask::getStatus, 0)
+                .and(w -> w
+                    .eq(PrintTask::getStatus, 0)
+                    .or(n -> n.eq(PrintTask::getStatus, 1).lt(PrintTask::getDispatchTime, stuckBefore))
+                )
                 .orderByAsc(PrintTask::getCreateTime)
                 .last("FETCH FIRST 10 ROWS ONLY")
         );
 
+        List<PrintTask> dispatched = new ArrayList<>();
         for (PrintTask task : tasks) {
+            // 重新派发的旧任务：计入重试次数，超过上限则标记失败不再下发
+            if (task.getStatus() != null && task.getStatus() == 1) {
+                int retry = (task.getRetryCount() == null ? 0 : task.getRetryCount()) + 1;
+                if (retry > maxRedispatch) {
+                    task.setStatus(3);
+                    task.setErrorMsg("多次派发未收到回报，判定为丢失");
+                    task.setPrintTime(LocalDateTime.now());
+                    taskMapper.updateById(task);
+                    log.warn("任务 {} 已达最大重派次数 {}，标记为失败", task.getTaskId(), maxRedispatch);
+                    continue;
+                }
+                task.setRetryCount(retry);
+                log.info("重新派发超时未回报的任务 {}，第 {} 次", task.getTaskId(), retry);
+            }
             task.setStatus(1);
+            task.setDispatchTime(LocalDateTime.now());  // 记录真实派发时刻，用于精确判断卡住重派
             taskMapper.updateById(task);
+            dispatched.add(task);
+        }
+        return dispatched;
+    }
+
+    /**
+     * 巡检卡住的打印任务（由定时任务 ticket.task.checkStuck 调用）：
+     *  - status=0 超过 PENDING_WARN_MINUTES 未被拉取 → 多半 agentId 配错或 Agent 长时间离线；
+     *  - status=1 派发超过 阈值×(maxRedispatch+1) 仍无回报 → 多半 Agent 反复崩溃、重派也救不回。
+     * 仅做告警（日志），不改变任务状态。
+     */
+    public void checkStuckTasks() {
+        LocalDateTime now = LocalDateTime.now();
+
+        List<PrintTask> pending = taskMapper.selectList(
+            new LambdaQueryWrapper<PrintTask>()
+                .eq(PrintTask::getStatus, 0)
+                .lt(PrintTask::getCreateTime, now.minusMinutes(PENDING_WARN_MINUTES))
+                .last("FETCH FIRST 20 ROWS ONLY")
+        );
+        if (!pending.isEmpty()) {
+            log.warn("巡检: {} 个任务已 {} 分钟未被拉取(status=0)，请检查 agentId 是否正确 / 目标 Agent 是否在线: {}",
+                pending.size(), PENDING_WARN_MINUTES,
+                pending.stream().map(t -> t.getTaskId() + "@(" + t.getAgentId() + ")").limit(5).collect(Collectors.joining(", ")));
         }
 
-        return tasks;
+        long severeMinutes = (long) stuckMinutes * (maxRedispatch + 1);
+        List<PrintTask> inFlight = taskMapper.selectList(
+            new LambdaQueryWrapper<PrintTask>()
+                .eq(PrintTask::getStatus, 1)
+                .lt(PrintTask::getDispatchTime, now.minusMinutes(severeMinutes))
+                .last("FETCH FIRST 20 ROWS ONLY")
+        );
+        if (!inFlight.isEmpty()) {
+            log.warn("巡检: {} 个任务派发超 {} 分钟仍无回报(status=1)，可能 Agent 反复崩溃: {}",
+                inFlight.size(), severeMinutes,
+                inFlight.stream().map(t -> t.getTaskId() + "@(" + t.getAgentId() + ")").limit(5).collect(Collectors.joining(", ")));
+        }
     }
 
     public void reportResult(String taskId, boolean success, String message) {
@@ -65,10 +142,25 @@ public class PrintTaskService {
         }
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public String createTasksFromOrder(String orderId, String agentId) {
         StickerPrintOrder order = orderMapper.selectById(orderId);
         if (order == null) {
-            throw new RuntimeException("申请单不存在");
+            throw new BusinessException("申请单不存在");
+        }
+        // 仅已审核(status=2)的申请单可下发打印，与 bartenderPrint 保持一致
+        if (order.getStatus() == null || order.getStatus() != 2) {
+            throw new BusinessException("只有已审核的申请单才能下发打印");
+        }
+
+        // 幂等：若该订单已有未完成(待打印/已派发)的任务，拒绝重复下发，避免重复打印
+        Long pending = taskMapper.selectCount(
+            new LambdaQueryWrapper<PrintTask>()
+                .eq(PrintTask::getOrderId, orderId)
+                .in(PrintTask::getStatus, 0, 1)
+        );
+        if (pending != null && pending > 0) {
+            throw new BusinessException("该申请单已有未完成的打印任务，请勿重复下发");
         }
 
         List<StickerPrintOrderDetail> details = detailMapper.selectList(
@@ -77,18 +169,34 @@ public class PrintTaskService {
         );
 
         if (details.isEmpty()) {
-            throw new RuntimeException("申请单无明细");
+            throw new BusinessException("申请单无明细");
         }
 
-        List<String> taskIds = new ArrayList<>();
-
+        // 先校验并缓存每条明细的模板匹配；任一未配置即整体抛错回滚，不产生半成品任务
+        // （避免回退 default.btw 导致 Agent 端必然"模板不存在"打印失败）
+        List<BrandTemplateMatch> matches = new ArrayList<>();
+        List<String> unmatched = new ArrayList<>();
         for (StickerPrintOrderDetail detail : details) {
             BrandTemplateMatch match = brandTemplateMatchService.matchByName(
                 detail.getBrandName(), detail.getKindName()
             );
+            matches.add(match);
+            if (match == null) {
+                unmatched.add(detail.getBrandName() + "/" + detail.getKindName());
+            }
+        }
+        if (!unmatched.isEmpty()) {
+            throw new BusinessException("以下品牌/品类未配置打印模板，请先在模板匹配中维护: " + String.join("; ", unmatched));
+        }
 
-            String templateFile = match != null ? match.getTemplateName() : "default.btw";
-            String printerName = match != null ? match.getPrinterName() : "";
+        List<String> taskIds = new ArrayList<>();
+
+        for (int i = 0; i < details.size(); i++) {
+            StickerPrintOrderDetail detail = details.get(i);
+            BrandTemplateMatch match = matches.get(i);
+
+            String templateFile = match.getTemplateName();
+            String printerName = match.getPrinterName() != null ? match.getPrinterName() : "";
 
             Map<String, String> printData = new HashMap<>();
             printData.put("MaterialNumber", detail.getMaterialNumber());

@@ -20,7 +20,7 @@
             </el-radio-group>
             <el-input v-model="searchKeyword" placeholder="输入编码或名称搜索" size="small" clearable :disabled="isEdit" style="width:240px" @keyup.enter="searchEntities" />
             <el-button type="primary" size="small" :loading="entitySearching" :disabled="isEdit" style="width:80px" @click="searchEntities">搜索</el-button>
-            <el-button type="success" size="small" :disabled="isEdit || !selectedEntities.length" @click="confirmEntitySelect">
+            <el-button type="success" size="small" :disabled="!selectedEntities.length" @click="confirmEntitySelect">
               添加({{ selectedEntities.length }})
             </el-button>
           </div>

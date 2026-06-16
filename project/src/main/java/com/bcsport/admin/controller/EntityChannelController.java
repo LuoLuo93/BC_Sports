@@ -127,8 +127,12 @@ public class EntityChannelController {
     @RequiresPermissions("bi:entity:edit")
     @OperLog(module = "实体渠道", operation = "批量保存实体渠道")
     public Result<?> batchSave(@RequestParam String externalId, @RequestParam String entityType, @RequestBody java.util.List<EntityChannelDTO> list) {
-        boolean success = entityChannelService.batchSave(externalId, entityType, list);
-        return success ? Result.success("保存成功") : Result.error("保存失败");
+        try {
+            boolean success = entityChannelService.batchSave(externalId, entityType, list);
+            return success ? Result.success("保存成功") : Result.error("保存失败");
+        } catch (IllegalArgumentException e) {
+            return Result.error(e.getMessage());
+        }
     }
 
     /**

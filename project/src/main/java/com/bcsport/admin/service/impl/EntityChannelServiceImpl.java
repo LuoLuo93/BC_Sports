@@ -165,12 +165,7 @@ public class EntityChannelServiceImpl implements EntityChannelService {
 
         // 生成ID
         if (entity.getId() == null || entity.getId().isEmpty()) {
-            try {
-                entity.setId(String.valueOf(entityChannelMapper.selectNextId()));
-            } catch (Exception e) {
-                // 如果序列不存在，使用UUID
-                entity.setId(UUID.randomUUID().toString().replace("-", "").substring(0, 32));
-            }
+            entity.setId(generateId());
         }
 
         return entityChannelMapper.insert(entity) > 0;
@@ -244,6 +239,25 @@ public class EntityChannelServiceImpl implements EntityChannelService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean batchSave(String externalId, String entityType, List<EntityChannelDTO> list) {
+        // 空集合保护：batchSave 是全量替换语义，空集会把该实体所有配置软删，直接拒绝
+        if (list == null || list.isEmpty()) {
+            throw new IllegalArgumentException("没有可保存的配置");
+        }
+
+        // 批次内组合去重：编辑页已允许新增多行，拦截维度完全相同的重复配置
+        // (externalId/entityType 全批相同，仅比对 7 个维度字段；与 isDuplicate 字段组合一致)
+        Set<String> seenKeys = new HashSet<>();
+        for (EntityChannelDTO dto : list) {
+            String key = String.join("|",
+                    nullSafe(dto.getBrandId()), nullSafe(dto.getChannelTypeId()),
+                    nullSafe(dto.getChannelDefId()), nullSafe(dto.getChannelNatureId()),
+                    nullSafe(dto.getBusinessTypeId()), nullSafe(dto.getRegionLevel1Id()),
+                    nullSafe(dto.getRegionLevel2Id()));
+            if (!seenKeys.add(key)) {
+                throw new IllegalArgumentException("存在维度完全相同的重复配置，请去重后再保存");
+            }
+        }
+
         // 1. 查询现有记录
         QueryWrapper<EntityChannel> wrapper = new QueryWrapper<>();
         wrapper.eq("deleted", 0);
@@ -266,7 +280,6 @@ public class EntityChannelServiceImpl implements EntityChannelService {
                 // 无ID → 新增记录
                 EntityChannel entity = new EntityChannel();
                 BeanUtils.copyProperties(dto, entity);
-                entity.setId(null);
                 // 使用DTO自身的externalId和entityType，而非参数
                 if (entity.getExternalId() == null || entity.getExternalId().isEmpty()) {
                     entity.setExternalId(externalId);
@@ -274,11 +287,7 @@ public class EntityChannelServiceImpl implements EntityChannelService {
                 if (entity.getEntityType() == null || entity.getEntityType().isEmpty()) {
                     entity.setEntityType(entityType);
                 }
-                try {
-                    entity.setId(String.valueOf(entityChannelMapper.selectNextId()));
-                } catch (Exception e) {
-                    entity.setId(UUID.randomUUID().toString().replace("-", "").substring(0, 32));
-                }
+                entity.setId(generateId());
                 entityChannelMapper.insert(entity);
             }
         }
@@ -378,8 +387,9 @@ public class EntityChannelServiceImpl implements EntityChannelService {
     private String getEntityTypeName(String entityType) {
         if (entityType == null) return null;
         switch (entityType) {
-            case "shop": return "店铺";
-            case "stock": return "仓库";
+            case "store": return "店仓";
+            case "shop": return "店铺";   // 兼容存量数据，新增统一为 store
+            case "stock": return "仓库";   // 兼容存量数据
             case "customer": return "客户";
             default: return entityType;
         }
@@ -589,7 +599,7 @@ public class EntityChannelServiceImpl implements EntityChannelService {
 
                     // 构建 EntityChannel 实体
                     EntityChannel entity = new EntityChannel();
-                    entity.setId(UUID.randomUUID().toString().replace("-", "").substring(0, 32));
+                    entity.setId(generateId());
                     entity.setEntityType(entityType);
                     entity.setExternalId(externalId);
                     entity.setEntityName(entityName);
@@ -650,6 +660,19 @@ public class EntityChannelServiceImpl implements EntityChannelService {
             return result;
         } finally {
             reader.close();
+        }
+    }
+
+    /**
+     * 统一生成主键：优先 Oracle 序列 SEQ_BC_SPORTS_SYS_ENTITY_CHANNEL，
+     * 序列不可用时回退 UUID。单条新增/批量保存/Excel导入三条路径共用，
+     * 与项目其它实体 selectNextId 约定一致，避免 ID 生成逻辑散落。
+     */
+    private String generateId() {
+        try {
+            return String.valueOf(entityChannelMapper.selectNextId());
+        } catch (Exception e) {
+            return UUID.randomUUID().toString().replace("-", "").substring(0, 32);
         }
     }
 

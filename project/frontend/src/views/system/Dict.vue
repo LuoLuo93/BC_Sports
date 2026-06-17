@@ -143,9 +143,11 @@ import {
 import { Plus } from '@element-plus/icons-vue'
 import { usePermission } from '@/composables/usePermission'
 import { usePageQuery } from '@/composables/usePageQuery'
+import { useDictStore } from '@/stores/dict'
 import { PAGE_SIZES } from '@/utils/appConfig'
 
 const { hasPermission } = usePermission()
+const dictStore = useDictStore()
 
 // --- 字典类型 ---
 const typeList = ref([])
@@ -271,6 +273,8 @@ async function handleDeleteData(row) {
   await ElMessageBox.confirm(`确定删除字典数据「${row.dictLabel}」？`, '提示', { type: 'warning' })
   await deleteDictData(row.id)
   ElMessage.success('删除成功')
+  // 清除字典缓存
+  dictStore.clearCache()
   loadDataList()
 }
 
@@ -287,6 +291,8 @@ async function handleSubmitData() {
     }
     ElMessage.success(isEditData.value ? '更新成功' : '创建成功')
     dataDialogVisible.value = false
+    // 清除字典缓存，确保其他页面能获取最新数据
+    dictStore.clearCache()
     loadDataList()
   } finally {
     dataSubmitting.value = false

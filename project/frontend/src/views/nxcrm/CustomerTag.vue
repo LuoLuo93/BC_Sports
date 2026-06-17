@@ -43,7 +43,7 @@
             </el-table>
           </div>
           <div class="pagination-wrapper--sm">
-            <el-pagination v-model:current-page="taskQuery.page" v-model:page-size="taskQuery.size" :total="taskTotal" :page-sizes="PAGE_SIZES_LG" layout="total, sizes, prev, pager, next" @size-change="loadTasks" @current-change="loadTasks" />
+            <el-pagination v-model:current-page="taskQuery.pageNum" v-model:page-size="taskQuery.pageSize" :total="taskTotal" :page-sizes="PAGE_SIZES_LG" layout="total, sizes, prev, pager, next" @size-change="loadTasks" @current-change="loadTasks" />
           </div>
         </el-card>
       </el-tab-pane>
@@ -101,7 +101,7 @@
             </el-table>
           </div>
           <div class="pagination-wrapper--sm">
-            <el-pagination v-model:current-page="detailQuery.page" v-model:page-size="detailQuery.size" :total="detailTotal" :page-sizes="PAGE_SIZES_LG" layout="total, sizes, prev, pager, next" @size-change="loadDetails" @current-change="loadDetails" />
+            <el-pagination v-model:current-page="detailQuery.pageNum" v-model:page-size="detailQuery.pageSize" :total="detailTotal" :page-sizes="PAGE_SIZES_LG" layout="total, sizes, prev, pager, next" @size-change="loadDetails" @current-change="loadDetails" />
           </div>
         </el-card>
       </el-tab-pane>
@@ -153,7 +153,7 @@
             </el-table>
           </div>
           <div class="pagination-wrapper--sm">
-            <el-pagination v-model:current-page="memberTagQuery.page" v-model:page-size="memberTagQuery.size" :total="memberTagTotal" :page-sizes="PAGE_SIZES_LG" layout="total, sizes, prev, pager, next" @size-change="loadMemberTags" @current-change="loadMemberTags" />
+            <el-pagination v-model:current-page="memberTagQuery.pageNum" v-model:page-size="memberTagQuery.pageSize" :total="memberTagTotal" :page-sizes="PAGE_SIZES_LG" layout="total, sizes, prev, pager, next" @size-change="loadMemberTags" @current-change="loadMemberTags" />
           </div>
         </el-card>
       </el-tab-pane>
@@ -196,7 +196,7 @@ function statusTagType(s) { return ['info', 'warning', 'success', 'danger'][s] |
 const taskLoading = ref(false)
 const taskData = ref([])
 const taskTotal = ref(0)
-const taskQuery = reactive({ page: 1, size: 20 })
+const taskQuery = reactive({ pageNum: 1, pageSize: 20 })
 const executingTaskId = ref(null)
 
 async function loadTasks() {
@@ -237,12 +237,12 @@ const selectedTask = ref(null)
 const detailLoading = ref(false)
 const detailData = ref([])
 const detailTotal = ref(0)
-const detailQuery = reactive({ page: 1, size: 20, status: null })
+const detailQuery = reactive({ pageNum: 1, pageSize: 20, status: null })
 
 function selectTask(row) { selectedTask.value = row }
 function viewDetails(row) {
   selectedTask.value = row
-  detailQuery.page = 1
+  detailQuery.pageNum = 1
   detailQuery.status = null
   activeTab.value = 'details'
 }
@@ -283,7 +283,7 @@ async function handleCreate() {
 const memberTagLoading = ref(false)
 const memberTagData = ref([])
 const memberTagTotal = ref(0)
-const memberTagQuery = reactive({ batchNo: '', status: null, page: 1, size: 20 })
+const memberTagQuery = reactive({ batchNo: '', status: null, pageNum: 1, pageSize: 20 })
 const fillShopLoading = ref(false)
 
 function memberStatusLabel(s) { return ['待处理', 'shopId已填充', '已打标签', '失败'][s] || '未知' }
@@ -298,8 +298,8 @@ async function loadMemberTags() {
   } finally { memberTagLoading.value = false }
 }
 
-function handleMemberTagSearch() { memberTagQuery.page = 1; loadMemberTags() }
-function resetMemberTagQuery() { memberTagQuery.batchNo = ''; memberTagQuery.status = null; memberTagQuery.page = 1; loadMemberTags() }
+function handleMemberTagSearch() { memberTagQuery.pageNum = 1; loadMemberTags() }
+function resetMemberTagQuery() { memberTagQuery.batchNo = ''; memberTagQuery.status = null; memberTagQuery.pageNum = 1; loadMemberTags() }
 
 async function handleFillShopId() {
   if (!memberTagQuery.batchNo) { ElMessage.warning('请先输入批次号'); return }

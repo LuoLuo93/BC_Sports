@@ -29,9 +29,10 @@
           <el-tag v-if="row.isDefault === 1" type="success" size="small">默认</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="300" align="center" fixed="right">
+      <el-table-column label="操作" width="380" align="center" fixed="right">
         <template #default="{ row }">
           <el-button type="primary" plain size="small" @click="editTemplate(row)">编辑</el-button>
+          <el-button size="small" @click="openFieldMapping(row)">字段映射</el-button>
           <el-button size="small" @click="copyTemplate(row)">复制</el-button>
           <el-button size="small" @click="handleSetDefault(row)" :disabled="row.isDefault === 1">设为默认</el-button>
           <el-button type="danger" plain size="small" @click="handleDelete(row)">删除</el-button>
@@ -39,6 +40,13 @@
       </el-table-column>
     </el-table>
   </SearchPage>
+
+  <!-- 字段映射弹窗 -->
+  <FieldMappingDialog
+    v-model="fieldMappingVisible"
+    :template-id="currentTemplateId"
+    :template-name="currentTemplateName"
+  />
 
   <!-- 新建模板弹窗 -->
   <el-dialog v-model="showCreateDialog" title="新建标签模板" width="420px" :close-on-click-modal="false">
@@ -80,6 +88,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import SearchPage from '@/components/SearchPage.vue'
+import FieldMappingDialog from './FieldMappingDialog.vue'
 import { usePageQuery } from '@/composables/usePageQuery'
 import { getTemplatePage as apiGetPage, createTemplate as apiCreate, deleteTemplate as apiDelete, setDefaultTemplate } from '@/api/sticker'
 
@@ -90,6 +99,17 @@ const { loading, tableData, total, query, loadData, handleSearch, resetQuery } =
 })
 
 onMounted(() => loadData())
+
+// 字段映射
+const fieldMappingVisible = ref(false)
+const currentTemplateId = ref('')
+const currentTemplateName = ref('')
+
+function openFieldMapping(row) {
+  currentTemplateId.value = row.id
+  currentTemplateName.value = row.templateName
+  fieldMappingVisible.value = true
+}
 
 const submitting = ref(false)
 const showCreateDialog = ref(false)

@@ -1,52 +1,71 @@
 <template>
   <div class="page-container">
-    <el-card shadow="never">
-      <div style="display:flex;justify-content:space-between;margin-bottom:16px">
-        <div style="display:flex;gap:12px;align-items:center">
-          <el-select v-model="query.brandName" placeholder="品牌" size="default" clearable filterable style="width:180px" @change="loadData">
+    <el-card shadow="never" class="search-card">
+      <el-form inline>
+        <el-form-item label="品牌">
+          <el-select v-model="query.brandName" placeholder="全部" clearable filterable style="width:180px">
             <el-option v-for="b in brandList" :key="b.ID" :label="b.ATTRIBNAME" :value="b.ATTRIBNAME" />
           </el-select>
-          <el-select v-model="query.kindName" placeholder="类别" size="default" clearable filterable style="width:180px" @change="loadData">
+        </el-form-item>
+        <el-form-item label="类别">
+          <el-select v-model="query.kindName" placeholder="全部" clearable filterable style="width:180px">
             <el-option v-for="k in kindList" :key="k.ID" :label="k.ATTRIBNAME" :value="k.ATTRIBNAME" />
           </el-select>
-          <el-button type="primary" @click="loadData">查询</el-button>
-          <el-button @click="handleReset">重置</el-button>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" :icon="Search" @click="handleSearch">搜索</el-button>
+          <el-button :icon="RefreshRight" @click="resetQuery">重置</el-button>
+        </el-form-item>
+      </el-form>
+    </el-card>
+
+    <el-card shadow="never">
+      <template #header>
+        <div class="card-header-row">
+          <span class="card-header-title">品牌模板配置</span>
+          <div class="header-actions">
+            <el-button v-if="hasPermission('sticker:brand-template:add')" type="primary" size="small" @click="handleAdd">新增</el-button>
+          </div>
         </div>
-        <el-button v-if="hasPermission('sticker:brand-template:add')" type="primary" @click="handleAdd">新增</el-button>
+      </template>
+      <div class="table-responsive">
+        <el-table v-loading="loading" :data="tableData" border stripe>
+          <el-table-column prop="brandName" label="品牌" width="150" />
+          <el-table-column prop="kindName" label="类别" width="150" />
+          <el-table-column prop="templateName" label="打印模板" min-width="200" show-overflow-tooltip />
+          <el-table-column prop="printerName" label="默认打印机" width="200" show-overflow-tooltip>
+            <template #default="{ row }">{{ getPrinterLabel(row.printerName) }}</template>
+          </el-table-column>
+          <el-table-column prop="remark" label="备注" width="200" show-overflow-tooltip />
+          <el-table-column prop="isActive" label="状态" width="80" align="center">
+            <template #default="{ row }">
+              <el-tag :type="row.isActive === 1 ? 'success' : 'info'" size="small">
+                {{ row.isActive === 1 ? '启用' : '停用' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="createTime" label="创建时间" width="170">
+            <template #default="{ row }">{{ formatTime(row.createTime) }}</template>
+          </el-table-column>
+          <el-table-column label="操作" width="150" align="center" fixed="right">
+            <template #default="{ row }">
+              <el-button v-if="hasPermission('sticker:brand-template:edit')" type="primary" plain size="small" @click="handleEdit(row)">编辑</el-button>
+              <el-button v-if="hasPermission('sticker:brand-template:delete')" type="danger" plain size="small" @click="handleDelete(row)">删除</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
       </div>
-
-      <el-table v-loading="loading" :data="tableData" border stripe>
-        <el-table-column prop="brandName" label="品牌" width="150" />
-        <el-table-column prop="kindName" label="类别" width="150" />
-        <el-table-column prop="templateName" label="打印模板" min-width="200" show-overflow-tooltip />
-        <el-table-column prop="printerName" label="默认打印机" width="200" show-overflow-tooltip />
-        <el-table-column prop="remark" label="备注" width="200" show-overflow-tooltip />
-        <el-table-column prop="isActive" label="状态" width="80" align="center">
-          <template #default="{ row }">
-            <el-tag :type="row.isActive === 1 ? 'success' : 'info'" size="small">
-              {{ row.isActive === 1 ? '启用' : '停用' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="createTime" label="创建时间" width="170" />
-        <el-table-column label="操作" width="150" align="center" fixed="right">
-          <template #default="{ row }">
-            <el-button v-if="hasPermission('sticker:brand-template:edit')" type="primary" plain size="small" @click="handleEdit(row)">编辑</el-button>
-            <el-button v-if="hasPermission('sticker:brand-template:delete')" type="danger" plain size="small" @click="handleDelete(row)">删除</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-
-      <el-pagination
-        v-model:current-page="query.page"
-        v-model:page-size="query.size"
-        :total="total"
-        :page-sizes="[20, 50, 100]"
-        layout="total, sizes, prev, pager, next"
-        @current-change="loadData"
-        @size-change="loadData"
-        style="margin-top:16px;justify-content:flex-end"
-      />
+      <div class="pagination-wrapper--sm">
+        <el-pagination
+          v-model:current-page="query.pageNum"
+          v-model:page-size="query.pageSize"
+          :total="total"
+          :page-sizes="PAGE_SIZES_LG"
+          layout="total, sizes, prev, pager, next"
+          @size-change="() => { query.pageNum = 1; loadData() }"
+          @current-change="loadData"
+        />
+      </div>
     </el-card>
 
     <!-- 新增/编辑弹窗 -->
@@ -66,7 +85,9 @@
           <el-input v-model="form.templateName" placeholder="请输入 .btw 模板文件名" />
         </el-form-item>
         <el-form-item label="默认打印机">
-          <el-input v-model="form.printerName" placeholder="打印机名称" />
+          <el-select v-model="form.printerName" placeholder="选择打印机" filterable clearable style="width:100%">
+            <el-option v-for="p in printerOptions" :key="p.value" :label="p.label" :value="p.value" />
+          </el-select>
         </el-form-item>
         <el-form-item label="备注">
           <el-input v-model="form.remark" type="textarea" :rows="2" />
@@ -86,18 +107,29 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Search, RefreshRight } from '@element-plus/icons-vue'
 import request from '@/api/request'
 import { getTemplateList, getProductBrands } from '@/api/sticker'
+import { usePageQuery } from '@/composables/usePageQuery'
 import { usePermission } from '@/composables/usePermission'
+import { useDictStore } from '@/stores/dict'
+import { PAGE_SIZES_LG } from '@/utils/appConfig'
+import { formatTime } from '@/utils/format'
 
 const { hasPermission } = usePermission()
+const dictStore = useDictStore()
 
-const loading = ref(false)
-const tableData = ref([])
-const total = ref(0)
-const query = reactive({ page: 1, size: 20, brandName: '', kindName: '' })
+const brandList = ref([])
+const kindList = ref([])
+const templateList = ref([])
+const printerOptions = ref([])
+
+const { loading, tableData, total, query, loadData, handleSearch, resetQuery } = usePageQuery(
+  (params) => request.get('/api/sticker/brand-template/page', { params }),
+  { brandName: '', kindName: '' }
+)
 
 const dialogVisible = ref(false)
 const isEdit = ref(false)
@@ -118,35 +150,11 @@ const rules = {
   templateName: [{ required: true, message: '请输入模板文件名', trigger: 'blur' }]
 }
 
-const brandList = ref([])
-const kindList = ref([])
-const templateList = ref([])
-
-async function loadData() {
-  loading.value = true
-  try {
-    const { data } = await request.get('/api/sticker/brand-template/page', {
-      params: { page: query.page, size: query.size, brandName: query.brandName, kindName: query.kindName }
-    })
-    tableData.value = data.records || []
-    total.value = data.total || 0
-  } finally {
-    loading.value = false
-  }
-}
-
-function handleReset() {
-  query.brandName = ''
-  query.kindName = ''
-  query.page = 1
-  loadData()
-}
-
 async function loadBrands() {
   if (brandList.value.length) return
   try {
     const { data } = await getProductBrands()
-    brandList.value = data || []
+    brandList.value = (data || []).map(b => ({ ...b, ID: String(b.ID) }))
   } catch {}
 }
 
@@ -154,7 +162,7 @@ async function loadKinds() {
   if (kindList.value.length) return
   try {
     const { data } = await request.get('/api/sticker/brand-template/kinds')
-    kindList.value = data || []
+    kindList.value = (data || []).map(k => ({ ...k, ID: String(k.ID) }))
   } catch {}
 }
 
@@ -164,6 +172,22 @@ async function loadTemplates() {
     const { data } = await getTemplateList()
     templateList.value = data || []
   } catch {}
+}
+
+async function loadPrinterOptions() {
+  try {
+    const data = await dictStore.loadDict('printer_name')
+    printerOptions.value = (data || []).map(d => ({ value: d.dictValue, label: d.dictLabel }))
+  } catch (e) {
+    console.error('加载打印机字典失败:', e)
+    printerOptions.value = []
+  }
+}
+
+function getPrinterLabel(value) {
+  if (!value) return '-'
+  const option = printerOptions.value.find(p => p.value === value)
+  return option ? option.label : value
 }
 
 function onBrandChange(val) {
@@ -185,25 +209,29 @@ function handleAdd() {
   isEdit.value = false
   editId.value = ''
   Object.assign(form, { brandId: '', brandName: '', kindId: '', kindName: '', templateId: '', templateName: '', printerName: '', remark: '', isActive: 1 })
-  loadBrands()
-  loadKinds()
-  loadTemplates()
   dialogVisible.value = true
 }
 
 function handleEdit(row) {
   isEdit.value = true
   editId.value = row.id
-  Object.assign(form, {
-    brandId: row.brandId, brandName: row.brandName,
-    kindId: row.kindId, kindName: row.kindName,
-    templateId: row.templateId, templateName: row.templateName,
-    printerName: row.printerName, remark: row.remark, isActive: row.isActive
-  })
-  loadBrands()
-  loadKinds()
-  loadTemplates()
   dialogVisible.value = true
+  nextTick(() => {
+    // 确保ID类型与选择器期望的类型一致（String）
+    const brandId = row.brandId ? String(row.brandId) : ''
+    const kindId = row.kindId ? String(row.kindId) : ''
+
+    Object.assign(form, {
+      brandId: brandId, brandName: row.brandName || '',
+      kindId: kindId, kindName: row.kindName || '',
+      templateId: row.templateId, templateName: row.templateName,
+      printerName: row.printerName, remark: row.remark, isActive: row.isActive
+    })
+
+    // 手动触发同步函数，确保名称字段与ID字段一致
+    if (brandId) onBrandChange(brandId)
+    if (kindId) onKindChange(kindId)
+  })
 }
 
 async function handleSave() {
@@ -236,6 +264,8 @@ onMounted(() => {
   loadData()
   loadBrands()
   loadKinds()
+  loadTemplates()
+  loadPrinterOptions()
 })
 </script>
 

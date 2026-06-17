@@ -2,61 +2,80 @@
   <div class="page-container">
     <!-- ========== 列表视图 ========== -->
     <template v-if="!formVisible">
+      <el-card shadow="never" class="search-card">
+        <el-form inline>
+          <el-form-item label="申请单号">
+            <el-input v-model="query.orderNo" placeholder="申请单号" clearable style="width:220px" @keyup.enter="handleSearch" />
+          </el-form-item>
+          <el-form-item label="申请人">
+            <el-input v-model="query.applicant" placeholder="申请人" clearable style="width:170px" @keyup.enter="handleSearch" />
+          </el-form-item>
+          <el-form-item label="状态">
+            <el-select v-model="query.status" placeholder="全部" clearable style="width:130px">
+              <el-option label="全部" :value="null" />
+              <el-option label="草稿" :value="0" />
+              <el-option label="待审核" :value="1" />
+              <el-option label="已审核" :value="2" />
+              <el-option label="已驳回" :value="3" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="日期">
+            <el-date-picker v-model="query.startDate" type="date" placeholder="开始日期" value-format="YYYY-MM-DD" style="width:155px" />
+            <span style="margin:0 4px;color:#999">-</span>
+            <el-date-picker v-model="query.endDate" type="date" placeholder="结束日期" value-format="YYYY-MM-DD" style="width:155px" />
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" :icon="Search" @click="handleSearch">搜索</el-button>
+            <el-button :icon="RefreshRight" @click="resetQuery">重置</el-button>
+          </el-form-item>
+        </el-form>
+      </el-card>
+
       <el-card shadow="never">
-        <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
-          <el-button v-if="hasPermission('sticker:print:add')" type="primary" @click="handleCreate">新建申请</el-button>
+        <template #header>
+          <div class="card-header-row">
+            <span class="card-header-title">贴纸打印申请</span>
+            <div class="header-actions">
+              <el-button v-if="hasPermission('sticker:print:add')" type="primary" size="small" @click="handleCreate">新建申请</el-button>
+            </div>
+          </div>
+        </template>
+        <div class="table-responsive">
+          <el-table v-loading="loading" :data="tableData" border stripe>
+            <el-table-column prop="orderNo" label="申请单号" width="200" />
+            <el-table-column prop="applicant" label="申请人" width="120" />
+            <el-table-column prop="status" label="状态" width="110">
+              <template #default="{ row }">
+                <span :class="['status-badge', 'status-' + row.status]">{{ statusLabel(row.status) }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="remark" label="备注" show-overflow-tooltip />
+            <el-table-column prop="createTime" label="创建时间" width="180" />
+            <el-table-column label="操作" width="460" align="center" fixed="right">
+              <template #default="{ row }">
+                <el-button type="success" plain size="small" @click="handleView(row)">查看</el-button>
+                <el-button v-if="row.status === 0 && hasPermission('sticker:print:edit')" type="primary" plain size="small" @click="handleEdit(row)">编辑</el-button>
+                <el-button v-if="row.status === 0 && hasPermission('sticker:print:edit')" type="warning" plain size="small" @click="handleSubmit(row)">提交</el-button>
+                <el-button v-if="row.status === 0 && hasPermission('sticker:print:delete')" type="danger" plain size="small" @click="handleDelete(row)">删除</el-button>
+                <el-button v-if="row.status === 1 && hasPermission('sticker:print:review')" type="success" plain size="small" @click="handleReview(row)">审核</el-button>
+                <el-button v-if="row.status === 2 && hasPermission('sticker:print:execute')" type="primary" size="small" @click="handleAgentPrint(row)">打印</el-button>
+                <el-button v-if="row.status === 2 && hasPermission('sticker:print:execute')" type="warning" plain size="small" @click="handlePrintPreview(row)">打印预览</el-button>
+                <el-button v-if="row.status === 2 && hasPermission('sticker:print:execute')" plain size="small" @click="handleQzPrint(row)">QZ打印</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
         </div>
-        <div style="display:flex;gap:12px;margin-bottom:16px;align-items:center;flex-wrap:wrap">
-          <el-input v-model="query.orderNo" placeholder="申请单号" size="default" clearable style="width:260px" @keyup.enter="loadData" />
-          <el-input v-model="query.applicant" placeholder="申请人" size="default" clearable style="width:200px" @keyup.enter="loadData" />
-          <el-select v-model="query.status" placeholder="单据状态" size="default" clearable style="width:140px" @change="loadData">
-            <el-option label="全部" :value="null" />
-            <el-option label="草稿" :value="0" />
-            <el-option label="待审核" :value="1" />
-            <el-option label="已审核" :value="2" />
-            <el-option label="已驳回" :value="3" />
-          </el-select>
-          <el-date-picker v-model="query.startDate" type="date" placeholder="开始日期" size="default" value-format="YYYY-MM-DD" style="width:195px" />
-          <span style="color:#999">-</span>
-          <el-date-picker v-model="query.endDate" type="date" placeholder="结束日期" size="default" value-format="YYYY-MM-DD" style="width:195px" />
-          <el-button type="primary" @click="loadData">查询</el-button>
-          <el-button @click="handleResetQuery">重置</el-button>
+        <div class="pagination-wrapper--sm">
+          <el-pagination
+            v-model:current-page="query.pageNum"
+            v-model:page-size="query.pageSize"
+            :total="total"
+            :page-sizes="PAGE_SIZES_LG"
+            layout="total, sizes, prev, pager, next"
+            @size-change="() => { query.pageNum = 1; loadData() }"
+            @current-change="loadData"
+          />
         </div>
-
-        <el-table v-loading="loading" :data="tableData" border stripe>
-          <el-table-column prop="orderNo" label="申请单号" width="200" />
-          <el-table-column prop="applicant" label="申请人" width="120" />
-          <el-table-column prop="status" label="状态" width="110">
-            <template #default="{ row }">
-              <span :class="['status-badge', 'status-' + row.status]">{{ statusLabel(row.status) }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column prop="remark" label="备注" show-overflow-tooltip />
-          <el-table-column prop="createTime" label="创建时间" width="180" />
-          <el-table-column label="操作" width="460" align="center" fixed="right">
-            <template #default="{ row }">
-              <el-button type="success" plain size="small" @click="handleView(row)">查看</el-button>
-              <el-button v-if="row.status === 0 && hasPermission('sticker:print:edit')" type="primary" plain size="small" @click="handleEdit(row)">编辑</el-button>
-              <el-button v-if="row.status === 0 && hasPermission('sticker:print:edit')" type="warning" plain size="small" @click="handleSubmit(row)">提交</el-button>
-              <el-button v-if="row.status === 0 && hasPermission('sticker:print:delete')" type="danger" plain size="small" @click="handleDelete(row)">删除</el-button>
-              <el-button v-if="row.status === 1 && hasPermission('sticker:print:review')" type="success" plain size="small" @click="handleReview(row)">审核</el-button>
-              <el-button v-if="row.status === 2 && hasPermission('sticker:print:execute')" type="primary" size="small" @click="handleAgentPrint(row)">打印</el-button>
-              <el-button v-if="row.status === 2 && hasPermission('sticker:print:execute')" type="warning" plain size="small" @click="handlePrintPreview(row)">打印预览</el-button>
-              <el-button v-if="row.status === 2 && hasPermission('sticker:print:execute')" plain size="small" @click="handleQzPrint(row)">QZ打印</el-button>
-            </template>
-          </el-table-column>
-        </el-table>
-
-        <el-pagination
-          v-model:current-page="query.page"
-          v-model:page-size="query.size"
-          :total="total"
-          :page-sizes="PAGE_SIZES_LG"
-          layout="total, sizes, prev, pager, next"
-          @current-change="loadData"
-          @size-change="loadData"
-          style="margin-top:16px;justify-content:flex-end"
-        />
       </el-card>
     </template>
 
@@ -366,11 +385,13 @@
 import { ref, reactive, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, onBeforeRouteLeave } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Loading } from '@element-plus/icons-vue'
+import { Loading, Search, RefreshRight } from '@element-plus/icons-vue'
 import request from '@/api/request'
 import { getPrintOrderPage, getPrintOrder, getTemplateList, createPrintOrder, updatePrintOrder, submitPrintOrder, reviewPrintOrder, deletePrintOrder, searchProducts, getProductBrands, createAgentPrintTasks } from '@/api/sticker'
+import { usePageQuery } from '@/composables/usePageQuery'
 import { usePermission } from '@/composables/usePermission'
 import { useAuthStore } from '@/stores/auth'
+import { PAGE_SIZES_LG } from '@/utils/appConfig'
 import { connectQZ, getPrinters, printOrderDetails } from '@/utils/qzPrint'
 
 const { hasPermission } = usePermission()
@@ -392,10 +413,10 @@ function generateOrderNo() {
 }
 
 const router = useRouter()
-const loading = ref(false)
-const tableData = ref([])
-const total = ref(0)
-const query = reactive({ page: 1, size: 20, status: null, orderNo: '', applicant: '', startDate: '', endDate: '' })
+const { loading, tableData, total, query, loadData, handleSearch, resetQuery } = usePageQuery(
+  (params) => getPrintOrderPage({ ...params, viewAll: viewAll.value }),
+  { status: null, orderNo: '', applicant: '', startDate: '', endDate: '' }
+)
 
 // ─── Form (replaces dialog) ────────────────────────────
 const formVisible = ref(false)
@@ -490,32 +511,7 @@ const STATUS_TAG = { 0: 'info', 1: 'warning', 2: 'success', 3: 'danger' }
 const statusLabel = (s) => STATUS_MAP[s] || '未知'
 const statusTagType = (s) => STATUS_TAG[s] || 'info'
 
-// ─── List ──────────────────────────────────────────────
-async function loadData() {
-  loading.value = true
-  try {
-    const params = { page: query.page, size: query.size, status: query.status, viewAll: viewAll.value }
-    if (query.orderNo) params.orderNo = query.orderNo
-    if (query.applicant) params.applicant = query.applicant
-    if (query.startDate) params.startDate = query.startDate
-    if (query.endDate) params.endDate = query.endDate
-    const { data } = await getPrintOrderPage(params)
-    tableData.value = data.records || []
-    total.value = data.total || 0
-  } finally {
-    loading.value = false
-  }
-}
-
-function handleResetQuery() {
-  query.orderNo = ''
-  query.applicant = ''
-  query.startDate = ''
-  query.endDate = ''
-  query.status = null
-  query.page = 1
-  loadData()
-}
+// ─── List (usePageQuery handles loadData, handleSearch, resetQuery) ────
 
 function handleCreate() {
   isEdit.value = false

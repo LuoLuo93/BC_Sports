@@ -93,3 +93,78 @@ export function getDefaultTemplate() {
 export function createAgentPrintTasks(orderId, agentId) {
   return request.post(`/api/print/create-tasks/${orderId}?agentId=${encodeURIComponent(agentId)}`)
 }
+
+// ─── Agent 管理 ──────────────────────
+export function getAgentPage(params) {
+  return request.get('/api/agent/page', { params })
+}
+
+export function getAgentList() {
+  return request.get('/api/agent/list')
+}
+
+export function getAgentTasksPage(agentId, params) {
+  return request.get(`/api/agent/${agentId}/tasks/page`, { params })
+}
+
+// ─── 打印字段映射 ──────────────────────
+export function getFieldMappingPage(params) {
+  return request.get('/api/sticker/field-mapping/page', { params })
+}
+
+export function getFieldMappingList(templateName) {
+  return request.get('/api/sticker/field-mapping/list', { params: { templateName } })
+}
+
+export function createFieldMapping(data) {
+  return request.post('/api/sticker/field-mapping', data)
+}
+
+export function updateFieldMapping(id, data) {
+  return request.put(`/api/sticker/field-mapping/${id}`, data)
+}
+
+export function deleteFieldMapping(id) {
+  return request.delete(`/api/sticker/field-mapping/${id}`)
+}
+
+export function deleteFieldMappingByTemplate(templateName) {
+  return request.delete(`/api/sticker/field-mapping/by-template/${templateName}`)
+}
+
+// ─── 品牌模板关系 ──────────────────────
+export function getBrandTemplateMatchPage(params) {
+  return request.get('/api/sticker/brand-template/page', { params })
+}
+
+export function getBrandTemplateMatchList() {
+  return request.get('/api/sticker/brand-template/list')
+}
+
+export function getBrandTemplateMatch(id) {
+  return request.get(`/api/sticker/brand-template/${id}`)
+}
+
+export function createBrandTemplateMatch(data) {
+  return request.post('/api/sticker/brand-template', data)
+}
+
+export function updateBrandTemplateMatch(id, data) {
+  return request.put(`/api/sticker/brand-template/${id}`, data)
+}
+
+export function deleteBrandTemplateMatch(id) {
+  return request.delete(`/api/sticker/brand-template/${id}`)
+}
+
+export function getBrandTemplateKinds() {
+  return request.get('/api/sticker/brand-template/kinds')
+}
+
+export function getBrandTemplateNames() {
+  return request.get('/api/sticker/brand-template/templates')
+}
+
+export function getAvailableFields() {
+  return request.get('/api/sticker/field-mapping/available-fields')
+}

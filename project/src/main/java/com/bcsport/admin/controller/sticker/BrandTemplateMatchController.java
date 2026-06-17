@@ -42,6 +42,13 @@ public class BrandTemplateMatchController {
         return Result.success(service.listAll());
     }
 
+    @GetMapping("/templates")
+    @ApiOperation("去重模板列表（供字段映射选择）")
+    @RequiresPermissions("sticker:brand-template:query")
+    public Result<List<String>> templateNames() {
+        return Result.success(service.getDistinctTemplateNames());
+    }
+
     @GetMapping("/kinds")
     @ApiOperation("类别列表（从ERP查询）")
     @RequiresPermissions("sticker:brand-template:query")

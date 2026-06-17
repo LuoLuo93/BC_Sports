@@ -1,8 +1,11 @@
 package com.bcsport.admin.service.agent;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bcsport.admin.entity.agent.PrintTask;
 import com.bcsport.admin.entity.sticker.BrandTemplateMatch;
+import com.bcsport.admin.entity.sticker.PrintFieldMapping;
 import com.bcsport.admin.entity.sticker.StickerPrintOrder;
 import com.bcsport.admin.entity.sticker.StickerPrintOrderDetail;
 import com.bcsport.admin.mapper.agent.PrintTaskMapper;
@@ -10,6 +13,7 @@ import com.bcsport.admin.mapper.sticker.StickerPrintOrderDetailMapper;
 import com.bcsport.admin.mapper.sticker.StickerPrintOrderMapper;
 import com.bcsport.admin.common.exception.BusinessException;
 import com.bcsport.admin.service.sticker.BrandTemplateMatchService;
+import com.bcsport.admin.service.sticker.PrintFieldMappingService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,6 +40,9 @@ public class PrintTaskService {
 
     @Autowired
     private BrandTemplateMatchService brandTemplateMatchService;
+
+    @Autowired
+    private PrintFieldMappingService fieldMappingService;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -191,6 +198,9 @@ public class PrintTaskService {
 
         List<String> taskIds = new ArrayList<>();
 
+        // 预加载每个模板的字段映射（按模板名称缓存，同一模板名称共享映射配置）
+        Map<String, List<PrintFieldMapping>> mappingCache = new HashMap<>();
+
         for (int i = 0; i < details.size(); i++) {
             StickerPrintOrderDetail detail = details.get(i);
             BrandTemplateMatch match = matches.get(i);
@@ -198,16 +208,14 @@ public class PrintTaskService {
             String templateFile = match.getTemplateName();
             String printerName = match.getPrinterName() != null ? match.getPrinterName() : "";
 
-            Map<String, String> printData = new HashMap<>();
-            printData.put("MaterialNumber", detail.getMaterialNumber());
-            printData.put("MaterialName", detail.getMaterialName());
-            printData.put("StyleNumber", detail.getStyleNumber());
-            printData.put("Color", detail.getColor());
-            printData.put("BrandName", detail.getBrandName());
-            printData.put("KindName", detail.getKindName());
-            printData.put("SizeName", detail.getSizeName());
-            printData.put("EAN13", detail.getEan13());
-            printData.put("Price", detail.getPrice() != null ? detail.getPrice().toString() : "");
+            // 获取该模板的字段映射（按模板名称查询）
+            List<PrintFieldMapping> mappings = mappingCache.computeIfAbsent(templateFile, name -> {
+                List<PrintFieldMapping> list = fieldMappingService.getByTemplateName(name);
+                return list != null ? list : Collections.emptyList();
+            });
+
+            // 根据映射构建 printData
+            Map<String, String> printData = buildPrintData(detail, mappings);
 
             String taskId = UUID.randomUUID().toString().replace("-", "");
 
@@ -257,5 +265,101 @@ public class PrintTaskService {
                 .orderByDesc(PrintTask::getCreateTime)
                 .last("FETCH FIRST 100 ROWS ONLY")
         );
+    }
+
+    public IPage<PrintTask> getTasksByAgentIdPage(int pageNum, int pageSize, String agentId) {
+        return taskMapper.selectPage(
+            new Page<>(pageNum, pageSize),
+            new LambdaQueryWrapper<PrintTask>()
+                .eq(PrintTask::getAgentId, agentId)
+                .orderByDesc(PrintTask::getCreateTime)
+        );
+    }
+
+    /**
+     * 根据字段映射构建打印数据。
+     * 如果没有配置映射，使用默认映射（兼容旧逻辑）。
+     */
+    private Map<String, String> buildPrintData(StickerPrintOrderDetail detail, List<PrintFieldMapping> mappings) {
+        Map<String, String> printData = new HashMap<>();
+
+        if (mappings == null || mappings.isEmpty()) {
+            // 默认映射（兼容没有配置映射的情况）
+            printData.put("MaterialNumber", detail.getMaterialNumber());
+            printData.put("MaterialName", detail.getMaterialName());
+            printData.put("StyleNumber", detail.getStyleNumber());
+            printData.put("Color", detail.getColor());
+            printData.put("BrandName", detail.getBrandName());
+            printData.put("KindName", detail.getKindName());
+            printData.put("SizeName", detail.getSizeName());
+            printData.put("EAN13", detail.getEan13());
+            printData.put("Price", detail.getPrice() != null ? detail.getPrice().toString() : "");
+            return printData;
+        }
+
+        // 按映射配置构建
+        for (PrintFieldMapping mapping : mappings) {
+            String dbField = mapping.getDbField();
+            String templateField = mapping.getTemplateField();
+            String value = getFieldValue(detail, dbField);
+
+            // 应用格式化规则
+            if (value != null && mapping.getFieldFormat() != null && !mapping.getFieldFormat().isBlank()) {
+                value = applyFormat(value, mapping.getFieldFormat());
+            }
+
+            printData.put(templateField, value != null ? value : "");
+        }
+
+        return printData;
+    }
+
+    /**
+     * 根据字段名获取明细值（支持反射或直接映射）
+     */
+    private String getFieldValue(StickerPrintOrderDetail detail, String dbField) {
+        if (dbField == null || dbField.isBlank()) return null;
+
+        // 直接映射常用字段
+        return switch (dbField.toUpperCase()) {
+            case "MATERIAL_NUMBER", "MATERIALNUMBER" -> detail.getMaterialNumber();
+            case "MATERIAL_NAME", "MATERIALNAME" -> detail.getMaterialName();
+            case "STYLE_NUMBER", "STYLENUMBER" -> detail.getStyleNumber();
+            case "COLOR" -> detail.getColor();
+            case "BRAND_NAME", "BRANDNAME" -> detail.getBrandName();
+            case "KIND_NAME", "KINDNAME" -> detail.getKindName();
+            case "SIZE_NAME", "SIZENAME" -> detail.getSizeName();
+            case "SIZE_GROUP", "SIZEGROUP" -> detail.getSizeGroup();
+            case "EAN13" -> detail.getEan13();
+            case "PRICE" -> detail.getPrice() != null ? detail.getPrice().toString() : null;
+            case "EXECUTION_STANDARD", "EXECUTIONSTANDARD" -> detail.getExecutionStandard();
+            case "ORIGIN" -> detail.getOrigin();
+            case "MANUFACTURER" -> detail.getManufacturer();
+            case "MANUFACTURER_ADDRESS", "MANUFACTURERADDRESS" -> detail.getManufacturerAddress();
+            case "CONTACT_PHONE", "CONTACTPHONE" -> detail.getContactPhone();
+            case "MATERIAL_COMPOSITION", "MATERIALCOMPOSITION" -> detail.getMaterialComposition();
+            default -> null;
+        };
+    }
+
+    /**
+     * 应用格式化规则（简单实现）
+     * 格式：fieldName:format  如 price:.2f
+     */
+    private String applyFormat(String value, String format) {
+        if (value == null || format == null) return value;
+
+        try {
+            // 处理数字格式化，如 ".2f" 表示保留2位小数
+            if (format.startsWith(".")) {
+                double num = Double.parseDouble(value);
+                int decimals = Integer.parseInt(format.substring(1, format.length() - 1));
+                return String.format("%." + decimals + "f", num);
+            }
+        } catch (Exception e) {
+            log.warn("格式化失败: value={}, format={}, error={}", value, format, e.getMessage());
+        }
+
+        return value;
     }
 }

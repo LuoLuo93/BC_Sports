@@ -122,7 +122,7 @@
           </div>
 
           <div class="pagination-wrapper--sm">
-            <el-pagination v-model:current-page="recordQuery.page" v-model:page-size="recordQuery.size" :total="recordTotal" :page-sizes="PAGE_SIZES_LG" layout="total, sizes, prev, pager, next" @size-change="handleRecordSearch" @current-change="loadRecordData" />
+            <el-pagination v-model:current-page="recordQuery.pageNum" v-model:page-size="recordQuery.pageSize" :total="recordTotal" :page-sizes="PAGE_SIZES_LG" layout="total, sizes, prev, pager, next" @size-change="handleRecordSearch" @current-change="loadRecordData" />
           </div>
         </el-card>
       </el-tab-pane>
@@ -244,7 +244,7 @@ async function handleDownloadTemplate() {
 // ===== 标签集 =====
 const tagLoading = ref(false)
 const tagRawData = ref([])
-const tagQuery = reactive({ tagName: '', page: 1, size: 9999 })
+const tagQuery = reactive({ tagName: '', pageNum: 1, pageSize: 9999 })
 
 const tagTreeData = computed(() => buildTagTree(tagRawData.value))
 
@@ -269,8 +269,8 @@ async function loadTagData() {
   tagLoading.value = true
   try { const res = await getCorpTags(tagQuery); tagRawData.value = res.data?.records || [] } finally { tagLoading.value = false }
 }
-function handleTagSearch() { tagQuery.page = 1; loadTagData() }
-function resetTagQuery() { tagQuery.tagName = ''; tagQuery.page = 1; loadTagData() }
+function handleTagSearch() { tagQuery.pageNum = 1; loadTagData() }
+function resetTagQuery() { tagQuery.tagName = ''; tagQuery.pageNum = 1; loadTagData() }
 
 const { syncLoading, handleSync: handleSyncTag, checkStatus: checkTagSyncStatus } = useSyncAction(syncQywxTags, loadTagData, '确定同步企业标签库？', getQywxTagSyncStatus)
 
@@ -349,14 +349,14 @@ async function handleDeleteTagGroup(row) {
 const recordLoading = ref(false)
 const recordData = ref([])
 const recordTotal = ref(0)
-const recordQuery = reactive({ externalUserid: '', tagName: '', batchNo: '', page: 1, size: 20 })
+const recordQuery = reactive({ externalUserid: '', tagName: '', batchNo: '', pageNum: 1, pageSize: 20 })
 
 async function loadRecordData() {
   recordLoading.value = true
   try { const res = await getTagRecords(recordQuery); recordData.value = res.data?.records || []; recordTotal.value = res.data?.total || 0 } finally { recordLoading.value = false }
 }
-function handleRecordSearch() { recordQuery.page = 1; loadRecordData() }
-function resetRecordQuery() { recordQuery.externalUserid = ''; recordQuery.tagName = ''; recordQuery.batchNo = ''; recordQuery.page = 1; loadRecordData() }
+function handleRecordSearch() { recordQuery.pageNum = 1; loadRecordData() }
+function resetRecordQuery() { recordQuery.externalUserid = ''; recordQuery.tagName = ''; recordQuery.batchNo = ''; recordQuery.pageNum = 1; loadRecordData() }
 
 watch(activeTab, (val) => {
   if (val === 'tags') loadTagData()

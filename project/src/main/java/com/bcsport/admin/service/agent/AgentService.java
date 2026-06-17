@@ -1,6 +1,8 @@
 package com.bcsport.admin.service.agent;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bcsport.admin.entity.agent.PrintAgent;
 import com.bcsport.admin.mapper.agent.PrintAgentMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -56,8 +58,8 @@ public class AgentService {
         }
     }
 
-    /** 心跳超过该秒数即视为离线（与 checkOffline 保持一致）。 */
-    private static final int HEARTBEAT_TIMEOUT_SECONDS = 30;
+    /** 心跳超过该秒数即视为离线（与 checkOffline 保持一致，前端"刚刚"阈值为60秒）。 */
+    private static final int HEARTBEAT_TIMEOUT_SECONDS = 60;
 
     /**
      * 列出全部 Agent，并按最后心跳实时重算在线/离线状态（仅用于展示，不写库），
@@ -101,5 +103,18 @@ public class AgentService {
             agent.setStatus(0);
             agentMapper.updateById(agent);
         }
+    }
+
+    /**
+     * 分页查询 Agent 列表。
+     * 状态由前端根据 lastHeartbeat 实时计算，后端只返回原始数据。
+     */
+    public IPage<PrintAgent> page(int pageNum, int pageSize, String agentName) {
+        LambdaQueryWrapper<PrintAgent> wrapper = new LambdaQueryWrapper<>();
+        if (agentName != null && !agentName.isBlank()) {
+            wrapper.like(PrintAgent::getAgentName, agentName);
+        }
+        wrapper.orderByDesc(PrintAgent::getLastHeartbeat);
+        return agentMapper.selectPage(new Page<>(pageNum, pageSize), wrapper);
     }
 }

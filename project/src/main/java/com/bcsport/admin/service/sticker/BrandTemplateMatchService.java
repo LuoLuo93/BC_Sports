@@ -44,6 +44,21 @@ public class BrandTemplateMatchService {
                 .orderByAsc(BrandTemplateMatch::getBrandName));
     }
 
+    /**
+     * 获取去重的模板名称列表
+     */
+    public List<String> getDistinctTemplateNames() {
+        List<BrandTemplateMatch> list = mapper.selectList(new LambdaQueryWrapper<BrandTemplateMatch>()
+                .select(BrandTemplateMatch::getTemplateName)
+                .eq(BrandTemplateMatch::getIsActive, 1)
+                .groupBy(BrandTemplateMatch::getTemplateName)
+                .orderByAsc(BrandTemplateMatch::getTemplateName));
+        return list.stream()
+                .map(BrandTemplateMatch::getTemplateName)
+                .filter(name -> name != null && !name.isBlank())
+                .collect(java.util.stream.Collectors.toList());
+    }
+
     public BrandTemplateMatch getById(String id) {
         return mapper.selectById(id);
     }

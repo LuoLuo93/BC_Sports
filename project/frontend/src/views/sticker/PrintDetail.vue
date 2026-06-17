@@ -110,6 +110,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { getPrintOrder } from '@/api/sticker'
+import { PAGE_SIZES_LG } from '@/utils/appConfig'
 
 const route = useRoute()
 const order = ref({ details: [] })

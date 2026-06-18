@@ -32,7 +32,7 @@
               <el-table-column prop="successCount" label="成功" width="70" align="center" />
               <el-table-column prop="failCount" label="失败" width="70" align="center" />
               <el-table-column label="创建时间" width="170" align="center">
-                <template #default="{ row }">{{ row.createTime || '-' }}</template>
+                <template #default="{ row }">{{ formatTime(row.createTime) }}</template>
               </el-table-column>
               <el-table-column label="操作" width="120" align="center">
                 <template #default="{ row }">
@@ -96,7 +96,7 @@
                 <template #default="{ row }">{{ row.errorMsg || '-' }}</template>
               </el-table-column>
               <el-table-column label="更新时间" width="170" align="center">
-                <template #default="{ row }">{{ row.updateTime || '-' }}</template>
+                <template #default="{ row }">{{ formatTime(row.updateTime) }}</template>
               </el-table-column>
             </el-table>
           </div>
@@ -185,6 +185,7 @@ import { ref, reactive, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Plus, RefreshRight, Search } from '@element-plus/icons-vue'
 import { PAGE_SIZES_LG } from '@/utils/appConfig'
+import { formatTime } from '@/utils/format'
 import { getNxcrmTagTasks, createNxcrmTagTask, executeNxcrmTagTask, getNxcrmTaskDetails, getNxcrmMemberTags, fillNxcrmShopId } from '@/api/nxcrm'
 
 const activeTab = ref('tasks')

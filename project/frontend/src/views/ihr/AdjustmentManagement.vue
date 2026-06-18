@@ -51,7 +51,7 @@
             </template>
           </el-table-column>
           <el-table-column prop="syncTime" label="同步时间" width="170" align="center">
-            <template #default="{ row }">{{ row.syncTime || '-' }}</template>
+            <template #default="{ row }">{{ formatTime(row.syncTime) }}</template>
           </el-table-column>
           <el-table-column label="操作" width="200" align="center" fixed="right">
             <template #default="{ row }">
@@ -77,6 +77,7 @@ import { syncStatusLabel, syncStatusTag } from '@/utils/syncStatus'
 import { Search, RefreshRight, Refresh } from '@element-plus/icons-vue'
 import { usePermission } from '@/composables/usePermission'
 import { usePageQuery } from '@/composables/usePageQuery'
+import { formatTime } from '@/utils/format'
 import { PAGE_SIZES } from '@/utils/appConfig'
 
 const { hasPermission } = usePermission()

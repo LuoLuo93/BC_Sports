@@ -114,7 +114,7 @@
                 <template #default="{ row }">{{ row.batchNo || '-' }}</template>
               </el-table-column>
               <el-table-column label="打标时间" width="170" align="center">
-                <template #default="{ row }">{{ row.createTime || '-' }}</template>
+                <template #default="{ row }">{{ formatTime(row.createTime) }}</template>
               </el-table-column>
             </el-table>
           </div>

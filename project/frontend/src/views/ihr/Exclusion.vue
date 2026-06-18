@@ -39,7 +39,7 @@
             </template>
           </el-table-column>
           <el-table-column label="创建时间" width="170" align="center">
-            <template #default="{ row }">{{ row.createTime || '-' }}</template>
+            <template #default="{ row }">{{ formatTime(row.createTime) }}</template>
           </el-table-column>
           <el-table-column label="操作" width="200" align="center" fixed="right">
             <template #default="{ row }">
@@ -84,6 +84,7 @@ import { getIhrExclusionPage, getIhrExclusion, createIhrExclusion, updateIhrExcl
 import { Plus, Search, RefreshRight } from '@element-plus/icons-vue'
 import { usePermission } from '@/composables/usePermission'
 import { PAGE_SIZES } from '@/utils/appConfig'
+import { formatTime } from '@/utils/format'
 
 const { hasPermission } = usePermission()
 

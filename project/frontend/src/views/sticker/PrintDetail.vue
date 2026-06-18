@@ -21,7 +21,7 @@
         </div>
         <div class="info-item">
           <span class="info-label">申请时间</span>
-          <span class="info-value">{{ order.createTime || '-' }}</span>
+          <span class="info-value">{{ formatTime(order.createTime) }}</span>
         </div>
         <div class="info-item">
           <span class="info-label">状态</span>
@@ -111,6 +111,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { getPrintOrder } from '@/api/sticker'
 import { PAGE_SIZES_LG } from '@/utils/appConfig'
+import { formatTime } from '@/utils/format'
 
 const route = useRoute()
 const order = ref({ details: [] })

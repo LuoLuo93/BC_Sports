@@ -50,7 +50,6 @@
           <div class="table-responsive">
             <el-table v-loading="tagLoading" :data="tagTreeData" border stripe>
               <el-table-column prop="tagName" label="标签组名称" width="160" />
-              <el-table-column prop="tagId" label="标签组ID" width="140" show-overflow-tooltip />
               <el-table-column label="标签" min-width="400">
                 <template #default="{ row }">
                   <span v-if="row.children && row.children.length">
@@ -61,7 +60,7 @@
               </el-table-column>
               <el-table-column prop="sortOrder" label="排序" width="80" align="center" />
               <el-table-column label="创建时间" width="170" align="center">
-                <template #default="{ row }">{{ row.createTime || '-' }}</template>
+                <template #default="{ row }">{{ formatTime(row.createTime) }}</template>
               </el-table-column>
               <el-table-column label="操作" width="140" align="center" fixed="right">
                 <template #default="{ row }">
@@ -161,6 +160,7 @@ import { Search, RefreshRight, Refresh, Plus, Delete } from '@element-plus/icons
 import { usePermission } from '@/composables/usePermission'
 import { useSyncAction } from '@/composables/useSyncAction'
 import { PAGE_SIZES_LG } from '@/utils/appConfig'
+import { formatTime } from '@/utils/format'
 import { getCorpTags, syncQywxTags, getQywxTagSyncStatus, getTagTemplate, uploadTagData, getTagRecords, addCorpTagGroup, editCorpTagGroup, deleteCorpTagGroup } from '@/api/qywx'
 
 const { hasPermission } = usePermission()

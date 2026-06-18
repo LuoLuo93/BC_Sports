@@ -304,7 +304,7 @@ async function confirmCopy() {
   try {
     const { data } = await getFieldMappingPage({
       pageNum: 1,
-      pageSize: 9999,
+      pageSize: 500,
       templateId: copySourceName.value
     })
     const sourceList = data?.records || []

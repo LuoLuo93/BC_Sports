@@ -244,7 +244,7 @@ async function handleDownloadTemplate() {
 // ===== 标签集 =====
 const tagLoading = ref(false)
 const tagRawData = ref([])
-const tagQuery = reactive({ tagName: '', pageNum: 1, pageSize: 9999 })
+const tagQuery = reactive({ tagName: '', pageNum: 1, pageSize: 500 })
 
 const tagTreeData = computed(() => buildTagTree(tagRawData.value))
 

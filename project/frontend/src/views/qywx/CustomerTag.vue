@@ -36,7 +36,6 @@
               <el-button type="primary" :icon="Search" @click="handleTagSearch">搜索</el-button>
               <el-button :icon="RefreshRight" @click="resetTagQuery">重置</el-button>
               <el-button v-if="hasPermission('qywx:tag:sync')" type="success" size="small" :icon="Refresh" :loading="syncLoading" @click="handleSyncTag">同步标签库</el-button>
-              <el-button size="small" @click="toggleExpandAll">{{ isExpandAll ? '折叠全部' : '展开全部' }}</el-button>
               <el-button type="primary" size="small" :icon="Plus" @click="showAddTagDialog">添加标签组</el-button>
             </el-form-item>
           </el-form>
@@ -49,25 +48,25 @@
             </div>
           </template>
           <div class="table-responsive">
-            <el-table v-if="refreshTable" v-loading="tagLoading" :data="tagTreeData" row-key="tagId" :tree-props="{ children: 'children' }" :default-expand-all="isExpandAll" border stripe :row-class-name="treeRowClass">
-              <el-table-column label="标签名称" min-width="200">
+            <el-table v-loading="tagLoading" :data="tagTreeData" border stripe>
+              <el-table-column prop="tagName" label="标签组名称" width="160" />
+              <el-table-column prop="tagId" label="标签组ID" width="140" show-overflow-tooltip />
+              <el-table-column label="标签" min-width="400">
                 <template #default="{ row }">
-                  <div class="name-cell">
-                    <el-icon v-if="row.children?.length" class="icon-folder" :size="16"><Folder /></el-icon>
-                    <el-icon v-else class="icon-doc" :size="14"><Document /></el-icon>
-                    <span>{{ row.tagName }}</span>
-                  </div>
+                  <span v-if="row.children && row.children.length">
+                    <el-tag v-for="child in row.children" :key="child.tagId" size="small" style="margin:2px">{{ child.tagName }}</el-tag>
+                  </span>
+                  <span v-else style="color:#909399">-</span>
                 </template>
               </el-table-column>
-              <el-table-column prop="tagId" label="标签ID" min-width="140" show-overflow-tooltip />
               <el-table-column prop="sortOrder" label="排序" width="80" align="center" />
-              <el-table-column label="创建时间" width="300" align="center">
+              <el-table-column label="创建时间" width="170" align="center">
                 <template #default="{ row }">{{ row.createTime || '-' }}</template>
               </el-table-column>
-              <el-table-column label="操作" width="140" align="center">
+              <el-table-column label="操作" width="140" align="center" fixed="right">
                 <template #default="{ row }">
-                  <el-button v-if="row.children" type="primary" plain size="small" @click="showEditTagDialog(row)">编辑</el-button>
-                  <el-button v-if="row.children" type="danger" plain size="small" @click="handleDeleteTagGroup(row)">删除</el-button>
+                  <el-button type="primary" plain size="small" @click="showEditTagDialog(row)">编辑</el-button>
+                  <el-button type="danger" plain size="small" @click="handleDeleteTagGroup(row)">删除</el-button>
                 </template>
               </el-table-column>
             </el-table>
@@ -155,9 +154,9 @@
 
 <script setup>
 defineOptions({ name: 'CustomerTag' })
-import { ref, reactive, watch, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, reactive, watch, computed, onMounted, onUnmounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Upload, Folder, Document } from '@element-plus/icons-vue'
+import { Upload } from '@element-plus/icons-vue'
 import { Search, RefreshRight, Refresh, Plus, Delete } from '@element-plus/icons-vue'
 import { usePermission } from '@/composables/usePermission'
 import { useSyncAction } from '@/composables/useSyncAction'
@@ -166,19 +165,6 @@ import { getCorpTags, syncQywxTags, getQywxTagSyncStatus, getTagTemplate, upload
 
 const { hasPermission } = usePermission()
 const activeTab = ref('upload')
-
-function treeRowClass({ row }) {
-  return row.children?.length ? 'tree-parent-row' : 'tree-child-row'
-}
-
-// 树表折叠/展开
-const isExpandAll = ref(true)
-const refreshTable = ref(true)
-function toggleExpandAll() {
-  refreshTable.value = false
-  isExpandAll.value = !isExpandAll.value
-  nextTick(() => { refreshTable.value = true })
-}
 
 // ===== 打标签 =====
 const uploadRef = ref(null)
@@ -385,41 +371,5 @@ onUnmounted(() => {
   color: #909399;
   font-size: 12px;
   margin-top: 4px;
-}
-/* 树形表格样式 - 参照BI地区管理 */
-.el-table :deep(.tree-parent-row) td {
-  font-weight: 600;
-  background-color: #f8fafc !important;
-}
-.el-table :deep(.tree-child-row) td {
-  font-weight: 400;
-}
-.el-table :deep(.tree-child-row) td:first-child .cell {
-  padding-left: 32px !important;
-}
-.el-table :deep(.tree-child-row) td:not(:first-child) .cell {
-  padding-left: 10px !important;
-}
-.el-table :deep(.tree-parent-row:hover) td {
-  background-color: #f1f5f9 !important;
-}
-.el-table :deep(.tree-child-row:hover) td {
-  background-color: #f8fafc !important;
-}
-.name-cell {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.icon-folder {
-  color: var(--el-color-primary);
-  flex-shrink: 0;
-}
-.icon-doc {
-  color: var(--el-text-color-placeholder);
-  flex-shrink: 0;
-}
-.el-table :deep(.el-table__expand-icon) {
-  margin-right: 4px;
 }
 </style>

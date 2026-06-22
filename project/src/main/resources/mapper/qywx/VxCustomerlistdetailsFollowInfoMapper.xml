@@ -28,4 +28,37 @@
         </foreach>
     </select>
 
+    <select id="selectCustomerPageByUserid" resultType="java.util.LinkedHashMap">
+        SELECT
+            fi.externalUserid AS externalUserid,
+            ec.name           AS name,
+            ec.type           AS type,
+            ec.corp_name      AS corpName,
+            fi.remark         AS remark,
+            fi.description    AS description,
+            fi.addWay         AS addWay,
+            CASE WHEN ISNUMERIC(fi.createtime) = 1
+                 THEN CONVERT(VARCHAR(19), DATEADD(SECOND, CAST(fi.createtime AS BIGINT), '1970-01-01'), 120)
+                 ELSE fi.createtime
+            END               AS createTime
+        FROM VX_CustomerListDetails_follow_info fi
+        LEFT JOIN VX_CustomerListDetails_external_contact ec ON fi.externalUserid = ec.externalUserid
+        WHERE fi.userid = #{userid}
+        <if test="name != null and name != ''">
+            AND ec.name LIKE '%' + #{name} + '%'
+        </if>
+        ORDER BY fi.createtime DESC
+        OFFSET #{offset} ROWS FETCH NEXT #{pageSize} ROWS ONLY
+    </select>
+
+    <select id="selectCustomerCountByUserid" resultType="long">
+        SELECT COUNT(1)
+        FROM VX_CustomerListDetails_follow_info fi
+        LEFT JOIN VX_CustomerListDetails_external_contact ec ON fi.externalUserid = ec.externalUserid
+        WHERE fi.userid = #{userid}
+        <if test="name != null and name != ''">
+            AND ec.name LIKE '%' + #{name} + '%'
+        </if>
+    </select>
+
 </mapper>

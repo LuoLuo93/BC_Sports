@@ -186,7 +186,7 @@ public class AuthController {
         "/bi/management", "/bi/brand", "/bi/region", "/bi/channel-type", "/bi/channel-nature",
         "/bi/entity-channel", "/bi/entity-channel/form", "/bi/erp-shop", "/bi/erp-warehouse", "/bi/erp-customer",
         "/statistics", "/report", "/message", "/help", "/profile", "/settings", "/403",
-        "/monitor/schedule", "/qywx/customer-tag",
+        "/monitor/schedule", "/qywx/customer-tag", "/qywx/follow-user", "/qywx/group-chat", "/qywx/moment",
         "/ihr/onboarding-exclusion", "/ihr/leaving-exclusion",
         "/ihr/onboarding-management", "/ihr/adjustment-management", "/ihr/leaving-management", "/ihr/employee-management",
         "/erp/employee-management"

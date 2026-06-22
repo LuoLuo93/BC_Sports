@@ -18,4 +18,22 @@
         </foreach>
     </insert>
 
+    <select id="selectPageByOwner" resultType="java.util.LinkedHashMap">
+        SELECT owner, new_chat_cnt AS newChatCnt, chat_total AS chatTotal,
+               chat_has_msg AS chatHasMsg, new_member_cnt AS newMemberCnt,
+               member_total AS memberTotal, member_has_msg AS memberHasMsg,
+               msg_total AS msgTotal, starttime, createtime
+        FROM VX_GroupChat_Yesterday
+        WHERE owner = #{owner}
+          AND starttime >= CONVERT(VARCHAR(10), DATEADD(DAY, -10, GETDATE()), 120)
+        ORDER BY starttime DESC
+        OFFSET #{offset} ROWS FETCH NEXT #{pageSize} ROWS ONLY
+    </select>
+
+    <select id="selectCountByOwner" resultType="long">
+        SELECT COUNT(1) FROM VX_GroupChat_Yesterday
+        WHERE owner = #{owner}
+          AND starttime >= CONVERT(VARCHAR(10), DATEADD(DAY, -10, GETDATE()), 120)
+    </select>
+
 </mapper>

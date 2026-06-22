@@ -38,6 +38,9 @@ const routes = [
       { path: 'ihr/leaving-exclusion', name: 'IhrLeavingExclusion', component: () => import('@/views/ihr/Exclusion.vue'), meta: { exclusionType: 2, pageTitle: '离职排除' } },
       // QYWX
       { path: 'qywx/customer-tag', name: 'CustomerTag', component: () => import('@/views/qywx/CustomerTag.vue'), meta: { pageTitle: '客户标签' } },
+      { path: 'qywx/follow-user', name: 'FollowUserList', component: () => import('@/views/qywx/FollowUserList.vue'), meta: { pageTitle: '客户联系成员' } },
+      { path: 'qywx/group-chat', name: 'GroupChatList', component: () => import('@/views/qywx/GroupChatList.vue'), meta: { pageTitle: '群聊管理' } },
+      { path: 'qywx/moment', name: 'MomentList', component: () => import('@/views/qywx/MomentList.vue'), meta: { pageTitle: '朋友圈管理' } },
       // NxCRM
       { path: 'nxcrm/customer-tag', name: 'NxcrmCustomerTag', component: () => import('@/views/nxcrm/CustomerTag.vue'), meta: { pageTitle: '南讯打标签' } },
       { path: 'nxcrm/member-tag', name: 'NxcrmMemberTag', component: () => import('@/views/nxcrm/MemberTagManagement.vue'), meta: { pageTitle: '会员标签管理' } },

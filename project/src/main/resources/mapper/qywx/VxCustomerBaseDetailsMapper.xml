@@ -23,4 +23,53 @@
         </foreach>
     </insert>
 
+    <select id="selectPageByOwner" resultType="java.util.LinkedHashMap">
+        SELECT chatId, name, owner, createTime, member_list AS memberList
+        FROM VX_CustomerBaseDetails
+        WHERE owner = #{owner}
+        <if test="name != null and name != ''">
+            AND name LIKE '%' + #{name} + '%'
+        </if>
+        ORDER BY createTime DESC
+        OFFSET #{offset} ROWS FETCH NEXT #{pageSize} ROWS ONLY
+    </select>
+
+    <select id="selectCountByOwner" resultType="long">
+        SELECT COUNT(1) FROM VX_CustomerBaseDetails
+        WHERE owner = #{owner}
+        <if test="name != null and name != ''">
+            AND name LIKE '%' + #{name} + '%'
+        </if>
+    </select>
+
+    <select id="selectPage" resultType="java.util.LinkedHashMap">
+        SELECT g.chatId, g.name, g.owner, d.name AS ownerName, g.member_list AS memberList, g.createTime
+        FROM VX_CustomerBaseDetails g
+        LEFT JOIN VX_DepartmentMembersList d ON g.owner = d.userid
+        <where>
+            <if test="name != null and name != ''">
+                AND g.name LIKE '%' + #{name} + '%'
+            </if>
+            <if test="ownerName != null and ownerName != ''">
+                AND d.name LIKE '%' + #{ownerName} + '%'
+            </if>
+        </where>
+        ORDER BY g.createTime DESC
+        OFFSET #{offset} ROWS FETCH NEXT #{pageSize} ROWS ONLY
+    </select>
+
+    <select id="selectCount" resultType="long">
+        SELECT COUNT(1)
+        FROM VX_CustomerBaseDetails g
+        LEFT JOIN VX_DepartmentMembersList d ON g.owner = d.userid
+        <where>
+            <if test="name != null and name != ''">
+                AND g.name LIKE '%' + #{name} + '%'
+            </if>
+            <if test="ownerName != null and ownerName != ''">
+                AND d.name LIKE '%' + #{ownerName} + '%'
+            </if>
+        </where>
+    </select>
+
 </mapper>

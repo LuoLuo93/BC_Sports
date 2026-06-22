@@ -12,4 +12,48 @@
             (#{item.id}, #{item.followUser}, GETDATE())
         </foreach>
     </insert>
+
+    <select id="selectPageWithDetail" resultType="java.util.LinkedHashMap">
+        SELECT
+            f.follow_user    AS followUser,
+            d.name           AS name,
+            d.position       AS position,
+            d.mobile         AS mobile,
+            dept.name        AS mainDepartment,
+            f.createTime     AS createTime
+        FROM VX_FollowUserList f
+        LEFT JOIN VX_DepartmentMembersList d ON f.follow_user = d.userid
+        LEFT JOIN VX_DepartmentList dept ON dept.departId = d.main_department
+        <where>
+            <if test="name != null and name != ''">
+                AND d.name LIKE '%' + #{name} + '%'
+            </if>
+            <if test="mobile != null and mobile != ''">
+                AND d.mobile LIKE '%' + #{mobile} + '%'
+            </if>
+            <if test="mainDepartment != null and mainDepartment != ''">
+                AND dept.name LIKE '%' + #{mainDepartment} + '%'
+            </if>
+        </where>
+        ORDER BY f.createTime DESC
+        OFFSET #{offset} ROWS FETCH NEXT #{pageSize} ROWS ONLY
+    </select>
+
+    <select id="selectCountWithDetail" resultType="long">
+        SELECT COUNT(1)
+        FROM VX_FollowUserList f
+        LEFT JOIN VX_DepartmentMembersList d ON f.follow_user = d.userid
+        LEFT JOIN VX_DepartmentList dept ON dept.departId = d.main_department
+        <where>
+            <if test="name != null and name != ''">
+                AND d.name LIKE '%' + #{name} + '%'
+            </if>
+            <if test="mobile != null and mobile != ''">
+                AND d.mobile LIKE '%' + #{mobile} + '%'
+            </if>
+            <if test="mainDepartment != null and mainDepartment != ''">
+                AND dept.name LIKE '%' + #{mainDepartment} + '%'
+            </if>
+        </where>
+    </select>
 </mapper>

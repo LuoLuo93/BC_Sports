@@ -14,4 +14,48 @@
         </foreach>
     </insert>
 
+    <select id="selectPageByCreator" resultType="java.util.LinkedHashMap">
+        SELECT moment_id AS momentId, creator, create_type AS createType, content,
+               CASE WHEN ISNUMERIC(create_time) = 1
+                    THEN CONVERT(VARCHAR(19), DATEADD(SECOND, CAST(create_time AS BIGINT), '1970-01-01'), 120)
+                    ELSE create_time
+               END AS createTime
+        FROM VX_Moment_friendCircle
+        WHERE creator = #{creator}
+        ORDER BY create_time DESC
+        OFFSET #{offset} ROWS FETCH NEXT #{pageSize} ROWS ONLY
+    </select>
+
+    <select id="selectCountByCreator" resultType="long">
+        SELECT COUNT(1) FROM VX_Moment_friendCircle WHERE creator = #{creator}
+    </select>
+
+    <select id="selectPage" resultType="java.util.LinkedHashMap">
+        SELECT m.moment_id AS momentId, m.creator, d.name AS creatorName, m.create_type AS createType, m.content,
+               CASE WHEN ISNUMERIC(m.create_time) = 1
+                    THEN CONVERT(VARCHAR(19), DATEADD(SECOND, CAST(m.create_time AS BIGINT), '1970-01-01'), 120)
+                    ELSE m.create_time
+               END AS createTime
+        FROM VX_Moment_friendCircle m
+        LEFT JOIN VX_DepartmentMembersList d ON m.creator = d.userid
+        <where>
+            <if test="creatorName != null and creatorName != ''">
+                AND d.name LIKE '%' + #{creatorName} + '%'
+            </if>
+        </where>
+        ORDER BY m.create_time DESC
+        OFFSET #{offset} ROWS FETCH NEXT #{pageSize} ROWS ONLY
+    </select>
+
+    <select id="selectCount" resultType="long">
+        SELECT COUNT(1)
+        FROM VX_Moment_friendCircle m
+        LEFT JOIN VX_DepartmentMembersList d ON m.creator = d.userid
+        <where>
+            <if test="creatorName != null and creatorName != ''">
+                AND d.name LIKE '%' + #{creatorName} + '%'
+            </if>
+        </where>
+    </select>
+
 </mapper>

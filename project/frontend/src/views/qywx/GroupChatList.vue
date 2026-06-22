@@ -65,7 +65,7 @@
           <el-table-column prop="userid" label="成员ID" min-width="150" show-overflow-tooltip />
           <el-table-column prop="type" label="身份" width="80" align="center">
             <template #default="{ row }">
-              <el-tag :type="row.type === '1' ? 'danger' : 'info'" size="small">{{ row.type === '1' ? '群主' : row.type === '2' ? '管理员' : '成员' }}</el-tag>
+              <el-tag :type="row.type === '1' ? 'danger' : 'info'" size="small">{{ row.type === '1' ? '群主' : '群成员' }}</el-tag>
             </template>
           </el-table-column>
           <el-table-column label="加入时间" width="180" align="center">

@@ -43,7 +43,10 @@
     </select>
 
     <select id="selectPage" resultType="java.util.LinkedHashMap">
-        SELECT g.chatId, g.name, g.owner, d.name AS ownerName, g.member_list AS memberList, g.createTime
+        SELECT g.chatId, g.name, g.owner, d.name AS ownerName, g.member_list AS memberList, g.createTime,
+               CASE WHEN EXISTS (SELECT 1 FROM VX_CustomerBaseDetails_GroupMembers m WHERE m.chatId = g.chatId AND m.type = '2')
+                    THEN '外部群' ELSE '内部群'
+               END AS groupType
         FROM VX_CustomerBaseDetails g
         LEFT JOIN VX_DepartmentMembersList d ON g.owner = d.userid
         <where>
@@ -70,6 +73,13 @@
                 AND d.name LIKE '%' + #{ownerName} + '%'
             </if>
         </where>
+    </select>
+
+    <select id="selectMembersByChatId" resultType="java.util.LinkedHashMap">
+        SELECT chatId, userid, name, type, join_time AS joinTime, join_scene AS joinScene, invitor
+        FROM VX_CustomerBaseDetails_GroupMembers
+        WHERE chatId = #{chatId}
+        ORDER BY type DESC, name
     </select>
 
 </mapper>

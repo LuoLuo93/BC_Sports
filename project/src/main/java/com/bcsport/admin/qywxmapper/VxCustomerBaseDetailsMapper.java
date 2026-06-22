@@ -61,4 +61,9 @@ public interface VxCustomerBaseDetailsMapper {
      */
     long selectCount(@Param("name") String name,
                      @Param("ownerName") String ownerName);
+
+    /**
+     * 根据chatId查询群成员列表
+     */
+    List<Map<String, Object>> selectMembersByChatId(@Param("chatId") String chatId);
 }

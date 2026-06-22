@@ -45,4 +45,12 @@ public class QywxGroupChatController {
         result.put("pages", (total + pageSize - 1) / pageSize);
         return Result.success(result);
     }
+
+    @GetMapping("/members")
+    @ApiOperation("查询群成员列表")
+    @RequiresPermissions("qywx:groupchat:query")
+    public Result<List<Map<String, Object>>> members(@RequestParam String chatId) {
+        List<Map<String, Object>> members = customerBaseDetailsMapper.selectMembersByChatId(chatId);
+        return Result.success(members);
+    }
 }

@@ -60,6 +60,10 @@ export function getGroupChatPage(params) {
   return request.get('/api/qywx/group-chat/page', { params })
 }
 
+export function getGroupChatMembers(chatId) {
+  return request.get('/api/qywx/group-chat/members', { params: { chatId } })
+}
+
 // ===== 朋友圈管理 =====
 
 export function getMomentPage(params) {

@@ -23,9 +23,9 @@
           <el-table-column type="index" label="#" width="50" align="center" />
           <el-table-column prop="content" label="内容" min-width="300" show-overflow-tooltip />
           <el-table-column prop="creatorName" label="发布者" width="120" />
-          <el-table-column prop="createType" label="类型" width="90" align="center">
+          <el-table-column prop="createType" label="类型" width="100" align="center">
             <template #default="{ row }">
-              <el-tag :type="row.createType === '1' ? 'primary' : 'info'" size="small">{{ row.createType === '1' ? '文字' : row.createType === '2' ? '图片' : row.createType === '3' ? '视频' : row.createType || '-' }}</el-tag>
+              <el-tag :type="TYPE_TAG_MAP[row.createType] || 'info'" size="small">{{ formatCreateType(row.createType) }}</el-tag>
             </template>
           </el-table-column>
           <el-table-column label="发布时间" width="180" align="center">
@@ -56,6 +56,10 @@ import { usePageQuery } from '@/composables/usePageQuery'
 import { PAGE_SIZES_LG } from '@/utils/appConfig'
 import { formatTime } from '@/utils/format'
 import { getMomentPage } from '@/api/qywx'
+
+const TYPE_MAP = { '0': '文字', '1': '图片', '2': '视频', '3': '图文链接', '4': '小程序' }
+const TYPE_TAG_MAP = { '0': 'primary', '1': 'success', '2': 'warning', '3': 'info', '4': 'danger' }
+function formatCreateType(val) { return TYPE_MAP[val] || val || '-' }
 
 const { loading, tableData, total, query, loadData, handleSearch: onSearch } = usePageQuery(getMomentPage, {
   creatorName: ''

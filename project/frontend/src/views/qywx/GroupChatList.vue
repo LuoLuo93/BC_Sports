@@ -11,6 +11,7 @@
         <el-form-item>
           <el-button type="primary" :icon="Search" @click="onSearch">搜索</el-button>
           <el-button :icon="RefreshRight" @click="onReset">重置</el-button>
+          <el-button type="success" size="small" :icon="Refresh" :loading="syncLoading" @click="handleSync">数据同步</el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -80,11 +81,12 @@
 <script setup>
 defineOptions({ name: 'GroupChatList' })
 import { ref, onMounted } from 'vue'
-import { Search, RefreshRight } from '@element-plus/icons-vue'
+import { Search, RefreshRight, Refresh } from '@element-plus/icons-vue'
 import { usePageQuery } from '@/composables/usePageQuery'
+import { useSyncAction } from '@/composables/useSyncAction'
 import { PAGE_SIZES_LG } from '@/utils/appConfig'
 import { formatTime } from '@/utils/format'
-import { getGroupChatPage, getGroupChatMembers } from '@/api/qywx'
+import { getGroupChatPage, getGroupChatMembers, syncGroupChats, getGroupChatSyncStatus } from '@/api/qywx'
 
 const { loading, tableData, total, query, loadData, handleSearch: onSearch } = usePageQuery(getGroupChatPage, {
   name: '', ownerName: ''
@@ -95,6 +97,9 @@ function onReset() {
   query.ownerName = ''
   onSearch()
 }
+
+// ===== 数据同步 =====
+const { syncLoading, handleSync, checkStatus } = useSyncAction(syncGroupChats, loadData, '确定同步群聊数据？', getGroupChatSyncStatus)
 
 // ===== 群成员弹窗 =====
 const memberDialogVisible = ref(false)
@@ -114,7 +119,7 @@ async function openMemberDialog(row) {
   }
 }
 
-onMounted(() => { loadData() })
+onMounted(() => { loadData(); checkStatus() })
 </script>
 
 <style scoped>

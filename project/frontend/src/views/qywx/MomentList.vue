@@ -8,6 +8,7 @@
         <el-form-item>
           <el-button type="primary" :icon="Search" @click="onSearch">搜索</el-button>
           <el-button :icon="RefreshRight" @click="onReset">重置</el-button>
+          <el-button type="success" size="small" :icon="Refresh" :loading="syncLoading" @click="handleSync">数据同步</el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -51,11 +52,12 @@
 <script setup>
 defineOptions({ name: 'MomentList' })
 import { onMounted } from 'vue'
-import { Search, RefreshRight } from '@element-plus/icons-vue'
+import { Search, RefreshRight, Refresh } from '@element-plus/icons-vue'
 import { usePageQuery } from '@/composables/usePageQuery'
+import { useSyncAction } from '@/composables/useSyncAction'
 import { PAGE_SIZES_LG } from '@/utils/appConfig'
 import { formatTime } from '@/utils/format'
-import { getMomentPage } from '@/api/qywx'
+import { getMomentPage, syncMoments, getMomentSyncStatus } from '@/api/qywx'
 
 const TYPE_MAP = { '0': '文字', '1': '图片', '2': '视频', '3': '图文链接', '4': '小程序' }
 const TYPE_TAG_MAP = { '0': 'primary', '1': 'success', '2': 'warning', '3': 'info', '4': 'danger' }
@@ -70,7 +72,10 @@ function onReset() {
   onSearch()
 }
 
-onMounted(() => { loadData() })
+// ===== 数据同步 =====
+const { syncLoading, handleSync, checkStatus } = useSyncAction(syncMoments, loadData, '确定同步朋友圈数据？', getMomentSyncStatus)
+
+onMounted(() => { loadData(); checkStatus() })
 </script>
 
 <style scoped>

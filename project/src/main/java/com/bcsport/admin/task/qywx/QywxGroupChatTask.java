@@ -32,6 +32,9 @@ public class QywxGroupChatTask {
     private static final int BATCH_SIZE = 50;
     private static final int USER_BATCH_SIZE = 100;
     private static final int CONCURRENT_TASKS = 3;
+    private static volatile boolean isSyncing = false;
+
+    public static boolean isSyncing() { return isSyncing; }
 
     @Autowired
     private QywxApiClient apiClient;
@@ -54,6 +57,10 @@ public class QywxGroupChatTask {
     private PlatformTransactionManager transactionManager;
 
     public void sync() {
+        synchronized (QywxGroupChatTask.class) {
+            if (isSyncing) { log.warn("同步企微群聊正在进行中"); return; }
+            isSyncing = true;
+        }
         log.info("=== 开始执行: 同步企微群聊 ===");
         long totalStartTime = System.currentTimeMillis();
 
@@ -70,6 +77,8 @@ public class QywxGroupChatTask {
         } catch (Exception e) {
             log.error("=== 失败: 同步企微群聊 ===", e);
             throw new RuntimeException(e);
+        } finally {
+            synchronized (QywxGroupChatTask.class) { isSyncing = false; }
         }
     }
 

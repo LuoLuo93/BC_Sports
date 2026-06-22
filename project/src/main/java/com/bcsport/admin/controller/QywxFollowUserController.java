@@ -163,6 +163,9 @@ public class QywxFollowUserController {
     @ApiOperation("同步客户联系成员")
     @RequiresPermissions("qywx:follow:query")
     public Result<String> sync() {
+        if (QywxFollowUserTask.isSyncing()) {
+            return Result.error("同步任务正在进行中，请稍后再试");
+        }
         taskThreadPool.execute(() -> {
             try {
                 followUserTask.sync();
@@ -170,6 +173,15 @@ public class QywxFollowUserController {
                 log.error("同步客户联系成员异常", e);
             }
         });
-        return Result.success("同步任务已触发，请稍后刷新页面查看数据");
+        return Result.success("同步任务已触发");
+    }
+
+    @GetMapping("/sync-status")
+    @ApiOperation("同步状态")
+    @RequiresPermissions("qywx:follow:query")
+    public Result<Map<String, Object>> syncStatus() {
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("syncing", QywxFollowUserTask.isSyncing());
+        return Result.success(data);
     }
 }

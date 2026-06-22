@@ -24,6 +24,10 @@ import java.util.List;
 @Component("qywxMomentTask")
 public class QywxMomentTask {
 
+    private static volatile boolean isSyncing = false;
+
+    public static boolean isSyncing() { return isSyncing; }
+
     @Autowired
     private QywxApiClient apiClient;
 
@@ -35,6 +39,10 @@ public class QywxMomentTask {
     private PlatformTransactionManager transactionManager;
 
     public void sync() {
+        synchronized (QywxMomentTask.class) {
+            if (isSyncing) { log.warn("同步企微朋友圈正在进行中"); return; }
+            isSyncing = true;
+        }
         log.info("=== 开始执行: 同步企微朋友圈 ===");
         long totalStartTime = System.currentTimeMillis();
 
@@ -121,6 +129,8 @@ public class QywxMomentTask {
         } catch (Exception e) {
             log.error("=== 失败: 同步企微朋友圈 ===", e);
             throw new RuntimeException(e);
+        } finally {
+            synchronized (QywxMomentTask.class) { isSyncing = false; }
         }
     }
 

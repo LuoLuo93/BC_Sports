@@ -54,6 +54,10 @@ export function syncFollowUsers() {
   return request.post('/api/qywx/follow-user/sync')
 }
 
+export function getFollowUserSyncStatus() {
+  return request.get('/api/qywx/follow-user/sync-status')
+}
+
 // ===== 群聊管理 =====
 
 export function getGroupChatPage(params) {
@@ -64,8 +68,24 @@ export function getGroupChatMembers(chatId) {
   return request.get('/api/qywx/group-chat/members', { params: { chatId } })
 }
 
+export function syncGroupChats() {
+  return request.post('/api/qywx/group-chat/sync')
+}
+
+export function getGroupChatSyncStatus() {
+  return request.get('/api/qywx/group-chat/sync-status')
+}
+
 // ===== 朋友圈管理 =====
 
 export function getMomentPage(params) {
   return request.get('/api/qywx/moment/page', { params })
+}
+
+export function syncMoments() {
+  return request.post('/api/qywx/moment/sync')
+}
+
+export function getMomentSyncStatus() {
+  return request.get('/api/qywx/moment/sync-status')
 }

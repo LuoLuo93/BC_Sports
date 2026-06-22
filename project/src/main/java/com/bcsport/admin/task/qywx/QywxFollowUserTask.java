@@ -18,6 +18,9 @@ import java.util.List;
 public class QywxFollowUserTask {
 
     private static final int BATCH_SIZE = 50;
+    private static volatile boolean isSyncing = false;
+
+    public static boolean isSyncing() { return isSyncing; }
 
     @Autowired
     private QywxApiClient apiClient;
@@ -26,6 +29,10 @@ public class QywxFollowUserTask {
     private QywxFollowUserMapper followUserMapper;
 
     public void sync() {
+        synchronized (QywxFollowUserTask.class) {
+            if (isSyncing) { log.warn("同步客户联系成员正在进行中"); return; }
+            isSyncing = true;
+        }
         log.info("=== 开始执行: 同步客户联系成员 ===");
         try {
             List<String> followUserList = apiClient.getFollowUserList();
@@ -49,6 +56,8 @@ public class QywxFollowUserTask {
         } catch (Exception e) {
             log.error("=== 失败: 同步客户联系成员 ===", e);
             throw e;
+        } finally {
+            synchronized (QywxFollowUserTask.class) { isSyncing = false; }
         }
     }
 

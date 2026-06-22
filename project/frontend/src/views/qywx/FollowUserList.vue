@@ -146,7 +146,7 @@ import { usePageQuery } from '@/composables/usePageQuery'
 import { useSyncAction } from '@/composables/useSyncAction'
 import { PAGE_SIZES_LG } from '@/utils/appConfig'
 import { formatTime } from '@/utils/format'
-import { getFollowUserPage, getFollowUserCustomers, getFollowUserGroupStats, syncFollowUsers } from '@/api/qywx'
+import { getFollowUserPage, getFollowUserCustomers, getFollowUserGroupStats, syncFollowUsers, getFollowUserSyncStatus } from '@/api/qywx'
 
 // ===== 添加方式映射 =====
 const ADD_WAY_MAP = {
@@ -179,7 +179,7 @@ function onReset() {
 }
 
 // ===== 数据同步 =====
-const { syncLoading, handleSync } = useSyncAction(syncFollowUsers, loadData, '确定同步客户联系成员数据？')
+const { syncLoading, handleSync, checkStatus } = useSyncAction(syncFollowUsers, loadData, '确定同步客户联系成员数据？', getFollowUserSyncStatus)
 
 // ===== 客户弹窗 =====
 const customerDialogVisible = ref(false)
@@ -238,7 +238,7 @@ async function loadGroupStatData() {
 }
 function handleGroupStatSearch() { groupStatQuery.pageNum = 1; loadGroupStatData() }
 
-onMounted(() => { loadData() })
+onMounted(() => { loadData(); checkStatus() })
 </script>
 
 <style scoped>

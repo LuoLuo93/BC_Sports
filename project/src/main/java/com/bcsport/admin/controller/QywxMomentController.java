@@ -4,17 +4,20 @@ import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.Result;
 import com.bcsport.admin.dto.QywxMomentQueryDTO;
 import com.bcsport.admin.qywxmapper.QywxMomentMapper;
+import com.bcsport.admin.task.qywx.QywxMomentTask;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ThreadPoolExecutor;
 
 @Slf4j
 @RestController
@@ -24,6 +27,13 @@ public class QywxMomentController {
 
     @Autowired
     private QywxMomentMapper momentMapper;
+
+    @Autowired
+    private QywxMomentTask momentTask;
+
+    @Autowired
+    @Qualifier("taskThreadPool")
+    private ThreadPoolExecutor taskThreadPool;
 
     @GetMapping("/page")
     @ApiOperation("分页查询朋友圈列表")
@@ -44,5 +54,31 @@ public class QywxMomentController {
         result.put("size", pageSize);
         result.put("pages", (total + pageSize - 1) / pageSize);
         return Result.success(result);
+    }
+
+    @PostMapping("/sync")
+    @ApiOperation("同步朋友圈数据")
+    @RequiresPermissions("qywx:moment:query")
+    public Result<String> sync() {
+        if (QywxMomentTask.isSyncing()) {
+            return Result.error("同步任务正在进行中，请稍后再试");
+        }
+        taskThreadPool.execute(() -> {
+            try {
+                momentTask.sync();
+            } catch (Exception e) {
+                log.error("同步朋友圈数据异常", e);
+            }
+        });
+        return Result.success("同步任务已触发");
+    }
+
+    @GetMapping("/sync-status")
+    @ApiOperation("同步状态")
+    @RequiresPermissions("qywx:moment:query")
+    public Result<Map<String, Object>> syncStatus() {
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("syncing", QywxMomentTask.isSyncing());
+        return Result.success(data);
     }
 }

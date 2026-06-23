@@ -111,7 +111,7 @@ import { ref, reactive, onMounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, RefreshRight } from '@element-plus/icons-vue'
 import request from '@/api/request'
-import { getTemplateList, getProductBrands } from '@/api/sticker'
+import { getProductBrands } from '@/api/sticker'
 import { usePageQuery } from '@/composables/usePageQuery'
 import { usePermission } from '@/composables/usePermission'
 import { useDictStore } from '@/stores/dict'
@@ -123,7 +123,6 @@ const dictStore = useDictStore()
 
 const brandList = ref([])
 const kindList = ref([])
-const templateList = ref([])
 const printerOptions = ref([])
 
 const { loading, tableData, total, query, loadData, handleSearch, resetQuery } = usePageQuery(
@@ -166,14 +165,6 @@ async function loadKinds() {
   } catch {}
 }
 
-async function loadTemplates() {
-  if (templateList.value.length) return
-  try {
-    const { data } = await getTemplateList()
-    templateList.value = data || []
-  } catch {}
-}
-
 async function loadPrinterOptions() {
   try {
     const data = await dictStore.loadDict('printer_name')
@@ -198,11 +189,6 @@ function onBrandChange(val) {
 function onKindChange(val) {
   const k = kindList.value.find(item => item.ID === val)
   form.kindName = k ? k.ATTRIBNAME : ''
-}
-
-function onTemplateChange(val) {
-  const t = templateList.value.find(item => item.id === val)
-  form.templateName = t ? t.templateName : ''
 }
 
 function handleAdd() {
@@ -264,7 +250,6 @@ onMounted(() => {
   loadData()
   loadBrands()
   loadKinds()
-  loadTemplates()
   loadPrinterOptions()
 })
 </script>

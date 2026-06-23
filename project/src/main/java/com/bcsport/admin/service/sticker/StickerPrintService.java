@@ -39,9 +39,6 @@ public class StickerPrintService {
     private StickerPrintOrderDetailMapper detailMapper;
 
     @Autowired
-    private BarTenderPrintService barTenderPrintService;
-
-    @Autowired
     private BjerpProductMapper bjerpProductMapper;
 
     public List<Map<String, Object>> searchProducts(String materialNumber, String styleNumber, String materialName, String brandId) {
@@ -195,30 +192,6 @@ public class StickerPrintService {
         }
         order.setDeleted(1);
         orderMapper.updateById(order);
-    }
-
-    @Transactional(rollbackFor = Exception.class)
-    public boolean bartenderPrint(String orderId) {
-        StickerPrintOrder order = orderMapper.selectById(orderId);
-        if (order == null || order.getStatus() != 2) {
-            throw new BusinessException("只有已审核的申请单才能打印");
-        }
-        List<StickerPrintOrderDetail> details = detailMapper.selectList(
-            new LambdaQueryWrapper<StickerPrintOrderDetail>()
-                .eq(StickerPrintOrderDetail::getOrderId, orderId)
-                .orderByAsc(StickerPrintOrderDetail::getSort)
-        );
-        if (details.isEmpty()) {
-            throw new BusinessException("申请单无明细");
-        }
-        boolean ok = barTenderPrintService.printOrder(order.getOrderNo(), details);
-        if (ok) {
-            order.setPrintTime(LocalDateTime.now());
-            order.setPrintBy(ShiroSecurityUtils.getCurrentUsername());
-            order.setUpdateTime(LocalDateTime.now());
-            orderMapper.updateById(order);
-        }
-        return ok;
     }
 
     private void saveDetails(String orderId, List<StickerPrintOrderDetail> details) {

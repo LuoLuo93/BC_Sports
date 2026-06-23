@@ -7,7 +7,6 @@ import com.bcsport.admin.dto.sticker.StickerDataQueryDTO;
 import com.bcsport.admin.dto.sticker.StickerPrintQueryDTO;
 import com.bcsport.admin.entity.sticker.StickerPrintOrder;
 import com.bcsport.admin.service.sticker.StickerPrintService;
-import com.bcsport.admin.service.sticker.ZplPrintService;
 import com.bcsport.admin.vo.StickerPrintOrderVO;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -26,8 +25,6 @@ public class StickerPrintController {
 
     @Autowired
     private StickerPrintService stickerPrintService;
-    @Autowired
-    private ZplPrintService zplPrintService;
 
     @GetMapping("/page")
     @ApiOperation("分页查询打印单")
@@ -109,43 +106,5 @@ public class StickerPrintController {
     @RequiresPermissions("sticker:print:query")
     public Result<?> getBrands() {
         return Result.success(stickerPrintService.getBrands());
-    }
-
-    @PostMapping("/{orderId}/bartender-print")
-    @ApiOperation("BarTender打印")
-    @RequiresPermissions("sticker:print:execute")
-    public Result<?> bartenderPrint(@PathVariable String orderId) {
-        boolean ok = stickerPrintService.bartenderPrint(orderId);
-        if (ok) {
-            return Result.success("打印指令已发送");
-        } else {
-            return Result.error("打印失败，请检查BarTender服务");
-        }
-    }
-
-    @GetMapping("/zpl-printers")
-    @ApiOperation("获取打印机列表")
-    @RequiresPermissions("sticker:print:query")
-    public Result<?> getPrinters() {
-        return Result.success(zplPrintService.getPrinters());
-    }
-
-    @PostMapping("/zpl-print")
-    @ApiOperation("ZPL直连打印")
-    @RequiresPermissions("sticker:print:execute")
-    public Result<?> zplPrint(@RequestBody Map<String, String> body) {
-        String zpl = body.get("zpl");
-        String printerIp = body.get("printerIp");
-        String printerPortStr = body.get("printerPort");
-        if (zpl == null || zpl.isBlank()) {
-            return Result.paramError("ZPL内容不能为空");
-        }
-        if (printerIp != null && !printerIp.isBlank() && printerPortStr != null) {
-            int port = Integer.parseInt(printerPortStr);
-            zplPrintService.sendZpl(printerIp, port, zpl);
-        } else {
-            zplPrintService.sendZpl(zpl);
-        }
-        return Result.success("打印指令已发送");
     }
 }

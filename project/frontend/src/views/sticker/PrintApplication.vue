@@ -59,8 +59,6 @@
                 <el-button v-if="row.status === 0 && hasPermission('sticker:print:delete')" type="danger" plain size="small" @click="handleDelete(row)">删除</el-button>
                 <el-button v-if="row.status === 1 && hasPermission('sticker:print:review')" type="success" plain size="small" @click="handleReview(row)">审核</el-button>
                 <el-button v-if="row.status === 2 && hasPermission('sticker:print:execute')" type="primary" size="small" @click="handleAgentPrint(row)">打印</el-button>
-                <el-button v-if="row.status === 2 && hasPermission('sticker:print:execute')" type="warning" plain size="small" @click="handlePrintPreview(row)">打印预览</el-button>
-                <el-button v-if="row.status === 2 && hasPermission('sticker:print:execute')" plain size="small" @click="handleQzPrint(row)">QZ打印</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -268,48 +266,6 @@
       </template>
     </el-dialog>
 
-    <!-- QZ Tray 打印 -->
-    <el-dialog v-model="qzPrintVisible" title="QZ Tray 直连打印" width="500px" :close-on-click-modal="false">
-      <div v-if="qzConnecting" style="text-align:center;padding:20px">
-        <el-icon class="is-loading" :size="24"><Loading /></el-icon>
-        <p style="margin-top:10px;color:#909399">正在连接 QZ Tray...</p>
-      </div>
-      <template v-else>
-        <el-alert v-if="qzError" :title="qzError" type="error" show-icon style="margin-bottom:16px" />
-        <el-form label-width="100px">
-          <el-form-item label="打印机">
-            <el-select v-model="qzSelectedPrinter" placeholder="选择打印机" style="width:100%">
-              <el-option v-for="p in qzPrinterList" :key="p" :label="p" :value="p" />
-            </el-select>
-            <div style="font-size:12px;color:#909399;margin-top:4px">
-              请确保已安装 QZ Tray（推荐 v2.0.11），<a href="https://github.com/qzind/tray/releases/tag/v2.0.11" target="_blank" style="color:#409eff">点击下载 QZ Tray</a>
-            </div>
-          </el-form-item>
-          <el-form-item label="模板">
-            <el-select v-model="qzSelectedTemplateId" placeholder="选择模板" style="width:100%">
-              <el-option v-for="t in templateList" :key="t.id" :label="t.templateName" :value="t.id" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="打印数量">
-            <span style="font-weight:600;color:#409eff">{{ qzOrderTotal }} 张</span>
-            <span style="font-size:12px;color:#909399;margin-left:8px">（共 {{ qzOrderDetails }} 条明细）</span>
-          </el-form-item>
-        </el-form>
-        <div v-if="qzPrinting" style="margin-top:16px">
-          <el-progress :percentage="qzPrintProgress" :format="p => `${qzPrinted}/${qzOrderTotal}`" />
-          <p style="text-align:center;color:#909399;font-size:12px;margin-top:8px">正在打印，请勿关闭页面...</p>
-        </div>
-      </template>
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button class="btn-cancel" @click="qzPrintVisible = false" :disabled="qzPrinting">取消</el-button>
-          <el-button class="btn-confirm" type="primary" @click="confirmQzPrint" :loading="qzPrinting" :disabled="!qzSelectedPrinter || !qzSelectedTemplateId">
-            {{ qzPrinting ? '打印中...' : '开始打印' }}
-          </el-button>
-        </div>
-      </template>
-    </el-dialog>
-
     <!-- 打印（通过 Agent 下发） -->
     <el-dialog v-model="agentPrintVisible" title="打印 · 选择 Agent" width="550px" :close-on-click-modal="false">
       <div v-if="agentLoading" style="text-align:center;padding:20px">
@@ -387,12 +343,11 @@ import { useRouter, onBeforeRouteLeave } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Loading, Search, RefreshRight } from '@element-plus/icons-vue'
 import request from '@/api/request'
-import { getPrintOrderPage, getPrintOrder, getTemplateList, createPrintOrder, updatePrintOrder, submitPrintOrder, reviewPrintOrder, deletePrintOrder, searchProducts, getProductBrands, createAgentPrintTasks } from '@/api/sticker'
+import { getPrintOrderPage, getPrintOrder, createPrintOrder, updatePrintOrder, submitPrintOrder, reviewPrintOrder, deletePrintOrder, searchProducts, getProductBrands, createAgentPrintTasks } from '@/api/sticker'
 import { usePageQuery } from '@/composables/usePageQuery'
 import { usePermission } from '@/composables/usePermission'
 import { useAuthStore } from '@/stores/auth'
 import { PAGE_SIZES_LG } from '@/utils/appConfig'
-import { connectQZ, getPrinters, printOrderDetails } from '@/utils/qzPrint'
 
 const { hasPermission } = usePermission()
 const authStore = useAuthStore()
@@ -469,25 +424,6 @@ const reviewVisible = ref(false)
 const reviewOrderId = ref('')
 const reviewForm = reactive({ status: 2, reviewRemark: '' })
 
-// QZ Tray Print
-const qzPrintVisible = ref(false)
-const qzConnecting = ref(false)
-const qzError = ref('')
-const qzPrinterList = ref([])
-const qzSelectedPrinter = ref('')
-const qzSelectedTemplateId = ref('')
-const qzOrder = ref(null)
-const qzPrinting = ref(false)
-const qzPrinted = ref(0)
-const templateList = ref([])
-
-const qzOrderTotal = computed(() => {
-  if (!qzOrder.value) return 0
-  return (qzOrder.value.details || []).reduce((sum, d) => sum + (d.printQty || 0), 0)
-})
-const qzOrderDetails = computed(() => qzOrder.value?.details?.length || 0)
-const qzPrintProgress = computed(() => qzOrderTotal.value ? Math.round((qzPrinted.value / qzOrderTotal.value) * 100) : 0)
-
 // Agent Print
 const agentPrintVisible = ref(false)
 const agentLoading = ref(false)
@@ -558,10 +494,6 @@ function handleView(row) {
   router.push(`/sticker/print/${row.id}`)
 }
 
-function handlePrintPreview(row) {
-  router.push(`/sticker/print/${row.id}/preview`)
-}
-
 async function handleSubmit(row) {
   await ElMessageBox.confirm('确认提交审核？', '提示')
   await submitPrintOrder(row.id)
@@ -591,95 +523,6 @@ async function confirmReview() {
   ElMessage.success('审核完成')
   reviewVisible.value = false
   loadData()
-}
-
-// ─── QZ Tray 打印 ────────────────────────────────────────
-async function handleQzPrint(row) {
-  qzError.value = ''
-  qzPrinterList.value = []
-  qzSelectedPrinter.value = ''
-  qzPrinting.value = false
-  qzPrinted.value = 0
-
-  // 加载订单详情
-  try {
-    const { data } = await getPrintOrder(row.id)
-    qzOrder.value = data
-  } catch {
-    ElMessage.error('获取订单详情失败')
-    return
-  }
-
-  // 加载模板列表
-  try {
-    const res = await getTemplateList()
-    templateList.value = res.data || []
-    const defaultTpl = templateList.value.find(t => t.isDefault === 1)
-    if (defaultTpl) qzSelectedTemplateId.value = defaultTpl.id
-    else if (templateList.value.length > 0) qzSelectedTemplateId.value = templateList.value[0].id
-  } catch {
-    templateList.value = []
-  }
-
-  qzPrintVisible.value = true
-
-  // 连接 QZ Tray
-  qzConnecting.value = true
-  try {
-    await connectQZ()
-    await loadQzPrinters()
-  } catch (e) {
-    qzError.value = e.message || '连接 QZ Tray 失败，请确保已安装并运行'
-  } finally {
-    qzConnecting.value = false
-  }
-}
-
-async function loadQzPrinters() {
-  try {
-    console.log('正在获取打印机列表...')
-    const list = await getPrinters()
-    console.log('打印机列表:', list)
-    qzPrinterList.value = list
-    if (list.length > 0 && !qzSelectedPrinter.value) {
-      qzSelectedPrinter.value = list[0]
-    }
-  } catch (e) {
-    console.error('获取打印机列表失败:', e)
-    qzError.value = '获取打印机列表失败: ' + (e.message || e)
-  }
-}
-
-async function confirmQzPrint() {
-  if (!qzSelectedPrinter.value) {
-    ElMessage.warning('请选择打印机')
-    return
-  }
-  if (!qzSelectedTemplateId.value) {
-    ElMessage.warning('请选择模板')
-    return
-  }
-
-  const tpl = templateList.value.find(t => t.id === qzSelectedTemplateId.value)
-  if (!tpl) {
-    ElMessage.error('未找到选中的模板')
-    return
-  }
-
-  qzPrinting.value = true
-  qzPrinted.value = 0
-
-  try {
-    const count = await printOrderDetails(qzSelectedPrinter.value, tpl, qzOrder.value.details || [], (printed, total) => {
-      qzPrinted.value = printed
-    })
-    ElMessage.success(`成功打印 ${count} 张标签`)
-    qzPrintVisible.value = false
-  } catch (e) {
-    ElMessage.error('打印失败: ' + (e.message || '未知错误'))
-  } finally {
-    qzPrinting.value = false
-  }
 }
 
 // ─── Agent 打印 ──────────────────────

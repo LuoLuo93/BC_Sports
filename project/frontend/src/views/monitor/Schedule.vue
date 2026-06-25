@@ -213,15 +213,16 @@
 
     <!-- 任务参数输入对话框 -->
     <el-dialog v-model="paramDialogVisible" title="任务参数" width="400px" destroy-on-close>
+      <p style="color: #f56c6c; font-size: 13px; margin: 0 0 16px;">填写日期抽取历史数据，不填默认抽取前一天</p>
       <el-form label-width="80px">
         <el-form-item v-for="pd in currentParamDefs" :key="pd.key" :label="pd.label">
           <el-date-picker
             v-if="pd.type === 'date'"
             v-model="paramForm[pd.key]"
-            type="datetime"
-            placeholder="请选择日期时间"
-            format="YYYY-MM-DD HH:mm:ss"
-            value-format="YYYY-MM-DD HH:mm:ss"
+            type="date"
+            placeholder="请选择日期"
+            format="YYYY-MM-DD"
+            value-format="YYYY-MM-DD"
             style="width: 100%"
           />
           <el-input v-else v-model="paramForm[pd.key]" :placeholder="'请输入' + pd.label" />

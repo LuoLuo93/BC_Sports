@@ -207,7 +207,8 @@ public class ScheduleConfig {
                 }
 
                 Object bean = applicationContext.getBean(option.getBeanName());
-                Method method = findMethod(bean.getClass(), option.getMethodName());
+                boolean hasParams = job.getParams() != null && !job.getParams().trim().isEmpty();
+                Method method = findMethod(bean.getClass(), option.getMethodName(), hasParams);
                 method.setAccessible(true);
                 Class<?>[] paramTypes = method.getParameterTypes();
                 if (paramTypes.length == 1 && Map.class.isAssignableFrom(paramTypes[0])) {
@@ -272,15 +273,21 @@ public class ScheduleConfig {
         return "task:" + option.getTaskKey();
     }
 
-    private Method findMethod(Class<?> clazz, String methodName) throws NoSuchMethodException {
+    private Method findMethod(Class<?> clazz, String methodName, boolean preferMapParam) throws NoSuchMethodException {
+        Method fallback = null;
         for (Method m : clazz.getDeclaredMethods()) {
             if (m.getName().equals(methodName)) {
-                return m;
+                Class<?>[] pts = m.getParameterTypes();
+                boolean isMapVersion = pts.length == 1 && Map.class.isAssignableFrom(pts[0]);
+                if (preferMapParam && isMapVersion) return m;
+                if (!preferMapParam && pts.length == 0) return m;
+                if (fallback == null) fallback = m;
             }
         }
+        if (fallback != null) return fallback;
         Class<?> superClass = clazz.getSuperclass();
         if (superClass != null) {
-            return findMethod(superClass, methodName);
+            return findMethod(superClass, methodName, preferMapParam);
         }
         throw new NoSuchMethodException("方法不存在：" + methodName);
     }

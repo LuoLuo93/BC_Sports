@@ -7,6 +7,11 @@
         WHERE DATEDIFF(DAY, insertDate, GETDATE()) = 0
     </delete>
 
+    <delete id="deleteByDate">
+        DELETE FROM yd_customerflow
+        WHERE CONVERT(DATE, insertDate) = #{date}
+    </delete>
+
     <insert id="insertBatch">
         INSERT INTO yd_customerflow
         (id, storeIdUuid, storeCode, name, realTime, indoorCount, outdoorCount,
@@ -18,7 +23,7 @@
              #{item.realTime}, #{item.indoorCount}, #{item.outdoorCount},
              #{item.statDimensionDayTime}, #{item.statDimensionHourTime},
              #{item.outsum}, #{item.areaCode}, #{item.areaName},
-             #{item.storeAreaIdUuid}, GETDATE())
+             #{item.storeAreaIdUuid}, #{item.insertDate})
         </foreach>
     </insert>
 

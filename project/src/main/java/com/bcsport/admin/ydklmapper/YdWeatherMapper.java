@@ -11,5 +11,7 @@ import java.util.List;
 public interface YdWeatherMapper extends BaseMapper<YdWeather> {
     void deleteTodayData();
 
+    void deleteByDate(@Param("date") String date);
+
     void insertBatch(@Param("list") List<YdWeather> list);
 }

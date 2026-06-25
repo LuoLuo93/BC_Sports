@@ -11,5 +11,7 @@ import java.util.List;
 public interface YdCustomerFlowMapper extends BaseMapper<YdCustomerFlow> {
     void deleteTodayData();
 
+    void deleteByDate(@Param("date") String date);
+
     void insertBatch(@Param("list") List<YdCustomerFlow> list);
 }

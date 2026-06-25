@@ -63,7 +63,9 @@ public class ScheduleTaskRegistry {
 
 
         // === YDKL 云盯客流模块 ===
-        register("ydkl.sync.all", "云盯客流-一键同步", "ydSyncAllTask", "syncAll", "一键同步：客流数据→天气数据", MODULE_YDKL, 3);
+        register("ydkl.sync.all", "云盯客流-一键同步", "ydSyncAllTask", "syncAll", "一键同步：客流数据→天气数据", MODULE_YDKL, 3,
+            new ParamDef("startTime", "开始日期", "date"),
+            new ParamDef("endTime", "结束日期", "date"));
         // register("ydkl.customerflow.sync", "云盯客流-同步客流数据", "ydCustomerFlowTask", "sync", "从云盯API同步昨日门店客流数据", MODULE_YDKL, 1);
         //  register("ydkl.weather.sync", "云盯客流-同步天气数据", "ydWeatherTask", "sync", "从云盯API同步昨日门店天气数据", MODULE_YDKL, 2);
 

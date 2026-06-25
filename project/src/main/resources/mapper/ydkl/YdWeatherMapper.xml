@@ -7,6 +7,11 @@
         WHERE DATEDIFF(DAY, insertDate, GETDATE()) = 0
     </delete>
 
+    <delete id="deleteByDate">
+        DELETE FROM yd_weather
+        WHERE CONVERT(DATE, insertDate) = #{date}
+    </delete>
+
     <insert id="insertBatch">
         INSERT INTO yd_weather
         (id, storeIdUuid, storeCode, storeName, realTime, province, city,
@@ -15,7 +20,7 @@
         <foreach collection="list" item="item" separator=",">
             (#{item.id}, #{item.storeIdUuid}, #{item.storeCode}, #{item.storename},
              #{item.realTime}, #{item.province}, #{item.city}, #{item.weather},
-             #{item.minTemp}, #{item.maxTemp}, #{item.wind}, GETDATE())
+             #{item.minTemp}, #{item.maxTemp}, #{item.wind}, #{item.insertDate})
         </foreach>
     </insert>
 

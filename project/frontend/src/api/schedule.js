@@ -5,7 +5,7 @@ export function getScheduleTasks() {
 }
 
 export function validateCron(cron) {
-  return request.get('/api/schedule/cron/validate', { params: { cron } })
+  return request.get('/api/schedule/cron/validate', { params: { cronExpression: cron } })
 }
 
 export function getScheduleJobPage(params) {

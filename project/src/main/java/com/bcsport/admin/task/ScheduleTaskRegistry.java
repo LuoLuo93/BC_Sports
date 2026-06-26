@@ -90,6 +90,9 @@ public class ScheduleTaskRegistry {
         register("ticket.agent.checkOffline", "贴纸打印-检测Agent离线", "agentService", "checkOffline", "检测心跳超时的Agent并标记为离线", MODULE_TICKET, 1);
         register("ticket.task.checkStuck", "贴纸打印-巡检卡住任务", "printTaskService", "checkStuckTasks", "巡检长时间未拉取/未回报的打印任务并告警", MODULE_TICKET, 2);
 
+        // === 系统维护 ===
+        register("system.log.clean", "系统-清理执行日志", "scheduleLogCleanTask", "clean", "自动清理7天前的定时任务执行日志", MODULE_OTHER, 1);
+
         // === 示例任务 ===
         register("demoTask.noParams", "示例任务-无参数", "demoTask", "noParams", "演示定时任务基本功能", MODULE_DEMO, 1);
         register("demoTask.withParams", "示例任务-带参数", "demoTask", "withParams", "演示带参数的定时任务", MODULE_DEMO, 2);

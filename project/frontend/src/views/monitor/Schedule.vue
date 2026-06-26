@@ -240,7 +240,7 @@
 
 <script setup>
 defineOptions({ name: 'Schedule' })
-import { ref, reactive, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getScheduleJobPage, getScheduleJob, createScheduleJob, updateScheduleJob, deleteScheduleJob, pauseScheduleJob, resumeScheduleJob, runScheduleJob, getScheduleTasks, validateCron, getScheduleLogPage, cleanScheduleLog, getScheduleRunStatus } from '@/api/schedule'
 import { Plus, Search, RefreshRight, Check } from '@element-plus/icons-vue'
@@ -341,22 +341,29 @@ const rules = {
 const { loading: logLoading, tableData: logData, total: logTotal, query: logQuery, loadData: loadLogData, handleSearch: handleLogSearch, resetQuery: resetLogQuery } = usePageQuery(getScheduleLogPage, { jobName: '', triggerType: '', status: undefined })
 
 async function handleCleanLog() {
-  await ElMessageBox.confirm('确定清理 30 天前的执行日志？', '清理确认', { type: 'warning' })
-  try { await cleanScheduleLog({ params: { keepDays: 30 } }); ElMessage.success('清理完成'); loadLogData() } catch { ElMessage.error('清理失败') }
+  await ElMessageBox.confirm('确定清理 7 天前的执行日志？', '清理确认', { type: 'warning' })
+  try { await cleanScheduleLog({ params: { keepDays: 7 } }); ElMessage.success('清理完成'); loadLogData() } catch { ElMessage.error('清理失败') }
 }
 
 watch(activeTab, (val) => { if (val === 'log') loadLogData() })
 
-function handleAdd() { isEdit.value = false; editId.value = null; Object.assign(form, defaultForm()); selectedTask.value = null; cronNextTime.value = ''; dialogVisible.value = true }
+function resetForm() {
+  Object.assign(form, defaultForm())
+  selectedTask.value = null
+  cronNextTime.value = ''
+  nextTick(() => formRef.value?.clearValidate())
+}
+function handleAdd() { isEdit.value = false; editId.value = null; resetForm(); dialogVisible.value = true }
 async function handleEdit(row) {
   const res = await getScheduleJob(row.id)
   isEdit.value = true; editId.value = row.id
-  Object.assign(form, res.data)
-  if (form.taskKey) {
-    selectedTask.value = taskOptions.value.find(t => t.taskKey === form.taskKey) || null
-  } else {
-    selectedTask.value = null
-  }
+  resetForm()
+  nextTick(() => {
+    Object.assign(form, res.data)
+    if (form.taskKey) {
+      selectedTask.value = taskOptions.value.find(t => t.taskKey === form.taskKey) || null
+    }
+  })
   dialogVisible.value = true
 }
 async function handleDelete(row) {

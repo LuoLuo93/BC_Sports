@@ -342,7 +342,7 @@ const { loading: logLoading, tableData: logData, total: logTotal, query: logQuer
 
 async function handleCleanLog() {
   await ElMessageBox.confirm('确定清理 7 天前的执行日志？', '清理确认', { type: 'warning' })
-  try { await cleanScheduleLog({ params: { keepDays: 7 } }); ElMessage.success('清理完成'); loadLogData() } catch { ElMessage.error('清理失败') }
+  try { await cleanScheduleLog({ keepDays: 7 }); ElMessage.success('清理完成'); loadLogData() } catch { ElMessage.error('清理失败') }
 }
 
 watch(activeTab, (val) => { if (val === 'log') loadLogData() })

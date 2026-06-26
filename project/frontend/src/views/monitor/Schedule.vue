@@ -296,7 +296,7 @@ function getModuleLabel(val) {
 }
 
 function moduleTagType(module) {
-  const map = { IHR: '', QW: 'success', YDKL: 'warning', NXCRM: 'danger', BJERP: '', DEMO: 'info', OTHER: 'info' }
+  const map = { IHR: '', QW: 'success', YDKL: 'warning', NXCRM: 'danger', BJERP: '', DEMO: 'info', OTHER: 'info', SYS: 'warning' }
   return map[module] || 'info'
 }
 

@@ -10,6 +10,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
@@ -88,6 +89,16 @@ public class GlobalExceptionHandler {
     public Result<?> handleIllegalArgumentException(IllegalArgumentException e) {
         log.warn("参数校验失败: {}", e.getMessage());
         return Result.paramError(e.getMessage());
+    }
+
+    /**
+     * 文件上传超过大小限制
+     */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    @ResponseStatus(HttpStatus.PAYLOAD_TOO_LARGE)
+    public Result<?> handleMaxUploadSizeExceededException(MaxUploadSizeExceededException e) {
+        log.warn("文件上传超过大小限制: {}", e.getMessage());
+        return Result.error("上传文件过大，单文件不能超过 100MB");
     }
 
     /**

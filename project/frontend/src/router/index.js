@@ -29,6 +29,7 @@ const routes = [
       { path: 'bi/entity-channel/form', name: 'EntityChannelForm', component: () => import('@/views/bi/EntityChannelForm.vue'), meta: { pageTitle: '渠道表单' } },
       { path: 'bi/erp-store', name: 'ErpStore', component: () => import('@/views/bi/ErpStore.vue'), meta: { pageTitle: '店仓管理' } },
       { path: 'bi/erp-customer', name: 'ErpCustomer', component: () => import('@/views/bi/ErpCustomer.vue'), meta: { pageTitle: '客户管理' } },
+      { path: 'bi/first-add', name: 'FirstAddImport', component: () => import('@/views/bi/FirstAddImport.vue'), meta: { pageTitle: '客户首次添加导入' } },
       // IHR
       { path: 'ihr/employee-management', name: 'IhrEmployee', component: () => import('@/views/ihr/EmployeeManagement.vue'), meta: { pageTitle: '员工管理' } },
       { path: 'ihr/onboarding-management', name: 'IhrOnboarding', component: () => import('@/views/ihr/OnboardingManagement.vue'), meta: { pageTitle: '入职管理' } },

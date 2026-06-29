@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bcsport.admin.qywxmapper.BasFirstAddMapper">
+
+    <insert id="insertBatch">
+        INSERT INTO Bas_FirstAdd
+        (customer_id, first_add_time, first_adder_dept, first_adder_store, first_adder)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.customerId}, #{item.firstAddTime}, #{item.firstAdderDept},
+             #{item.firstAdderStore}, #{item.firstAdder})
+        </foreach>
+    </insert>
+
+    <!-- MERGE upsert：一条 SQL 同时处理插入和更新，无需预加载 ID -->
+    <insert id="mergeBatch">
+        MERGE INTO Bas_FirstAdd AS target
+        USING (
+            VALUES
+            <foreach collection="list" item="item" separator=",">
+                (#{item.customerId}, #{item.firstAddTime}, #{item.firstAdderDept},
+                 #{item.firstAdderStore}, #{item.firstAdder})
+            </foreach>
+        ) AS source (customer_id, first_add_time, first_adder_dept, first_adder_store, first_adder)
+        ON target.customer_id = source.customer_id
+        WHEN MATCHED THEN
+            UPDATE SET first_add_time = source.first_add_time,
+                       first_adder_dept = source.first_adder_dept,
+                       first_adder_store = source.first_adder_store,
+                       first_adder = source.first_adder
+        WHEN NOT MATCHED THEN
+            INSERT (customer_id, first_add_time, first_adder_dept, first_adder_store, first_adder)
+            VALUES (source.customer_id, source.first_add_time, source.first_adder_dept,
+                    source.first_adder_store, source.first_adder);
+    </insert>
+
+</mapper>

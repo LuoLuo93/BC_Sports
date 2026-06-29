@@ -32,7 +32,7 @@
         <div class="card-header-row">
           <span class="card-header-title">实体渠道配置</span>
           <div style="display:flex;gap:8px">
-            <el-button v-if="hasPermission('bi:entity:add')" size="small" :icon="Upload" @click="showImportDialog = true">批量导入</el-button>
+            <el-button v-if="hasPermission('bi:entity:add')" type="warning" size="small" :icon="Upload" @click="showImportDialog = true">批量导入</el-button>
             <el-button v-if="hasPermission('bi:entity:add')" type="primary" size="small" :icon="Plus" @click="router.push('/bi/entity-channel/form')">新增配置</el-button>
           </div>
         </div>

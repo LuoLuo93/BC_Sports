@@ -89,3 +89,21 @@ export function syncMoments() {
 export function getMomentSyncStatus() {
   return request.get('/api/qywx/moment/sync-status')
 }
+
+// ===== 客户首次添加记录 =====
+
+export function getFirstAddPage(params) {
+  return request.get('/api/bi/first-add/page', { params })
+}
+
+export function importFirstAdd(data) {
+  return request.post('/api/bi/first-add/import', data, { timeout: 600000 })
+}
+
+export function getFirstAddTemplate() {
+  return request.get('/api/bi/first-add/template', { responseType: 'blob' })
+}
+
+export function getFirstAddImportLogPage(params) {
+  return request.get('/api/bi/first-add/import-log/page', { params })
+}

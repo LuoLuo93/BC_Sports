@@ -210,7 +210,7 @@ public class QywxNewEmployeeSyncTask {
 
         } catch (Exception e) {
             log.error("=== 失败: 录入企微新员工 ===", e);
-            
+            throw e;
         }
     }
 

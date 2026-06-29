@@ -40,10 +40,13 @@ spring:
       max-wait: 60000
       time-between-eviction-runs-millis: 60000
       min-evictable-idle-time-millis: 300000
+      phy-timeout-millis: 1800000
       validation-query: SELECT 1 FROM DUAL
+      validation-query-timeout: 5
       test-while-idle: true
       test-on-borrow: false
       test-on-return: false
+      keep-alive: true
       pool-prepared-statements: true
       max-pool-prepared-statement-per-connection-size: 20
       filters: stat,wall,slf4j
@@ -53,7 +56,7 @@ spring:
     ihr:
       type: com.alibaba.druid.pool.DruidDataSource
       driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
-      url: jdbc:sqlserver://192.168.5.152:1433;DatabaseName=BC_SPORTS_IHR;encrypt=false;trustServerCertificate=true;socketTimeout=600000;queryTimeout=600000;loginTimeout=60
+      url: jdbc:sqlserver://192.168.5.152:1433;DatabaseName=BC_SPORTS_IHR;encrypt=false;trustServerCertificate=true;socketTimeout=300000;queryTimeout=300000;loginTimeout=60
       username: ${IHR_DB_USERNAME:sa}
       password: ${IHR_DB_PASSWORD:northland2047.}
       druid:
@@ -63,6 +66,7 @@ spring:
         max-wait: 60000
         time-between-eviction-runs-millis: 60000
         min-evictable-idle-time-millis: 300000
+        phy-timeout-millis: 1800000
         validation-query: SELECT 1
         validation-query-timeout: 5
         test-while-idle: true
@@ -77,17 +81,17 @@ spring:
     qywx:
       type: com.alibaba.druid.pool.DruidDataSource
       driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
-      url: jdbc:sqlserver://192.168.5.152:1433;DatabaseName=BC_SPORTS_QYWX;encrypt=false;trustServerCertificate=true;socketTimeout=600000;queryTimeout=600000;loginTimeout=60
+      url: jdbc:sqlserver://192.168.5.152:1433;DatabaseName=BC_SPORTS_QYWX;encrypt=false;trustServerCertificate=true;socketTimeout=300000;queryTimeout=300000;loginTimeout=60
       username: ${QYWX_DB_USERNAME:sa}
       password: ${QYWX_DB_PASSWORD:northland2047.}
       druid:
         initial-size: 10
         min-idle: 10
-        max-active: 30
+        max-active: 50
         max-wait: 60000
         time-between-eviction-runs-millis: 30000
         min-evictable-idle-time-millis: 300000
-        max-wait-thread-count: 10
+        phy-timeout-millis: 1800000
         validation-query: SELECT 1
         validation-query-timeout: 5
         test-while-idle: true
@@ -112,7 +116,9 @@ spring:
         max-wait: 60000
         time-between-eviction-runs-millis: 60000
         min-evictable-idle-time-millis: 300000
+        phy-timeout-millis: 1800000
         validation-query: SELECT 1 FROM DUAL
+        validation-query-timeout: 5
         test-while-idle: true
         test-on-borrow: false
         test-on-return: false

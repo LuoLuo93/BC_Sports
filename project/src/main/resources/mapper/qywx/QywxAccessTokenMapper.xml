@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.bcsport.admin.qywxmapper.QywxAccessTokenMapper">
-    <delete id="deleteAll">DELETE FROM VX_AccessToken</delete>
+    <delete id="deleteAll">TRUNCATE TABLE VX_AccessToken</delete>
     <insert id="insertBatch">
         INSERT INTO VX_AccessToken(id, access_token, createTime, updateTime)
         VALUES

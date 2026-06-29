@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.bcsport.admin.ihrmapper.IhrEmployeeDetailMapper">
-    <delete id="deleteAll">DELETE FROM employee_information</delete>
+    <delete id="deleteAll">TRUNCATE TABLE employee_information</delete>
     <insert id="insertBatch">
         INSERT INTO employee_information(id, age, created_date, company_id, qq_no, wechat_no, staff_no,
             staff_name, id_card_no, id_card_type, birthday, sex, mobile_no, email, work_phone, work_email,

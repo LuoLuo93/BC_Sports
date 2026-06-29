@@ -4,7 +4,7 @@
     <select id="selectAllUserIds" resultType="java.lang.String">
         SELECT follow_user FROM VX_FollowUserList
     </select>
-    <delete id="deleteAll">DELETE FROM VX_FollowUserList</delete>
+    <delete id="deleteAll">TRUNCATE TABLE VX_FollowUserList</delete>
     <insert id="insertBatch">
         INSERT INTO VX_FollowUserList(id, follow_user, createTime)
         VALUES

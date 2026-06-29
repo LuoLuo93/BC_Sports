@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.bcsport.admin.ihrmapper.IhrEmployeeSubset04Mapper">
-    <delete id="deleteAll">DELETE FROM employee_tab_staff_subset04</delete>
+    <delete id="deleteAll">TRUNCATE TABLE employee_tab_staff_subset04</delete>
     <insert id="insertBatch">
         INSERT INTO employee_tab_staff_subset04(staff_id, d_code_type_0, d_code_type_1, d_code_type_2,
             d_string_1, d_code_type_3, d_code_type_4, d_code_type_5, d_string_0, d_code_type_6,

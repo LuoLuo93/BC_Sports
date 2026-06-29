@@ -3,7 +3,7 @@
 <mapper namespace="com.bcsport.admin.qywxmapper.VxCustomerlistdetailsFollowInfoMapper">
 
     <delete id="deleteAll">
-        DELETE FROM VX_CustomerListDetails_follow_info
+        TRUNCATE TABLE VX_CustomerListDetails_follow_info
     </delete>
 
     <insert id="insertBatch">

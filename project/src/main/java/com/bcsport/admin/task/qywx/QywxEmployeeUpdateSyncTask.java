@@ -231,7 +231,7 @@ public class QywxEmployeeUpdateSyncTask {
 
         } catch (Exception e) {
             log.error("=== 失败: 更新企微员工信息 ===", e);
-            
+            throw e;
         }
     }
 

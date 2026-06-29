@@ -73,6 +73,10 @@ public class QywxFollowUserDetailSyncTask {
             log.info("=== 企业微信客户联系成员整合同步 完成, 成功: {}, 失败: {}, 耗时: {} ms ===",
                     successCount, failCount, totalTime);
 
+            if (failCount > 0) {
+                throw new RuntimeException("企业微信客户联系成员整合同步部分失败: " + failCount + "个步骤失败");
+            }
+
         } catch (Exception e) {
             log.error("=== 企业微信客户联系成员整合同步 异常 ===", e);
             throw e;

@@ -32,6 +32,8 @@ public class QywxEmployeeUpdateSyncTask {
 
     private static final String DEFAULT_DEPART_ID = "1997";
     private static final int BATCH_QUERY_SIZE = 100;
+    /** 企微错误码：邮箱已被其他用户占用 */
+    private static final int ERR_EMAIL_EXISTED = 60106;
 
     @Autowired
     private IhrEmployeeModificationMapper modificationMapper;
@@ -161,13 +163,6 @@ public class QywxEmployeeUpdateSyncTask {
                     if (userid == null || userid.isEmpty()) {
                         try {
                             String departId = resolveDepartId(employee);
-                            if (departId == null) {
-                                failCount++;
-                                updateService.markSyncFailed(employee.getId(), staffName, staffNo,
-                                        "部门匹配失败: " + employee.getDepartmentName());
-                                log.warn("调整同步自动入职失败(部门匹配): {}({}), 部门: {}", staffName, mobile, employee.getDepartmentName());
-                                continue;
-                            }
                             JSONObject createBody = buildCreateUserBody(employee, departId);
                             JSONObject createResult = apiClient.createUser(createBody);
                             Integer createErrcode = createResult.getInt("errcode");
@@ -190,15 +185,8 @@ public class QywxEmployeeUpdateSyncTask {
                         continue;
                     }
 
-                    // 匹配部门 ID
+                    // 匹配部门 ID（匹配不到兜底到默认部门）
                     String departId = resolveDepartId(employee);
-                    if (departId == null) {
-                        failCount++;
-                        updateService.markSyncFailed(employee.getId(), staffName, staffNo,
-                                "部门匹配失败: " + employee.getDepartmentName());
-                        log.warn("更新企微用户失败(部门匹配): {}({}), 部门: {}", staffName, mobile, employee.getDepartmentName());
-                        continue;
-                    }
 
                     // 构建更新请求体
                     JSONObject requestBody = buildUpdateUserBody(userid, employee, departId);
@@ -206,6 +194,15 @@ public class QywxEmployeeUpdateSyncTask {
                     // 调用更新 API
                     JSONObject result = apiClient.updateUser(requestBody);
                     Integer errcode = result.getInt("errcode");
+
+                    // 邮箱被占用 → 去掉邮箱重试
+                    if (errcode != null && errcode == ERR_EMAIL_EXISTED) {
+                        log.warn("邮箱被占用，去掉邮箱重试: {}({})", staffName, mobile);
+                        requestBody.remove("email");
+                        result = apiClient.updateUser(requestBody);
+                        errcode = result.getInt("errcode");
+                    }
+
                     if (errcode != null && errcode == 0) {
                         successCount++;
                         updateService.markSyncSuccess(employee.getId(), staffName, staffNo);
@@ -264,11 +261,6 @@ public class QywxEmployeeUpdateSyncTask {
             // 员工不在企微通讯录，走入职流程
             log.info("员工 {}({}) 不在企微，尝试入职创建", staffName, staffNo);
             String departId = resolveDepartId(employee);
-            if (departId == null) {
-                updateService.markSyncFailed(staffId, staffName, staffNo,
-                        "部门匹配失败: " + employee.getDepartmentName());
-                return "部门匹配失败: " + employee.getDepartmentName();
-            }
             JSONObject createBody = buildCreateUserBody(employee, departId);
             JSONObject createResult = apiClient.createUser(createBody);
             Integer createErrcode = createResult.getInt("errcode");
@@ -284,14 +276,17 @@ public class QywxEmployeeUpdateSyncTask {
         }
 
         String departId = resolveDepartId(employee);
-        if (departId == null) {
-            updateService.markSyncFailed(staffId, staffName, staffNo,
-                    "部门匹配失败: " + employee.getDepartmentName());
-            return "部门匹配失败: " + employee.getDepartmentName();
-        }
         JSONObject requestBody = buildUpdateUserBody(userid, employee, departId);
         JSONObject result = apiClient.updateUser(requestBody);
         Integer errcode = result.getInt("errcode");
+
+        // 邮箱被占用 → 去掉邮箱重试
+        if (errcode != null && errcode == ERR_EMAIL_EXISTED) {
+            log.warn("邮箱被占用，去掉邮箱重试: {}({})", staffName, mobile);
+            requestBody.remove("email");
+            result = apiClient.updateUser(requestBody);
+            errcode = result.getInt("errcode");
+        }
 
         if (errcode != null && errcode == 0) {
             updateService.markSyncSuccess(staffId, staffName, staffNo);
@@ -307,20 +302,20 @@ public class QywxEmployeeUpdateSyncTask {
     /**
      * 匹配企微部门 ID
      * 优先按部门名直接匹配，多个同名时通过 IHR department 表递归查祖先链消歧
-     * @return 部门 ID，无法确定时返回 null
+     * 无法匹配时兜底到 DEFAULT_DEPART_ID（1997 外部联系人）
      */
     private String resolveDepartId(IhrEmployeeDetail employee) {
         String departmentName = employee.getDepartmentName();
         if (departmentName == null || departmentName.isEmpty()) {
-            log.warn("员工 {} 的部门名称为空", employee.getStaffName());
-            return null;
+            log.warn("员工 {} 的部门名称为空，兜底到默认部门 {}", employee.getStaffName(), DEFAULT_DEPART_ID);
+            return DEFAULT_DEPART_ID;
         }
 
         try {
             List<String> departIds = departmentMapper.selectDepartIdByName(departmentName);
             if (departIds == null || departIds.isEmpty()) {
-                log.warn("未找到部门: {}", departmentName);
-                return null;
+                log.warn("未找到部门: {}，兜底到默认部门 {}", departmentName, DEFAULT_DEPART_ID);
+                return DEFAULT_DEPART_ID;
             }
 
             if (departIds.size() == 1) {
@@ -333,11 +328,14 @@ public class QywxEmployeeUpdateSyncTask {
                 try {
                     Long deptId = Long.parseLong(deptIdStr);
                     List<String> ancestorNames = ihrDepartmentMapper.selectAncestorNames(deptId);
-                    // 去掉根部门（最后一个），两套系统的公司名不同不需要比较
-                    if (ancestorNames != null && ancestorNames.size() > 1) {
-                        ancestorNames = ancestorNames.subList(0, ancestorNames.size() - 1);
+                    // 根直属部门：祖先只有根，两套系统公司名不同无法比较，跳过祖先链匹配
+                    if (ancestorNames != null && ancestorNames.size() <= 1) {
+                        log.warn("部门 {} 是根直属部门，跳过祖先链匹配，兜底到默认部门 {}", departmentName, DEFAULT_DEPART_ID);
+                        return DEFAULT_DEPART_ID;
                     }
-                    if (ancestorNames != null && !ancestorNames.isEmpty()) {
+                    // 去掉根部门（最后一个），两套系统的公司名不同不需要比较
+                    ancestorNames = ancestorNames.subList(0, ancestorNames.size() - 1);
+                    if (!ancestorNames.isEmpty()) {
                         List<String> results = departmentMapper.selectDepartIdByAncestorChain(departmentName, ancestorNames);
                         if (results != null && !results.isEmpty()) {
                             log.info("通过祖先链匹配部门成功: {} -> 祖先: {}", departmentName, ancestorNames);
@@ -349,11 +347,11 @@ public class QywxEmployeeUpdateSyncTask {
                 }
             }
 
-            log.warn("未找到部门 {} 的精确匹配(共{}个同名部门)", departmentName, departIds.size());
-            return null;
+            log.warn("未找到部门 {} 的精确匹配(共{}个同名部门)，兜底到默认部门 {}", departmentName, departIds.size(), DEFAULT_DEPART_ID);
+            return DEFAULT_DEPART_ID;
         } catch (Exception e) {
-            log.error("匹配部门失败: {}: {}", departmentName, e.getMessage());
-            return null;
+            log.error("匹配部门失败: {}，兜底到默认部门 {}: {}", departmentName, DEFAULT_DEPART_ID, e.getMessage());
+            return DEFAULT_DEPART_ID;
         }
     }
 
@@ -370,7 +368,7 @@ public class QywxEmployeeUpdateSyncTask {
             body.set("position", employee.getPositionName());
         }
 
-        if (employee.getWorkEmail() != null && !"null".equals(employee.getWorkEmail()) && !employee.getWorkEmail().isEmpty()) {
+        if (apiClient.isValidEmail(employee.getWorkEmail())) {
             body.set("email", employee.getWorkEmail());
         }
 
@@ -425,7 +423,7 @@ public class QywxEmployeeUpdateSyncTask {
             body.set("position", employee.getPositionName());
         }
 
-        if (employee.getWorkEmail() != null && !"null".equals(employee.getWorkEmail()) && !employee.getWorkEmail().isEmpty()) {
+        if (apiClient.isValidEmail(employee.getWorkEmail())) {
             body.set("email", employee.getWorkEmail());
         }
 

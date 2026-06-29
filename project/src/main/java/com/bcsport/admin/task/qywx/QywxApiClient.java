@@ -930,6 +930,17 @@ public class QywxApiClient {
         });
     }
 
+    private static final java.util.regex.Pattern EMAIL_PATTERN =
+            java.util.regex.Pattern.compile("^[\\w.-]+@[\\w.-]+\\.[a-zA-Z]{2,}$");
+
+    /**
+     * 校验邮箱格式，null / "null" / 空白 / 格式不符 均返回 false
+     */
+    public boolean isValidEmail(String email) {
+        if (email == null || "null".equals(email) || email.trim().isEmpty()) return false;
+        return EMAIL_PATTERN.matcher(email.trim()).matches();
+    }
+
     @FunctionalInterface
     private interface QywxApiCallback<T> {
         T execute() throws Exception;

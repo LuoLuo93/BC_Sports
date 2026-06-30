@@ -930,6 +930,37 @@ public class QywxApiClient {
         });
     }
 
+    /**
+     * 获取联系客户统计数据（员工行为数据）
+     */
+    public JSONObject getUserBehaviorData(String userid, long startTime, long endTime) {
+        return executeWithRetry(() -> {
+            String url = apiBaseUrl + "/cgi-bin/externalcontact/get_user_behavior_data?access_token=" + getAccessToken();
+
+            JSONObject requestBody = new JSONObject();
+            requestBody.set("userid", userid);
+            requestBody.set("start_time", startTime);
+            requestBody.set("end_time", endTime);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            org.springframework.http.HttpEntity<String> entity = new org.springframework.http.HttpEntity<>(requestBody.toString(), headers);
+
+            org.springframework.http.ResponseEntity<String> response = restTemplate.exchange(url, org.springframework.http.HttpMethod.POST, entity, String.class);
+
+            if (response.getStatusCode() == org.springframework.http.HttpStatus.OK && response.getBody() != null) {
+                JSONObject body = JSONUtil.parseObj(response.getBody());
+                Integer errcode = body.getInt("errcode");
+                if (errcode != null && errcode != 0) {
+                    throw new RuntimeException("Failed to get user behavior data, errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
+                }
+                return body;
+            } else {
+                throw new RuntimeException("Failed to get user behavior data");
+            }
+        });
+    }
+
     private static final java.util.regex.Pattern EMAIL_PATTERN =
             java.util.regex.Pattern.compile("^[\\w.-]+@[\\w.-]+\\.[a-zA-Z]{2,}$");
 

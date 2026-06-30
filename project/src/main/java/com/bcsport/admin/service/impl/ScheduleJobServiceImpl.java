@@ -140,11 +140,24 @@ public class ScheduleJobServiceImpl extends ServiceImpl<ScheduleJobMapper, Sched
         if (job.getSort() == null) {
             job.setSort(option.getSort());
         }
-        boolean saved = save(job);
-        if (saved && Integer.valueOf(1).equals(job.getStatus())) {
+        // 雪花ID碰撞重试（多实例部署时workerId相同可能产生重复ID）
+        boolean saved = false;
+        for (int i = 0; i < 3; i++) {
+            try {
+                job.setId(null); // 清除ID让雪花重新生成
+                saved = save(job);
+                break;
+            } catch (org.springframework.dao.DuplicateKeyException e) {
+                log.warn("雪花ID碰撞，重试第{}次: {}", i + 1, e.getMessage());
+            }
+        }
+        if (!saved) {
+            throw new BusinessException("新增任务失败：主键冲突重试3次均失败");
+        }
+        if (Integer.valueOf(1).equals(job.getStatus())) {
             scheduleConfig.registerTask(job);
         }
-        return saved;
+        return true;
     }
 
     @Override

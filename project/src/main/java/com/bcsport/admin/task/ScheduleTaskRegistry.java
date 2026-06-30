@@ -54,6 +54,7 @@ public class ScheduleTaskRegistry {
         //register("qywx.group.chat.stat", "QW-同步群聊统计", "qywxGroupChatStatTask", "sync", "同步企业微信群聊统计数据", MODULE_QYWX, 11);
         //register("qywx.mass.message", "QW-同步群发消息", "qywxMassMessageTask", "sync", "同步企业微信群发消息记录", MODULE_QYWX, 12);
         //register("qywx.moment", "QW-同步朋友圈", "qywxMomentTask", "sync", "同步企业微信朋友圈", MODULE_QYWX, 14);
+        register("qywx.contact.customer.statistics", "QW-同步联系客户统计", "qywxContactCustomerStatisticsTask", "sync", "同步企业微信联系客户行为统计数据", MODULE_QYWX, 15);
 
         // === QW 企业微信标签模块 ===
         register("qywx.tag.sync", "QW-同步企业标签库", "qywxCustomerTagTask", "syncTags", "从企微同步企业客户标签到本地", MODULE_QYWX, 20);

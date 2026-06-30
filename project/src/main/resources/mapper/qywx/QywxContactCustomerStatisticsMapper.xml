@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bcsport.admin.qywxmapper.QywxContactCustomerStatisticsMapper">
+
+    <delete id="deleteAll">
+        DELETE FROM VX_ContactCustomerStatistics
+    </delete>
+
+    <delete id="deleteByDate">
+        DELETE FROM VX_ContactCustomerStatistics WHERE stat_time = #{dateStr}
+    </delete>
+
+    <insert id="insertBatch">
+        INSERT INTO VX_ContactCustomerStatistics (userid, stat_time, chat_cnt, message_cnt, avg_reply_time, reply_percentage, negative_feedback_cnt, new_apply_cnt, new_contact_cnt, createTime)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.userid}, #{item.statTime}, #{item.chatCnt}, #{item.messageCnt}, #{item.avgReplyTime}, #{item.replyPercentage}, #{item.negativeFeedbackCnt}, #{item.newApplyCnt}, #{item.newContactCnt}, GETDATE())
+        </foreach>
+    </insert>
+
+</mapper>

@@ -30,14 +30,14 @@
       <div class="table-responsive">
         <el-table v-loading="loading" :data="tableData" border stripe empty-text="暂无数据">
           <el-table-column type="index" label="#" width="50" align="center" />
-          <el-table-column prop="name" label="姓名" min-width="120" />
+          <el-table-column prop="name" label="姓名" min-width="80" />
           <el-table-column prop="mobile" label="手机号" width="130">
             <template #default="{ row }">{{ row.mobile || '-' }}</template>
           </el-table-column>
-          <el-table-column prop="mainDepartment" label="主部门" min-width="150">
+          <el-table-column prop="mainDepartment" label="主部门" min-width="100">
             <template #default="{ row }">{{ row.mainDepartment || '-' }}</template>
           </el-table-column>
-          <el-table-column label="录入时间" width="170" align="center">
+          <el-table-column label="录入时间" width="190" align="center">
             <template #default="{ row }">{{ formatTime(row.createTime) }}</template>
           </el-table-column>
           <el-table-column label="操作" width="140" align="center" fixed="right">

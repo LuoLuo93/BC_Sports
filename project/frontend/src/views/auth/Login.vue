@@ -315,9 +315,19 @@ async function loadCaptcha() {
 }
 
 async function handleLogin() {
+  if (loading.value) return // 防重复提交
   errorMsg.value = ''
   const valid = await formRef.value?.validate().catch(() => false)
   if (!valid) return
+
+  // 验证码开启时，确保 captchaKey 已加载完成
+  if (captchaEnabled.value && !captchaKey.value) {
+    await loadCaptcha()
+    if (!captchaKey.value) {
+      errorMsg.value = '验证码加载失败，请刷新页面重试'
+      return
+    }
+  }
 
   const loginData = {
     ...form.value,
@@ -335,6 +345,9 @@ async function handleLogin() {
     errorMsg.value = e.message || '凭据检验未通过，请核对后重试'
     if (captchaEnabled.value) {
       form.value.captchaCode = ''
+      // 先清空旧 key，防止用户快速提交时使用已消费的验证码
+      captchaKey.value = ''
+      captchaImage.value = ''
       await loadCaptcha()
     }
   } finally {

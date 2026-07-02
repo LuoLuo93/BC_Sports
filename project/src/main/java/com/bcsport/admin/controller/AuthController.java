@@ -183,10 +183,15 @@ public class AuthController {
      */
     @GetMapping({
         "/system/menu", "/system/user", "/system/role", "/system/dept", "/system/dict",
+        "/system/log", "/system/online-user",
         "/bi/management", "/bi/brand", "/bi/region", "/bi/channel-type", "/bi/channel-nature",
         "/bi/entity-channel", "/bi/entity-channel/form", "/bi/erp-shop", "/bi/erp-warehouse", "/bi/erp-customer",
+        "/bi/erp-store", "/bi/first-add", "/bi/retail-supervisor", "/bi/goods-data",
         "/statistics", "/report", "/message", "/help", "/profile", "/settings", "/403",
-        "/monitor/schedule", "/qywx/customer-tag", "/qywx/follow-user", "/qywx/group-chat", "/qywx/moment",
+        "/monitor/schedule", "/monitor/system",
+        "/sticker/print", "/sticker/print/{orderId}", "/sticker/data", "/sticker/brand-template", "/sticker/agent", "/sticker/field-mapping",
+        "/qywx/customer-tag", "/qywx/follow-user", "/qywx/group-chat", "/qywx/moment",
+        "/nxcrm/customer-tag", "/nxcrm/member-tag",
         "/ihr/onboarding-exclusion", "/ihr/leaving-exclusion",
         "/ihr/onboarding-management", "/ihr/adjustment-management", "/ihr/leaving-management", "/ihr/employee-management",
         "/erp/employee-management"

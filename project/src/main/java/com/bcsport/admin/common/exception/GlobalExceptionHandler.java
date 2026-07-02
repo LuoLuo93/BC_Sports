@@ -14,6 +14,7 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
+import org.apache.catalina.connector.ClientAbortException;
 import java.util.stream.Collectors;
 
 /**
@@ -99,6 +100,15 @@ public class GlobalExceptionHandler {
     public Result<?> handleMaxUploadSizeExceededException(MaxUploadSizeExceededException e) {
         log.warn("文件上传超过大小限制: {}", e.getMessage());
         return Result.error("上传文件过大，单文件不能超过 100MB");
+    }
+
+    /**
+     * 客户端断连（浏览器刷新/关闭导致），无需处理
+     */
+    @ExceptionHandler(ClientAbortException.class)
+    public void handleClientAbortException(ClientAbortException e) {
+        log.debug("客户端断连: {}", e.getMessage());
+        // 不返回任何内容，连接已断开
     }
 
     /**

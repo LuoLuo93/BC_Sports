@@ -111,7 +111,7 @@
     </el-tabs>
 
     <!-- 批量导入弹窗 -->
-    <el-dialog v-model="showImportDialog" title="批量导入货品资料" width="520px" destroy-on-close @open="resetImportState">
+    <el-dialog v-model="showImportDialog" title="批量导入货品新旧资料" width="520px" destroy-on-close @open="resetImportState">
       <div class="import-zone">
         <el-upload :limit="1" accept=".xlsx,.xls" :auto-upload="false" :before-upload="beforeUpload" drag :on-change="handleFileChange" :on-remove="handleFileRemove" :on-exceed="() => ElMessage.warning('只能上传一个文件')">
           <el-icon :size="40" style="color:var(--el-text-color-placeholder)"><Upload /></el-icon>

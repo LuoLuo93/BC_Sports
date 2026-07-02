@@ -6,7 +6,28 @@ server:
 
 spring:
   datasource:
-    url: jdbc:oracle:thin:@//192.168.104.167:1521/freepdb1
+    url: jdbc:oracle:thin:@192.168.5.174:1521:BCSports
+    username: bc
+    password: abc123
+    druid:
+      initial-size: 10
+      min-idle: 10
+      max-active: 50
+      max-wait: 60000
+      time-between-eviction-runs-millis: 60000
+      min-evictable-idle-time-millis: 300000
+      phy-timeout-millis: 1800000
+      validation-query: SELECT 1 FROM DUAL
+      validation-query-timeout: 5
+      test-while-idle: true
+      test-on-borrow: false
+      test-on-return: false
+      keep-alive: true
+      pool-prepared-statements: true
+      max-pool-prepared-statement-per-connection-size: 20
+      filters: stat,wall,slf4j
+      connection-properties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=5000
+      use-global-data-source-stat: true
 
 # 生产环境日志级别
 logging:

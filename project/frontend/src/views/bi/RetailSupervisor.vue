@@ -11,6 +11,12 @@
             <el-form-item label="名称">
               <el-input v-model="storeQuery.name" placeholder="请输入店仓名称" clearable @keyup.enter="storeSearch" />
             </el-form-item>
+            <el-form-item label="零售主管">
+              <el-input v-model="storeQuery.supervisorName" placeholder="请输入零售主管" clearable @keyup.enter="storeSearch" />
+            </el-form-item>
+            <el-form-item label="工号">
+              <el-input v-model="storeQuery.erpJobNo" placeholder="请输入ERP工号" clearable @keyup.enter="storeSearch" />
+            </el-form-item>
             <el-form-item>
               <el-button type="primary" :icon="Search" @click="storeSearch">搜索</el-button>
               <el-button :icon="RefreshRight" @click="storeReset">重置</el-button>
@@ -28,8 +34,17 @@
           <div class="table-responsive">
             <el-table v-loading="storeLoading" :data="storeData" border stripe empty-text="暂无数据">
               <el-table-column type="index" label="#" width="50" align="center" />
-              <el-table-column prop="code" label="店仓编码" min-width="150" show-overflow-tooltip />
-              <el-table-column prop="name" label="店仓名称" min-width="200" show-overflow-tooltip />
+              <el-table-column prop="storeCode" label="店仓编码" min-width="120" show-overflow-tooltip />
+              <el-table-column prop="storeName" label="店仓名称" min-width="160" show-overflow-tooltip />
+              <el-table-column prop="supervisorCode" label="零售主管编码" min-width="130" show-overflow-tooltip />
+              <el-table-column prop="supervisorName" label="零售主管" min-width="120" show-overflow-tooltip />
+              <el-table-column prop="erpJobNo" label="ERP工号" min-width="110" show-overflow-tooltip />
+              <el-table-column prop="phone" label="手机号" min-width="130" show-overflow-tooltip />
+              <el-table-column label="操作" width="100" align="center" fixed="right">
+                <template #default="{ row }">
+                  <el-button link type="primary" size="small" @click="handleEdit(row)">编辑</el-button>
+                </template>
+              </el-table-column>
             </el-table>
           </div>
 
@@ -57,6 +72,12 @@
             <el-form-item label="名称">
               <el-input v-model="customerQuery.name" placeholder="请输入客户名称" clearable @keyup.enter="customerSearch" />
             </el-form-item>
+            <el-form-item label="零售主管">
+              <el-input v-model="customerQuery.supervisorName" placeholder="请输入零售主管" clearable @keyup.enter="customerSearch" />
+            </el-form-item>
+            <el-form-item label="工号">
+              <el-input v-model="customerQuery.erpJobNo" placeholder="请输入ERP工号" clearable @keyup.enter="customerSearch" />
+            </el-form-item>
             <el-form-item>
               <el-button type="primary" :icon="Search" @click="customerSearch">搜索</el-button>
               <el-button :icon="RefreshRight" @click="customerReset">重置</el-button>
@@ -74,8 +95,17 @@
           <div class="table-responsive">
             <el-table v-loading="customerLoading" :data="customerData" border stripe empty-text="暂无数据">
               <el-table-column type="index" label="#" width="50" align="center" />
-              <el-table-column prop="code" label="客户编码" min-width="150" show-overflow-tooltip />
-              <el-table-column prop="name" label="客户名称" min-width="200" show-overflow-tooltip />
+              <el-table-column prop="customerCode" label="客户编码" min-width="120" show-overflow-tooltip />
+              <el-table-column prop="customerName" label="客户名称" min-width="160" show-overflow-tooltip />
+              <el-table-column prop="supervisorCode" label="零售主管编码" min-width="130" show-overflow-tooltip />
+              <el-table-column prop="supervisorName" label="零售主管" min-width="120" show-overflow-tooltip />
+              <el-table-column prop="erpJobNo" label="ERP工号" min-width="110" show-overflow-tooltip />
+              <el-table-column prop="phone" label="手机号" min-width="130" show-overflow-tooltip />
+              <el-table-column label="操作" width="100" align="center" fixed="right">
+                <template #default="{ row }">
+                  <el-button link type="primary" size="small" @click="handleEdit(row)">编辑</el-button>
+                </template>
+              </el-table-column>
             </el-table>
           </div>
 
@@ -99,7 +129,8 @@
 <script setup>
 defineOptions({ name: 'RetailSupervisor' })
 import { ref, onMounted } from 'vue'
-import { Search, RefreshRight } from '@element-plus/icons-vue'
+import { Search, RefreshRight, Edit } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 import { PAGE_SIZES } from '@/utils/appConfig'
 
 // ===== Tab =====
@@ -113,7 +144,7 @@ function onTabChange(tab) {
 const storeLoading = ref(false)
 const storeData = ref([])
 const storeTotal = ref(0)
-const storeQuery = ref({ pageNum: 1, pageSize: 10, code: '', name: '' })
+const storeQuery = ref({ pageNum: 1, pageSize: 10, code: '', name: '', supervisorName: '', erpJobNo: '' })
 
 async function loadStoreData() {
   storeLoading.value = true
@@ -129,13 +160,13 @@ async function loadStoreData() {
   }
 }
 function storeSearch() { storeQuery.value.pageNum = 1; loadStoreData() }
-function storeReset() { storeQuery.value.code = ''; storeQuery.value.name = ''; storeSearch() }
+function storeReset() { storeQuery.value.code = ''; storeQuery.value.name = ''; storeQuery.value.supervisorName = ''; storeQuery.value.erpJobNo = ''; storeSearch() }
 
 // ===== 客户 =====
 const customerLoading = ref(false)
 const customerData = ref([])
 const customerTotal = ref(0)
-const customerQuery = ref({ pageNum: 1, pageSize: 10, code: '', name: '' })
+const customerQuery = ref({ pageNum: 1, pageSize: 10, code: '', name: '', supervisorName: '', erpJobNo: '' })
 
 async function loadCustomerData() {
   customerLoading.value = true
@@ -151,7 +182,13 @@ async function loadCustomerData() {
   }
 }
 function customerSearch() { customerQuery.value.pageNum = 1; loadCustomerData() }
-function customerReset() { customerQuery.value.code = ''; customerQuery.value.name = ''; customerSearch() }
+function customerReset() { customerQuery.value.code = ''; customerQuery.value.name = ''; customerQuery.value.supervisorName = ''; customerQuery.value.erpJobNo = ''; customerSearch() }
+
+// ===== 操作 =====
+function handleEdit(row) {
+  // TODO: 打开编辑弹窗/跳转编辑页
+  ElMessage.info('编辑功能开发中')
+}
 
 onMounted(() => loadStoreData())
 </script>

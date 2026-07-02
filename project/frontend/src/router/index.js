@@ -31,6 +31,7 @@ const routes = [
       { path: 'bi/erp-customer', name: 'ErpCustomer', component: () => import('@/views/bi/ErpCustomer.vue'), meta: { pageTitle: '客户管理' } },
       { path: 'bi/first-add', name: 'FirstAddImport', component: () => import('@/views/bi/FirstAddImport.vue'), meta: { pageTitle: '客户首次添加导入' } },
       { path: 'bi/retail-supervisor', name: 'RetailSupervisor', component: () => import('@/views/bi/RetailSupervisor.vue'), meta: { pageTitle: '零售主管管理' } },
+      { path: 'bi/goods-data', name: 'GoodsDataImport', component: () => import('@/views/bi/GoodsDataImport.vue'), meta: { pageTitle: '货品资料导入' } },
       // IHR
       { path: 'ihr/employee-management', name: 'IhrEmployee', component: () => import('@/views/ihr/EmployeeManagement.vue'), meta: { pageTitle: '员工管理' } },
       { path: 'ihr/onboarding-management', name: 'IhrOnboarding', component: () => import('@/views/ihr/OnboardingManagement.vue'), meta: { pageTitle: '入职管理' } },

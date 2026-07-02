@@ -74,7 +74,7 @@ public class BasFirstAddServiceImpl implements BasFirstAddService {
         if (StringUtils.hasText(firstAdder)) {
             wrapper.like(BasFirstAdd::getFirstAdder, firstAdder);
         }
-        wrapper.orderByDesc(BasFirstAdd::getId);
+        wrapper.orderByDesc(BasFirstAdd::getFirstAddTime);
         Page<BasFirstAdd> result = basFirstAddMapper.selectPage(page, wrapper);
         return PageResult.of(result);
     }

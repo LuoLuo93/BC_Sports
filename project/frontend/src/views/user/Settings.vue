@@ -8,7 +8,7 @@
         </div>
       </template>
 
-      <el-tabs v-model="activeTab">
+      <el-tabs v-model="activeTab" @tab-change="onTabChange">
         <!-- 基础配置 -->
         <el-tab-pane label="基础配置" name="basic">
           <el-form label-width="140px" class="settings-form" v-loading="loading">
@@ -263,6 +263,45 @@
           </el-form>
         </el-tab-pane>
 
+        <!-- 数据库监控 -->
+        <el-tab-pane label="数据库监控" name="dbMonitor">
+          <div class="db-monitor-section">
+            <div class="maint-card">
+              <div class="maint-card-header">
+                <div>
+                  <h4>连接池状态总览</h4>
+                  <p class="maint-desc">监控各数据源连接池运行状态</p>
+                </div>
+                <el-button type="primary" plain :loading="dbMonitorLoading" @click="loadDbMonitor">刷新状态</el-button>
+              </div>
+              <el-table v-loading="dbMonitorLoading" :data="dbMonitorData" border stripe empty-text="暂无数据" style="margin-top:16px">
+              <el-table-column prop="name" label="数据源" min-width="160" />
+              <el-table-column label="状态" width="90" align="center">
+                <template #default="{ row }">
+                  <el-tag :type="row.status === '正常' ? 'success' : 'danger'" size="small">{{ row.status }}</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="username" label="账号" width="120" show-overflow-tooltip />
+              <el-table-column prop="url" label="连接地址" min-width="280" show-overflow-tooltip />
+              <el-table-column label="活跃连接" width="100" align="center">
+                <template #default="{ row }">
+                  <span :style="{ color: row.activeCount >= row.maxActive * 0.8 ? 'var(--el-color-danger)' : '' }">{{ row.activeCount }}</span>
+                  <span style="color:#909399"> / {{ row.maxActive }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column prop="activePeak" label="峰值活跃" width="100" align="center" />
+              <el-table-column prop="poolingCount" label="空闲连接" width="100" align="center" />
+              <el-table-column prop="poolingPeak" label="峰值空闲" width="100" align="center" />
+              <el-table-column prop="waitThreadCount" label="等待线程" width="100" align="center">
+                <template #default="{ row }">
+                  <span :style="{ color: row.waitThreadCount > 0 ? 'var(--el-color-warning)' : '' }">{{ row.waitThreadCount }}</span>
+                </template>
+              </el-table-column>
+            </el-table>
+            </div>
+          </div>
+        </el-tab-pane>
+
         <!-- 系统维护 -->
         <el-tab-pane label="系统维护" name="maintenance">
           <div class="maintenance-section">
@@ -356,6 +395,10 @@ const themeStore = useThemeStore()
 const activeTab = ref('basic')
 const loading = ref(false)
 const saving = ref(false)
+
+function onTabChange(tab) {
+  if (tab === 'dbMonitor' && !dbMonitorData.value.length) loadDbMonitor()
+}
 
 const presetColors = [
   '#1d4ed8', '#2563eb', '#3b82f6',
@@ -464,6 +507,24 @@ const healthInfo = ref(null)
 const cacheClearing = ref(false)
 const logCleaning = ref(false)
 const logCleanDays = ref(30)
+
+// 数据库监控
+const dbMonitorLoading = ref(false)
+const dbMonitorData = ref([])
+
+async function loadDbMonitor() {
+  dbMonitorLoading.value = true
+  try {
+    const res = await request.get('/api/maintenance/db-monitor')
+    if (res.code === 200) {
+      dbMonitorData.value = res.data || []
+    }
+  } catch {
+    // handled by interceptor
+  } finally {
+    dbMonitorLoading.value = false
+  }
+}
 
 // 通知测试
 const testLoading = ref(false)
@@ -845,5 +906,13 @@ async function handleLogoUpload({ file }) {
   padding-left: 12px;
   border-left: 3px solid #d1d5db;
   margin-bottom: 4px;
+}
+
+/* ===== DB Monitor Tab ===== */
+.db-monitor-section {
+  padding: 8px 0;
+}
+.db-monitor-section .maint-card {
+  max-width: none;
 }
 </style>

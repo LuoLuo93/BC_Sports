@@ -1,5 +1,6 @@
 package com.bcsport.admin.controller;
 
+import com.alibaba.druid.pool.DruidDataSource;
 import com.bcsport.admin.common.Result;
 import com.bcsport.admin.service.AuthCacheService;
 import com.bcsport.admin.service.ConfigService;
@@ -7,11 +8,14 @@ import com.bcsport.admin.service.SysLogService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -30,6 +34,22 @@ public class MaintenanceController {
 
     @Autowired
     private AuthCacheService authCacheService;
+
+    @Autowired
+    @Qualifier("dataSource")
+    private DruidDataSource mainDataSource;
+
+    @Autowired
+    @Qualifier("bjerpDataSource")
+    private DruidDataSource bjerpDataSource;
+
+    @Autowired
+    @Qualifier("ihrDataSource")
+    private DruidDataSource ihrDataSource;
+
+    @Autowired
+    @Qualifier("qywxDataSource")
+    private DruidDataSource qywxDataSource;
 
     /**
      * 清除系统缓存（Redis + 内存配置缓存）
@@ -120,6 +140,44 @@ public class MaintenanceController {
         info.put("configCount", configService.getString("sys.name") != null ? "正常加载" : "未加载");
 
         return Result.success(info);
+    }
+
+    /**
+     * 数据库连接池监控
+     */
+    @GetMapping("/db-monitor")
+    @RequiresPermissions("system:config:query")
+    public Result<List<Map<String, Object>>> dbMonitor() {
+        List<Map<String, Object>> list = new ArrayList<>();
+        list.add(buildPoolStats("主库 (Oracle)", mainDataSource));
+        list.add(buildPoolStats("伯俊ERP (Oracle)", bjerpDataSource));
+        list.add(buildPoolStats("IHR (SQL Server)", ihrDataSource));
+        list.add(buildPoolStats("企业微信 (SQL Server)", qywxDataSource));
+        return Result.success(list);
+    }
+
+    private Map<String, Object> buildPoolStats(String name, DruidDataSource ds) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("name", name);
+        m.put("url", ds.getUrl());
+        m.put("username", ds.getUsername());
+        m.put("activeCount", ds.getActiveCount());
+        m.put("activePeak", ds.getActivePeak());
+        m.put("poolingCount", ds.getPoolingCount());
+        m.put("poolingPeak", ds.getPoolingPeak());
+        m.put("maxActive", ds.getMaxActive());
+        m.put("minIdle", ds.getMinIdle());
+        m.put("initialSize", ds.getInitialSize());
+        m.put("waitThreadCount", ds.getWaitThreadCount());
+        m.put("maxWait", ds.getMaxWait());
+        m.put("phyTimeoutMillis", ds.getPhyTimeoutMillis());
+        // 连接测试
+        try (var conn = ds.getConnection()) {
+            m.put("status", conn.isValid(3) ? "正常" : "异常");
+        } catch (Exception e) {
+            m.put("status", "连接失败: " + e.getMessage());
+        }
+        return m;
     }
 
     private String formatSize(long bytes) {

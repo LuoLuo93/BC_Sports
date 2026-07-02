@@ -89,7 +89,7 @@ spring:
         min-idle: 10
         max-active: 50
         max-wait: 60000
-        time-between-eviction-runs-millis: 30000
+        time-between-eviction-runs-millis: 60000
         min-evictable-idle-time-millis: 300000
         phy-timeout-millis: 1800000
         validation-query: SELECT 1

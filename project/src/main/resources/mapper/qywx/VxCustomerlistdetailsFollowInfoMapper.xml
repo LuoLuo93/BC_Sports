@@ -37,7 +37,8 @@
             fi.remark         AS remark,
             fi.description    AS description,
             fi.addWay         AS addWay,
-            CASE WHEN ISNUMERIC(fi.createtime) = 1
+            -- 防御性转换：旧数据存的是秒级时间戳字符串，新数据已是 yyyy-MM-dd HH:mm:ss 格式
+            CASE WHEN ISNUMERIC(fi.createtime) = 1 AND LEN(fi.createtime) = 10
                  THEN CONVERT(VARCHAR(19), DATEADD(SECOND, CAST(fi.createtime AS BIGINT), '1970-01-01'), 120)
                  ELSE fi.createtime
             END               AS createTime

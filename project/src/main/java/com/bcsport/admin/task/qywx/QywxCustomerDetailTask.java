@@ -1,5 +1,6 @@
 package com.bcsport.admin.task.qywx;
 
+import cn.hutool.core.date.DateUtil;
 import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import com.bcsport.admin.entity.qywx.VxCustomerlistdetailsExternalContact;
@@ -212,7 +213,14 @@ public class QywxCustomerDetailTask {
                         info.setUserid(followInfo.getStr("userid", ""));
                         info.setRemark(followInfo.getStr("remark", ""));
                         info.setDescription(followInfo.getStr("description", ""));
-                        info.setCreatetime(followInfo.getStr("createtime", ""));
+                        String ct = followInfo.getStr("createtime", "");
+                        if (ct != null && !ct.isEmpty()) {
+                            try {
+                                info.setCreatetime(DateUtil.formatDateTime(new Date(Long.parseLong(ct) * 1000)));
+                            } catch (Exception e) {
+                                info.setCreatetime(ct);
+                            }
+                        }
                         info.setAddWay(followInfo.getStr("add_way", ""));
                         info.setOperUserid(followInfo.getStr("oper_userid", ""));
                         info.setExternalUserid(externalUserid);

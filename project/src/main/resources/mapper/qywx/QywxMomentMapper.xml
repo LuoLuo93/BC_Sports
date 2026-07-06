@@ -16,7 +16,7 @@
 
     <select id="selectPageByCreator" resultType="java.util.LinkedHashMap">
         SELECT moment_id AS momentId, creator, create_type AS createType, content,
-               CASE WHEN ISNUMERIC(create_time) = 1
+               CASE WHEN ISNUMERIC(create_time) = 1 AND LEN(create_time) = 10
                     THEN CONVERT(VARCHAR(19), DATEADD(SECOND, CAST(create_time AS BIGINT), '1970-01-01'), 120)
                     ELSE create_time
                END AS createTime
@@ -32,7 +32,7 @@
 
     <select id="selectPage" resultType="java.util.LinkedHashMap">
         SELECT m.moment_id AS momentId, m.creator, d.name AS creatorName, m.create_type AS createType, m.content,
-               CASE WHEN ISNUMERIC(m.create_time) = 1
+               CASE WHEN ISNUMERIC(m.create_time) = 1 AND LEN(m.create_time) = 10
                     THEN CONVERT(VARCHAR(19), DATEADD(SECOND, CAST(m.create_time AS BIGINT), '1970-01-01'), 120)
                     ELSE m.create_time
                END AS createTime

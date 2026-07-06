@@ -22,6 +22,7 @@ public class ScheduleTaskRegistry {
     public static final String MODULE_BJERP = "BJERP";
     public static final String MODULE_TICKET = "TICKET";
     public static final String MODULE_SYS = "SYS";
+    public static final String MODULE_HKERP = "HK";
 
     private static final Map<String, TaskOption> TASK_MAP = new LinkedHashMap<>();
 
@@ -75,6 +76,9 @@ public class ScheduleTaskRegistry {
 
         // === BJERP 伯俊ERP模块 ===
         register("bjerp.employee.sync", "伯俊ERP-人员同步", "erpEmployeeSyncTask", "syncAll", "将待同步人员(入职/变更/离职)同步到伯俊ERP", MODULE_BJERP, 1);
+
+        // === HKERP 旧版ERP直写模块（移植自 interfaceForHK） ===
+        register("hkerp.employee.lifecycle", "HKERP-员工生命周期同步", "hkPersonnelSyncTask", "syncAll", "顺序执行：新员工入职→员工变更→员工离职（含满30天收尾），一站式同步到HKERP Bas_Personnel", MODULE_HKERP, 1);
 
         // === NXCRM 南讯CRM模块 ===
         register("nxcrm.token.refresh", "NXCRM-刷新Token", "nxcrmTokenRefreshTask", "refreshToken", "刷新南讯CRM AccessToken", MODULE_NXCRM, 1);

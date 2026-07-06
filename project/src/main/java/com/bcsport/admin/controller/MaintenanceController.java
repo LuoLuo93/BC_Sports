@@ -51,6 +51,10 @@ public class MaintenanceController {
     @Qualifier("qywxDataSource")
     private DruidDataSource qywxDataSource;
 
+    @Autowired
+    @Qualifier("hkerpDataSource")
+    private DruidDataSource hkerpDataSource;
+
     /**
      * 清除系统缓存（Redis + 内存配置缓存）
      */
@@ -153,6 +157,7 @@ public class MaintenanceController {
         list.add(buildPoolStats("伯俊ERP (Oracle)", bjerpDataSource));
         list.add(buildPoolStats("IHR (SQL Server)", ihrDataSource));
         list.add(buildPoolStats("企业微信 (SQL Server)", qywxDataSource));
+        list.add(buildPoolStats("HKERP主库 (SQL Server)", hkerpDataSource));
         return Result.success(list);
     }
 

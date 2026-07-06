@@ -194,7 +194,8 @@ public class AuthController {
         "/nxcrm/customer-tag", "/nxcrm/member-tag",
         "/ihr/onboarding-exclusion", "/ihr/leaving-exclusion",
         "/ihr/onboarding-management", "/ihr/adjustment-management", "/ihr/leaving-management", "/ihr/employee-management",
-        "/erp/employee-management"
+        "/erp/employee-management",
+        "/hkerp/personnel-sync"
     })
     public String vuePage() {
         return "forward:/index.html";

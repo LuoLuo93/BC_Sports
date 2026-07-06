@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bcsport.admin.hkerpmapper.HkBasPersonnelMapper">
+
+    <select id="queryMaxNum" resultType="java.lang.String">
+        select Max(PersonnelID)
+        from Bas_Personnel
+        where CompanyID = 'BC'
+    </select>
+
+    <select id="queryEmployeeOne" resultType="com.bcsport.admin.entity.hkerp.HkBasPersonnel">
+        select * from Bas_Personnel
+        <where>
+            PersonnelName = #{personnelName} and Mobilephone = #{mobilePhone}
+        </where>
+    </select>
+
+    <select id="queryIdByDepartmentName" resultType="java.lang.String">
+        select DepartMentID
+        from Bas_DepartMent
+        where DepartMentName = #{departmentName}
+    </select>
+
+    <select id="queryShopIdByDepartmentName" resultType="com.bcsport.admin.entity.hkerp.HkShopStockSportCity">
+        select ShopID, StockID, SportCityID
+        from Bas_Shop
+        where ShopName = #{departmentName}
+          and ShopID is not null
+          and StockID is not null
+          and SportCityID is not null
+          and CompanyID = 'BC'
+    </select>
+
+    <select id="findPersonnelByNameAndMobileNo" resultType="java.lang.Integer">
+        SELECT count(PersonnelCode)
+        from Bas_Personnel
+        where PersonnelName = #{personnelName}
+          and Mobilephone = #{mobilePhone}
+          and AllowUsed = 0
+    </select>
+
+    <select id="findPersonnel" resultType="java.lang.Boolean">
+        SELECT count(PersonnelCode)
+        from Bas_Personnel
+        where PersonnelName = #{personnelName}
+          and Mobilephone = #{mobilePhone}
+          and AllowUsed = 1
+    </select>
+
+    <update id="updatePersonnelOfAllowUsedAndPersonnelStatus">
+        update Bas_Personnel
+        set AllowUsed = 1,
+            PersonnelStatus = 0,
+            ShopID = #{shopId},
+            StockID = #{stockId}
+        where PersonnelName = #{personnelName}
+          and Mobilephone = #{mobilePhone}
+    </update>
+
+    <insert id="insertBatch">
+        INSERT into Bas_Personnel (CompanyID,
+        PersonnelID,
+        PersonnelCode,
+        PersonnelName,
+        PersonnelTypeID,
+        DepartMentID,
+        Sex,
+        Mobilephone,
+        IsEmployee,
+        IsBuyer,
+        IsPicker,
+        IsSurveyor,
+        IsAssistant,
+        ShopID,
+        AllowUsed,
+        CheckState,
+        LockState,
+        SyncState,
+        ModifyDTM,
+        IsSDCashier,
+        IsEMCashier,
+        IsEMPerson,
+        IsStocker,
+        StockID,
+        IsRecipients,
+        Lan,
+        AllShopName,
+        PersonnelStatus)
+        values
+        <foreach collection="list" separator="," item="item" index="index">
+            (#{item.companyId}, #{item.personnelId}, #{item.personnelCode}, #{item.personnelName},
+            #{item.personnelTypeId}, #{item.departmentId},
+            #{item.sex}, #{item.mobilePhone}, #{item.isEmployee}, #{item.isBuyer}, #{item.isPicker}, #{item.isSurveyor},
+            #{item.isAssistant},
+            #{item.shopId}, #{item.allowUsed}, #{item.checkState}, #{item.lockState}, #{item.syncState},
+            getdate(), #{item.isSdCashier},
+            #{item.isEmCashier}, #{item.isEmPerson}, #{item.isStocker}, #{item.stockId}, #{item.isRecipients},
+            #{item.lan}, #{item.allShopName},
+            #{item.personnelStatus})
+        </foreach>
+    </insert>
+
+    <update id="updateAllowUse">
+        UPDATE Bas_Personnel
+        set AllowUsed       = 0,
+            ModifyDTM       = getdate(),
+            PersonnelStatus = 2
+        where PersonnelName = #{personnelName}
+          and Mobilephone = #{mobilePhone}
+          and AllowUsed = 1
+    </update>
+
+    <select id="findPersonnelByAllowUseAndStatus" resultType="com.bcsport.admin.entity.hkerp.HkBasPersonnel">
+        SELECT PersonnelName, Mobilephone
+        from Bas_Personnel
+        where AllowUsed = 0
+          and PersonnelStatus = 0
+          and CONVERT(VARCHAR(10), ModifyDTM, 121) &lt;= CONVERT(VARCHAR(10), getdate() - 30, 121)
+    </select>
+
+    <update id="updateStatus">
+        UPDATE Bas_Personnel
+        set PersonnelStatus = 2
+        where PersonnelName = #{personnelName}
+          and Mobilephone = #{mobilePhone}
+    </update>
+
+    <select id="findShopId" resultType="java.lang.String">
+        select ShopID
+        from bas_shop
+        where ShopName = #{departmentName}
+          and CompanyID = 'BC'
+    </select>
+
+    <update id="updateUserShopId">
+        update Bas_Personnel
+        set ShopID     = #{newShopId},
+            AllShopName = #{newDepartment},
+            StockID    = #{stockId}
+        where (Mobilephone = #{mobileNo} or Telphone = #{mobileNo})
+          and ShopID = #{shopId}
+          and PersonnelName = #{staffName}
+    </update>
+
+    <update id="updateUserPh">
+        update Bas_Personnel
+        set Mobilephone = #{newPhone},
+            Telphone    = #{newPhone}
+        where (Mobilephone = #{mobileNo} or Telphone = #{mobileNo})
+          and PersonnelName = #{staffName}
+    </update>
+
+    <select id="getStockIdByShopId" parameterType="java.lang.String" resultType="java.lang.String">
+        select StockID
+        from Bas_Shop
+        where ShopID = #{shopId}
+          and CompanyID = 'BC'
+          AND AllowUsed = 1
+    </select>
+
+</mapper>

@@ -62,6 +62,8 @@ const routes = [
       { path: 'report', name: 'Report', component: () => import('@/views/statistics/Report.vue'), meta: { pageTitle: '报表中心' } },
       // ERP
       { path: 'erp/employee-management', name: 'ErpEmployee', component: () => import('@/views/erp/EmployeeManagement.vue'), meta: { pageTitle: 'ERP员工' } },
+      // HK ERP（旧版直写链路，移植自 interfaceForHK）
+      { path: 'hkerp/personnel-sync', name: 'HkPersonnelSync', component: () => import('@/views/hkerp/PersonnelSync.vue'), meta: { pageTitle: 'HK ERP同步' } },
       // User
       { path: 'profile', name: 'Profile', component: () => import('@/views/user/Profile.vue'), meta: { pageTitle: '个人中心' } },
       { path: 'settings', name: 'Settings', component: () => import('@/views/user/Settings.vue'), meta: { pageTitle: '系统设置' } }

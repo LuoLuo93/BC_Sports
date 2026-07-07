@@ -268,6 +268,10 @@ public class ScheduleConfig {
     private String getLockKey(ScheduleTaskRegistry.TaskOption option) {
         String module = option.getModule();
         if (module != null && !module.trim().isEmpty()) {
+            // TICKET 模块不做模块级唯一校验，使用任务级锁允许并发执行
+            if (ScheduleTaskRegistry.MODULE_TICKET.equals(module)) {
+                return "task:" + option.getTaskKey();
+            }
             return "module:" + module;
         }
         return "task:" + option.getTaskKey();

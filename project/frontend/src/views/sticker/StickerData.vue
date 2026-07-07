@@ -3,16 +3,16 @@
     <el-card shadow="never" class="search-card">
       <el-form inline>
         <el-form-item label="货号">
-          <el-input v-model="query.materialNumber" placeholder="请输入货号" clearable style="width:170px" @keyup.enter="onSearch" />
+          <el-input v-model="query.materialNumber" placeholder="请输入货号" clearable style="min-width:130px;max-width:170px" @keyup.enter="onSearch" />
         </el-form-item>
         <el-form-item label="款号">
-          <el-input v-model="query.styleNumber" placeholder="请输入款号" clearable style="width:170px" @keyup.enter="onSearch" />
+          <el-input v-model="query.styleNumber" placeholder="请输入款号" clearable style="min-width:130px;max-width:170px" @keyup.enter="onSearch" />
         </el-form-item>
         <el-form-item label="货品名称">
-          <el-input v-model="query.materialName" placeholder="请输入货品名称" clearable style="width:200px" @keyup.enter="onSearch" />
+          <el-input v-model="query.materialName" placeholder="请输入货品名称" clearable style="min-width:150px;max-width:200px" @keyup.enter="onSearch" />
         </el-form-item>
         <el-form-item label="品牌">
-          <el-select v-model="query.brandId" placeholder="全部" clearable filterable style="width:140px">
+          <el-select v-model="query.brandId" placeholder="全部" clearable filterable style="min-width:110px;max-width:140px">
             <el-option v-for="b in brandList" :key="b.ID" :label="b.ATTRIBNAME" :value="b.ID" />
           </el-select>
         </el-form-item>

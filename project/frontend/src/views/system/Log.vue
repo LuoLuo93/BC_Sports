@@ -3,15 +3,15 @@
     <el-card shadow="never" class="search-card">
       <el-form :inline="true" :model="query">
         <el-form-item label="模块">
-          <el-select v-model="query.module" placeholder="全部" clearable style="width: 140px">
+          <el-select v-model="query.module" placeholder="全部" clearable style="min-width: 120px; max-width: 140px">
             <el-option v-for="m in modules" :key="m" :label="m" :value="m" />
           </el-select>
         </el-form-item>
         <el-form-item label="操作人">
-          <el-input v-model="query.username" placeholder="用户名" clearable style="width: 120px" />
+          <el-input v-model="query.username" placeholder="用户名" clearable style="min-width: 100px; max-width: 120px" />
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="query.status" placeholder="全部" clearable style="width: 100px">
+          <el-select v-model="query.status" placeholder="全部" clearable style="min-width: 80px; max-width: 100px">
             <el-option label="成功" :value="1" />
             <el-option label="失败" :value="0" />
           </el-select>
@@ -25,7 +25,7 @@
             end-placeholder="结束日期"
             value-format="YYYY-MM-DD HH:mm:ss"
             :default-time="[new Date(0,0,0,0,0,0), new Date(0,0,0,23,59,59)]"
-            style="width: 260px"
+            style="min-width: 220px; max-width: 260px"
           />
         </el-form-item>
         <el-form-item>

@@ -18,7 +18,7 @@
               <el-radio-button value="store">店仓</el-radio-button>
               <el-radio-button value="customer">客户</el-radio-button>
             </el-radio-group>
-            <el-input v-model="searchKeyword" placeholder="输入编码或名称搜索" size="small" clearable :disabled="isEdit" style="width:240px" @keyup.enter="searchEntities" />
+            <el-input v-model="searchKeyword" placeholder="输入编码或名称搜索" size="small" clearable :disabled="isEdit" style="min-width:200px;max-width:240px" @keyup.enter="searchEntities" />
             <el-button type="primary" size="small" :loading="entitySearching" :disabled="isEdit" style="width:80px" @click="searchEntities">搜索</el-button>
             <el-button type="success" size="small" :disabled="!selectedEntities.length" @click="confirmEntitySelect">
               添加({{ selectedEntities.length }})
@@ -37,7 +37,7 @@
           <div class="panel-bar">
             <span class="panel-bar-title">已选实体明细 <span class="detail-summary">共 {{ selectedDetail.length }} 条</span></span>
             <div style="display:flex;gap:6px;align-items:center">
-              <el-input v-model="detailKeyword" placeholder="搜索编码/名称" size="small" clearable style="width:200px" />
+              <el-input v-model="detailKeyword" placeholder="搜索编码/名称" size="small" clearable style="min-width:160px;max-width:200px" />
               <el-button type="danger" size="small" :disabled="!detailSelection.length" @click="handleBatchDelete">批量删除</el-button>
             </div>
           </div>

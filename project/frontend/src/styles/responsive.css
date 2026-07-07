@@ -1,5 +1,41 @@
 /* ========== Responsive Breakpoints ========== */
 
+/* ------------------------------------------------------------
+   Small Laptop / Low-res Monitor (max-width: 1366px)
+   适配 1280×720、1366×768、1440×900 等笔记本小屏。
+   这类屏幕宽度 > 1024,不会触发下方平板断点,但内容区减去 240px
+   侧边栏后仅剩 ~1000~1100px,默认桌面布局会出现搜索表单横向
+   溢出、分页被挤压。此区间补充温和的收缩规则。
+   写在 1024 断点之前,更窄屏幕由后续断点接管(同特异性后定义胜出)。
+   ------------------------------------------------------------ */
+@media (max-width: 1366px) {
+  /* 内容区内边距收紧,腾出更多横向空间 */
+  .layout .content-wrapper {
+    padding: 16px 18px;
+  }
+
+  /* 搜索表单允许换行 —— 默认 inline 表单在窄内容区会横向溢出 */
+  .search-card .el-form--inline {
+    display: flex;
+    flex-wrap: wrap;
+    row-gap: 12px;
+  }
+
+  /* 分页条允许换行,避免按钮被挤压 */
+  .pagination-wrapper {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* 弹窗封顶:防止宽弹窗(900/1200px)在小屏顶到边缘。
+     注意 el-dialog 默认 teleport 到 <body>,脱离 .layout,故不能
+     用 .layout 前缀;行内 width 属性优先级高于普通选择器,需 !important。
+     仅限制 max-width,不影响窄弹窗(480px 等)的原有宽度。 */
+  .el-overlay-dialog .el-dialog {
+    max-width: calc(100vw - 48px) !important;
+  }
+}
+
 /* Tablet and below */
 @media (max-width: 1024px) {
   .page-container {
@@ -23,9 +59,11 @@
     justify-content: flex-start;
   }
 
-  .layout .el-dialog {
-    width: 92%;
-    max-width: 560px;
+  /* el-dialog teleport 到 body,脱离 .layout,故不用 .layout 前缀。
+     行内 width 属性优先级更高,需 !important 覆盖。 */
+  .el-overlay-dialog .el-dialog {
+    width: 92% !important;
+    max-width: 560px !important;
   }
 
   .pagination-wrapper {
@@ -66,20 +104,22 @@
     gap: 8px;
   }
 
-  .layout .el-dialog {
+  /* el-dialog teleport 到 body,脱离 .layout,故不用 .layout 前缀。
+     底部抽屉式弹窗,适配手机竖屏。行内 width 需 !important 覆盖。 */
+  .el-overlay-dialog .el-dialog {
     border-radius: 12px 12px 0 0;
     margin-bottom: 0;
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
-    width: 100%;
-    max-width: 100%;
+    width: 100% !important;
+    max-width: 100% !important;
     max-height: 90vh;
     overflow-y: auto;
   }
 
-  .layout .el-dialog__body {
+  .el-dialog__body {
     padding: 16px;
   }
 

@@ -6,10 +6,10 @@
         <el-card shadow="never" class="search-card">
           <el-form :model="detailQuery" inline>
             <el-form-item label="nasOuid">
-              <el-input v-model="detailQuery.nasOuid" placeholder="输入nasOuid搜索" clearable @keyup.enter="loadDetail" style="width:200px" />
+              <el-input v-model="detailQuery.nasOuid" placeholder="输入nasOuid搜索" clearable @keyup.enter="loadDetail" style="min-width:160px;max-width:200px" />
             </el-form-item>
             <el-form-item label="标签名">
-              <el-input v-model="detailQuery.tagName" placeholder="输入标签名搜索" clearable @keyup.enter="loadDetail" style="width:200px" />
+              <el-input v-model="detailQuery.tagName" placeholder="输入标签名搜索" clearable @keyup.enter="loadDetail" style="min-width:160px;max-width:200px" />
             </el-form-item>
             <el-form-item>
               <el-button type="primary" :icon="Search" @click="loadDetail">搜索</el-button>
@@ -42,7 +42,7 @@
         <el-card shadow="never" class="search-card">
           <el-form :model="tagQuery" inline>
             <el-form-item label="搜索">
-              <el-input v-model="tagQuery.keyword" placeholder="输入标签名/标签编码/文件夹搜索" clearable @keyup.enter="loadTagList" style="width:300px" />
+              <el-input v-model="tagQuery.keyword" placeholder="输入标签名/标签编码/文件夹搜索" clearable @keyup.enter="loadTagList" style="min-width:220px;max-width:300px" />
             </el-form-item>
             <el-form-item>
               <el-button type="primary" :icon="Search" @click="loadTagList">搜索</el-button>

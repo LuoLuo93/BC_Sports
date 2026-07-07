@@ -5,13 +5,13 @@
       <el-card shadow="never" class="search-card">
         <el-form inline>
           <el-form-item label="申请单号">
-            <el-input v-model="query.orderNo" placeholder="申请单号" clearable style="width:220px" @keyup.enter="handleSearch" />
+            <el-input v-model="query.orderNo" placeholder="申请单号" clearable style="min-width:170px;max-width:220px" @keyup.enter="handleSearch" />
           </el-form-item>
           <el-form-item label="申请人">
-            <el-input v-model="query.applicant" placeholder="申请人" clearable style="width:170px" @keyup.enter="handleSearch" />
+            <el-input v-model="query.applicant" placeholder="申请人" clearable style="min-width:130px;max-width:170px" @keyup.enter="handleSearch" />
           </el-form-item>
           <el-form-item label="状态">
-            <el-select v-model="query.status" placeholder="全部" clearable style="width:130px">
+            <el-select v-model="query.status" placeholder="全部" clearable style="min-width:110px;max-width:130px">
               <el-option label="全部" :value="null" />
               <el-option label="草稿" :value="0" />
               <el-option label="待审核" :value="1" />
@@ -20,9 +20,9 @@
             </el-select>
           </el-form-item>
           <el-form-item label="日期">
-            <el-date-picker v-model="query.startDate" type="date" placeholder="开始日期" value-format="YYYY-MM-DD" style="width:155px" />
+            <el-date-picker v-model="query.startDate" type="date" placeholder="开始日期" value-format="YYYY-MM-DD" style="min-width:135px;max-width:155px" />
             <span style="margin:0 4px;color:#999">-</span>
-            <el-date-picker v-model="query.endDate" type="date" placeholder="结束日期" value-format="YYYY-MM-DD" style="width:155px" />
+            <el-date-picker v-model="query.endDate" type="date" placeholder="结束日期" value-format="YYYY-MM-DD" style="min-width:135px;max-width:155px" />
           </el-form-item>
           <el-form-item>
             <el-button type="primary" :icon="Search" @click="handleSearch">搜索</el-button>
@@ -117,10 +117,10 @@
           <div class="search-panel">
             <div class="search-bar">
               <span class="panel-bar-title">货品搜索</span>
-              <el-input v-model="searchMaterialNumber" placeholder="货号" size="small" clearable style="width:170px" @keyup.enter="searchProductsAction" />
-              <el-input v-model="searchStyleNumber" placeholder="款号" size="small" clearable style="width:170px" @keyup.enter="searchProductsAction" />
-              <el-input v-model="searchMaterialName" placeholder="商品名称" size="small" clearable style="width:200px" @keyup.enter="searchProductsAction" />
-              <el-select v-model="searchBrandId" placeholder="品牌" size="small" clearable filterable style="width:140px">
+              <el-input v-model="searchMaterialNumber" placeholder="货号" size="small" clearable style="min-width:130px;max-width:170px" @keyup.enter="searchProductsAction" />
+              <el-input v-model="searchStyleNumber" placeholder="款号" size="small" clearable style="min-width:130px;max-width:170px" @keyup.enter="searchProductsAction" />
+              <el-input v-model="searchMaterialName" placeholder="商品名称" size="small" clearable style="min-width:150px;max-width:200px" @keyup.enter="searchProductsAction" />
+              <el-select v-model="searchBrandId" placeholder="品牌" size="small" clearable filterable style="min-width:110px;max-width:140px">
                 <el-option v-for="b in brandList" :key="b.ID" :label="b.ATTRIBNAME" :value="b.ID" />
               </el-select>
               <el-button type="primary" size="small" @click="searchProductsAction">搜索</el-button>
@@ -166,7 +166,7 @@
             <div class="panel-bar">
               <span class="panel-bar-title">已选明细 <span class="detail-summary">共 {{ filteredDetails.length }} 条，合计 <em class="total-qty">{{ totalPrintQty }}</em> 张</span></span>
               <div style="display:flex;gap:6px;align-items:center">
-                <el-input v-model="detailKeyword" placeholder="搜索货号/款号/货品名称" size="small" clearable style="width:240px" />
+                <el-input v-model="detailKeyword" placeholder="搜索货号/款号/货品名称" size="small" clearable style="min-width:180px;max-width:240px" />
                 <el-button size="small" :disabled="!selectedRows.length" @click="handleBatchSetQty">批量设置数量</el-button>
                 <el-button type="danger" size="small" :disabled="!selectedRows.length" @click="handleBatchDelete">批量删除</el-button>
               </div>

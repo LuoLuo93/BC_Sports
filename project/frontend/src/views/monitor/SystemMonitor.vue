@@ -133,7 +133,7 @@
         <el-card shadow="never" class="search-card">
           <el-form inline>
             <el-form-item label="Logger">
-              <el-input v-model="loggerSearch" placeholder="搜索 Logger 名称" clearable style="width: 300px" :prefix-icon="Search" />
+              <el-input v-model="loggerSearch" placeholder="搜索 Logger 名称" clearable style="min-width: 220px; max-width: 300px" :prefix-icon="Search" />
             </el-form-item>
             <el-form-item>
               <el-button :icon="Refresh" @click="loadLoggers" :loading="loggersLoading">刷新</el-button>

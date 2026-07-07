@@ -3,12 +3,12 @@
     <el-card shadow="never" class="search-card">
       <el-form inline>
         <el-form-item label="品牌">
-          <el-select v-model="query.brandName" placeholder="全部" clearable filterable style="width:180px">
+          <el-select v-model="query.brandName" placeholder="全部" clearable filterable style="min-width:140px;max-width:180px">
             <el-option v-for="b in brandList" :key="b.ID" :label="b.ATTRIBNAME" :value="b.ATTRIBNAME" />
           </el-select>
         </el-form-item>
         <el-form-item label="类别">
-          <el-select v-model="query.kindName" placeholder="全部" clearable filterable style="width:180px">
+          <el-select v-model="query.kindName" placeholder="全部" clearable filterable style="min-width:140px;max-width:180px">
             <el-option v-for="k in kindList" :key="k.ID" :label="k.ATTRIBNAME" :value="k.ATTRIBNAME" />
           </el-select>
         </el-form-item>

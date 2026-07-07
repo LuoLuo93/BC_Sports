@@ -3,7 +3,7 @@
     <el-card shadow="never" class="search-card">
       <el-form inline>
         <el-form-item label="选择模板">
-          <el-select v-model="selectedTemplateName" placeholder="请选择打印模板" filterable style="width:300px" @change="onTemplateChange">
+          <el-select v-model="selectedTemplateName" placeholder="请选择打印模板" filterable style="min-width:220px;max-width:300px" @change="onTemplateChange">
             <el-option
               v-for="name in templateNames"
               :key="name"

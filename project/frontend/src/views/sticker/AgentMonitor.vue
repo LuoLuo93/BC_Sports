@@ -4,10 +4,10 @@
     <el-card shadow="never" class="search-card">
       <el-form inline>
         <el-form-item label="Agent 名称">
-          <el-input v-model="query.agentName" placeholder="搜索名称" clearable style="width:180px" @keyup.enter="handleSearch" />
+          <el-input v-model="query.agentName" placeholder="搜索名称" clearable style="min-width:140px;max-width:180px" @keyup.enter="handleSearch" />
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="statusFilter" placeholder="全部" clearable style="width:120px">
+          <el-select v-model="statusFilter" placeholder="全部" clearable style="min-width:100px;max-width:120px">
             <el-option label="在线" :value="1" />
             <el-option label="离线" :value="0" />
           </el-select>

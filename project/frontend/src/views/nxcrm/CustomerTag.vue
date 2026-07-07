@@ -62,7 +62,7 @@
               <span>{{ selectedTask.successCount }} / {{ selectedTask.failCount }}</span>
             </el-form-item>
             <el-form-item label="筛选状态">
-              <el-select v-model="detailQuery.status" placeholder="全部" clearable style="width:120px">
+              <el-select v-model="detailQuery.status" placeholder="全部" clearable style="min-width:100px;max-width:120px">
                 <el-option label="待处理" :value="0" />
                 <el-option label="成功" :value="1" />
                 <el-option label="失败" :value="2" />
@@ -114,7 +114,7 @@
               <el-input v-model="memberTagQuery.batchNo" placeholder="请输入批次号" clearable />
             </el-form-item>
             <el-form-item label="状态">
-              <el-select v-model="memberTagQuery.status" placeholder="全部" clearable style="width:120px">
+              <el-select v-model="memberTagQuery.status" placeholder="全部" clearable style="min-width:100px;max-width:120px">
                 <el-option label="待处理" :value="0" />
                 <el-option label="shopId已填充" :value="1" />
                 <el-option label="已打标签" :value="2" />

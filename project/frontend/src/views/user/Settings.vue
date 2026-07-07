@@ -360,7 +360,7 @@
                   <p class="maint-desc">清理指定天数前的操作日志记录</p>
                 </div>
                 <div style="display: flex; align-items: center; gap: 12px">
-                  <el-select v-model="logCleanDays" style="width: 140px">
+                  <el-select v-model="logCleanDays" style="max-width: 140px">
                     <el-option label="7 天前" :value="7" />
                     <el-option label="30 天前" :value="30" />
                     <el-option label="90 天前" :value="90" />

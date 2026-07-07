@@ -10,10 +10,10 @@
         </el-form-item>
         <el-form-item label="同步状态">
           <el-select v-model="query.syncStatus" placeholder="全部" clearable >
-            <el-option label="未同步" value="pending" />
-            <el-option label="同步中" value="syncing" />
-            <el-option label="已同步" value="success" />
-            <el-option label="同步失败" value="failed" />
+            <el-option label="未同步" :value="0" />
+            <el-option label="已同步" :value="1" />
+            <el-option label="同步失败" :value="2" />
+            <el-option label="已跳过" :value="3" />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -55,7 +55,7 @@
           </el-table-column>
           <el-table-column label="操作" width="200" align="center" fixed="right">
             <template #default="{ row }">
-              <el-button v-if="row.syncStatus !== 'success' && row.staffStatus === 'IN_SERVICE' && hasPermission('ihr:update:sync')" type="primary" plain size="small" @click="handleSyncOne(row)">同步企微</el-button>
+              <el-button v-if="row.syncStatus !== 1 && row.staffStatus === 'IN_SERVICE' && hasPermission('ihr:update:sync')" type="primary" plain size="small" @click="handleSyncOne(row)">同步企微</el-button>
             </template>
           </el-table-column>
         </el-table>

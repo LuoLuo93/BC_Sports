@@ -48,7 +48,7 @@
           </el-table-column>
           <el-table-column label="操作" width="200" align="center" fixed="right">
             <template #default="{ row }">
-              <el-button v-if="hasPermission('ihr:leaving:sync')" type="primary" plain size="small" @click="handleSyncOne(row)">同步企微</el-button>
+              <el-button v-if="row.syncStatus !== 'success' && hasPermission('ihr:leaving:sync')" type="primary" plain size="small" @click="handleSyncOne(row)">同步企微</el-button>
             </template>
           </el-table-column>
         </el-table>

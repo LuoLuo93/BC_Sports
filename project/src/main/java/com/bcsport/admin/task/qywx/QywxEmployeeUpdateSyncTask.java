@@ -364,6 +364,14 @@ public class QywxEmployeeUpdateSyncTask {
         body.set("name", employee.getStaffName());
         body.set("mobile", employee.getMobileNo());
 
+        // 性别映射：IHR MALE/FEMALE → 企微 1(男)/2(女)
+        if (employee.getSex() != null && !"null".equals(employee.getSex())) {
+            switch (employee.getSex().toUpperCase()) {
+                case "MALE":   body.set("gender", 1); break;
+                case "FEMALE": body.set("gender", 2); break;
+            }
+        }
+
         if (employee.getPositionName() != null && !"null".equals(employee.getPositionName())) {
             body.set("position", employee.getPositionName());
         }
@@ -417,6 +425,14 @@ public class QywxEmployeeUpdateSyncTask {
 
         if (employee.getMobileNo() != null && !"null".equals(employee.getMobileNo())) {
             body.set("mobile", employee.getMobileNo());
+        }
+
+        // 性别映射：IHR MALE/FEMALE → 企微 1(男)/2(女)
+        if (employee.getSex() != null && !"null".equals(employee.getSex())) {
+            switch (employee.getSex().toUpperCase()) {
+                case "MALE":   body.set("gender", 1); break;
+                case "FEMALE": body.set("gender", 2); break;
+            }
         }
 
         if (employee.getPositionName() != null && !"null".equals(employee.getPositionName())) {

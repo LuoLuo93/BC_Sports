@@ -143,7 +143,7 @@
               </el-table-column>
               <el-table-column label="操作" width="200" align="center" fixed="right">
                 <template #default="{ row }">
-                  <el-button v-if="(row.staffStatus === 'IN_SERVICE' || row.staffStatus === 'PROBATION') && hasPermission('ihr:update:sync')" type="primary" plain size="small" @click="handleAdjSyncOne(row)">同步企微</el-button>
+                  <el-button v-if="row.syncStatus !== 1 && (row.staffStatus === 'IN_SERVICE' || row.staffStatus === 'PROBATION') && hasPermission('ihr:update:sync')" type="primary" plain size="small" @click="handleAdjSyncOne(row)">同步企微</el-button>
                 </template>
               </el-table-column>
             </el-table>
@@ -219,7 +219,7 @@
               </el-table-column>
               <el-table-column label="操作" width="200" align="center" fixed="right">
                 <template #default="{ row }">
-                  <el-button v-if="hasPermission('ihr:leaving:sync')" type="primary" plain size="small" @click="handleLeaveSyncOne(row)">同步企微</el-button>
+                  <el-button v-if="row.syncStatus !== 1 && hasPermission('ihr:leaving:sync')" type="primary" plain size="small" @click="handleLeaveSyncOne(row)">同步企微</el-button>
                 </template>
               </el-table-column>
             </el-table>

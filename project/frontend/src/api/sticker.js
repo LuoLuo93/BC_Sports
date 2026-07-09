@@ -49,6 +49,11 @@ export function createAgentPrintTasks(orderId, agentId) {
   return request.post(`/api/print/create-tasks/${orderId}?agentId=${encodeURIComponent(agentId)}`)
 }
 
+// 补打单个任务
+export function reprintTask(data) {
+  return request.post('/api/print/reprint', data)
+}
+
 // ─── Agent 管理 ──────────────────────
 export function getAgentPage(params) {
   return request.get('/api/agent/page', { params })

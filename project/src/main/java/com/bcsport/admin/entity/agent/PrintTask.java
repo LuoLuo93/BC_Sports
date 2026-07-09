@@ -73,4 +73,16 @@ public class PrintTask {
 
     @TableField("retry_count")
     private Integer retryCount;
+
+    /** 补打来源任务ID；NULL 表示原始任务 */
+    @TableField("source_task_id")
+    private String sourceTaskId;
+
+    /** 是否补打任务：0 否 / 1 是 */
+    @TableField("is_reprint")
+    private Integer isReprint;
+
+    /** 补打原因（审计） */
+    @TableField("reprint_reason")
+    private String reprintReason;
 }

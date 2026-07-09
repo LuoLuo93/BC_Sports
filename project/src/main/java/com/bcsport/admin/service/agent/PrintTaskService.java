@@ -258,6 +258,59 @@ public class PrintTaskService {
         );
     }
 
+    /**
+     * 补打单个任务：克隆原任务的打印数据生成新的待打印任务(status=0)，原任务保持不动（保留审计）。
+     * 约束：
+     *  - 原任务必须处于终态（2成功 / 3失败），进行中(0/1)不允许补打，避免与正在打印的冲突导致重复；
+     *  - 原任务当前已有未完成的补打任务时拒绝，防止重复补打。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public String reprintTask(String sourceTaskId, String agentId, String reason) {
+        PrintTask source = taskMapper.selectOne(
+            new LambdaQueryWrapper<PrintTask>().eq(PrintTask::getTaskId, sourceTaskId)
+        );
+        if (source == null) {
+            throw new BusinessException("原任务不存在");
+        }
+        if (source.getStatus() == null || (source.getStatus() != 2 && source.getStatus() != 3)) {
+            throw new BusinessException("只有已成功或失败的任务才能补打");
+        }
+        Long pending = taskMapper.selectCount(
+            new LambdaQueryWrapper<PrintTask>()
+                .eq(PrintTask::getSourceTaskId, sourceTaskId)
+                .in(PrintTask::getStatus, 0, 1)
+        );
+        if (pending != null && pending > 0) {
+            throw new BusinessException("该任务已有未完成的补打任务，请等待打印完成");
+        }
+
+        PrintTask reprint = new PrintTask();
+        reprint.setTaskId(UUID.randomUUID().toString().replace("-", ""));
+        reprint.setOrderNo(source.getOrderNo());
+        reprint.setOrderId(source.getOrderId());
+        reprint.setMaterialNumber(source.getMaterialNumber());
+        reprint.setMaterialName(source.getMaterialName());
+        reprint.setStyleNumber(source.getStyleNumber());
+        reprint.setColor(source.getColor());
+        reprint.setBrandName(source.getBrandName());
+        reprint.setKindName(source.getKindName());
+        reprint.setSizeName(source.getSizeName());
+        reprint.setPrintQty(source.getPrintQty());
+        reprint.setTemplateFile(source.getTemplateFile());
+        reprint.setPrinterName(source.getPrinterName());
+        reprint.setPrintData(source.getPrintData());
+        reprint.setAgentId(agentId);
+        reprint.setStatus(0);
+        reprint.setCreateTime(LocalDateTime.now());
+        reprint.setRetryCount(0);
+        reprint.setIsReprint(1);
+        reprint.setSourceTaskId(sourceTaskId);
+        reprint.setReprintReason(reason);
+        taskMapper.insert(reprint);
+        log.info("补打任务已创建: 原 {} → 新 {}，agent={}", sourceTaskId, reprint.getTaskId(), agentId);
+        return reprint.getTaskId();
+    }
+
     public List<PrintTask> getTasksByAgentId(String agentId) {
         return taskMapper.selectList(
             new LambdaQueryWrapper<PrintTask>()
@@ -272,6 +325,7 @@ public class PrintTaskService {
             new Page<>(pageNum, pageSize),
             new LambdaQueryWrapper<PrintTask>()
                 .eq(PrintTask::getAgentId, agentId)
+                .orderByDesc(PrintTask::getPrintTime)
                 .orderByDesc(PrintTask::getCreateTime)
         );
     }

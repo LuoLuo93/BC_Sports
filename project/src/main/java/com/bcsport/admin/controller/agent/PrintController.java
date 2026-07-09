@@ -62,4 +62,22 @@ public class PrintController {
     public Result<List<PrintTask>> getTasks(@PathVariable String orderId) {
         return Result.success(printTaskService.getTasksByOrderId(orderId));
     }
+
+    @PostMapping("/reprint")
+    @ApiOperation("补打单个打印任务")
+    public Result<?> reprint(@RequestBody Map<String, Object> body) {
+        String taskId = (String) body.get("taskId");
+        String agentId = (String) body.get("agentId");
+        String reason = body.get("reason") != null ? String.valueOf(body.get("reason")) : null;
+
+        if (taskId == null || taskId.isBlank()) {
+            return Result.paramError("taskId 不能为空");
+        }
+        if (agentId == null || agentId.isBlank()) {
+            return Result.paramError("agentId 不能为空");
+        }
+
+        String newTaskId = printTaskService.reprintTask(taskId, agentId, reason);
+        return Result.success(newTaskId);
+    }
 }

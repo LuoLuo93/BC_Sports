@@ -43,7 +43,7 @@
             </el-table>
           </div>
           <div class="pagination-wrapper--sm">
-            <el-pagination v-model:current-page="taskQuery.pageNum" v-model:page-size="taskQuery.pageSize" :total="taskTotal" :page-sizes="PAGE_SIZES_LG" layout="total, sizes, prev, pager, next" @size-change="loadTasks" @current-change="loadTasks" />
+            <el-pagination v-model:current-page="taskQuery.pageNum" v-model:page-size="taskQuery.pageSize" :total="taskTotal" :page-sizes="PAGE_SIZES" layout="total, sizes, prev, pager, next" @size-change="loadTasks" @current-change="loadTasks" />
           </div>
         </el-card>
       </el-tab-pane>
@@ -101,7 +101,7 @@
             </el-table>
           </div>
           <div class="pagination-wrapper--sm">
-            <el-pagination v-model:current-page="detailQuery.pageNum" v-model:page-size="detailQuery.pageSize" :total="detailTotal" :page-sizes="PAGE_SIZES_LG" layout="total, sizes, prev, pager, next" @size-change="loadDetails" @current-change="loadDetails" />
+            <el-pagination v-model:current-page="detailQuery.pageNum" v-model:page-size="detailQuery.pageSize" :total="detailTotal" :page-sizes="PAGE_SIZES" layout="total, sizes, prev, pager, next" @size-change="loadDetails" @current-change="loadDetails" />
           </div>
         </el-card>
       </el-tab-pane>
@@ -153,7 +153,7 @@
             </el-table>
           </div>
           <div class="pagination-wrapper--sm">
-            <el-pagination v-model:current-page="memberTagQuery.pageNum" v-model:page-size="memberTagQuery.pageSize" :total="memberTagTotal" :page-sizes="PAGE_SIZES_LG" layout="total, sizes, prev, pager, next" @size-change="loadMemberTags" @current-change="loadMemberTags" />
+            <el-pagination v-model:current-page="memberTagQuery.pageNum" v-model:page-size="memberTagQuery.pageSize" :total="memberTagTotal" :page-sizes="PAGE_SIZES" layout="total, sizes, prev, pager, next" @size-change="loadMemberTags" @current-change="loadMemberTags" />
           </div>
         </el-card>
       </el-tab-pane>
@@ -184,7 +184,7 @@ defineOptions({ name: 'NxcrmCustomerTag' })
 import { ref, reactive, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Plus, RefreshRight, Search } from '@element-plus/icons-vue'
-import { PAGE_SIZES_LG } from '@/utils/appConfig'
+import { PAGE_SIZES } from '@/utils/appConfig'
 import { formatTime } from '@/utils/format'
 import { getNxcrmTagTasks, createNxcrmTagTask, executeNxcrmTagTask, getNxcrmTaskDetails, getNxcrmMemberTags, fillNxcrmShopId } from '@/api/nxcrm'
 

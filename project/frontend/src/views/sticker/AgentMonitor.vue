@@ -62,7 +62,7 @@
           v-model:current-page="query.pageNum"
           v-model:page-size="query.pageSize"
           :total="total"
-          :page-sizes="PAGE_SIZES_LG"
+          :page-sizes="PAGE_SIZES"
           layout="total, sizes, prev, pager, next"
           @size-change="() => { query.pageNum = 1; loadData() }"
           @current-change="loadData"
@@ -110,7 +110,7 @@ import { Search, RefreshRight } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { usePageQuery } from '@/composables/usePageQuery'
 import { getAgentPage, getAgentTasksPage } from '@/api/sticker'
-import { PAGE_SIZES, PAGE_SIZES_LG } from '@/utils/appConfig'
+import { PAGE_SIZES } from '@/utils/appConfig'
 
 // ========== Agent 监控 ==========
 const { loading, tableData, total, query, loadData, handleSearch } = usePageQuery(

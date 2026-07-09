@@ -7,7 +7,7 @@
           <el-icon><ArrowLeft /></el-icon> 返回列表
         </el-button>
         <span class="form-header-title">贴纸资料详情</span>
-        <el-tag effect="dark" type="success" size="small">ERP 数据</el-tag>
+        <el-button type="primary" size="small" @click="handleSave">保存</el-button>
       </div>
 
       <!-- 基本信息卡片 -->
@@ -63,19 +63,20 @@
       <div class="info-section">
         <div class="section-title">
           <el-icon><Stamp /></el-icon> 质检与标识
+          <el-tag size="small" type="warning" effect="plain" style="margin-left:8px">可编辑</el-tag>
         </div>
         <div class="info-grid">
-          <div class="info-card">
+          <div class="info-card editable">
             <span class="info-card-label">执行标准</span>
-            <span class="info-card-value">{{ row.EXECUTION_STANDARD || '-' }}</span>
+            <el-input v-model="row.EXECUTION_STANDARD" placeholder="请输入执行标准" size="small" />
           </div>
-          <div class="info-card">
+          <div class="info-card editable">
             <span class="info-card-label">EAN13</span>
-            <span class="info-card-value mono-value">{{ row.EAN13 || '-' }}</span>
+            <el-input v-model="row.EAN13" placeholder="请输入 EAN13" size="small" />
           </div>
-          <div class="info-card span-2">
+          <div class="info-card editable span-2">
             <span class="info-card-label">面料成分</span>
-            <span class="info-card-value">{{ row.MATERIAL_COMPOSITION || '-' }}</span>
+            <el-input v-model="row.MATERIAL_COMPOSITION" placeholder="请输入面料成分" size="small" />
           </div>
         </div>
       </div>
@@ -84,23 +85,24 @@
       <div class="info-section">
         <div class="section-title">
           <el-icon><OfficeBuilding /></el-icon> 生产信息
+          <el-tag size="small" type="warning" effect="plain" style="margin-left:8px">可编辑</el-tag>
         </div>
         <div class="info-grid">
-          <div class="info-card">
+          <div class="info-card editable">
             <span class="info-card-label">产地</span>
-            <span class="info-card-value">{{ row.ORIGIN || '-' }}</span>
+            <el-input v-model="row.ORIGIN" placeholder="请输入产地" size="small" />
           </div>
-          <div class="info-card span-2">
+          <div class="info-card editable span-2">
             <span class="info-card-label">制造商</span>
-            <span class="info-card-value">{{ row.MANUFACTURER || '-' }}</span>
+            <el-input v-model="row.MANUFACTURER" placeholder="请输入制造商" size="small" />
           </div>
-          <div class="info-card span-2">
+          <div class="info-card editable span-2">
             <span class="info-card-label">制造商地址</span>
-            <span class="info-card-value">{{ row.MANUFACTURER_ADDRESS || '-' }}</span>
+            <el-input v-model="row.MANUFACTURER_ADDRESS" placeholder="请输入制造商地址" size="small" />
           </div>
-          <div class="info-card">
+          <div class="info-card editable">
             <span class="info-card-label">联系电话</span>
-            <span class="info-card-value mono-value">{{ row.CONTACT_PHONE || '-' }}</span>
+            <el-input v-model="row.CONTACT_PHONE" placeholder="请输入联系电话" size="small" />
           </div>
         </div>
       </div>
@@ -128,6 +130,10 @@ const colorMap = {
 function parseSizes(s) {
   if (!s) return []
   return s.split(/[,，;；\s]+/).filter(Boolean)
+}
+
+function handleSave() {
+  ElMessage.success('保存成功（前端演示，后端接口待对接）')
 }
 
 onMounted(() => {
@@ -270,5 +276,18 @@ onMounted(() => {
 /* 尺码标签 */
 .size-tag {
   margin: 2px 4px 2px 0;
+}
+
+/* 可编辑卡片 */
+.info-card.editable {
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+.info-card.editable:hover {
+  border-color: #f59e0b;
+}
+.info-card.editable :deep(.el-input__inner) {
+  font-size: 14px;
+  color: #1e293b;
 }
 </style>

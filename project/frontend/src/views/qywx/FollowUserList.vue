@@ -54,7 +54,7 @@
           v-model:current-page="query.pageNum"
           v-model:page-size="query.pageSize"
           :total="total"
-          :page-sizes="PAGE_SIZES_LG"
+          :page-sizes="PAGE_SIZES"
           layout="total, sizes, prev, pager, next"
           @size-change="() => { query.pageNum = 1; loadData() }"
           @current-change="loadData"
@@ -99,7 +99,7 @@
           v-model:current-page="customerQuery.pageNum"
           v-model:page-size="customerQuery.pageSize"
           :total="customerTotal"
-          :page-sizes="PAGE_SIZES_LG"
+          :page-sizes="PAGE_SIZES"
           layout="total, sizes, prev, pager, next"
           @size-change="() => { customerQuery.pageNum = 1; loadCustomerData() }"
           @current-change="loadCustomerData"
@@ -127,7 +127,7 @@
           v-model:current-page="groupStatQuery.pageNum"
           v-model:page-size="groupStatQuery.pageSize"
           :total="groupStatTotal"
-          :page-sizes="PAGE_SIZES_LG"
+          :page-sizes="PAGE_SIZES"
           layout="total, sizes, prev, pager, next"
           @size-change="() => { groupStatQuery.pageNum = 1; loadGroupStatData() }"
           @current-change="loadGroupStatData"
@@ -144,7 +144,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { Search, RefreshRight, Refresh } from '@element-plus/icons-vue'
 import { usePageQuery } from '@/composables/usePageQuery'
 import { useSyncAction } from '@/composables/useSyncAction'
-import { PAGE_SIZES_LG } from '@/utils/appConfig'
+import { PAGE_SIZES } from '@/utils/appConfig'
 import { formatTime } from '@/utils/format'
 import { getFollowUserPage, getFollowUserCustomers, getFollowUserGroupStats, syncFollowUsers, getFollowUserSyncStatus } from '@/api/qywx'
 

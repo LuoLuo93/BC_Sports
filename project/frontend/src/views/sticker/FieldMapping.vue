@@ -100,7 +100,7 @@
           v-model:current-page="pageNum"
           v-model:page-size="pageSize"
           :total="total"
-          :page-sizes="PAGE_SIZES_LG"
+          :page-sizes="PAGE_SIZES"
           layout="total, sizes, prev, pager, next"
           @size-change="() => { pageNum = 1; loadMappings() }"
           @current-change="loadMappings"
@@ -135,7 +135,7 @@ import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, CopyDocument, Right } from '@element-plus/icons-vue'
 import { getBrandTemplateNames, getFieldMappingPage, createFieldMapping, updateFieldMapping, deleteFieldMapping, deleteFieldMappingByTemplate, getAvailableFields } from '@/api/sticker'
-import { PAGE_SIZES_LG } from '@/utils/appConfig'
+import { PAGE_SIZES } from '@/utils/appConfig'
 
 defineOptions({ name: 'FieldMapping' })
 
@@ -147,7 +147,7 @@ const availableFields = ref([])
 
 // 分页状态
 const pageNum = ref(1)
-const pageSize = ref(PAGE_SIZES_LG[0])
+const pageSize = ref(PAGE_SIZES[0])
 const total = ref(0)
 
 onMounted(async () => {

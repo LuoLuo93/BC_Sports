@@ -120,7 +120,7 @@
           </div>
 
           <div class="pagination-wrapper--sm">
-            <el-pagination v-model:current-page="recordQuery.pageNum" v-model:page-size="recordQuery.pageSize" :total="recordTotal" :page-sizes="PAGE_SIZES_LG" layout="total, sizes, prev, pager, next" @size-change="handleRecordSearch" @current-change="loadRecordData" />
+            <el-pagination v-model:current-page="recordQuery.pageNum" v-model:page-size="recordQuery.pageSize" :total="recordTotal" :page-sizes="PAGE_SIZES" layout="total, sizes, prev, pager, next" @size-change="handleRecordSearch" @current-change="loadRecordData" />
           </div>
         </el-card>
       </el-tab-pane>
@@ -159,7 +159,7 @@ import { Upload } from '@element-plus/icons-vue'
 import { Search, RefreshRight, Refresh, Plus, Delete } from '@element-plus/icons-vue'
 import { usePermission } from '@/composables/usePermission'
 import { useSyncAction } from '@/composables/useSyncAction'
-import { PAGE_SIZES_LG } from '@/utils/appConfig'
+import { PAGE_SIZES } from '@/utils/appConfig'
 import { formatTime } from '@/utils/format'
 import { getCorpTags, syncQywxTags, getQywxTagSyncStatus, getTagTemplate, uploadTagData, getTagRecords, addCorpTagGroup, editCorpTagGroup, deleteCorpTagGroup } from '@/api/qywx'
 

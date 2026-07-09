@@ -32,7 +32,7 @@
           </el-table>
           </div>
           <div class="pagination-wrapper--sm">
-            <el-pagination v-model:current-page="detailQuery.pageNum" v-model:page-size="detailQuery.pageSize" :total="detailTotal" :page-sizes="PAGE_SIZES_LG" layout="total, sizes, prev, pager, next" @current-change="loadDetail" @size-change="loadDetail" />
+            <el-pagination v-model:current-page="detailQuery.pageNum" v-model:page-size="detailQuery.pageSize" :total="detailTotal" :page-sizes="PAGE_SIZES" layout="total, sizes, prev, pager, next" @current-change="loadDetail" @size-change="loadDetail" />
           </div>
         </el-card>
       </el-tab-pane>
@@ -74,7 +74,7 @@
           </el-table>
           </div>
           <div class="pagination-wrapper--sm">
-            <el-pagination v-model:current-page="tagQuery.pageNum" v-model:page-size="tagQuery.pageSize" :total="tagTotal" :page-sizes="PAGE_SIZES_LG" layout="total, sizes, prev, pager, next" @current-change="loadTagList" @size-change="loadTagList" />
+            <el-pagination v-model:current-page="tagQuery.pageNum" v-model:page-size="tagQuery.pageSize" :total="tagTotal" :page-sizes="PAGE_SIZES" layout="total, sizes, prev, pager, next" @current-change="loadTagList" @size-change="loadTagList" />
           </div>
         </el-card>
       </el-tab-pane>

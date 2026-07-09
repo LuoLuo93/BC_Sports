@@ -112,7 +112,7 @@ import { getChannelTypeTree, getChannelNatureTree } from '@/api/channel'
 import { getBrandList } from '@/api/brand'
 import { getRegionTree } from '@/api/region'
 import { getErpStorePage, getErpCustomerPage } from '@/api/erp'
-import { PAGE_SIZES_LG } from '@/utils/appConfig'
+import { PAGE_SIZES } from '@/utils/appConfig'
 
 const router = useRouter()
 const route = useRoute()
@@ -225,7 +225,7 @@ function onSearchTypeChange() {
 async function searchEntities() {
   entitySearching.value = true
   try {
-    const params = { pageNum: 1, pageSize: PAGE_SIZES_LG[0] }
+    const params = { pageNum: 1, pageSize: PAGE_SIZES[0] }
     if (searchKeyword.value) {
       params.code = searchKeyword.value
       params.name = searchKeyword.value

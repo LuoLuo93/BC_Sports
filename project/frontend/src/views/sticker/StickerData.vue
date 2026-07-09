@@ -27,7 +27,6 @@
       <template #header>
         <div class="card-header-row">
           <span class="card-header-title">贴纸资料维护</span>
-          <span class="card-header-sub">数据来源：伯俊 ERP</span>
         </div>
       </template>
       <div class="table-responsive">
@@ -72,7 +71,7 @@
           v-model:current-page="query.pageNum"
           v-model:page-size="query.pageSize"
           :total="total"
-          :page-sizes="PAGE_SIZES_LG"
+          :page-sizes="PAGE_SIZES"
           layout="total, sizes, prev, pager, next"
           @size-change="handleSearch"
           @current-change="loadData"
@@ -88,7 +87,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Search, RefreshRight } from '@element-plus/icons-vue'
 import { usePageQuery } from '@/composables/usePageQuery'
-import { PAGE_SIZES_LG } from '@/utils/appConfig'
+import { PAGE_SIZES } from '@/utils/appConfig'
 import { getStickerDataPage, getStickerBrands } from '@/api/sticker'
 
 defineOptions({ name: 'StickerData' })
@@ -155,5 +154,4 @@ onActivated(() => {
 </script>
 
 <style scoped>
-.card-header-sub { font-size: 13px; color: #909399; font-weight: 400; margin-left: 12px; }
 </style>

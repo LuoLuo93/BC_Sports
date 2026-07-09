@@ -96,7 +96,7 @@
           v-model:current-page="detailPage"
           v-model:page-size="detailSize"
           :total="order.details.length"
-          :page-sizes="PAGE_SIZES_LG"
+          :page-sizes="PAGE_SIZES"
           layout="total, sizes, prev, pager, next"
           size="small"
           style="margin-top:8px;justify-content:flex-end"
@@ -110,7 +110,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { getPrintOrder } from '@/api/sticker'
-import { PAGE_SIZES_LG } from '@/utils/appConfig'
+import { PAGE_SIZES } from '@/utils/appConfig'
 import { formatTime } from '@/utils/format'
 
 const route = useRoute()

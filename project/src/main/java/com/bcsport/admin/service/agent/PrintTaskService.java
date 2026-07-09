@@ -21,9 +21,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -328,17 +326,13 @@ public class PrintTaskService {
     }
 
     /**
-     * 分页查询 Agent 的打印任务，支持按打印时间区间筛选。
-     * startDate/endDate 为 yyyy-MM-dd；筛选打印时间会自然排除未打印(printTime 为空)的任务。
+     * 分页查询 Agent 的打印任务，支持按批次号筛选（前缀匹配，便于按"同一批次"排查）。
      */
-    public IPage<PrintTask> getTasksByAgentIdPage(int pageNum, int pageSize, String agentId, String startDate, String endDate) {
+    public IPage<PrintTask> getTasksByAgentIdPage(int pageNum, int pageSize, String agentId, String batchId) {
         LambdaQueryWrapper<PrintTask> wrapper = new LambdaQueryWrapper<PrintTask>()
                 .eq(PrintTask::getAgentId, agentId);
-        if (startDate != null && !startDate.isBlank()) {
-            wrapper.ge(PrintTask::getPrintTime, LocalDate.parse(startDate).atStartOfDay());
-        }
-        if (endDate != null && !endDate.isBlank()) {
-            wrapper.le(PrintTask::getPrintTime, LocalDate.parse(endDate).atTime(LocalTime.MAX));
+        if (batchId != null && !batchId.isBlank()) {
+            wrapper.likeRight(PrintTask::getBatchId, batchId.trim());
         }
         wrapper.orderByDesc(PrintTask::getPrintTime).orderByDesc(PrintTask::getCreateTime);
         return taskMapper.selectPage(new Page<>(pageNum, pageSize), wrapper);

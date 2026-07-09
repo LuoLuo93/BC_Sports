@@ -88,12 +88,11 @@ public class AgentController {
     }
 
     @GetMapping("/{agentId}/tasks/page")
-    @ApiOperation("Agent 任务记录（分页，支持打印时间筛选）")
+    @ApiOperation("Agent 任务记录（分页，支持批次号筛选）")
     public Result<PageResult<PrintTask>> getTasksPage(@Valid PageQuery pageQuery,
                                                       @PathVariable String agentId,
-                                                      @RequestParam(required = false) String startDate,
-                                                      @RequestParam(required = false) String endDate) {
+                                                      @RequestParam(required = false) String batchId) {
         return Result.success(PageResult.of(printTaskService.getTasksByAgentIdPage(
-                pageQuery.getPageNum(), pageQuery.getPageSize(), agentId, startDate, endDate)));
+                pageQuery.getPageNum(), pageQuery.getPageSize(), agentId, batchId)));
     }
 }

@@ -69,22 +69,20 @@
     </el-card>
 
     <!-- 任务记录弹窗 -->
-    <el-dialog v-model="taskDialogVisible" :title="`${currentAgent} - 打印任务`" width="1200px">
+    <el-dialog v-model="taskDialogVisible" :title="`${currentAgent} - 打印任务`" width="1300px">
       <div class="task-filter-bar">
-        <span class="task-filter-label">打印时间</span>
-        <el-date-picker
-          v-model="taskDateRange"
-          type="daterange"
-          range-separator="至"
-          start-placeholder="开始日期"
-          end-placeholder="结束日期"
-          value-format="YYYY-MM-DD"
+        <span class="task-filter-label">批次查询</span>
+        <el-input
+          v-model="taskQuery.batchId"
+          placeholder="输入批次号（支持前缀）"
+          clearable
           size="small"
-          style="width:280px"
-          :clearable="true"
-          @change="onTaskDateChange"
+          style="width:240px"
+          @keyup.enter="onBatchSearch"
+          @clear="onBatchSearch"
         />
-        <el-button v-if="taskDateRange" size="small" link type="primary" @click="clearTaskDate">清除</el-button>
+        <el-button type="primary" size="small" @click="onBatchSearch">查询</el-button>
+        <el-button v-if="taskQuery.batchId" size="small" link type="primary" @click="clearBatch">清除</el-button>
       </div>
       <el-table :data="taskList" border size="small">
         <el-table-column label="任务ID" width="210" show-overflow-tooltip>
@@ -95,7 +93,7 @@
         </el-table-column>
         <el-table-column label="批次" width="120" show-overflow-tooltip>
           <template #default="{ row }">
-            <span v-if="row.batchId" class="batch-tag">{{ row.batchId.substring(0, 8) }}</span>
+            <span v-if="row.batchId" class="batch-tag clickable" @click="filterByBatch(row.batchId)" title="点击筛选该批次">{{ row.batchId.substring(0, 8) }}</span>
             <span v-else style="color:#c0c4cc">-</span>
           </template>
         </el-table-column>
@@ -279,8 +277,7 @@ const taskList = ref([])
 const taskTotal = ref(0)
 const currentAgent = ref('')
 const currentAgentId = ref('')
-const taskQuery = reactive({ pageNum: 1, pageSize: 20, startDate: '', endDate: '' })
-const taskDateRange = ref(null)
+const taskQuery = reactive({ pageNum: 1, pageSize: 50, batchId: '' })
 
 // 任务详情
 const taskDetailVisible = ref(false)
@@ -300,30 +297,26 @@ async function viewTasks(row) {
   currentAgent.value = row.agentName || row.agentId
   currentAgentId.value = row.agentId
   taskQuery.pageNum = 1
-  taskQuery.startDate = ''
-  taskQuery.endDate = ''
-  taskDateRange.value = null
+  taskQuery.batchId = ''
   taskDialogVisible.value = true
   await loadTasks()
 }
 
-// 打印时间筛选
-function onTaskDateChange(val) {
-  if (val && val.length === 2) {
-    taskQuery.startDate = val[0]
-    taskQuery.endDate = val[1]
-  } else {
-    taskQuery.startDate = ''
-    taskQuery.endDate = ''
-  }
+// 批次查询
+function onBatchSearch() {
   taskQuery.pageNum = 1
   loadTasks()
 }
 
-function clearTaskDate() {
-  taskDateRange.value = null
-  taskQuery.startDate = ''
-  taskQuery.endDate = ''
+function clearBatch() {
+  taskQuery.batchId = ''
+  taskQuery.pageNum = 1
+  loadTasks()
+}
+
+// 点击批次标签快速筛选该批次
+function filterByBatch(batchId) {
+  taskQuery.batchId = batchId
   taskQuery.pageNum = 1
   loadTasks()
 }
@@ -430,5 +423,13 @@ onUnmounted(() => {
   padding: 1px 8px;
   border-radius: 4px;
   letter-spacing: 0.04em;
+}
+.batch-tag.clickable {
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.batch-tag.clickable:hover {
+  background: #dbeafe;
+  color: #2563eb;
 }
 </style>

@@ -15,7 +15,7 @@
         <el-form-item>
           <el-button type="primary" :icon="Search" @click="handleSearch">搜索</el-button>
           <el-button :icon="RefreshRight" @click="handleReset">重置</el-button>
-          <el-button @click="loadData">刷新</el-button>
+          <el-button @click="refreshAll">刷新</el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -39,8 +39,8 @@
           <el-table-column prop="ipAddress" label="IP 地址" width="140" />
           <el-table-column label="状态" width="80" align="center">
             <template #default="{ row }">
-              <el-tag :type="isOnline(row) ? 'success' : 'danger'" size="small">
-                {{ isOnline(row) ? '在线' : '离线' }}
+              <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
+                {{ row.status === 1 ? '在线' : '离线' }}
               </el-tag>
             </template>
           </el-table-column>
@@ -105,11 +105,10 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { Search, RefreshRight } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
 import { usePageQuery } from '@/composables/usePageQuery'
-import { getAgentPage, getAgentTasksPage } from '@/api/sticker'
+import { getAgentPage, getAgentList, getAgentTasksPage } from '@/api/sticker'
 import { PAGE_SIZES } from '@/utils/appConfig'
 
 // ========== Agent 监控 ==========
@@ -118,34 +117,41 @@ const { loading, tableData, total, query, loadData, handleSearch } = usePageQuer
   { agentName: '' }
 )
 
-// 状态筛选（前端实时计算）
+// 全部 Agent（用于全局在线/离线统计，状态由服务端计算）
+const allAgents = ref([])
+
+// 状态筛选（前端过滤当前页）
 const statusFilter = ref(null)
 
-// 心跳超时阈值（秒），与后端一致
-const HEARTBEAT_TIMEOUT = 60
-
-// 实时判断 Agent 是否在线
-function isOnline(row) {
-  if (!row.lastHeartbeat) return false
-  const d = new Date(row.lastHeartbeat)
-  if (isNaN(d)) return false
-  return (Date.now() - d.getTime()) / 1000 < HEARTBEAT_TIMEOUT
-}
-
-// 按状态筛选后的数据
+// 按状态筛选后的数据（基于服务端返回的 status 字段）
 const filteredData = computed(() => {
   if (statusFilter.value === null) return tableData.value
-  return tableData.value.filter(row => isOnline(row) === (statusFilter.value === 1))
+  return tableData.value.filter(row => row.status === statusFilter.value)
 })
 
-const onlineCount = computed(() => tableData.value.filter(isOnline).length)
-const offlineCount = computed(() => tableData.value.filter(row => !isOnline(row)).length)
+// 全局在线/离线计数（基于 getAgentList，服务端统一计算状态）
+const onlineCount = computed(() => allAgents.value.filter(a => a.status === 1).length)
+const offlineCount = computed(() => allAgents.value.filter(a => a.status !== 1).length)
+
+async function loadAllAgents() {
+  try {
+    const { data } = await getAgentList()
+    allAgents.value = data || []
+  } catch {
+    allAgents.value = []
+  }
+}
+
+function refreshAll() {
+  loadData()
+  loadAllAgents()
+}
 
 function handleReset() {
   query.agentName = ''
   statusFilter.value = null
   query.pageNum = 1
-  loadData()
+  refreshAll()
 }
 
 const STATUS_MAP = { 0: '待打印', 1: '打印中', 2: '成功', 3: '失败' }
@@ -153,16 +159,11 @@ const STATUS_TAG = { 0: 'info', 1: 'warning', 2: 'success', 3: 'danger' }
 const statusLabel = (s) => STATUS_MAP[s] || '未知'
 const statusTagType = (s) => STATUS_TAG[s] || 'info'
 
+// 后端 Jackson 已将 lastHeartbeat 格式化为 yyyy-MM-dd HH:mm:ss，直接展示绝对时间，
+// 避免用浏览器时钟算相对时间导致与时钟无关的状态标签产生矛盾。
 function fmtTime(val) {
   if (!val) return '-'
-  const d = new Date(val)
-  if (isNaN(d)) return val
-  const diff = (Date.now() - d.getTime()) / 1000
-  if (diff < 60) return '刚刚'
-  if (diff < 3600) return Math.floor(diff / 60) + ' 分钟前'
-  if (diff < 86400) return Math.floor(diff / 3600) + ' 小时前'
-  const pad = (n) => String(n).padStart(2, '0')
-  return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+  return val
 }
 
 // ========== 任务记录 ==========
@@ -193,7 +194,16 @@ async function loadTasks() {
 }
 
 // ========== 初始化 ==========
+// 监控面板自动轮询（30 秒刷新，状态由服务端计算）
+const POLL_INTERVAL = 30000
+let pollTimer = null
+
 onMounted(() => {
-  loadData()
+  refreshAll()
+  pollTimer = setInterval(refreshAll, POLL_INTERVAL)
+})
+
+onUnmounted(() => {
+  if (pollTimer) clearInterval(pollTimer)
 })
 </script>

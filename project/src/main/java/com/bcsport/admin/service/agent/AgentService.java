@@ -107,7 +107,8 @@ public class AgentService {
 
     /**
      * 分页查询 Agent 列表。
-     * 状态由前端根据 lastHeartbeat 实时计算，后端只返回原始数据。
+     * 状态在服务端根据 lastHeartbeat 实时计算（applyLiveStatus），统一用服务端时钟，
+     * 避免前端用浏览器时钟与服务端心跳时间相减导致时钟偏差误判。
      */
     public IPage<PrintAgent> page(int pageNum, int pageSize, String agentName) {
         LambdaQueryWrapper<PrintAgent> wrapper = new LambdaQueryWrapper<>();
@@ -115,6 +116,8 @@ public class AgentService {
             wrapper.like(PrintAgent::getAgentName, agentName);
         }
         wrapper.orderByDesc(PrintAgent::getLastHeartbeat);
-        return agentMapper.selectPage(new Page<>(pageNum, pageSize), wrapper);
+        IPage<PrintAgent> p = agentMapper.selectPage(new Page<>(pageNum, pageSize), wrapper);
+        p.getRecords().forEach(this::applyLiveStatus);
+        return p;
     }
 }

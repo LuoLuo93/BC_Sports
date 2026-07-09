@@ -133,46 +133,159 @@
     </el-dialog>
 
     <!-- 任务详情弹窗 -->
-    <el-dialog v-model="taskDetailVisible" title="任务详情" width="720px" append-to-body>
-      <el-descriptions v-if="currentTask" :column="2" border size="small">
-        <el-descriptions-item label="任务ID" :span="2">{{ currentTask.taskId || '-' }}</el-descriptions-item>
-        <el-descriptions-item v-if="currentTask.batchId" label="打印批次" :span="2">{{ currentTask.batchId }}</el-descriptions-item>
-        <el-descriptions-item v-if="currentTask.isReprint === 1" label="补打任务">
-          <el-tag type="warning" size="small">是</el-tag>
-        </el-descriptions-item>
-        <el-descriptions-item v-if="currentTask.isReprint === 1" label="原任务ID">{{ currentTask.sourceTaskId || '-' }}</el-descriptions-item>
-        <el-descriptions-item v-if="currentTask.isReprint === 1 && currentTask.reprintReason" label="补打原因" :span="2">{{ currentTask.reprintReason }}</el-descriptions-item>
-        <el-descriptions-item label="申请单号">{{ currentTask.orderNo || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="状态">
-          <el-tag :type="statusTagType(currentTask.status)" size="small">{{ statusLabel(currentTask.status) }}</el-tag>
-        </el-descriptions-item>
-        <el-descriptions-item label="货号">{{ currentTask.materialNumber || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="款号">{{ currentTask.styleNumber || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="货品名称" :span="2">{{ currentTask.materialName || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="品牌">{{ currentTask.brandName || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="类别">{{ currentTask.kindName || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="颜色">{{ currentTask.color || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="尺码">{{ currentTask.sizeName || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="打印数量">{{ currentTask.printQty ?? '-' }}</el-descriptions-item>
-        <el-descriptions-item label="重试次数">{{ currentTask.retryCount ?? 0 }}</el-descriptions-item>
-        <el-descriptions-item label="模板文件" :span="2">{{ currentTask.templateFile || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="打印机">{{ currentTask.printerName || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="Agent ID">{{ currentTask.agentId || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="创建时间">{{ formatTime(currentTask.createTime) }}</el-descriptions-item>
-        <el-descriptions-item label="派发时间">{{ formatTime(currentTask.dispatchTime) }}</el-descriptions-item>
-        <el-descriptions-item label="打印时间" :span="2">{{ formatTime(currentTask.printTime) }}</el-descriptions-item>
-        <el-descriptions-item v-if="currentTask.errorMsg" label="错误信息" :span="2">
-          <span style="color:#dc2626">{{ currentTask.errorMsg }}</span>
-        </el-descriptions-item>
-        <el-descriptions-item label="打印数据(JSON)" :span="2">
-          <pre style="margin:0;max-height:200px;overflow:auto;font-size:12px;background:#f5f5f5;padding:8px;border-radius:4px">{{ formatPrintData(currentTask.printData) }}</pre>
-        </el-descriptions-item>
-      </el-descriptions>
+    <el-dialog v-model="taskDetailVisible" title="任务详情" width="860px" append-to-body>
+      <template v-if="currentTask">
+        <!-- 顶部状态栏 -->
+        <div class="detail-header">
+          <div class="detail-header-left">
+            <span class="detail-task-id">{{ currentTask.taskId || '-' }}</span>
+            <el-tag :type="statusTagType(currentTask.status)" size="small" effect="dark" class="detail-status-tag">{{ statusLabel(currentTask.status) }}</el-tag>
+            <el-tag v-if="currentTask.isReprint === 1" type="warning" size="small" effect="plain">补打</el-tag>
+          </div>
+          <el-button v-if="currentTask.status === 2 || currentTask.status === 3"
+            type="warning" size="small" @click="openReprint">补打任务</el-button>
+        </div>
+
+        <!-- 信息区域：左右两列 -->
+        <div class="detail-body">
+          <!-- 左列 -->
+          <div class="detail-col">
+            <!-- 基本信息 -->
+            <div class="detail-section">
+              <div class="detail-section-title">基本信息</div>
+              <div class="detail-field-grid">
+                <div class="detail-field" v-if="currentTask.batchId">
+                  <span class="detail-label">打印批次</span>
+                  <span class="detail-value mono">{{ currentTask.batchId }}</span>
+                </div>
+                <div class="detail-field">
+                  <span class="detail-label">申请单号</span>
+                  <span class="detail-value">{{ currentTask.orderNo || '-' }}</span>
+                </div>
+                <div class="detail-field">
+                  <span class="detail-label">Agent ID</span>
+                  <span class="detail-value mono">{{ currentTask.agentId || '-' }}</span>
+                </div>
+                <div class="detail-field">
+                  <span class="detail-label">打印机</span>
+                  <span class="detail-value">{{ currentTask.printerName || '-' }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 补打信息 -->
+            <div class="detail-section" v-if="currentTask.isReprint === 1">
+              <div class="detail-section-title">补打信息</div>
+              <div class="detail-field-grid">
+                <div class="detail-field">
+                  <span class="detail-label">原任务ID</span>
+                  <span class="detail-value mono">{{ currentTask.sourceTaskId || '-' }}</span>
+                </div>
+                <div class="detail-field" v-if="currentTask.reprintReason">
+                  <span class="detail-label">补打原因</span>
+                  <span class="detail-value">{{ currentTask.reprintReason }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 货品信息 -->
+            <div class="detail-section">
+              <div class="detail-section-title">货品信息</div>
+              <div class="detail-field-grid">
+                <div class="detail-field">
+                  <span class="detail-label">货品名称</span>
+                  <span class="detail-value">{{ currentTask.materialName || '-' }}</span>
+                </div>
+                <div class="detail-field">
+                  <span class="detail-label">货号</span>
+                  <span class="detail-value">{{ currentTask.materialNumber || '-' }}</span>
+                </div>
+                <div class="detail-field">
+                  <span class="detail-label">款号</span>
+                  <span class="detail-value">{{ currentTask.styleNumber || '-' }}</span>
+                </div>
+                <div class="detail-field">
+                  <span class="detail-label">品牌</span>
+                  <span class="detail-value">{{ currentTask.brandName || '-' }}</span>
+                </div>
+                <div class="detail-field">
+                  <span class="detail-label">类别</span>
+                  <span class="detail-value">{{ currentTask.kindName || '-' }}</span>
+                </div>
+                <div class="detail-field">
+                  <span class="detail-label">颜色</span>
+                  <span class="detail-value">{{ currentTask.color || '-' }}</span>
+                </div>
+                <div class="detail-field">
+                  <span class="detail-label">尺码</span>
+                  <span class="detail-value">{{ currentTask.sizeName || '-' }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 右列 -->
+          <div class="detail-col">
+            <!-- 打印信息 -->
+            <div class="detail-section">
+              <div class="detail-section-title">打印信息</div>
+              <div class="detail-field-grid">
+                <div class="detail-field">
+                  <span class="detail-label">打印数量</span>
+                  <span class="detail-value">{{ currentTask.printQty ?? '-' }}</span>
+                </div>
+                <div class="detail-field">
+                  <span class="detail-label">重试次数</span>
+                  <span class="detail-value">{{ currentTask.retryCount ?? 0 }}</span>
+                </div>
+                <div class="detail-field">
+                  <span class="detail-label">模板文件</span>
+                  <span class="detail-value">{{ currentTask.templateFile || '-' }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 时间信息 -->
+            <div class="detail-section">
+              <div class="detail-section-title">时间信息</div>
+              <div class="detail-timeline">
+                <div class="timeline-item" :class="{ 'timeline-active': currentTask.createTime }">
+                  <span class="timeline-label">创建时间</span>
+                  <span class="timeline-value">{{ formatTime(currentTask.createTime) || '-' }}</span>
+                </div>
+                <div class="timeline-item" :class="{ 'timeline-active': currentTask.dispatchTime }">
+                  <span class="timeline-label">派发时间</span>
+                  <span class="timeline-value">{{ formatTime(currentTask.dispatchTime) || '-' }}</span>
+                </div>
+                <div class="timeline-item" :class="{ 'timeline-active': currentTask.printTime }">
+                  <span class="timeline-label">打印时间</span>
+                  <span class="timeline-value">{{ formatTime(currentTask.printTime) || '-' }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 错误信息 -->
+            <div class="detail-section" v-if="currentTask.errorMsg">
+              <div class="detail-section-title" style="color:#dc2626">错误信息</div>
+              <div class="detail-error-box">{{ currentTask.errorMsg }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 打印数据 JSON（可折叠） -->
+        <div class="detail-json-section">
+          <div class="detail-json-header" @click="jsonExpanded = !jsonExpanded">
+            <span class="detail-section-title" style="margin:0">打印数据 (JSON)</span>
+            <el-icon class="detail-json-arrow" :class="{ expanded: jsonExpanded }"><ArrowDown /></el-icon>
+          </div>
+          <transition name="el-zoom-in-top">
+            <pre v-show="jsonExpanded" class="detail-json-pre">{{ formatPrintData(currentTask.printData) }}</pre>
+          </transition>
+        </div>
+      </template>
       <template #footer>
         <div class="dialog-footer">
           <el-button @click="taskDetailVisible = false">关闭</el-button>
-          <el-button v-if="currentTask && (currentTask.status === 2 || currentTask.status === 3)"
-            type="warning" @click="openReprint">补打</el-button>
         </div>
       </template>
     </el-dialog>
@@ -216,7 +329,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
-import { Search, RefreshRight } from '@element-plus/icons-vue'
+import { Search, RefreshRight, ArrowDown } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { usePageQuery } from '@/composables/usePageQuery'
 import { getAgentPage, getAgentList, getAgentTasksPage, reprintTask } from '@/api/sticker'
@@ -283,6 +396,7 @@ const taskQuery = reactive({ pageNum: 1, pageSize: 50, batchId: '' })
 // 任务详情
 const taskDetailVisible = ref(false)
 const currentTask = ref(null)
+const jsonExpanded = ref(false)
 
 // 格式化打印数据 JSON（折叠展开后端下发的 printData）
 function formatPrintData(raw) {
@@ -335,6 +449,7 @@ async function loadTasks() {
 
 function viewTaskDetail(row) {
   currentTask.value = row
+  jsonExpanded.value = false
   taskDetailVisible.value = true
 }
 
@@ -432,5 +547,188 @@ onUnmounted(() => {
 .batch-tag.clickable:hover {
   background: #dbeafe;
   color: #2563eb;
+}
+
+/* ========== 任务详情弹窗 ========== */
+
+/* 顶部状态栏 */
+.detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0 16px;
+  border-bottom: 1px solid #ebeef5;
+  margin-bottom: 20px;
+}
+.detail-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.detail-task-id {
+  font-size: 15px;
+  font-weight: 600;
+  color: #303133;
+  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  letter-spacing: 0.02em;
+}
+.detail-status-tag {
+  flex-shrink: 0;
+}
+
+/* 左右两列布局 */
+.detail-body {
+  display: flex;
+  gap: 20px;
+}
+.detail-col {
+  flex: 1;
+  min-width: 0;
+}
+
+/* 分组标题 */
+.detail-section {
+  margin-bottom: 18px;
+}
+.detail-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #606266;
+  margin-bottom: 10px;
+  padding-left: 8px;
+  border-left: 3px solid #409eff;
+  line-height: 1;
+}
+
+/* 字段网格：2列 */
+.detail-field-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 16px;
+}
+.detail-field {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 0;
+}
+.detail-label {
+  font-size: 12px;
+  color: #909399;
+  margin-bottom: 2px;
+  white-space: nowrap;
+}
+.detail-value {
+  font-size: 13px;
+  color: #303133;
+  word-break: break-all;
+  line-height: 1.5;
+}
+.detail-value.mono {
+  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  font-size: 12px;
+}
+
+/* 时间线 */
+.detail-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  position: relative;
+  padding-left: 14px;
+}
+.detail-timeline::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  background: #e4e7ed;
+  border-radius: 1px;
+}
+.timeline-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 7px 0;
+  position: relative;
+}
+.timeline-item::before {
+  content: '';
+  position: absolute;
+  left: -14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #dcdfe6;
+  border: 2px solid #fff;
+  box-sizing: content-box;
+}
+.timeline-item.timeline-active::before {
+  background: #409eff;
+}
+.timeline-label {
+  font-size: 12px;
+  color: #909399;
+}
+.timeline-value {
+  font-size: 13px;
+  color: #303133;
+  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  font-size: 12px;
+}
+
+/* 错误信息 */
+.detail-error-box {
+  background: #fef0f0;
+  border: 1px solid #fde2e2;
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: #dc2626;
+  line-height: 1.6;
+  word-break: break-all;
+}
+
+/* 打印数据 JSON */
+.detail-json-section {
+  margin-top: 6px;
+  border-top: 1px solid #ebeef5;
+  padding-top: 14px;
+}
+.detail-json-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+  padding: 4px 0;
+}
+.detail-json-header:hover .detail-section-title {
+  color: #409eff;
+}
+.detail-json-arrow {
+  font-size: 14px;
+  color: #909399;
+  transition: transform 0.25s;
+}
+.detail-json-arrow.expanded {
+  transform: rotate(180deg);
+}
+.detail-json-pre {
+  margin: 8px 0 0;
+  max-height: 240px;
+  overflow: auto;
+  font-size: 12px;
+  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  background: #f5f7fa;
+  color: #475569;
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid #ebeef5;
+  line-height: 1.6;
 }
 </style>

@@ -236,8 +236,9 @@ const allAgents = ref([])
 const statusFilter = ref(null)
 
 // 按状态筛选后的数据（基于服务端返回的 status 字段）
+// el-select clearable 清除后值可能是 undefined，用 == null 同时覆盖 null 和 undefined
 const filteredData = computed(() => {
-  if (statusFilter.value === null) return tableData.value
+  if (statusFilter.value == null || statusFilter.value === '') return tableData.value
   return tableData.value.filter(row => row.status === statusFilter.value)
 })
 

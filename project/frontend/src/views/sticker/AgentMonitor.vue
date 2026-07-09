@@ -35,7 +35,7 @@
       <div class="table-responsive">
         <el-table v-loading="loading" :data="filteredData" border stripe>
           <el-table-column prop="agentId" label="Agent ID" width="120" />
-          <el-table-column prop="agentName" label="名称" width="150" />
+          <el-table-column prop="agentName" label="名称" min-width="180" show-overflow-tooltip />
           <el-table-column prop="ipAddress" label="IP 地址" width="140" />
           <el-table-column label="状态" width="80" align="center">
             <template #default="{ row }">
@@ -44,8 +44,8 @@
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="printers" label="打印机" min-width="200" show-overflow-tooltip />
-          <el-table-column label="最后心跳" width="170">
+          <el-table-column prop="printers" label="打印机" min-width="140" show-overflow-tooltip />
+          <el-table-column label="最后心跳" width="160">
             <template #default="{ row }">
               {{ fmtTime(row.lastHeartbeat) }}
             </template>
@@ -159,11 +159,18 @@ const STATUS_TAG = { 0: 'info', 1: 'warning', 2: 'success', 3: 'danger' }
 const statusLabel = (s) => STATUS_MAP[s] || '未知'
 const statusTagType = (s) => STATUS_TAG[s] || 'info'
 
-// 后端 Jackson 已将 lastHeartbeat 格式化为 yyyy-MM-dd HH:mm:ss，直接展示绝对时间，
-// 避免用浏览器时钟算相对时间导致与时钟无关的状态标签产生矛盾。
+// 最后心跳相对时间（刚刚 / X分钟前），配合 30s 自动轮询动态刷新；
+// 状态标签以服务端 row.status 为准，相对时间仅作直观展示。
 function fmtTime(val) {
   if (!val) return '-'
-  return val
+  const d = new Date(val)
+  if (isNaN(d)) return val
+  const diff = (Date.now() - d.getTime()) / 1000
+  if (diff < 60) return '刚刚'
+  if (diff < 3600) return Math.floor(diff / 60) + ' 分钟前'
+  if (diff < 86400) return Math.floor(diff / 3600) + ' 小时前'
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
 // ========== 任务记录 ==========

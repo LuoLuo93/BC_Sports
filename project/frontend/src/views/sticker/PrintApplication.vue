@@ -267,7 +267,7 @@
     </el-dialog>
 
     <!-- 打印（通过 Agent 下发） -->
-    <el-dialog v-model="agentPrintVisible" title="打印 · 选择 Agent" width="550px" :close-on-click-modal="false">
+    <el-dialog v-model="agentPrintVisible" title="打印 · 选择 Agent" width="720px" :close-on-click-modal="false">
       <div v-if="agentLoading" style="text-align:center;padding:20px">
         <el-icon class="is-loading" :size="24"><Loading /></el-icon>
         <p style="margin-top:10px;color:#909399">正在加载 Agent 列表...</p>
@@ -276,12 +276,16 @@
         <p style="margin-bottom:12px;color:#606266;font-size:13px">
           选择一个在线的 Agent 下发打印任务（共 <b>{{ agentOrderDetailCount }}</b> 条明细）
         </p>
-        <el-table :data="agentList" border size="small" highlight-current-row
-          @current-change="handleAgentSelect" style="width:100%">
-          <el-table-column prop="agentId" label="Agent ID" width="120" />
-          <el-table-column prop="agentName" label="名称" width="120" />
-          <el-table-column prop="ipAddress" label="IP 地址" width="130" />
-          <el-table-column prop="status" label="状态" width="80" align="center">
+        <el-table :data="agentList" border size="small" style="width:100%">
+          <el-table-column label="选择" width="55" align="center">
+            <template #default="{ row }">
+              <el-radio v-model="selectedAgentId" :value="row.agentId" :disabled="row.status !== 1" @change="onAgentRadioChange(row)">&nbsp;</el-radio>
+            </template>
+          </el-table-column>
+          <el-table-column prop="agentId" label="Agent ID" width="140" />
+          <el-table-column prop="agentName" label="名称" min-width="150" show-overflow-tooltip />
+          <el-table-column prop="ipAddress" label="IP 地址" width="140" />
+          <el-table-column prop="status" label="状态" width="90" align="center">
             <template #default="{ row }">
               <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
                 {{ row.status === 1 ? '在线' : '离线' }}
@@ -430,6 +434,7 @@ const agentLoading = ref(false)
 const agentPrinting = ref(false)
 const agentList = ref([])
 const selectedAgent = ref(null)
+const selectedAgentId = ref('')
 const agentOrder = ref(null)
 const agentOrderDetailCount = computed(() => agentOrder.value?.details?.length || 0)
 
@@ -529,6 +534,7 @@ async function confirmReview() {
 async function handleAgentPrint(row) {
   agentOrder.value = null
   selectedAgent.value = null
+  selectedAgentId.value = ''
   agentPrinting.value = false
 
   // 加载订单详情
@@ -555,7 +561,7 @@ async function handleAgentPrint(row) {
   agentPrintVisible.value = true
 }
 
-function handleAgentSelect(row) {
+function onAgentRadioChange(row) {
   selectedAgent.value = row
 }
 

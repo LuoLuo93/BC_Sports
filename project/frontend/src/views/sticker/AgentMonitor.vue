@@ -71,22 +71,25 @@
     </el-card>
 
     <!-- 任务记录弹窗 -->
-    <el-dialog v-model="taskDialogVisible" :title="`${currentAgent} - 打印任务`" width="900px">
+    <el-dialog v-model="taskDialogVisible" :title="`${currentAgent} - 打印任务`" width="1100px">
       <el-table :data="taskList" border size="small">
-        <el-table-column prop="taskNo" label="任务ID" width="100" show-overflow-tooltip />
-        <el-table-column prop="orderNo" label="申请单号" width="150" />
-        <el-table-column prop="materialNumber" label="货号" width="120" />
-        <el-table-column prop="materialName" label="货品名称" width="150" />
-        <el-table-column prop="sizeName" label="尺码" width="60" />
-        <el-table-column prop="printQty" label="数量" width="60" />
-        <el-table-column prop="status" label="状态" width="80" align="center">
+        <el-table-column prop="taskId" label="任务ID" width="130" show-overflow-tooltip />
+        <el-table-column prop="orderNo" label="申请单号" width="170" show-overflow-tooltip />
+        <el-table-column prop="materialNumber" label="货号" width="140" show-overflow-tooltip />
+        <el-table-column prop="materialName" label="货品名称" min-width="170" show-overflow-tooltip />
+        <el-table-column prop="sizeName" label="尺码" width="70" align="center" />
+        <el-table-column prop="printQty" label="数量" width="70" align="center" />
+        <el-table-column prop="status" label="状态" width="100" align="center">
           <template #default="{ row }">
-            <el-tag :type="statusTagType(row.status)" size="small">
-              {{ statusLabel(row.status) }}
-            </el-tag>
+            <el-tooltip v-if="row.status === 3 && row.errorMsg" :content="row.errorMsg" placement="top">
+              <el-tag :type="statusTagType(row.status)" size="small">{{ statusLabel(row.status) }}</el-tag>
+            </el-tooltip>
+            <el-tag v-else :type="statusTagType(row.status)" size="small">{{ statusLabel(row.status) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="printTime" label="打印时间" width="170" />
+        <el-table-column label="打印时间" width="170" show-overflow-tooltip>
+          <template #default="{ row }">{{ row.printTime || '-' }}</template>
+        </el-table-column>
       </el-table>
       <div class="pagination-wrapper--sm" v-if="taskTotal > 0">
         <el-pagination
@@ -214,3 +217,10 @@ onUnmounted(() => {
   if (pollTimer) clearInterval(pollTimer)
 })
 </script>
+
+<style scoped>
+/* 表格单元格内容不换行，超长由 show-overflow-tooltip 以省略号+气泡展示 */
+:deep(.el-table .el-table__cell) {
+  white-space: nowrap;
+}
+</style>

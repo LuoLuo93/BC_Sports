@@ -47,7 +47,7 @@
           <el-table-column prop="printers" label="打印机" min-width="140" show-overflow-tooltip />
           <el-table-column label="最后心跳" width="160">
             <template #default="{ row }">
-              {{ fmtTime(row.lastHeartbeat) }}
+              {{ formatTime(row.lastHeartbeat) }}
             </template>
           </el-table-column>
           <el-table-column label="操作" width="120" align="center">
@@ -71,16 +71,19 @@
     </el-card>
 
     <!-- 任务记录弹窗 -->
-    <el-dialog v-model="taskDialogVisible" :title="`${currentAgent} - 打印任务`" width="900px">
+    <el-dialog v-model="taskDialogVisible" :title="`${currentAgent} - 打印任务`" width="1200px">
       <el-table :data="taskList" border size="small">
-        <el-table-column label="任务ID" min-width="200" show-overflow-tooltip>
+        <el-table-column label="任务ID" width="240" show-overflow-tooltip>
           <template #default="{ row }">
             <span>{{ row.taskId }}</span>
             <el-tag v-if="row.isReprint === 1" type="warning" size="small" effect="plain" style="margin-left:4px">补</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="orderNo" label="申请单号" min-width="170" show-overflow-tooltip />
-        <el-table-column prop="status" label="状态" width="110" align="center">
+        <el-table-column prop="orderNo" label="申请单号" width="190" show-overflow-tooltip />
+        <el-table-column prop="materialName" label="货品名称" min-width="160" show-overflow-tooltip />
+        <el-table-column prop="sizeName" label="尺码" width="70" align="center" />
+        <el-table-column prop="printQty" label="数量" width="70" align="center" />
+        <el-table-column prop="status" label="状态" width="100" align="center">
           <template #default="{ row }">
             <el-tooltip v-if="row.status === 3 && row.errorMsg" :content="row.errorMsg" placement="top">
               <el-tag :type="statusTagType(row.status)" size="small">{{ statusLabel(row.status) }}</el-tag>
@@ -88,10 +91,10 @@
             <el-tag v-else :type="statusTagType(row.status)" size="small">{{ statusLabel(row.status) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="打印时间" width="170" show-overflow-tooltip>
-          <template #default="{ row }">{{ row.printTime || '-' }}</template>
+        <el-table-column label="打印时间" width="160" show-overflow-tooltip>
+          <template #default="{ row }">{{ formatTime(row.printTime) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="90" align="center" fixed="right">
+        <el-table-column label="操作" width="80" align="center" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" plain size="small" @click="viewTaskDetail(row)">查看</el-button>
           </template>
@@ -136,9 +139,9 @@
         <el-descriptions-item label="模板文件" :span="2">{{ currentTask.templateFile || '-' }}</el-descriptions-item>
         <el-descriptions-item label="打印机">{{ currentTask.printerName || '-' }}</el-descriptions-item>
         <el-descriptions-item label="Agent ID">{{ currentTask.agentId || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="创建时间">{{ currentTask.createTime || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="派发时间">{{ currentTask.dispatchTime || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="打印时间" :span="2">{{ currentTask.printTime || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="创建时间">{{ formatTime(currentTask.createTime) }}</el-descriptions-item>
+        <el-descriptions-item label="派发时间">{{ formatTime(currentTask.dispatchTime) }}</el-descriptions-item>
+        <el-descriptions-item label="打印时间" :span="2">{{ formatTime(currentTask.printTime) }}</el-descriptions-item>
         <el-descriptions-item v-if="currentTask.errorMsg" label="错误信息" :span="2">
           <span style="color:#dc2626">{{ currentTask.errorMsg }}</span>
         </el-descriptions-item>
@@ -199,6 +202,7 @@ import { ElMessage } from 'element-plus'
 import { usePageQuery } from '@/composables/usePageQuery'
 import { getAgentPage, getAgentList, getAgentTasksPage, reprintTask } from '@/api/sticker'
 import { PAGE_SIZES } from '@/utils/appConfig'
+import { formatTime } from '@/utils/format'
 
 // ========== Agent 监控 ==========
 const { loading, tableData, total, query, loadData, handleSearch } = usePageQuery(
@@ -247,20 +251,6 @@ const STATUS_MAP = { 0: '待打印', 1: '打印中', 2: '成功', 3: '失败' }
 const STATUS_TAG = { 0: 'info', 1: 'warning', 2: 'success', 3: 'danger' }
 const statusLabel = (s) => STATUS_MAP[s] || '未知'
 const statusTagType = (s) => STATUS_TAG[s] || 'info'
-
-// 最后心跳相对时间（刚刚 / X分钟前），配合 30s 自动轮询动态刷新；
-// 状态标签以服务端 row.status 为准，相对时间仅作直观展示。
-function fmtTime(val) {
-  if (!val) return '-'
-  const d = new Date(val)
-  if (isNaN(d)) return val
-  const diff = (Date.now() - d.getTime()) / 1000
-  if (diff < 60) return '刚刚'
-  if (diff < 3600) return Math.floor(diff / 60) + ' 分钟前'
-  if (diff < 86400) return Math.floor(diff / 3600) + ' 小时前'
-  const pad = (n) => String(n).padStart(2, '0')
-  return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
 
 // ========== 任务记录 ==========
 const taskDialogVisible = ref(false)

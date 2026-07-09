@@ -352,12 +352,11 @@ import { usePageQuery } from '@/composables/usePageQuery'
 import { usePermission } from '@/composables/usePermission'
 import { useAuthStore } from '@/stores/auth'
 import { PAGE_SIZES } from '@/utils/appConfig'
+import { formatTime } from '@/utils/format'
 
 const { hasPermission } = usePermission()
 const authStore = useAuthStore()
 const viewAll = computed(() => hasPermission('sticker:print:all'))
-
-const currentTimeStr = new Date().toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
 
 function generateOrderNo() {
   const now = new Date()
@@ -460,7 +459,7 @@ function handleCreate() {
   form.orderNo = generateOrderNo()
   form.applicant = authStore.nickname || authStore.username || ''
   form.deptName = authStore.deptName || ''
-  form.createTime = new Date().toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+  form.createTime = formatTime(new Date())
   form.remark = ''
   form.details = []
   selectedRows.value = []

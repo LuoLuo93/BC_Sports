@@ -85,4 +85,8 @@ public class PrintTask {
     /** 补打原因（审计） */
     @TableField("reprint_reason")
     private String reprintReason;
+
+    /** 打印批次ID：同一次下发(含补打)的任务共享，用于区分同一批次 */
+    @TableField("batch_id")
+    private String batchId;
 }

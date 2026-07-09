@@ -21,7 +21,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -198,6 +200,9 @@ public class PrintTaskService {
 
         List<String> taskIds = new ArrayList<>();
 
+        // 本次下发共享同一个批次号，便于在任务记录中区分"同一批次"
+        String batchId = UUID.randomUUID().toString().replace("-", "");
+
         // 预加载每个模板的字段映射（按模板名称缓存，同一模板名称共享映射配置）
         Map<String, List<PrintFieldMapping>> mappingCache = new HashMap<>();
 
@@ -242,6 +247,7 @@ public class PrintTaskService {
             task.setStatus(0);
             task.setCreateTime(LocalDateTime.now());
             task.setRetryCount(0);
+            task.setBatchId(batchId);
 
             taskMapper.insert(task);
             taskIds.add(taskId);
@@ -286,6 +292,7 @@ public class PrintTaskService {
 
         PrintTask reprint = new PrintTask();
         reprint.setTaskId(UUID.randomUUID().toString().replace("-", ""));
+        reprint.setBatchId(UUID.randomUUID().toString().replace("-", ""));
         reprint.setOrderNo(source.getOrderNo());
         reprint.setOrderId(source.getOrderId());
         reprint.setMaterialNumber(source.getMaterialNumber());
@@ -320,14 +327,21 @@ public class PrintTaskService {
         );
     }
 
-    public IPage<PrintTask> getTasksByAgentIdPage(int pageNum, int pageSize, String agentId) {
-        return taskMapper.selectPage(
-            new Page<>(pageNum, pageSize),
-            new LambdaQueryWrapper<PrintTask>()
-                .eq(PrintTask::getAgentId, agentId)
-                .orderByDesc(PrintTask::getPrintTime)
-                .orderByDesc(PrintTask::getCreateTime)
-        );
+    /**
+     * 分页查询 Agent 的打印任务，支持按打印时间区间筛选。
+     * startDate/endDate 为 yyyy-MM-dd；筛选打印时间会自然排除未打印(printTime 为空)的任务。
+     */
+    public IPage<PrintTask> getTasksByAgentIdPage(int pageNum, int pageSize, String agentId, String startDate, String endDate) {
+        LambdaQueryWrapper<PrintTask> wrapper = new LambdaQueryWrapper<PrintTask>()
+                .eq(PrintTask::getAgentId, agentId);
+        if (startDate != null && !startDate.isBlank()) {
+            wrapper.ge(PrintTask::getPrintTime, LocalDate.parse(startDate).atStartOfDay());
+        }
+        if (endDate != null && !endDate.isBlank()) {
+            wrapper.le(PrintTask::getPrintTime, LocalDate.parse(endDate).atTime(LocalTime.MAX));
+        }
+        wrapper.orderByDesc(PrintTask::getPrintTime).orderByDesc(PrintTask::getCreateTime);
+        return taskMapper.selectPage(new Page<>(pageNum, pageSize), wrapper);
     }
 
     /**

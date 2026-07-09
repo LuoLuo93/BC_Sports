@@ -35,7 +35,7 @@
       <div class="table-responsive">
         <el-table v-loading="loading" :data="filteredData" border stripe>
           <el-table-column prop="agentId" label="Agent ID" width="120" />
-          <el-table-column prop="agentName" label="名称" min-width="180" show-overflow-tooltip />
+          <el-table-column prop="agentName" label="名称" width="130" show-overflow-tooltip />
           <el-table-column prop="ipAddress" label="IP 地址" width="140" />
           <el-table-column label="状态" width="80" align="center">
             <template #default="{ row }">
@@ -45,10 +45,8 @@
             </template>
           </el-table-column>
           <el-table-column prop="printers" label="打印机" min-width="140" show-overflow-tooltip />
-          <el-table-column label="最后心跳" width="160">
-            <template #default="{ row }">
-              {{ formatTime(row.lastHeartbeat) }}
-            </template>
+          <el-table-column label="最后心跳" width="180">
+            <template #default="{ row }">{{ formatTime(row.lastHeartbeat) }}</template>
           </el-table-column>
           <el-table-column label="操作" width="120" align="center">
             <template #default="{ row }">
@@ -72,14 +70,36 @@
 
     <!-- 任务记录弹窗 -->
     <el-dialog v-model="taskDialogVisible" :title="`${currentAgent} - 打印任务`" width="1200px">
+      <div class="task-filter-bar">
+        <span class="task-filter-label">打印时间</span>
+        <el-date-picker
+          v-model="taskDateRange"
+          type="daterange"
+          range-separator="至"
+          start-placeholder="开始日期"
+          end-placeholder="结束日期"
+          value-format="YYYY-MM-DD"
+          size="small"
+          style="width:280px"
+          :clearable="true"
+          @change="onTaskDateChange"
+        />
+        <el-button v-if="taskDateRange" size="small" link type="primary" @click="clearTaskDate">清除</el-button>
+      </div>
       <el-table :data="taskList" border size="small">
-        <el-table-column label="任务ID" width="240" show-overflow-tooltip>
+        <el-table-column label="任务ID" width="210" show-overflow-tooltip>
           <template #default="{ row }">
             <span>{{ row.taskId }}</span>
             <el-tag v-if="row.isReprint === 1" type="warning" size="small" effect="plain" style="margin-left:4px">补</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="orderNo" label="申请单号" width="190" show-overflow-tooltip />
+        <el-table-column label="批次" width="120" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span v-if="row.batchId" class="batch-tag">{{ row.batchId.substring(0, 8) }}</span>
+            <span v-else style="color:#c0c4cc">-</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="orderNo" label="申请单号" width="180" show-overflow-tooltip />
         <el-table-column prop="materialName" label="货品名称" min-width="160" show-overflow-tooltip />
         <el-table-column prop="sizeName" label="尺码" width="70" align="center" />
         <el-table-column prop="printQty" label="数量" width="70" align="center" />
@@ -118,6 +138,7 @@
     <el-dialog v-model="taskDetailVisible" title="任务详情" width="720px" append-to-body>
       <el-descriptions v-if="currentTask" :column="2" border size="small">
         <el-descriptions-item label="任务ID" :span="2">{{ currentTask.taskId || '-' }}</el-descriptions-item>
+        <el-descriptions-item v-if="currentTask.batchId" label="打印批次" :span="2">{{ currentTask.batchId }}</el-descriptions-item>
         <el-descriptions-item v-if="currentTask.isReprint === 1" label="补打任务">
           <el-tag type="warning" size="small">是</el-tag>
         </el-descriptions-item>
@@ -258,7 +279,8 @@ const taskList = ref([])
 const taskTotal = ref(0)
 const currentAgent = ref('')
 const currentAgentId = ref('')
-const taskQuery = reactive({ pageNum: 1, pageSize: 20 })
+const taskQuery = reactive({ pageNum: 1, pageSize: 20, startDate: '', endDate: '' })
+const taskDateRange = ref(null)
 
 // 任务详情
 const taskDetailVisible = ref(false)
@@ -278,8 +300,32 @@ async function viewTasks(row) {
   currentAgent.value = row.agentName || row.agentId
   currentAgentId.value = row.agentId
   taskQuery.pageNum = 1
+  taskQuery.startDate = ''
+  taskQuery.endDate = ''
+  taskDateRange.value = null
   taskDialogVisible.value = true
   await loadTasks()
+}
+
+// 打印时间筛选
+function onTaskDateChange(val) {
+  if (val && val.length === 2) {
+    taskQuery.startDate = val[0]
+    taskQuery.endDate = val[1]
+  } else {
+    taskQuery.startDate = ''
+    taskQuery.endDate = ''
+  }
+  taskQuery.pageNum = 1
+  loadTasks()
+}
+
+function clearTaskDate() {
+  taskDateRange.value = null
+  taskQuery.startDate = ''
+  taskQuery.endDate = ''
+  taskQuery.pageNum = 1
+  loadTasks()
 }
 
 async function loadTasks() {
@@ -359,5 +405,30 @@ onUnmounted(() => {
 /* 表格单元格内容不换行，超长由 show-overflow-tooltip 以省略号+气泡展示 */
 :deep(.el-table .el-table__cell) {
   white-space: nowrap;
+}
+
+/* 任务记录筛选栏 */
+.task-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.task-filter-label {
+  font-size: 13px;
+  color: #606266;
+  white-space: nowrap;
+}
+
+/* 批次标签：等宽字体 + 浅底，相同批次一目了然 */
+.batch-tag {
+  display: inline-block;
+  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  font-size: 12px;
+  color: #475569;
+  background: #f1f5f9;
+  padding: 1px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.04em;
 }
 </style>

@@ -334,6 +334,12 @@ function handleLogout() {
   height: 100vh;
   overflow: hidden;
   background: var(--bc-bg);
+  /* 布局尺寸变量 —— 详情页高度 calc 统一引用，改这里即可全局生效 */
+  --layout-header-h: 56px;
+  --layout-tab-h: 38px;
+  --layout-footer-h: 32px;
+  --layout-pad-y: 20px;
+  --layout-pad-x: 24px;
 }
 
 /* ===== Sidebar ===== */
@@ -476,7 +482,7 @@ function handleLogout() {
 
 /* ===== Top Navbar ===== */
 .top-navbar {
-  height: 56px;
+  height: var(--layout-header-h);
   background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -566,7 +572,7 @@ function handleLogout() {
 
 /* ===== Tab Bar ===== */
 .tab-bar {
-  height: 38px;
+  height: var(--layout-tab-h);
   background: var(--bc-bg-white);
   border-bottom: 1px solid var(--bc-border);
   display: flex;
@@ -652,7 +658,7 @@ function handleLogout() {
 .content-wrapper {
   flex: 1;
   overflow-y: auto;
-  padding: 20px 24px;
+  padding: var(--layout-pad-y) var(--layout-pad-x);
   background: var(--el-bg-color-page);
   display: flex;
   flex-direction: column;
@@ -660,7 +666,7 @@ function handleLogout() {
 
 /* ===== Footer ===== */
 .footer {
-  height: 32px;
+  height: var(--layout-footer-h);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -673,11 +679,12 @@ function handleLogout() {
 
 /* ===== Mobile Responsive ===== */
 @media (max-width: 768px) {
+  .layout {
+    --layout-pad-y: 12px;
+    --layout-pad-x: 12px;
+  }
   .main-content {
     margin-left: 0 !important;
-  }
-  .content-wrapper {
-    padding: 12px !important;
   }
   .top-navbar {
     padding: 0 12px;

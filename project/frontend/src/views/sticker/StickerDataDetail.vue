@@ -133,7 +133,7 @@ function parseSizes(s) {
 }
 
 function handleSave() {
-  ElMessage.success('保存成功（前端演示，后端接口待对接）')
+  ElMessage.info('后端接口待对接')
 }
 
 onMounted(() => {
@@ -151,8 +151,8 @@ onMounted(() => {
 .form-view {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 56px - 38px - 32px - 40px);
-  margin: -20px -24px;
+  height: calc(100vh - var(--layout-header-h) - var(--layout-tab-h) - var(--layout-footer-h) - var(--layout-pad-y) * 2);
+  margin: calc(-1 * var(--layout-pad-y)) calc(-1 * var(--layout-pad-x));
   padding: 0;
   background: #f0f2f5;
   overflow-y: auto;

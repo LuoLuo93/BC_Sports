@@ -382,10 +382,10 @@ onUnmounted(() => {
 .cockpit {
   position: relative;
   width: 100%;
-  height: calc(100vh - 56px - 38px - 24px);
+  height: calc(100vh - var(--layout-header-h) - var(--layout-tab-h) - var(--layout-footer-h) - var(--layout-pad-y) * 2);
   min-height: 680px;
   padding: 20px 24px 16px;
-  margin: -20px -24px;
+  margin: calc(-1 * var(--layout-pad-y)) calc(-1 * var(--layout-pad-x));
   display: flex;
   flex-direction: column;
   gap: 16px;

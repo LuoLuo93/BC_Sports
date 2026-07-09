@@ -145,8 +145,8 @@ onMounted(() => {
 .form-view {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 56px - 38px - 32px - 40px);
-  margin: -20px -24px;
+  height: calc(100vh - var(--layout-header-h) - var(--layout-tab-h) - var(--layout-footer-h) - var(--layout-pad-y) * 2);
+  margin: calc(-1 * var(--layout-pad-y)) calc(-1 * var(--layout-pad-x));
   padding: 0;
   background: #f0f2f5;
 }

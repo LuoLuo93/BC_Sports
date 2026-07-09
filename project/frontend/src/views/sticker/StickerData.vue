@@ -133,13 +133,16 @@ async function loadBrands() {
 
 function restoreAndLoad() {
   const saved = sessionStorage.getItem('stickerDataQuery')
-  if (saved) {
+  if (!saved) return
+  try {
     const q = JSON.parse(saved)
     query.materialNumber = q.materialNumber || ''
     query.styleNumber = q.styleNumber || ''
     query.materialName = q.materialName || ''
     query.brandId = q.brandId || ''
     loadData()
+  } catch {
+    sessionStorage.removeItem('stickerDataQuery')
   }
 }
 

@@ -2,8 +2,8 @@
   <div class="login-layout">
     <!-- Left: Brand -->
     <div class="brand-side">
-      <div class="brand-image-fallback"></div>
-      <img class="brand-image" src="/index.avif" alt="Outdoor" />
+      <div v-if="!brandLoaded" class="brand-image-fallback"></div>
+      <img class="brand-image" src="/index.avif" alt="Outdoor" @load="brandLoaded = true" />
       <div class="brand-overlay"></div>
 
       <!-- Noise texture -->
@@ -22,7 +22,7 @@
 
       <!-- Floating particles -->
       <div class="particles">
-        <span v-for="i in 20" :key="i" class="particle" :class="'p-' + (i % 3)" :style="particleStyle(i)"></span>
+          <span v-for="(style, i) in particleStyles" :key="i" class="particle" :class="'p-' + (i % 3)" :style="style"></span>
       </div>
 
       <!-- Mountain silhouette with glow -->
@@ -160,7 +160,6 @@
             class="btn-adventure"
             :class="{ 'is-loading': loading }"
             :disabled="loading"
-            @click.prevent="handleLogin"
           >
             <span class="btn-bg"></span>
             <span class="btn-shimmer"></span>
@@ -189,7 +188,7 @@
       </div>
 
       <!-- 帮助对话框 -->
-      <el-dialog v-model="helpDialogVisible" title="授权帮助" width="400px" :append-to-body="true">
+      <el-dialog v-model="helpDialogVisible" title="授权帮助" width="400px">
         <div class="help-content">
           <p><strong>无法登录？请尝试以下方案：</strong></p>
           <ul>
@@ -249,6 +248,8 @@ const systemName = ref('BC体育数据管理系统')
 const captchaEnabled = ref(false)
 const captchaKey = ref('')
 const captchaImage = ref('')
+const particleStyles = ref([])
+const brandLoaded = ref(false)
 
 const form = ref({
   username: '',
@@ -266,6 +267,7 @@ onMounted(async () => {
   if (route.query.kicked === '1') {
     errorMsg.value = '您的账号已在其他设备登录，请重新登录'
   }
+  particleStyles.value = generateParticles()
   try {
     const res = await getPublicConfig()
     if (res.code === 200 && res.data) {
@@ -290,16 +292,20 @@ function checkCapsLock(e) {
   }
 }
 
-function particleStyle(i) {
-  const size = 2 + Math.random() * 4
-  return {
-    width: size + 'px',
-    height: size + 'px',
-    left: (3 + Math.random() * 94) + '%',
-    top: (3 + Math.random() * 70) + '%',
-    animationDelay: (i * 0.8) + 's',
-    animationDuration: (8 + Math.random() * 12) + 's'
+function generateParticles() {
+  const styles = []
+  for (let i = 0; i < 20; i++) {
+    const size = 2 + Math.random() * 4
+    styles.push({
+      width: size + 'px',
+      height: size + 'px',
+      left: (3 + Math.random() * 94) + '%',
+      top: (3 + Math.random() * 70) + '%',
+      animationDelay: (i * 0.8) + 's',
+      animationDuration: (8 + Math.random() * 12) + 's'
+    })
   }
+  return styles
 }
 
 async function loadCaptcha() {
@@ -1258,7 +1264,7 @@ async function handleLogin() {
    ============================================================ */
 @media (max-width: 1024px) {
   .brand-side { display: none; }
-  .form-side { flex: 1; }
+  .form-side { flex: 1; padding: 32px 24px; }
   .form-wrapper { background: transparent; backdrop-filter: none; border: none; box-shadow: none; padding: 0; border-radius: 0; }
 }
 

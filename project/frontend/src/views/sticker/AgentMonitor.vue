@@ -133,7 +133,7 @@
     </el-dialog>
 
     <!-- 任务详情弹窗 -->
-    <el-dialog v-model="taskDetailVisible" title="任务详情" width="860px" append-to-body>
+    <el-dialog v-model="taskDetailVisible" title="任务详情" width="860px">
       <template v-if="currentTask">
         <!-- 顶部状态栏 -->
         <div class="detail-header">
@@ -291,7 +291,7 @@
     </el-dialog>
 
     <!-- 补打 · 选择 Agent -->
-    <el-dialog v-model="reprintDialogVisible" title="补打 · 选择 Agent" width="720px" append-to-body :close-on-click-modal="false">
+    <el-dialog v-model="reprintDialogVisible" title="补打 · 选择 Agent" width="720px" :close-on-click-modal="false">
       <p style="margin-bottom:12px;color:#606266;font-size:13px">
         选择一个在线的 Agent 下发补打任务（共 <b>{{ currentTask?.printQty ?? 0 }}</b> 张）
       </p>

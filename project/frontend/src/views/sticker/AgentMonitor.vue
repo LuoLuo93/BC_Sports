@@ -577,7 +577,7 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-/* 左右两列布局 */
+/* 两列布局 */
 .detail-body {
   display: flex;
   gap: 20px;
@@ -585,6 +585,20 @@ onUnmounted(() => {
 .detail-col {
   flex: 1;
   min-width: 0;
+}
+
+/* 弹窗内部滚动，防止撑开页面 */
+:deep(.el-dialog) {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 40px);
+  margin: 20px auto;
+}
+:deep(.el-dialog__body) {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  padding: 16px 20px;
 }
 
 /* 分组标题 */

@@ -395,16 +395,9 @@ onMounted(async () => {
       }
       // 搜索区类型自动匹配
       searchType.value = entType
-      // 自动搜索当前实体
       searchKeyword.value = extId
-      await searchEntities()
-      // 自动选中搜索结果中的当前实体
-      nextTick(() => {
-        const match = entityList.value.find(e => e.CODE === extId)
-        if (match && entityTableRef.value) {
-          entityTableRef.value.toggleRowSelection(match, true)
-        }
-      })
+      // 编辑模式搜索栏已禁用，直接显示当前实体，不走模糊搜索避免带出无关结果
+      entityList.value = [{ CODE: extId, NAME: editEntityName.value || extId }]
     }
   }
 })
@@ -450,16 +443,9 @@ watch(() => route.fullPath, async () => {
     }
     // 搜索区类型自动匹配
     searchType.value = finalEntType
-    // 自动搜索当前实体
     searchKeyword.value = finalExtId
-    await searchEntities()
-    // 自动选中搜索结果中的当前实体
-    nextTick(() => {
-      const match = entityList.value.find(e => e.CODE === finalExtId)
-      if (match && entityTableRef.value) {
-        entityTableRef.value.toggleRowSelection(match, true)
-      }
-    })
+    // 编辑模式搜索栏已禁用，直接显示当前实体，不走模糊搜索避免带出无关结果
+    entityList.value = [{ CODE: finalExtId, NAME: editEntityName.value || finalExtId }]
   } else {
     searchType.value = 'store'
   }

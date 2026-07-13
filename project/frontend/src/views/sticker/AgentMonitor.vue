@@ -69,7 +69,7 @@
     </el-card>
 
     <!-- 任务记录弹窗 -->
-    <el-dialog v-model="taskDialogVisible" :title="`${currentAgent} - 打印任务`" width="1300px">
+    <el-dialog v-model="taskDialogVisible" :title="`${currentAgent} - 打印任务`" width="1300px" class="task-dialog">
       <div class="task-filter-bar">
         <span class="task-filter-label">批次查询</span>
         <el-input
@@ -84,7 +84,7 @@
         <el-button type="primary" size="small" @click="onBatchSearch">查询</el-button>
         <el-button v-if="taskQuery.batchId" size="small" link type="primary" @click="clearBatch">清除</el-button>
       </div>
-      <el-table :data="taskList" border size="small">
+      <el-table :data="taskList" border size="small" height="100%">
         <el-table-column label="任务ID" width="210" show-overflow-tooltip>
           <template #default="{ row }">
             <span>{{ row.taskId }}</span>
@@ -124,8 +124,7 @@
           v-model:page-size="taskQuery.pageSize"
           :total="taskTotal"
           :page-sizes="PAGE_SIZES"
-          layout="total, sizes, prev, pager, next"
-          size="small"
+          layout="total, sizes, prev, pager, next, jumper"
           @size-change="() => { taskQuery.pageNum = 1; loadTasks() }"
           @current-change="loadTasks"
         />
@@ -514,6 +513,21 @@ onUnmounted(() => {
 /* 表格单元格内容不换行，超长由 show-overflow-tooltip 以省略号+气泡展示 */
 :deep(.el-table .el-table__cell) {
   white-space: nowrap;
+}
+
+/* 任务记录弹窗：body 用 flex 布局，表格撑满、分页固定底部 */
+.task-dialog :deep(.el-dialog__body) {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 200px);
+  overflow: hidden;
+}
+.task-dialog :deep(.el-dialog__body > .el-table) {
+  flex: 1;
+  min-height: 0;
+}
+.task-dialog :deep(.el-dialog__body > .pagination-wrapper--sm) {
+  flex-shrink: 0;
 }
 
 /* 任务记录筛选栏 */

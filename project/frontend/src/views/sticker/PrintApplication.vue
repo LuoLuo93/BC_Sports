@@ -105,7 +105,7 @@
           </div>
           <div class="info-item">
             <span class="info-label">申请时间</span>
-            <span class="info-value">{{ form.createTime }}</span>
+            <span class="info-value">{{ formatTime(form.createTime) }}</span>
           </div>
           <div class="info-item" style="flex:1.5">
             <span class="info-label">备注</span>
@@ -480,6 +480,7 @@ function handleCreate() {
   selectedProducts.value = []
   loadBrands()
   formVisible.value = true
+  loadDefaultProducts()
 }
 
 async function handleEdit(row) {
@@ -501,6 +502,20 @@ async function handleEdit(row) {
   selectedProducts.value = []
   loadBrands()
   formVisible.value = true
+  loadDefaultProducts()
+}
+
+// 进入表单时默认加载前 20 条货品
+async function loadDefaultProducts() {
+  productLoading.value = true
+  try {
+    const { data } = await searchProducts({})
+    productList.value = (data || []).slice(0, 20)
+  } catch {
+    productList.value = []
+  } finally {
+    productLoading.value = false
+  }
 }
 
 function handleView(row) {
@@ -1054,7 +1069,7 @@ onBeforeUnmount(() => {
 }
 .sa-list {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 6px;
   max-height: 360px;
   overflow-y: auto;

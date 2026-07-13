@@ -515,12 +515,23 @@ onUnmounted(() => {
   white-space: nowrap;
 }
 
-/* 任务记录弹窗：body 用 flex 布局，表格撑满、分页固定底部 */
+/* 任务记录弹窗：筛选栏+分页固定，表格内部滚动 */
+.task-dialog :deep(.el-dialog) {
+  display: flex;
+  flex-direction: column;
+  margin-top: 8vh !important;
+  margin-bottom: 4vh !important;
+}
 .task-dialog :deep(.el-dialog__body) {
   display: flex;
   flex-direction: column;
-  max-height: calc(100vh - 200px);
+  flex: 1;
+  min-height: 0;
   overflow: hidden;
+  padding: 12px 20px;
+}
+.task-dialog :deep(.el-dialog__body > .task-filter-bar) {
+  flex-shrink: 0;
 }
 .task-dialog :deep(.el-dialog__body > .el-table) {
   flex: 1;

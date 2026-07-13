@@ -23,6 +23,7 @@
         <div class="card-header-row">
           <span class="card-header-title">揽众客户押金资料</span>
           <el-button v-if="hasPermission('erp:lzCustomer:add')" type="primary" size="small" :icon="Plus" @click="handleAdd">新增</el-button>
+          <el-button v-if="hasPermission('erp:lzCustomer:import')" type="warning" size="small" :icon="Upload" @click="showImportDialog = true">批量导入</el-button>
         </div>
       </template>
 
@@ -81,6 +82,39 @@
         </div>
       </template>
     </el-dialog>
+
+    <!-- 批量导入弹窗 -->
+    <el-dialog v-model="showImportDialog" title="批量导入揽众客户资料" width="520px" destroy-on-close @open="resetImportState">
+      <div class="import-zone">
+        <el-upload :limit="1" accept=".xlsx,.xls" :auto-upload="false" :before-upload="beforeUpload" drag :on-change="handleFileChange" :on-remove="handleFileRemove" :on-exceed="() => ElMessage.warning('只能上传一个文件')">
+          <el-icon :size="40" style="color:var(--el-text-color-placeholder)"><Upload /></el-icon>
+          <div style="margin-top:8px">将 Excel 文件拖到此处，或 <em>点击上传</em></div>
+          <template #tip>
+            <div class="upload-hint">仅支持 .xlsx / .xls 格式，店铺代码重复时自动更新</div>
+          </template>
+        </el-upload>
+        <div style="margin-top:12px;text-align:center">
+          <el-button link type="primary" :loading="templateLoading" @click="handleDownloadTemplate">下载导入模板</el-button>
+        </div>
+      </div>
+
+      <div v-if="importResult" style="margin-top:16px">
+        <el-alert
+          :title="`导入完成：共 ${importResult.total} 条，成功 ${importResult.success} 条，失败 ${importResult.fail} 条`"
+          :type="importResult.fail > 0 ? 'warning' : 'success'"
+          :closable="false"
+          show-icon
+        />
+        <div v-if="importResult.errors?.length" style="margin-top:8px;max-height:120px;overflow-y:auto">
+          <div v-for="(err, i) in importResult.errors" :key="i" style="font-size:12px;color:#f56c6c;padding:2px 0">{{ err }}</div>
+        </div>
+      </div>
+
+      <template #footer>
+        <el-button @click="showImportDialog = false">关闭</el-button>
+        <el-button type="primary" :loading="importLoading" :disabled="importLoading" @click="submitImport">开始导入</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -88,8 +122,8 @@
 defineOptions({ name: 'LzCustomer' })
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Search, RefreshRight } from '@element-plus/icons-vue'
-import { getLzCustomerPage, getLzCustomer, createLzCustomer, updateLzCustomer, deleteLzCustomer } from '@/api/erp'
+import { Plus, Search, RefreshRight, Upload } from '@element-plus/icons-vue'
+import { getLzCustomerPage, getLzCustomer, createLzCustomer, updateLzCustomer, deleteLzCustomer, importLzCustomer, getLzCustomerTemplate } from '@/api/erp'
 import { usePermission } from '@/composables/usePermission'
 import { usePageQuery } from '@/composables/usePageQuery'
 import { PAGE_SIZES } from '@/utils/appConfig'
@@ -157,6 +191,74 @@ async function handleSubmit() {
     loadData()
   } finally {
     submitting.value = false
+  }
+}
+
+// ========== 批量导入 ==========
+const showImportDialog = ref(false)
+const importLoading = ref(false)
+const templateLoading = ref(false)
+const selectedFile = ref(null)
+const importResult = ref(null)
+const MAX_FILE_SIZE = 50 * 1024 * 1024
+
+function resetImportState() {
+  selectedFile.value = null
+  importResult.value = null
+}
+
+function beforeUpload(file) {
+  const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls')
+  if (!isExcel) { ElMessage.error('仅支持 .xlsx / .xls 格式的 Excel 文件'); return false }
+  if (file.size > MAX_FILE_SIZE) { ElMessage.error('文件大小不能超过 50MB'); return false }
+  return true
+}
+
+function handleFileChange(file) {
+  if (beforeUpload(file.raw)) {
+    selectedFile.value = file.raw
+    importResult.value = null
+  }
+}
+
+function handleFileRemove() {
+  selectedFile.value = null
+}
+
+async function submitImport() {
+  if (!selectedFile.value) { ElMessage.warning('请先选择 Excel 文件'); return }
+  importLoading.value = true
+  try {
+    const formData = new FormData()
+    formData.append('file', selectedFile.value)
+    const res = await importLzCustomer(formData)
+    importResult.value = res.data
+    if (res.data?.success > 0) {
+      ElMessage.success('导入完成')
+      loadData()
+    }
+  } catch (e) {
+    ElMessage.error('导入失败：' + (e.message || '服务器错误'))
+  } finally {
+    importLoading.value = false
+  }
+}
+
+async function handleDownloadTemplate() {
+  templateLoading.value = true
+  try {
+    const res = await getLzCustomerTemplate()
+    const blob = new Blob([res], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = '揽众客户资料导入模板.xlsx'
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch (e) {
+    ElMessage.error('模板下载失败')
+  } finally {
+    templateLoading.value = false
   }
 }
 

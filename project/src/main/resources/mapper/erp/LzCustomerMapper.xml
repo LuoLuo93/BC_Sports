@@ -62,4 +62,30 @@
         DELETE FROM LZCUSTOMERINFOR WHERE ID = #{id}
     </delete>
 
+    <!-- 批量 upsert：以 SHOPCODE 为业务键，存在则更新，不存在则新增 -->
+    <insert id="mergeBatch" parameterType="java.util.List">
+        MERGE INTO LZCUSTOMERINFOR target
+        USING (
+            <foreach collection="list" item="item" separator=" UNION ALL ">
+                SELECT
+                    #{item.shopCode, jdbcType=VARCHAR} AS shopcode,
+                    #{item.shopName, jdbcType=VARCHAR} AS shopname,
+                    #{item.shopBoss, jdbcType=VARCHAR} AS shopboss,
+                    #{item.fundingLimit, jdbcType=VARCHAR} AS fundinglimit,
+                    #{item.fundingRatio, jdbcType=VARCHAR} AS fundingratio
+                FROM dual
+            </foreach>
+        ) source
+        ON (target.SHOPCODE = source.shopcode)
+        WHEN MATCHED THEN
+            UPDATE SET
+                target.SHOPNAME     = source.shopname,
+                target.SHOPBOSS     = source.shopboss,
+                target.FUNDINGLIMIT = source.fundinglimit,
+                target.FUNDINGRATIO = source.fundingratio
+        WHEN NOT MATCHED THEN
+            INSERT (SHOPCODE, SHOPNAME, SHOPBOSS, FUNDINGLIMIT, FUNDINGRATIO)
+            VALUES (source.shopcode, source.shopname, source.shopboss, source.fundinglimit, source.fundingratio)
+    </insert>
+
 </mapper>

@@ -29,4 +29,6 @@ public interface LzCustomerMapper {
     int updateLzCustomer(@Param("map") Map<String, Object> map);
 
     int deleteLzCustomer(@Param("id") Long id);
+
+    int mergeBatch(@Param("list") List<Map<String, Object>> list);
 }

@@ -88,3 +88,11 @@ export function updateLzCustomer(id, data) {
 export function deleteLzCustomer(id) {
   return request.delete(`/api/lz-customer/${id}`)
 }
+
+export function importLzCustomer(data) {
+  return request.post('/api/lz-customer/import', data, { timeout: 600000 })
+}
+
+export function getLzCustomerTemplate() {
+  return request.get('/api/lz-customer/template', { responseType: 'blob' })
+}

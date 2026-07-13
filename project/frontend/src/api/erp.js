@@ -67,3 +67,24 @@ export function getErpCustomerPage(params) {
 export function getErpCustomerListAll() {
   return request.get('/api/erp-customer/list-all')
 }
+
+// 揽众客户押金资料 (bjerp LZCUSTOMERINFOR)
+export function getLzCustomerPage(params) {
+  return request.get('/api/lz-customer/page', { params })
+}
+
+export function getLzCustomer(id) {
+  return request.get(`/api/lz-customer/${id}`)
+}
+
+export function createLzCustomer(data) {
+  return request.post('/api/lz-customer', data)
+}
+
+export function updateLzCustomer(id, data) {
+  return request.put(`/api/lz-customer/${id}`, data)
+}
+
+export function deleteLzCustomer(id) {
+  return request.delete(`/api/lz-customer/${id}`)
+}

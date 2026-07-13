@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bcsport.admin.erpmapper.LzCustomerMapper">
+
+    <sql id="searchWhere">
+        <where>
+            <if test="shopCode != null and shopCode != ''">
+                AND SHOPCODE LIKE '%' || #{shopCode} || '%' ESCAPE '\'
+            </if>
+            <if test="shopName != null and shopName != ''">
+                AND SHOPNAME LIKE '%' || #{shopName} || '%' ESCAPE '\'
+            </if>
+            <if test="shopBoss != null and shopBoss != ''">
+                AND SHOPBOSS LIKE '%' || #{shopBoss} || '%' ESCAPE '\'
+            </if>
+        </where>
+    </sql>
+
+    <select id="countLzCustomers" resultType="long">
+        SELECT COUNT(*) FROM LZCUSTOMERINFOR
+        <include refid="searchWhere"/>
+    </select>
+
+    <select id="searchLzCustomers" resultType="java.util.Map">
+        SELECT * FROM (
+            SELECT ID, SHOPCODE, SHOPNAME, SHOPBOSS, FUNDINGLIMIT, FUNDINGRATIO,
+                   ROW_NUMBER() OVER (ORDER BY ID DESC) AS RN
+            FROM LZCUSTOMERINFOR
+            <include refid="searchWhere"/>
+        ) WHERE RN &gt; #{offset} AND RN &lt;= #{offset} + #{pageSize}
+    </select>
+
+    <select id="getLzCustomerById" resultType="java.util.Map">
+        SELECT ID, SHOPCODE, SHOPNAME, SHOPBOSS, FUNDINGLIMIT, FUNDINGRATIO
+        FROM LZCUSTOMERINFOR
+        WHERE ID = #{id}
+    </select>
+
+    <insert id="insertLzCustomer">
+        INSERT INTO LZCUSTOMERINFOR (SHOPCODE, SHOPNAME, SHOPBOSS, FUNDINGLIMIT, FUNDINGRATIO)
+        VALUES (
+            #{map.shopCode, jdbcType=VARCHAR},
+            #{map.shopName, jdbcType=VARCHAR},
+            #{map.shopBoss, jdbcType=VARCHAR},
+            #{map.fundingLimit, jdbcType=VARCHAR},
+            #{map.fundingRatio, jdbcType=VARCHAR}
+        )
+    </insert>
+
+    <update id="updateLzCustomer">
+        UPDATE LZCUSTOMERINFOR
+        SET
+            SHOPCODE     = #{map.shopCode, jdbcType=VARCHAR},
+            SHOPNAME     = #{map.shopName, jdbcType=VARCHAR},
+            SHOPBOSS     = #{map.shopBoss, jdbcType=VARCHAR},
+            FUNDINGLIMIT = #{map.fundingLimit, jdbcType=VARCHAR},
+            FUNDINGRATIO = #{map.fundingRatio, jdbcType=VARCHAR}
+        WHERE ID = #{map.id}
+    </update>
+
+    <delete id="deleteLzCustomer">
+        DELETE FROM LZCUSTOMERINFOR WHERE ID = #{id}
+    </delete>
+
+</mapper>

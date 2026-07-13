@@ -50,7 +50,9 @@
               </template>
             </el-table-column>
             <el-table-column prop="remark" label="备注" show-overflow-tooltip />
-            <el-table-column prop="createTime" label="创建时间" width="180" />
+            <el-table-column prop="createTime" label="创建时间" width="180">
+              <template #default="{ row }">{{ formatTime(row.createTime) }}</template>
+            </el-table-column>
             <el-table-column label="操作" width="460" align="center" fixed="right">
               <template #default="{ row }">
                 <el-button type="success" plain size="small" @click="handleView(row)">查看</el-button>
@@ -306,7 +308,7 @@
     </el-dialog>
 
     <!-- 尺码赋值 -->
-    <el-dialog v-model="showSizeAssignDialog" title="尺码赋值" width="520px" class="size-assign-dialog" destroy-on-close>
+    <el-dialog v-model="showSizeAssignDialog" title="尺码赋值" width="720px" class="size-assign-dialog" destroy-on-close>
       <div class="sa-header">
         <div class="sa-header-bar"></div>
         <div class="sa-header-info">
@@ -319,17 +321,18 @@
         </div>
       </div>
       <div class="sa-toolbar">
+        <el-input v-model="sizeAssignSearch" placeholder="搜索尺码" size="small" clearable style="width:160px" />
         <el-checkbox v-model="sizeAssignAllChecked" @change="toggleSizeAssignAll">全选</el-checkbox>
         <span class="sa-toolbar-count">已选 <b>{{ sizeAssignCheckedCount }}</b> / {{ sizeAssignOptions.length }} 个尺码</span>
       </div>
       <div class="sa-list">
-        <div v-for="(item, i) in sizeAssignOptions" :key="i" class="sa-item" :class="{ 'sa-item--checked': item.checked, 'sa-item--existing': item.existing }" @click="item.checked = !item.checked">
+        <div v-for="(item, i) in filteredSizeAssignOptions" :key="i" class="sa-item" :class="{ 'sa-item--checked': item.checked, 'sa-item--existing': item.existing }" @click="item.checked = !item.checked">
           <el-checkbox v-model="item.checked" @click.stop />
           <span class="sa-item-size">{{ item.size }}</span>
           <el-tag v-if="item.existing" type="warning" size="small" effect="plain">已添加</el-tag>
-          <el-input-number v-model="item.qty" :min="1" :max="999" size="small" controls-position="right" style="width:120px" :disabled="!item.checked" @click.stop />
+          <el-input-number v-model="item.qty" :min="1" :max="999" size="small" controls-position="right" style="width:110px" :disabled="!item.checked" @click.stop />
         </div>
-        <div v-if="!sizeAssignOptions.length" class="sa-empty">无可用尺码</div>
+        <div v-if="!filteredSizeAssignOptions.length" class="sa-empty">无匹配尺码</div>
       </div>
       <template #footer>
         <div class="dialog-footer">
@@ -444,7 +447,13 @@ const sizeAssignProductName = ref('')
 const sizeAssignMeta = reactive({ brand: '', color: '', ean13: '' })
 const sizeAssignOptions = ref([])
 const sizeAssignAllChecked = ref(false)
+const sizeAssignSearch = ref('')
 const sizeAssignCheckedCount = computed(() => sizeAssignOptions.value.filter(o => o.checked).length)
+const filteredSizeAssignOptions = computed(() => {
+  const kw = sizeAssignSearch.value.trim().toLowerCase()
+  if (!kw) return sizeAssignOptions.value
+  return sizeAssignOptions.value.filter(o => (o.size || '').toLowerCase().includes(kw))
+})
 
 const STATUS_MAP = { 0: '草稿', 1: '待审核', 2: '已审核', 3: '已驳回' }
 const STATUS_TAG = { 0: 'info', 1: 'warning', 2: 'success', 3: 'danger' }
@@ -744,6 +753,7 @@ function openSizeAssign(row, index) {
     }
   })
   sizeAssignAllChecked.value = sizeAssignOptions.value.every(o => o.checked)
+  sizeAssignSearch.value = ''
   showSizeAssignDialog.value = true
 }
 
@@ -1043,21 +1053,22 @@ onBeforeUnmount(() => {
   color: #3b82f6;
 }
 .sa-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 6px;
-  max-height: 340px;
+  max-height: 360px;
   overflow-y: auto;
 }
 .sa-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
+  gap: 8px;
+  padding: 8px 10px;
   border: 1px solid #f3f4f6;
   border-radius: 6px;
   transition: all 0.15s;
   cursor: pointer;
+  flex-wrap: wrap;
 }
 .sa-item:hover {
   background: #f8fafc;
@@ -1075,10 +1086,11 @@ onBeforeUnmount(() => {
   border-color: #fcd34d;
 }
 .sa-item-size {
-  width: 60px;
   font-size: 14px;
   font-weight: 500;
   color: #374151;
+  flex: 1;
+  min-width: 0;
 }
 .sa-empty {
   text-align: center;

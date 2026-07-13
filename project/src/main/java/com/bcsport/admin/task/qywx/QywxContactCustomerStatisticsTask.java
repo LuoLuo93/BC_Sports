@@ -92,24 +92,41 @@ public class QywxContactCustomerStatisticsTask {
 
             // 遍历每个成员获取行为数据
             for (String userid : userIds) {
-                JSONObject result = apiClient.getUserBehaviorData(userid, startTime, endTime);
+                try {
+                    JSONObject result = apiClient.getUserBehaviorData(userid, startTime, endTime);
 
-                JSONArray behaviorData = result.getJSONArray("behavior_data");
-                if (behaviorData != null && behaviorData.size() > 0) {
-                    JSONObject data = behaviorData.getJSONObject(0);
+                    // 如果 userid 不存在（60111），且看起来像手机号，尝试通过手机号解析真正的企微 userid 后重试
+                    Integer errcode = result.getInt("errcode");
+                    if (errcode != null && errcode == 60111 && userid.matches("^1[3-9]\\d{9}$")) {
+                        log.warn("userid {} 返回 60111，尝试通过手机号解析", userid);
+                        String realUserId = apiClient.getUserIdByMobile(userid);
+                    if (realUserId != null) {
+                        log.info("手机号 {} 解析为企微 userid {}，重试获取行为数据", userid, realUserId);
+                        result = apiClient.getUserBehaviorData(realUserId, startTime, endTime);
+                    } else {
+                        log.warn("手机号 {} 在企微中未找到对应用户，跳过", userid);
+                    }
+                    }
 
-                    QywxContactCustomerStatistics stat = new QywxContactCustomerStatistics();
-                    stat.setUserid(userid);
-                    stat.setStatTime(DateUtil.formatDate(yesterdayStart));
-                    stat.setChatCnt(data.getStr("chat_cnt", ""));
-                    stat.setMessageCnt(data.getStr("message_cnt", ""));
-                    stat.setAvgReplyTime(data.getStr("avg_reply_time", ""));
-                    stat.setReplyPercentage(data.getStr("reply_percentage", ""));
-                    stat.setNegativeFeedbackCnt(data.getStr("negative_feedback_cnt", ""));
-                    stat.setNewApplyCnt(data.getStr("new_apply_cnt", ""));
-                    stat.setNewContactCnt(data.getStr("new_contact_cnt", ""));
+                    JSONArray behaviorData = result.getJSONArray("behavior_data");
+                    if (behaviorData != null && behaviorData.size() > 0) {
+                        JSONObject data = behaviorData.getJSONObject(0);
 
-                    allData.add(stat);
+                        QywxContactCustomerStatistics stat = new QywxContactCustomerStatistics();
+                        stat.setUserid(userid);
+                        stat.setStatTime(DateUtil.formatDate(yesterdayStart));
+                        stat.setChatCnt(data.getStr("chat_cnt", ""));
+                        stat.setMessageCnt(data.getStr("message_cnt", ""));
+                        stat.setAvgReplyTime(data.getStr("avg_reply_time", ""));
+                        stat.setReplyPercentage(data.getStr("reply_percentage", ""));
+                        stat.setNegativeFeedbackCnt(data.getStr("negative_feedback_cnt", ""));
+                        stat.setNewApplyCnt(data.getStr("new_apply_cnt", ""));
+                        stat.setNewContactCnt(data.getStr("new_contact_cnt", ""));
+
+                        allData.add(stat);
+                    }
+                } catch (Exception e) {
+                    log.error("获取用户 {} 行为数据失败: {}", userid, e.getMessage());
                 }
             }
 

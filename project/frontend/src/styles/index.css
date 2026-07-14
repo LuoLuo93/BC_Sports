@@ -1180,3 +1180,46 @@ html {
   color: var(--bc-text-lighter);
   font-size: 0.875rem;
 }
+
+/* ========== Dialog Fixed Layout ==========
+   适用：弹窗内含「固定筛选栏/表头 + 中间滚动表格/列表 + 固定分页」的结构
+   用法：<el-dialog class="dialog-fixed-layout">
+         - 需固定不滚动的子元素加 .dialog-fixed（筛选栏、分页等）
+         - 中间滚动区若是 el-table，配合 :max-height 即可（表格自带表头固定+body 滚动）
+         - 中间若是普通内容，加 .dialog-scroll 由 body 内部滚动
+   效果：弹窗锁定在视口内，杜绝页面/overlay 第二个滚动条，只有中间区域滚动
+*/
+.dialog-fixed-layout.el-dialog {
+  display: flex;
+  flex-direction: column;
+  margin-top: 8vh !important;
+  margin-bottom: 4vh !important;
+  max-height: calc(100vh - 12vh);
+}
+.dialog-fixed-layout .el-dialog__header {
+  flex-shrink: 0;
+}
+.dialog-fixed-layout .el-dialog__body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden; /* 弹窗自身不滚动，滚动交给内部区域 */
+  padding: 12px 20px;
+}
+/* 固定子元素：筛选栏、分页等 */
+.dialog-fixed-layout .el-dialog__body > .dialog-fixed {
+  flex-shrink: 0;
+}
+/* 中间普通内容滚动区（非 el-table 场景） */
+.dialog-fixed-layout .el-dialog__body > .dialog-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+/*
+   el-table 场景说明：
+   表格表头固定+body 滚动依赖 element-plus 的 :max-height 属性（JS 动态计算），
+   这里【不】对 .el-table 设 flex:1，避免与 max-height 语义冲突。
+   表格作为 flex item 默认 flex:0 1 auto，空间不足时自动收缩兜底。
+*/

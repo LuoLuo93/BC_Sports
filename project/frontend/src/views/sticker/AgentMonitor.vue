@@ -69,8 +69,8 @@
     </el-card>
 
     <!-- 任务记录弹窗 -->
-    <el-dialog v-model="taskDialogVisible" :title="`${currentAgent} - 打印任务`" width="1300px" class="task-dialog">
-      <div class="task-filter-bar">
+    <el-dialog v-model="taskDialogVisible" :title="`${currentAgent} - 打印任务`" width="1300px" class="dialog-fixed-layout">
+      <div class="task-filter-bar dialog-fixed">
         <span class="task-filter-label">批次查询</span>
         <el-input
           v-model="taskQuery.batchId"
@@ -118,7 +118,7 @@
           </template>
         </el-table-column>
       </el-table>
-      <div class="pagination-wrapper--sm" v-if="taskTotal > 0">
+      <div class="pagination-wrapper--sm dialog-fixed" v-if="taskTotal > 0">
         <el-pagination
           v-model:current-page="taskQuery.pageNum"
           v-model:page-size="taskQuery.pageSize"
@@ -749,41 +749,5 @@ onUnmounted(() => {
   border-radius: 6px;
   border: 1px solid #ebeef5;
   line-height: 1.6;
-}
-</style>
-
-<!-- 全局样式：弹窗 DOM 在 body 层级，scoped 无法穿透，需用非 scoped 块 -->
-<style>
-/*
-  任务记录弹窗布局策略：
-  - 弹窗 max-height 锁定视口，杜绝 overlay/页面级滚动条（第二个滚动条）
-  - body overflow:hidden 自身不滚动；滚动交给 el-table 的 :max-height 内部滚动（唯一滚动条）
-  - el-table 的高度由模板上的 :max-height（JS 动态计算）驱动表头固定+body 滚动，
-    这里【不】对 .el-table 设 flex:1，避免与 max-height 语义冲突（内容少时被强行拉高）
-  - 表格作为 flex item 默认 flex:0 1 auto，空间不足时自动收缩兜底
-*/
-.task-dialog.el-dialog {
-  display: flex;
-  flex-direction: column;
-  margin-top: 8vh !important;
-  margin-bottom: 4vh !important;
-  max-height: calc(100vh - 12vh);
-}
-.task-dialog .el-dialog__header {
-  flex-shrink: 0;
-}
-.task-dialog .el-dialog__body {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden; /* 弹窗自身不滚动，滚动交给表格 */
-  padding: 12px 20px;
-}
-.task-dialog .el-dialog__body > .task-filter-bar {
-  flex-shrink: 0;
-}
-.task-dialog .el-dialog__body > .pagination-wrapper--sm {
-  flex-shrink: 0;
 }
 </style>

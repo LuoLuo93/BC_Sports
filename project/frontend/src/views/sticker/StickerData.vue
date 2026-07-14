@@ -133,7 +133,11 @@ async function loadBrands() {
 
 function restoreAndLoad() {
   const saved = sessionStorage.getItem('stickerDataQuery')
-  if (!saved) return
+  if (!saved) {
+    // 首次进入无缓存：默认加载第一页
+    loadData()
+    return
+  }
   try {
     const q = JSON.parse(saved)
     query.materialNumber = q.materialNumber || ''
@@ -143,6 +147,7 @@ function restoreAndLoad() {
     loadData()
   } catch {
     sessionStorage.removeItem('stickerDataQuery')
+    loadData()
   }
 }
 

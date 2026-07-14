@@ -95,20 +95,20 @@
         <el-button v-if="taskQuery.batchId || taskQuery.orderNo" size="small" link type="primary" @click="clearBatch">清除</el-button>
       </div>
       <el-table :data="taskList" border size="small" :max-height="taskTableMaxHeight">
-        <el-table-column label="任务ID" width="280" show-overflow-tooltip>
+        <el-table-column label="任务ID" width="350" show-overflow-tooltip>
           <template #default="{ row }">
             <span>{{ row.taskId }}</span>
             <el-tag v-if="row.isReprint === 1" type="warning" size="small" effect="plain" style="margin-left:4px">补</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="批次" width="120" show-overflow-tooltip>
+        <el-table-column label="批次" width="260" show-overflow-tooltip>
           <template #default="{ row }">
-            <span v-if="row.batchId" class="batch-tag clickable" @click="filterByBatch(row.batchId)" title="点击筛选该批次">{{ row.batchId.substring(0, 8) }}</span>
+            <span v-if="row.batchId" class="batch-tag clickable" @click="filterByBatch(row.batchId)" title="点击筛选该批次">{{ row.batchId }}</span>
             <span v-else style="color:#c0c4cc">-</span>
           </template>
         </el-table-column>
         <el-table-column prop="orderNo" label="申请单号" width="180" show-overflow-tooltip />
-        <el-table-column prop="materialName" label="货品名称" min-width="160" show-overflow-tooltip />
+        <el-table-column prop="materialName" label="货品名称" min-width="120" show-overflow-tooltip />
         <el-table-column prop="sizeName" label="尺码" width="70" align="center" />
         <el-table-column prop="printQty" label="数量" width="70" align="center" />
         <el-table-column prop="status" label="状态" width="100" align="center">

@@ -755,28 +755,10 @@ onUnmounted(() => {
 <!-- 全局样式：弹窗 DOM 在 body 层级，scoped 无法穿透，需用非 scoped 块 -->
 <style>
 .task-dialog.el-dialog {
-  display: flex;
-  flex-direction: column;
   margin-top: 8vh !important;
   margin-bottom: 4vh !important;
-  max-height: calc(100vh - 12vh);
 }
 .task-dialog .el-dialog__body {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
   padding: 12px 20px;
-}
-.task-dialog .el-dialog__body > .task-filter-bar {
-  flex-shrink: 0;
-}
-.task-dialog .el-dialog__body > .el-table {
-  flex: 1;
-  min-height: 0;
-}
-.task-dialog .el-dialog__body > .pagination-wrapper--sm {
-  flex-shrink: 0;
 }
 </style>

@@ -84,7 +84,7 @@
         <el-button type="primary" size="small" @click="onBatchSearch">查询</el-button>
         <el-button v-if="taskQuery.batchId" size="small" link type="primary" @click="clearBatch">清除</el-button>
       </div>
-      <el-table :data="taskList" border size="small" height="100%">
+      <el-table :data="taskList" border size="small" :max-height="taskTableMaxHeight">
         <el-table-column label="任务ID" width="210" show-overflow-tooltip>
           <template #default="{ row }">
             <span>{{ row.taskId }}</span>
@@ -390,6 +390,7 @@ const taskList = ref([])
 const taskTotal = ref(0)
 const currentAgent = ref('')
 const currentAgentId = ref('')
+const taskTableMaxHeight = ref(400)
 const taskQuery = reactive({ pageNum: 1, pageSize: 50, batchId: '' })
 
 // 任务详情
@@ -412,6 +413,8 @@ async function viewTasks(row) {
   currentAgentId.value = row.agentId
   taskQuery.pageNum = 1
   taskQuery.batchId = ''
+  // 弹窗高度：标题(~55) + 筛选栏(~48) + 分页(~52) + 内边距(~40) ≈ 195
+  taskTableMaxHeight.value = window.innerHeight - 195 - 120 // 120 = 弹窗上下边距
   taskDialogVisible.value = true
   await loadTasks()
 }

@@ -106,16 +106,16 @@
     </el-dialog>
 
     <!-- 批量导入弹窗 -->
-    <el-dialog v-model="showImportDialog" title="批量导入" width="520px" @close="resetImportState">
+    <el-dialog v-model="showImportDialog" title="批量导入品牌模板关系" width="520px" destroy-on-close @open="resetImportState">
       <div class="import-zone">
         <el-upload :limit="1" accept=".xlsx,.xls" :auto-upload="false" :before-upload="beforeUpload" drag :on-change="handleFileChange" :on-remove="handleFileRemove" :on-exceed="() => ElMessage.warning('只能上传一个文件')">
           <el-icon :size="40" style="color:var(--el-text-color-placeholder)"><Upload /></el-icon>
-          <div style="margin-top:6px;color:var(--el-text-color-regular)">将 Excel 文件拖到此处，或点击上传</div>
+          <div style="margin-top:8px">将 Excel 文件拖到此处，或 <em>点击上传</em></div>
           <template #tip>
             <div class="upload-hint">仅支持 .xlsx / .xls 格式，品牌+类别重复时自动更新</div>
           </template>
         </el-upload>
-        <div style="margin-top:8px;text-align:right">
+        <div style="margin-top:12px;text-align:center">
           <el-button link type="primary" :loading="templateLoading" @click="handleDownloadTemplate">下载导入模板</el-button>
         </div>
       </div>
@@ -131,10 +131,8 @@
         </div>
       </div>
       <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="showImportDialog = false">关闭</el-button>
-          <el-button type="primary" :loading="importLoading" :disabled="importLoading" @click="submitImport">开始导入</el-button>
-        </div>
+        <el-button @click="showImportDialog = false">关闭</el-button>
+        <el-button type="primary" :loading="importLoading" :disabled="importLoading" @click="submitImport">开始导入</el-button>
       </template>
     </el-dialog>
   </div>

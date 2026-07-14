@@ -181,40 +181,39 @@ onMounted(() => {
 
 .form-info-row {
   display: flex;
-  gap: 0;
+  gap: 10px;
   padding: 12px 16px;
-  background: #fff;
-  border-bottom: 4px solid #f0f2f5;
+  background: #f5f7fa;
+  border-bottom: 1px solid #e5e7eb;
   flex-shrink: 0;
   align-items: stretch;
   flex-wrap: wrap;
 }
 .info-item {
   flex: 1;
+  min-width: 120px;
   padding: 8px 14px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  align-items: center;
-  border-right: 1px solid #f3f4f6;
-  min-width: 120px;
+  gap: 6px;
+  align-items: flex-start;
+  background: #fff;
+  border: 1px solid #ebeef5;
+  border-radius: 6px;
+  justify-content: center;
 }
-.info-item:last-child { border-right: none; }
 .info-label {
-  font-size: 11px;
-  color: #6366f1;
-  font-weight: 600;
+  font-size: 12px;
+  color: #909399;
   white-space: nowrap;
-  letter-spacing: 0.04em;
-  background: linear-gradient(135deg, #eef2ff, #e0e7ff);
-  padding: 2px 10px;
-  border-radius: 10px;
-  border: 1px solid #c7d2fe;
+  line-height: 1.4;
 }
 .info-value {
   font-size: 14px;
   color: #111827;
-  font-weight: 700;
+  font-weight: 600;
+  line-height: 1.4;
+  word-break: break-all;
 }
 
 .detail-panel {

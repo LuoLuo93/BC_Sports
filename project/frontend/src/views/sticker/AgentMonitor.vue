@@ -69,7 +69,7 @@
     </el-card>
 
     <!-- 任务记录弹窗 -->
-    <el-dialog v-model="taskDialogVisible" :title="`${currentAgent} - 打印任务`" width="1300px" class="dialog-fixed-layout">
+    <el-dialog v-model="taskDialogVisible" :title="`${currentAgent} - 打印任务`" width="1500px" class="dialog-fixed-layout">
       <div class="task-filter-bar dialog-fixed">
         <span class="task-filter-label">批次查询</span>
         <el-input
@@ -77,15 +77,25 @@
           placeholder="输入批次号（支持前缀）"
           clearable
           size="small"
-          style="width:240px"
+          style="width:200px"
+          @keyup.enter="onBatchSearch"
+          @clear="onBatchSearch"
+        />
+        <span class="task-filter-label">申请单号</span>
+        <el-input
+          v-model="taskQuery.orderNo"
+          placeholder="输入申请单号（支持前缀）"
+          clearable
+          size="small"
+          style="width:200px"
           @keyup.enter="onBatchSearch"
           @clear="onBatchSearch"
         />
         <el-button type="primary" size="small" @click="onBatchSearch">查询</el-button>
-        <el-button v-if="taskQuery.batchId" size="small" link type="primary" @click="clearBatch">清除</el-button>
+        <el-button v-if="taskQuery.batchId || taskQuery.orderNo" size="small" link type="primary" @click="clearBatch">清除</el-button>
       </div>
       <el-table :data="taskList" border size="small" :max-height="taskTableMaxHeight">
-        <el-table-column label="任务ID" width="210" show-overflow-tooltip>
+        <el-table-column label="任务ID" width="280" show-overflow-tooltip>
           <template #default="{ row }">
             <span>{{ row.taskId }}</span>
             <el-tag v-if="row.isReprint === 1" type="warning" size="small" effect="plain" style="margin-left:4px">补</el-tag>
@@ -391,7 +401,7 @@ const taskTotal = ref(0)
 const currentAgent = ref('')
 const currentAgentId = ref('')
 const taskTableMaxHeight = ref(400)
-const taskQuery = reactive({ pageNum: 1, pageSize: 50, batchId: '' })
+const taskQuery = reactive({ pageNum: 1, pageSize: 50, batchId: '', orderNo: '' })
 
 // 任务详情
 const taskDetailVisible = ref(false)
@@ -413,6 +423,7 @@ async function viewTasks(row) {
   currentAgentId.value = row.agentId
   taskQuery.pageNum = 1
   taskQuery.batchId = ''
+  taskQuery.orderNo = ''
   // 弹窗高度：标题(~55) + 筛选栏(~48) + 分页(~52) + 内边距(~40) ≈ 195
   taskTableMaxHeight.value = window.innerHeight - 195 - 120 // 120 = 弹窗上下边距
   taskDialogVisible.value = true
@@ -427,6 +438,7 @@ function onBatchSearch() {
 
 function clearBatch() {
   taskQuery.batchId = ''
+  taskQuery.orderNo = ''
   taskQuery.pageNum = 1
   loadTasks()
 }

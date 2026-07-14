@@ -290,7 +290,7 @@ public class PrintTaskService {
 
         PrintTask reprint = new PrintTask();
         reprint.setTaskId(UUID.randomUUID().toString().replace("-", ""));
-        reprint.setBatchId(UUID.randomUUID().toString().replace("-", ""));
+        reprint.setBatchId(source.getBatchId());
         reprint.setOrderNo(source.getOrderNo());
         reprint.setOrderId(source.getOrderId());
         reprint.setMaterialNumber(source.getMaterialNumber());
@@ -328,11 +328,14 @@ public class PrintTaskService {
     /**
      * 分页查询 Agent 的打印任务，支持按批次号筛选（前缀匹配，便于按"同一批次"排查）。
      */
-    public IPage<PrintTask> getTasksByAgentIdPage(int pageNum, int pageSize, String agentId, String batchId) {
+    public IPage<PrintTask> getTasksByAgentIdPage(int pageNum, int pageSize, String agentId, String batchId, String orderNo) {
         LambdaQueryWrapper<PrintTask> wrapper = new LambdaQueryWrapper<PrintTask>()
                 .eq(PrintTask::getAgentId, agentId);
         if (batchId != null && !batchId.isBlank()) {
             wrapper.likeRight(PrintTask::getBatchId, batchId.trim());
+        }
+        if (orderNo != null && !orderNo.isBlank()) {
+            wrapper.likeRight(PrintTask::getOrderNo, orderNo.trim());
         }
         wrapper.orderByDesc(PrintTask::getPrintTime).orderByDesc(PrintTask::getCreateTime);
         return taskMapper.selectPage(new Page<>(pageNum, pageSize), wrapper);

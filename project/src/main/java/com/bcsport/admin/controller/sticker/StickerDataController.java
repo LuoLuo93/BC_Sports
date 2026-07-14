@@ -22,13 +22,7 @@ public class StickerDataController {
     @GetMapping("/page")
     @RequiresPermissions("sticker:data:query")
     public Result<PageResult<Map<String, Object>>> page(@Valid PageQuery pageQuery, StickerDataQueryDTO queryDTO) {
-        boolean noFilter = (queryDTO.getMaterialNumber() == null || queryDTO.getMaterialNumber().trim().isEmpty())
-                && (queryDTO.getStyleNumber() == null || queryDTO.getStyleNumber().trim().isEmpty())
-                && (queryDTO.getMaterialName() == null || queryDTO.getMaterialName().trim().isEmpty())
-                && (queryDTO.getBrandId() == null || queryDTO.getBrandId().trim().isEmpty());
-        if (noFilter) {
-            return Result.paramError("请至少输入一个搜索条件");
-        }
+        // 无条件时默认查第一页（分页保护，避免全表一次性加载）
         PageResult<Map<String, Object>> result = stickerPrintService.searchProducts(pageQuery, queryDTO.getMaterialNumber(), queryDTO.getStyleNumber(), queryDTO.getMaterialName(), queryDTO.getBrandId());
         return Result.success(result);
     }

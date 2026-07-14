@@ -84,7 +84,6 @@
 <script setup>
 import { ref, onMounted, onActivated } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
 import { Search, RefreshRight } from '@element-plus/icons-vue'
 import { usePageQuery } from '@/composables/usePageQuery'
 import { PAGE_SIZES } from '@/utils/appConfig'
@@ -101,10 +100,6 @@ const { loading, tableData, total, query, loadData, handleSearch } = usePageQuer
 const brandList = ref([])
 
 function onSearch() {
-  if (!query.materialNumber?.trim() && !query.styleNumber?.trim() && !query.materialName?.trim() && !query.brandId) {
-    ElMessage.warning('请至少输入一个搜索条件')
-    return
-  }
   handleSearch()
   sessionStorage.setItem('stickerDataQuery', JSON.stringify({ materialNumber: query.materialNumber, styleNumber: query.styleNumber, materialName: query.materialName, brandId: query.brandId }))
 }

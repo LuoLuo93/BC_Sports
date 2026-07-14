@@ -888,6 +888,25 @@ html {
   height: 100%;
 }
 
+/* ========== Form View ==========
+   表单页面容器：放在 .page-container 内，自动撑满剩余空间。
+   默认 overflow:hidden（内部 flex 子区域各自管理滚动）；
+   需要整页滚动的场景追加修饰类 .form-view--scroll。
+   用法：<div class="page-container"><div class="form-view">...</div></div>
+*/
+.form-view {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  background: var(--el-bg-color-page, #f5f5f4);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.form-view--scroll {
+  overflow-y: auto;
+}
+
 .page-container > .search-card {
   flex-shrink: 0;
 }

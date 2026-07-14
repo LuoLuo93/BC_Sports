@@ -1,6 +1,6 @@
 <template>
   <div class="page-container">
-    <div class="form-view">
+    <div class="form-view form-view--scroll">
       <!-- 头部栏 -->
       <div class="form-header">
         <el-button type="warning" size="small" @click="$router.push('/sticker/data')">
@@ -148,16 +148,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.form-view {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  background: var(--el-bg-color-page, #f5f5f4);
-  border-radius: 4px;
-  overflow-y: auto;
-}
-
 .form-header {
   display: flex;
   justify-content: space-between;

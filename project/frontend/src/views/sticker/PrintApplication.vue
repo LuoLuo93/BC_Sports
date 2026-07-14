@@ -865,16 +865,6 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.form-view {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  background: var(--el-bg-color-page, #f5f5f4);
-  border-radius: 4px;
-  overflow: hidden;
-}
-
 .form-header {
   display: flex;
   justify-content: space-between;

@@ -868,10 +868,11 @@ onBeforeUnmount(() => {
 .form-view {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - var(--layout-header-h) - var(--layout-tab-h) - var(--layout-footer-h) - var(--layout-pad-y) * 2);
-  margin: calc(-1 * var(--layout-pad-y)) calc(-1 * var(--layout-pad-x));
-  padding: 0;
-  background: #f0f2f5;
+  flex: 1;
+  min-height: 0;
+  background: var(--el-bg-color-page, #f5f5f4);
+  border-radius: 4px;
+  overflow: hidden;
 }
 
 .form-header {

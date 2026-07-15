@@ -1,9 +1,9 @@
 <template>
   <div class="page-container">
-    <el-row :gutter="16">
+    <el-row :gutter="16" class="dict-row">
       <!-- 左侧：字典类型 -->
       <el-col :span="8">
-        <el-card shadow="never">
+        <el-card shadow="never" class="dict-type-card">
           <template #header>
             <div class="card-header-row">
               <span class="card-header-title">字典类型</span>
@@ -33,7 +33,7 @@
 
       <!-- 右侧：字典数据 -->
       <el-col :span="16">
-        <el-card shadow="never">
+        <el-card shadow="never" class="dict-data-card">
           <template #header>
             <div class="card-header-row">
               <span class="card-header-title">
@@ -45,7 +45,7 @@
           </template>
 
           <div class="table-responsive">
-            <el-table v-loading="dataLoading" :data="dataList" border stripe empty-text="暂无数据">
+            <el-table v-loading="dataLoading" :data="dataList" border stripe empty-text="暂无数据" :max-height="tableMaxHeight">
               <el-table-column type="index" label="#" width="50" align="center" />
               <el-table-column prop="dictLabel" label="字典标签" min-width="140" />
               <el-table-column prop="dictValue" label="字典值" min-width="120" />
@@ -148,6 +148,8 @@ import { PAGE_SIZES } from '@/utils/appConfig'
 
 const { hasPermission } = usePermission()
 const dictStore = useDictStore()
+
+const tableMaxHeight = ref(400)
 
 // --- 字典类型 ---
 const typeList = ref([])
@@ -299,11 +301,33 @@ async function handleSubmitData() {
   }
 }
 
-onMounted(() => loadTypes())
+onMounted(() => {
+  // 卡片头部(~55) + 分页(~52) + 内边距(~32) ≈ 140
+  tableMaxHeight.value = Math.max(window.innerHeight - 230, 200)
+  loadTypes()
+})
 </script>
 
 <style scoped>
-.type-list { max-height: 520px; overflow-y: auto; }
+.dict-row {
+  flex: 1;
+  min-height: 0;
+}
+.dict-type-card,
+.dict-data-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.dict-type-card :deep(.el-card__body),
+.dict-data-card :deep(.el-card__body) {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.type-list { flex: 1; overflow-y: auto; }
 .type-item {
   display: flex; align-items: center; gap: 8px;
   padding: 10px 12px; border-radius: 8px; cursor: pointer;

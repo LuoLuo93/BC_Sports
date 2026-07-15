@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.bcsport.admin.common.exception.BusinessException;
 import com.bcsport.admin.entity.DictData;
 import com.bcsport.admin.mapper.DictDataMapper;
 import com.bcsport.admin.service.DictDataService;
@@ -37,6 +38,8 @@ public class DictDataServiceImpl extends ServiceImpl<DictDataMapper, DictData> i
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean addDictData(DictData dictData) {
+        // 同一字典类型下，字典标签和字典值不可重复
+        checkDuplicate(dictData.getDictType(), dictData.getDictLabel(), dictData.getDictValue(), null);
         dictData.setStatus(dictData.getStatus() != null ? dictData.getStatus() : 1);
         return save(dictData);
     }
@@ -44,6 +47,8 @@ public class DictDataServiceImpl extends ServiceImpl<DictDataMapper, DictData> i
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean updateDictData(DictData dictData) {
+        // 同一字典类型下，字典标签和字典值不可重复（排除自身）
+        checkDuplicate(dictData.getDictType(), dictData.getDictLabel(), dictData.getDictValue(), dictData.getId());
         return updateById(dictData);
     }
 
@@ -56,5 +61,37 @@ public class DictDataServiceImpl extends ServiceImpl<DictDataMapper, DictData> i
     @Override
     public String getLabelByValue(String dictType, String dictValue) {
         return baseMapper.getLabelByValue(dictType, dictValue);
+    }
+
+    /**
+     * 校验同一字典类型下字典标签和字典值的唯一性。
+     */
+    private void checkDuplicate(String dictType, String dictLabel, String dictValue, String excludeId) {
+        if (dictType == null) return;
+        LambdaQueryWrapper<DictData> wrapper = new LambdaQueryWrapper<DictData>()
+                .eq(DictData::getDictType, dictType);
+        if (excludeId != null && !excludeId.isBlank()) {
+            wrapper.ne(DictData::getId, excludeId);
+        }
+        // 检查标签重复
+        if (dictLabel != null && !dictLabel.isBlank()) {
+            Long labelCount = count(new LambdaQueryWrapper<DictData>()
+                    .eq(DictData::getDictType, dictType)
+                    .eq(DictData::getDictLabel, dictLabel.trim())
+                    .ne(excludeId != null && !excludeId.isBlank(), DictData::getId, excludeId));
+            if (labelCount != null && labelCount > 0) {
+                throw new BusinessException("字典标签「" + dictLabel + "」在该类型下已存在");
+            }
+        }
+        // 检查值重复
+        if (dictValue != null && !dictValue.isBlank()) {
+            Long valueCount = count(new LambdaQueryWrapper<DictData>()
+                    .eq(DictData::getDictType, dictType)
+                    .eq(DictData::getDictValue, dictValue.trim())
+                    .ne(excludeId != null && !excludeId.isBlank(), DictData::getId, excludeId));
+            if (valueCount != null && valueCount > 0) {
+                throw new BusinessException("字典值「" + dictValue + "」在该类型下已存在");
+            }
+        }
     }
 }

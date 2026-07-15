@@ -66,7 +66,7 @@
     <el-dialog v-model="customerDialogVisible" :title="`客户列表 - ${currentUser.name || currentUser.followUser}`" width="1200px" destroy-on-close>
       <el-form inline style="margin-bottom:12px">
         <el-form-item label="客户名称">
-          <el-input v-model="customerQuery.name" placeholder="请输入客户名称" clearable @keyup.enter="handleCustomerSearch" />
+          <el-input v-model="customerQuery.name" placeholder="请输入客户名称" clearable style="width:260px" @keyup.enter="handleCustomerSearch" />
         </el-form-item>
         <el-form-item>
           <el-button type="primary" :icon="Search" @click="handleCustomerSearch">搜索</el-button>

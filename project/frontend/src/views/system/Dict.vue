@@ -45,7 +45,7 @@
           </template>
 
           <div class="table-responsive">
-            <el-table v-loading="dataLoading" :data="dataList" border stripe empty-text="暂无数据" :max-height="tableMaxHeight">
+            <el-table v-loading="dataLoading" :data="dataList" border stripe empty-text="暂无数据" height="100%">
               <el-table-column type="index" label="#" width="50" align="center" />
               <el-table-column prop="dictLabel" label="字典标签" min-width="140" />
               <el-table-column prop="dictValue" label="字典值" min-width="120" />
@@ -148,8 +148,6 @@ import { PAGE_SIZES } from '@/utils/appConfig'
 
 const { hasPermission } = usePermission()
 const dictStore = useDictStore()
-
-const tableMaxHeight = ref(400)
 
 // --- 字典类型 ---
 const typeList = ref([])
@@ -301,20 +299,22 @@ async function handleSubmitData() {
   }
 }
 
-onMounted(() => {
-  // 卡片头部(~55) + 分页(~52) + 内边距(~32) ≈ 140
-  tableMaxHeight.value = Math.max(window.innerHeight - 230, 200)
-  loadTypes()
-})
+onMounted(() => loadTypes())
 </script>
 
 <style scoped>
+/* el-row 默认非 flex item，改 display:flex 撑满 page-container 剩余空间 */
 .dict-row {
   flex: 1;
   min-height: 0;
+  display: flex;
+}
+.dict-row :deep(.el-col) {
+  display: flex;
 }
 .dict-type-card,
 .dict-data-card {
+  width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -323,11 +323,12 @@ onMounted(() => {
 .dict-data-card :deep(.el-card__body) {
   flex: 1;
   min-height: 0;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
+  overflow: hidden; /* card body 自身不滚动，滚动交给内部 type-list / el-table */
 }
-.type-list { flex: 1; overflow-y: auto; }
+/* 左侧类型列表：撑满剩余空间，内部滚动 */
+.type-list { flex: 1; min-height: 0; overflow-y: auto; }
 .type-item {
   display: flex; align-items: center; gap: 8px;
   padding: 10px 12px; border-radius: 8px; cursor: pointer;
@@ -338,4 +339,12 @@ onMounted(() => {
 .type-name { font-weight: 600; font-size: 0.875rem; flex-shrink: 0; }
 .type-code { flex: 1; font-size: 0.75rem; color: var(--bc-text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .type-actions { flex-shrink: 0; }
+/* 右侧搜索框固定 */
+.dict-data-card :deep(.el-card__body > .table-responsive) {
+  flex: 1;
+  min-height: 0;
+}
+.dict-data-card :deep(.el-card__body > .pagination-wrapper--sm) {
+  flex-shrink: 0;
+}
 </style>

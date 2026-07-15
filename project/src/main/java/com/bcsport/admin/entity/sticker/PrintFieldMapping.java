@@ -23,6 +23,9 @@ public class PrintFieldMapping {
     @TableField("field_format")
     private String fieldFormat;
 
+    @TableField("default_value")
+    private String defaultValue;
+
     @TableField("sort_order")
     private Integer sortOrder;
 

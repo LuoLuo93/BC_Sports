@@ -366,7 +366,18 @@ public class PrintTaskService {
         for (PrintFieldMapping mapping : mappings) {
             String dbField = mapping.getDbField();
             String templateField = mapping.getTemplateField();
-            String value = getFieldValue(detail, dbField);
+
+            // dbField 为空时使用默认值（固定值场景，如标题/检验员等）
+            String value;
+            if (dbField == null || dbField.isBlank()) {
+                value = mapping.getDefaultValue();
+            } else {
+                value = getFieldValue(detail, dbField);
+                // 货品资料取不到值时，回退到默认值
+                if (value == null && mapping.getDefaultValue() != null && !mapping.getDefaultValue().isBlank()) {
+                    value = mapping.getDefaultValue();
+                }
+            }
 
             // 应用格式化规则
             if (value != null && mapping.getFieldFormat() != null && !mapping.getFieldFormat().isBlank()) {

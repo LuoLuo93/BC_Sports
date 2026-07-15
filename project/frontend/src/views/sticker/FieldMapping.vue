@@ -35,7 +35,8 @@
                 v-if="row._editing"
                 v-model="row.dbField"
                 filterable
-                placeholder="选择数据字段"
+                clearable
+                placeholder="留空则用默认值"
                 size="small"
                 style="width:100%"
               >
@@ -49,7 +50,7 @@
                   <span style="float:right;color:#8492a6;font-size:12px">{{ field.value }}</span>
                 </el-option>
               </el-select>
-              <span v-else>{{ getFieldLabel(row.dbField) }}</span>
+              <span v-else>{{ row.dbField ? getFieldLabel(row.dbField) : '（固定值）' }}</span>
             </template>
           </el-table-column>
           <el-table-column label="→" width="60" align="center">
@@ -57,10 +58,16 @@
               <el-icon><Right /></el-icon>
             </template>
           </el-table-column>
-          <el-table-column prop="templateField" label="模板字段" width="280">
+          <el-table-column prop="templateField" label="模板字段" width="240">
             <template #default="{ row }">
               <el-input v-if="row._editing" v-model="row.templateField" size="small" placeholder="如 货号" />
               <span v-else>{{ row.templateField }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="defaultValue" label="默认值" min-width="160">
+            <template #default="{ row }">
+              <el-input v-if="row._editing" v-model="row.defaultValue" size="small" placeholder="固定值，留空则从货品取" />
+              <span v-else>{{ row.defaultValue || '-' }}</span>
             </template>
           </el-table-column>
           <el-table-column prop="fieldFormat" label="格式化规则" min-width="200">
@@ -223,6 +230,7 @@ function handleAdd() {
     templateId: selectedTemplateName.value,
     dbField: '',
     templateField: '',
+    defaultValue: '',
     fieldFormat: '',
     sortOrder: mappingList.value.length,
     _editing: true,
@@ -246,8 +254,12 @@ function handleCancel(index) {
 }
 
 async function handleSave(row) {
-  if (!row.dbField?.trim() || !row.templateField?.trim()) {
-    ElMessage.warning('数据字段和模板字段不能为空')
+  if (!row.templateField?.trim()) {
+    ElMessage.warning('模板字段不能为空')
+    return
+  }
+  if (!row.dbField?.trim() && !row.defaultValue?.trim()) {
+    ElMessage.warning('数据字段和默认值至少填一个')
     return
   }
 
@@ -255,16 +267,18 @@ async function handleSave(row) {
     if (row._isNew) {
       await createFieldMapping({
         templateId: selectedTemplateName.value,
-        dbField: row.dbField.trim(),
+        dbField: row.dbField?.trim() || null,
         templateField: row.templateField.trim(),
+        defaultValue: row.defaultValue?.trim() || null,
         fieldFormat: row.fieldFormat?.trim() || null,
         sortOrder: row.sortOrder || 0
       })
       ElMessage.success('新增成功')
     } else {
       await updateFieldMapping(row.id, {
-        dbField: row.dbField.trim(),
+        dbField: row.dbField?.trim() || null,
         templateField: row.templateField.trim(),
+        defaultValue: row.defaultValue?.trim() || null,
         fieldFormat: row.fieldFormat?.trim() || null,
         sortOrder: row.sortOrder || 0
       })
@@ -327,6 +341,7 @@ async function confirmCopy() {
         templateId: selectedTemplateName.value,
         dbField: item.dbField,
         templateField: item.templateField,
+        defaultValue: item.defaultValue,
         fieldFormat: item.fieldFormat,
         sortOrder: item.sortOrder
       })

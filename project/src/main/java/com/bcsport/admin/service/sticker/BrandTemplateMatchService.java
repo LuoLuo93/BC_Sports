@@ -7,6 +7,7 @@ import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.entity.sticker.BrandTemplateMatch;
 import com.bcsport.admin.erpmapper.BjerpProductMapper;
 import com.bcsport.admin.mapper.sticker.BrandTemplateMatchMapper;
+import com.bcsport.admin.service.DictDataService;
 import com.bcsport.admin.util.ShiroSecurityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -25,6 +26,9 @@ public class BrandTemplateMatchService {
 
     @Autowired
     private BjerpProductMapper bjerpProductMapper;
+
+    @Autowired
+    private DictDataService dictDataService;
 
     public PageResult<BrandTemplateMatch> page(PageQuery pageQuery, String brandName, String kindName) {
         LambdaQueryWrapper<BrandTemplateMatch> wrapper = new LambdaQueryWrapper<BrandTemplateMatch>()
@@ -123,6 +127,12 @@ public class BrandTemplateMatchService {
         Map<String, String> brandNameToId = buildNameToIdMap(bjerpProductMapper.getBrands());
         Map<String, String> kindNameToId = buildNameToIdMap(bjerpProductMapper.getKinds());
 
+        // 加载字典 sticker_template 中的合法模板名集合
+        java.util.Set<String> validTemplates = new java.util.HashSet<>();
+        for (com.bcsport.admin.entity.DictData d : dictDataService.listByDictType("sticker_template")) {
+            if (d.getDictValue() != null) validTemplates.add(d.getDictValue().trim());
+        }
+
         String currentUser = ShiroSecurityUtils.getCurrentUsername();
         LocalDateTime now = LocalDateTime.now();
         int success = 0;
@@ -139,6 +149,11 @@ public class BrandTemplateMatchService {
                 String kindId = kindNameToId.get(row.getKindName());
                 if (kindId == null) {
                     errors.add("第" + rowNum + "行：类别「" + row.getKindName() + "」在 ERP 中未找到");
+                    continue;
+                }
+                // 校验模板名是否在字典 sticker_template 中存在
+                if (!validTemplates.isEmpty() && !validTemplates.contains(row.getTemplateName())) {
+                    errors.add("第" + rowNum + "行：打印模板「" + row.getTemplateName() + "」在字典中不存在，请先在数据字典-贴纸打印模板中添加");
                     continue;
                 }
 

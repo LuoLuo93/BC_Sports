@@ -83,7 +83,9 @@
           </el-select>
         </el-form-item>
         <el-form-item label="打印模板" prop="templateName">
-          <el-input v-model="form.templateName" placeholder="请输入 .btw 模板文件名" />
+          <el-select v-model="form.templateName" placeholder="选择打印模板" filterable style="width:100%">
+            <el-option v-for="t in templateOptions" :key="t.dictValue" :label="t.dictLabel" :value="t.dictValue" />
+          </el-select>
         </el-form-item>
         <el-form-item label="默认打印机">
           <el-select v-model="form.printerName" placeholder="选择打印机" filterable clearable style="width:100%">
@@ -156,6 +158,7 @@ const dictStore = useDictStore()
 const brandList = ref([])
 const kindList = ref([])
 const printerOptions = ref([])
+const templateOptions = ref([])
 
 const { loading, tableData, total, query, loadData, handleSearch, resetQuery } = usePageQuery(
   (params) => request.get('/api/sticker/brand-template/page', { params }),
@@ -178,7 +181,7 @@ const form = reactive({
 const rules = {
   brandId: [{ required: true, message: '请选择品牌', trigger: 'change' }],
   kindId: [{ required: true, message: '请选择类别', trigger: 'change' }],
-  templateName: [{ required: true, message: '请输入模板文件名', trigger: 'blur' }]
+  templateName: [{ required: true, message: '请选择打印模板', trigger: 'change' }]
 }
 
 async function loadBrands() {
@@ -204,6 +207,15 @@ async function loadPrinterOptions() {
   } catch (e) {
     console.error('加载打印机字典失败:', e)
     printerOptions.value = []
+  }
+}
+
+async function loadTemplateOptions() {
+  try {
+    templateOptions.value = await dictStore.loadDict('sticker_template')
+  } catch (e) {
+    console.error('加载打印模板字典失败:', e)
+    templateOptions.value = []
   }
 }
 
@@ -354,6 +366,7 @@ onMounted(() => {
   loadBrands()
   loadKinds()
   loadPrinterOptions()
+  loadTemplateOptions()
 })
 </script>
 

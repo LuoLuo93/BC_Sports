@@ -134,10 +134,13 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, CopyDocument, Right } from '@element-plus/icons-vue'
-import { getBrandTemplateNames, getFieldMappingPage, createFieldMapping, updateFieldMapping, deleteFieldMapping, deleteFieldMappingByTemplate, getAvailableFields } from '@/api/sticker'
+import { getFieldMappingPage, createFieldMapping, updateFieldMapping, deleteFieldMapping, deleteFieldMappingByTemplate, getAvailableFields } from '@/api/sticker'
+import { useDictStore } from '@/stores/dict'
 import { PAGE_SIZES } from '@/utils/appConfig'
 
 defineOptions({ name: 'FieldMapping' })
+
+const dictStore = useDictStore()
 
 const templateNames = ref([])
 const selectedTemplateName = ref('')
@@ -157,8 +160,8 @@ onMounted(async () => {
 
 async function loadTemplateNames() {
   try {
-    const { data } = await getBrandTemplateNames()
-    templateNames.value = data || []
+    const data = await dictStore.loadDict('sticker_template')
+    templateNames.value = (data || []).map(d => d.dictValue)
   } catch {
     templateNames.value = []
   }

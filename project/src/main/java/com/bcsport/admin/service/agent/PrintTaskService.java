@@ -143,7 +143,7 @@ public class PrintTaskService {
 
         if (task != null) {
             task.setStatus(success ? 2 : 3);
-            task.setErrorMsg(message);
+            task.setErrorMsg(success ? null : message);  // 成功时清空错误信息，失败时才记录
             task.setPrintTime(LocalDateTime.now());
             taskMapper.updateById(task);
         }

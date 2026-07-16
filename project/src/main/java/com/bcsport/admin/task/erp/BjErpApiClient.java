@@ -177,6 +177,17 @@ public class BjErpApiClient {
         return null;
     }
 
+    /**
+     * 判断错误信息是否为"数据已存在"（如"输入的数据已存在:编号"）。
+     * 用于入职同步时把"已存在"识别为已跳过而非失败。
+     *
+     * @param errMsg 错误信息
+     * @return true 表示是"已存在"类错误
+     */
+    public static boolean isAlreadyExists(String errMsg) {
+        return errMsg != null && errMsg.contains("已存在");
+    }
+
     // ==================== 工具 ====================
 
     private String encode(String value) {

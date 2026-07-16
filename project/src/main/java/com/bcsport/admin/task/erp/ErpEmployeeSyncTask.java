@@ -142,6 +142,13 @@ public class ErpEmployeeSyncTask {
 
         } catch (Exception e) {
             String errMsg = e.getMessage();
+            // 入职报"编号已存在" → 标记已跳过(3)，而非失败(2)
+            if (BjErpApiClient.isAlreadyExists(errMsg)) {
+                log.info("同步跳过(数据已存在): syncType={}, staffNo={}, staffName={}, employeeId={}",
+                        syncType, staffNo, staffName, employeeId);
+                erpSyncService.markSyncSkipped(syncType, employeeId, staffName, staffNo);
+                return new int[]{0, 0, 1};
+            }
             log.error("同步失败: syncType={}, staffNo={}, staffName={}, employeeId={}, error={}",
                     syncType, staffNo, staffName, employeeId, errMsg, e);
             erpSyncService.markSyncFailed(syncType, employeeId, staffName, staffNo, errMsg);
@@ -197,12 +204,17 @@ public class ErpEmployeeSyncTask {
             return null;
         } catch (Exception e) {
             String errMsg = e.getMessage();
-            log.error("单人同步失败: syncType={}, employeeId={}, error={}", syncType, employeeId, errMsg, e);
-            // 失败：写入同步状态
             try {
                 IhrEmployeeDetail detail = employeeDetailMapper.selectById(employeeId);
                 String staffName = detail != null ? detail.getStaffName() : "";
                 String staffNo = detail != null ? detail.getStaffNo() : "";
+                // 入职报"编号已存在" → 标记已跳过(3)，而非失败(2)
+                if (BjErpApiClient.isAlreadyExists(errMsg)) {
+                    log.info("单人同步跳过(数据已存在): syncType={}, employeeId={}", syncType, employeeId);
+                    erpSyncService.markSyncSkipped(syncType, employeeId, staffName, staffNo);
+                    return "数据已存在，已跳过";
+                }
+                log.error("单人同步失败: syncType={}, employeeId={}, error={}", syncType, employeeId, errMsg, e);
                 erpSyncService.markSyncFailed(syncType, employeeId, staffName, staffNo, errMsg);
             } catch (Exception ex) {
                 log.error("写入同步失败状态异常", ex);

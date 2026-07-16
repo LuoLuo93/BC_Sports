@@ -32,4 +32,7 @@ public interface IhrEmployeeOnboardingStatusMapper extends BaseMapper<IhrEmploye
     );
 
     void upsertByEmployeesId(@Param("entity") IhrEmployeeOnboardingStatus entity);
+
+    /** 按业务键查询当前同步状态(用于状态不降级保护)，无记录返回 null */
+    Integer selectSyncStatusByEmployeesId(@Param("employeesId") String employeesId);
 }

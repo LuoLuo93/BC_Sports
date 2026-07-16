@@ -101,6 +101,11 @@ public class IhrEmployeeOnboardingServiceImpl implements IhrEmployeeOnboardingSe
     @Override
     @Transactional(transactionManager = "ihrTransactionManager", rollbackFor = Exception.class)
     public void markSyncSkipped(String employeesId, String staffName, String staffNo) {
+        // 状态不降级保护：已同步成功(1)的员工不再被覆盖成已跳过(3)，避免数据重推导致已同步→已跳过
+        Integer current = mapper.selectSyncStatusByEmployeesId(employeesId);
+        if (current != null && current == 1) {
+            return;
+        }
         IhrEmployeeOnboardingStatus status = new IhrEmployeeOnboardingStatus();
         status.setEmployeesId(employeesId);
         status.setStaffName(staffName);

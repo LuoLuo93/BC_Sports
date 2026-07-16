@@ -32,4 +32,7 @@ public interface IhrEmployeeUpdateStatusMapper extends BaseMapper<IhrEmployeeUpd
     );
 
     void upsertByStaffId(@Param("entity") IhrEmployeeUpdateStatus entity);
+
+    /** 按业务键查询当前同步状态(用于状态不降级保护)，无记录返回 null */
+    Integer selectSyncStatusByStaffId(@Param("staffId") String staffId);
 }

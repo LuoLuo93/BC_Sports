@@ -101,6 +101,11 @@ public class IhrEmployeeUpdateServiceImpl implements IhrEmployeeUpdateService {
     @Override
     @Transactional(transactionManager = "ihrTransactionManager", rollbackFor = Exception.class)
     public void markSyncSkipped(String staffId, String staffName, String staffNo) {
+        // 状态不降级保护：已同步成功(1)的员工不再被覆盖成已跳过(3)
+        Integer current = mapper.selectSyncStatusByStaffId(staffId);
+        if (current != null && current == 1) {
+            return;
+        }
         IhrEmployeeUpdateStatus status = new IhrEmployeeUpdateStatus();
         status.setStaffId(staffId);
         status.setStaffName(staffName);

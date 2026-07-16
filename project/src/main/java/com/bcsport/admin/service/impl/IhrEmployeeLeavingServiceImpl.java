@@ -102,6 +102,11 @@ public class IhrEmployeeLeavingServiceImpl implements IhrEmployeeLeavingService 
     @Override
     @Transactional(transactionManager = "ihrTransactionManager", rollbackFor = Exception.class)
     public void markSyncSkipped(String employeeId, String staffName, String staffNo) {
+        // 状态不降级保护：已同步成功(1)的员工不再被覆盖成已跳过(3)
+        Integer current = mapper.selectSyncStatusByEmployeeId(employeeId);
+        if (current != null && current == 1) {
+            return;
+        }
         IhrEmployeeLeavingStatus status = new IhrEmployeeLeavingStatus();
         status.setEmployeeId(employeeId);
         status.setStaffName(staffName);

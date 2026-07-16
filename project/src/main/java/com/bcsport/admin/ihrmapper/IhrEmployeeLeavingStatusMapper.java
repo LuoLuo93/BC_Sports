@@ -32,4 +32,7 @@ public interface IhrEmployeeLeavingStatusMapper extends BaseMapper<IhrEmployeeLe
     );
 
     void upsertByEmployeeId(@Param("entity") IhrEmployeeLeavingStatus entity);
+
+    /** 按业务键查询当前同步状态(用于状态不降级保护)，无记录返回 null */
+    Integer selectSyncStatusByEmployeeId(@Param("employeeId") String employeeId);
 }

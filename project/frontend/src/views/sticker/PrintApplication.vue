@@ -133,6 +133,7 @@
             <el-table v-loading="productLoading" :data="productList" border size="small" @selection-change="handleProductSelect" height="100%">
               <el-table-column type="selection" width="35" fixed="left" />
               <el-table-column type="index" label="#" width="45" fixed="left" />
+              <el-table-column prop="PRODUCT_ID" label="商品ID" width="100" show-overflow-tooltip fixed="left" />
               <el-table-column prop="MATERIAL_NUMBER" label="货号" width="170" show-overflow-tooltip fixed="left" class-name="col-key" />
               <el-table-column prop="STYLE_NUMBER" label="款号" width="170" show-overflow-tooltip fixed="left" class-name="col-key" />
               <el-table-column prop="MATERIAL_NAME" label="商品名称" width="200" show-overflow-tooltip fixed="left" class-name="col-key" />
@@ -178,6 +179,7 @@
               <el-table-column label="#" width="45" fixed="left">
                 <template #default="{ $index }">{{ (detailPage - 1) * detailSize + $index + 1 }}</template>
               </el-table-column>
+              <el-table-column prop="productId" label="商品ID" width="100" show-overflow-tooltip fixed="left" />
               <el-table-column prop="materialNumber" label="货号" width="170" show-overflow-tooltip fixed="left" class-name="col-key" />
               <el-table-column prop="styleNumber" label="款号" width="170" show-overflow-tooltip fixed="left" class-name="col-key" />
               <el-table-column prop="materialName" label="货品名称" width="200" show-overflow-tooltip fixed="left" class-name="col-key" />
@@ -764,7 +766,7 @@ async function openSizeAssign(row, index) {
   if (row.productId) {
     try {
       const { data } = await getProductSizes(row.productId)
-      sizeRows = (data || []).filter(r => r.SIZE)
+      sizeRows = (data || []).filter(r => r.SIZES)
     } catch { sizeRows = [] }
   }
   // 找出同货号已添加的尺码及数量
@@ -776,9 +778,9 @@ async function openSizeAssign(row, index) {
   })
   if (sizeRows.length) {
     sizeAssignOptions.value = sizeRows.map(r => {
-      const exist = existingMap[r.SIZE]
+      const exist = existingMap[r.SIZES]
       return {
-        size: r.SIZE,
+        size: r.SIZES,
         barcode: r.BARCODE || '',
         checked: !!exist,
         qty: exist ? exist.qty : 1,

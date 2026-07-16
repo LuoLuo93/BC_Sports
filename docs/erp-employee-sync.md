@@ -89,7 +89,7 @@ syncOne("ONBOARDING", employeeId, staffName, staffNo)
 │   ├─ IhrToBjErpConverter.toCreateParams(detail)
 │   │    字段: NO=工号, NAME=姓名, C_CUSTOMER_ID__NAME="边城体育"(固定),
 │   │         C_STORE_ID__NAME=部门名(实时), INCUMBENCY_STS=在职状况,
-│   │         BEGIN_DATE=入职日期, HANDSET=手机, EMAIL=邮箱
+│   │         ISSALER="Y"(营业员), BEGIN_DATE=入职日期, HANDSET=手机, EMAIL=邮箱
 │   ├─ buildTransactions("ObjectCreate", data)  → 表 12462 新增命令
 │   └─ bjErpApiClient.call(transactions)
 ├─ 成功 → markSyncSuccess(1, erpObjectId) ✅
@@ -97,7 +97,7 @@ syncOne("ONBOARDING", employeeId, staffName, staffNo)
 └─ 其他异常 → markSyncFailed(2, 错误信息)
 ```
 
-> 店仓 `C_STORE_ID__NAME` 取 IHR 员工部门名（实时），不再写死。经销商 `C_CUSTOMER_ID__NAME` 固定为 `"边城体育"`（IHR 无该字段）。
+> 店仓 `C_STORE_ID__NAME` 取 IHR 员工部门名（实时），不再写死。经销商 `C_CUSTOMER_ID__NAME` 固定为 `"边城体育"`（IHR 无该字段）。营业员 `ISSALER='Y'`（伯俊 HR_EMPLOYEE 表：Y=营业员2745人/N=非营业员880人）。不传部门字段 `C_DEPARTMENT_ID__NAME`（伯俊 C_DEPARTMENT 表为空，传了会报"部门不存在"）。
 
 ---
 
@@ -111,8 +111,8 @@ syncOne("UPDATE", employeeId, staffName, staffNo)
 ├─ syncUpdate(detail):
 │   ├─ IhrToBjErpConverter.toModifyParams(detail)
 │   │    字段: ak=工号(定位), NAME=姓名, C_CUSTOMER_ID__NAME="边城体育"(固定),
-│   │         C_STORE_ID__NAME=部门名, INCUMBENCY_STS=在职状况,
-│   │         HANDSET=手机, C_DEPARTMENT_ID__NAME=部门名
+│   │         C_STORE_ID__NAME=部门名(实时), INCUMBENCY_STS=在职状况,
+│   │         ISSALER="Y"(营业员), HANDSET=手机
 │   ├─ buildTransactions("ObjectModify", data)  → 表 12462 工号 ak 定位 + 增量更新
 │   └─ bjErpApiClient.call(transactions)
 ├─ 成功 → markSyncSuccess(1, erpObjectId) ✅
@@ -120,7 +120,7 @@ syncOne("UPDATE", employeeId, staffName, staffNo)
 └─ 其他异常 → markSyncFailed(2, 错误信息)
 ```
 
-> 入职用 `ObjectCreate`（新增），变更用 `ObjectModify`（用工号 `ak` 定位记录后增量更新字段）。变更几乎不会报"已存在"（是改不是增），工号在 ERP 不存在时会失败(2)。
+> 入职用 `ObjectCreate`（新增），变更用 `ObjectModify`（用工号 `ak` 定位记录后增量更新字段）。变更几乎不会报"已存在"（是改不是增），工号在 ERP 不存在时会失败(2)。变更不传部门字段 `C_DEPARTMENT_ID__NAME`（伯俊 C_DEPARTMENT 表为空，传了会报"部门不存在"）。
 
 ---
 
@@ -234,7 +234,9 @@ public void markSyncSkipped(String syncType, String employeeId, String staffName
 | 过期基准 | `enroll_in_date`（入职日期） | `sync_date`（最近修改日） | 无 |
 | 额外过滤 | 排除已离职 `staff_status != 'LEAVED'` | 去重（同日已入职不重复处理） | — |
 | 经销商 | `"边城体育"`（固定） | `"边城体育"`（固定） | 无 |
-| 店仓 | 部门名（实时） | 部门名（实时） | 无 |
+| 店仓 `C_STORE_ID__NAME` | IHR 部门名（实时） | IHR 部门名（实时） | 无 |
+| 营业员 `ISSALER` | `"Y"` | `"Y"` | 无 |
+| 部门 `C_DEPARTMENT_ID__NAME` | ❌ 不传（伯俊表空） | ❌ 不传（伯俊表空） | 无 |
 | 会报"已存在" | ✅ 会（编号重复） | ❌ 不会（是改不是增） | ❌ 不会 |
 | 启用状态 | ✅ 启用 | ✅ 启用 | ⚠️ 已注释（后期改库） |
 

@@ -15,6 +15,13 @@ public class StickerPrintOrderDetail {
     @TableField("order_id")
     private String orderId;
 
+    @TableField("product_id")
+    private String productId;
+
+    @FieldLabel("条码")
+    @TableField("barcode")
+    private String barcode;
+
     @FieldLabel("款号")
     @TableField("style_number")
     private String styleNumber;

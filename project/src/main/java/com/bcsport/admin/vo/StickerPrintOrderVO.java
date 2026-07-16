@@ -61,6 +61,9 @@ public class StickerPrintOrderVO {
 
         private String id;
 
+        @ApiModelProperty("伯俊商品ID")
+        private String productId;
+
         @ApiModelProperty("货号")
         private String materialNumber;
 
@@ -87,6 +90,9 @@ public class StickerPrintOrderVO {
 
         @ApiModelProperty("EAN13")
         private String ean13;
+
+        @ApiModelProperty("条码(每尺码对应)")
+        private String barcode;
 
         @ApiModelProperty("品牌名称")
         private String brandName;

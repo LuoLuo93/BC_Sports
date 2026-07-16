@@ -31,6 +31,8 @@ public class IhrToBjErpConverter {
 
         // INCUMBENCY_STS - 在职状况 【必填】
         data.set("INCUMBENCY_STS", mapStaffStatus(detail.getStaffStatus()));
+        // ISSALER - 是否营业员（Y=营业员）。同步的终端店铺员工均为营业员
+        data.set("ISSALER", "Y");
 
         // BEGIN_DATE - 入职日期
         putIfNotNull(data, "BEGIN_DATE", formatDate(detail.getEnrollInDate()));

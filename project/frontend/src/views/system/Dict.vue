@@ -1,8 +1,8 @@
 <template>
   <div class="page-container">
-    <el-row :gutter="16" class="dict-row">
+    <div class="dict-layout">
       <!-- 左侧：字典类型 -->
-      <el-col :span="8">
+      <div class="dict-left">
         <el-card shadow="never" class="dict-type-card">
           <template #header>
             <div class="card-header-row">
@@ -38,10 +38,10 @@
             <el-pagination v-model:current-page="typeQuery.pageNum" v-model:page-size="typeQuery.pageSize" :total="typeTotal" :page-sizes="PAGE_SIZES" layout="total, prev, pager, next" small @size-change="handleTypeSearch" @current-change="loadTypeList" />
           </div>
         </el-card>
-      </el-col>
+      </div>
 
       <!-- 右侧：字典数据 -->
-      <el-col :span="16">
+      <div class="dict-right">
         <el-card shadow="never" class="dict-data-card">
           <template #header>
             <div class="card-header-row">
@@ -99,8 +99,8 @@
           </div>
           <el-empty v-if="!currentDictType" description="请先选择左侧字典类型" :image-size="80" />
         </el-card>
-      </el-col>
-    </el-row>
+      </div>
+    </div>
 
     <!-- 字典类型弹窗 -->
     <el-dialog v-model="typeDialogVisible" :title="isEditType ? '编辑字典类型' : '新增字典类型'" width="480px" destroy-on-close>
@@ -313,22 +313,34 @@ onMounted(() => loadTypeList())
 </script>
 
 <style scoped>
-/* el-row 默认非 flex item，改 display:flex 撑满 page-container 剩余空间 */
-.dict-row {
+/* ===== 左右分栏布局 (原生 flex，不用 el-row/el-col) ===== */
+.dict-layout {
   flex: 1;
   min-height: 0;
   display: flex;
+  gap: 16px;
+  overflow: hidden;
 }
-/* 关键：el-col 需要 min-height:0 + overflow:hidden，否则内部内容会撑高导致整页滚动 */
-.dict-row :deep(.el-col) {
+.dict-left {
+  width: 33.333%;
+  min-width: 0;
+  flex-shrink: 0;
   display: flex;
   min-height: 0;
   overflow: hidden;
 }
+.dict-right {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+}
+
+/* ===== 两栏 el-card 统一撑满高度 ===== */
 .dict-type-card,
 .dict-data-card {
   width: 100%;
-  height: 100%;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -340,23 +352,40 @@ onMounted(() => loadTypeList())
   min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden; /* card body 自身不滚动，滚动交给内部 type-list / el-table */
+  overflow: hidden;
 }
-/* 左侧搜索框固定，列表撑满剩余空间内部滚动，分页固定底部 */
-.dict-type-search { flex-shrink: 0; margin-bottom: 12px; }
-.type-list { flex: 1; min-height: 0; overflow-y: auto; }
+
+/* ===== 左栏内部 ===== */
+.dict-type-search {
+  flex-shrink: 0;
+  margin-bottom: 12px;
+}
+.type-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
 .type-item {
-  display: flex; align-items: center; gap: 8px;
-  padding: 10px 12px; border-radius: 8px; cursor: pointer;
-  transition: background 0.15s; border-bottom: 1px solid var(--bc-bg);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+  border-bottom: 1px solid var(--bc-bg);
 }
 .type-item:hover { background: var(--bc-bg); }
 .type-item.active { background: var(--bc-bg-primary-soft); border-left: 3px solid var(--bc-primary-light); }
 .type-name { font-weight: 600; font-size: 0.875rem; flex-shrink: 0; }
 .type-code { flex: 1; font-size: 0.75rem; color: var(--bc-text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .type-actions { flex-shrink: 0; }
-/* 右侧搜索区固定高度，表格撑满剩余空间，分页固定底部 */
-.dict-data-search { flex-shrink: 0; margin-bottom: 12px; }
+
+/* ===== 右栏内部 ===== */
+.dict-data-search {
+  flex-shrink: 0;
+  margin-bottom: 12px;
+}
 .dict-data-search :deep(.el-form-item) { margin-bottom: 0; }
 .dict-data-card :deep(.el-card__body > .table-responsive) {
   flex: 1;

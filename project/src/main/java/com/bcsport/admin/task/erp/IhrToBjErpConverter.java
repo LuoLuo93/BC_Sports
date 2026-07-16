@@ -26,8 +26,8 @@ public class IhrToBjErpConverter {
 
         // C_CUSTOMER_ID__NAME - 经销商 【必填】固定值
         data.set("C_CUSTOMER_ID__NAME", "边城体育");
-        // C_STORE_ID__NAME - 店仓 【必填】固定值
-        data.set("C_STORE_ID__NAME", "南京玄武区招商花园城NL");
+        // C_STORE_ID__NAME - 店仓 【必填】取 IHR 员工部门（与变更逻辑一致，不再写死）
+        data.set("C_STORE_ID__NAME", detail.getDepartmentName());
 
         // INCUMBENCY_STS - 在职状况 【必填】
         data.set("INCUMBENCY_STS", mapStaffStatus(detail.getStaffStatus()));

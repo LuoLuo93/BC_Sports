@@ -57,9 +57,9 @@ public class IhrToBjErpConverter {
         data.set("C_STORE_ID__NAME", detail.getDepartmentName());          // 【必填】店仓（IHR员工部门）
         data.set("INCUMBENCY_STS", mapStaffStatus(detail.getStaffStatus())); // 【必填】在职状况
 
-        // 只更新手机号和部门，其他不动
+        // 只更新手机号，其他不动（不传部门字段 C_DEPARTMENT_ID__NAME，
+        // 伯俊 C_DEPARTMENT 表为空，传部门会导致"部门不存在"报错）
         putIfNotNull(data, "HANDSET", detail.getMobileNo());               // 手机号
-        putIfNotNull(data, "C_DEPARTMENT_ID__NAME", detail.getDepartmentName()); // 部门
 
         return data;
     }

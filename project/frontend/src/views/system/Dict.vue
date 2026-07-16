@@ -10,10 +10,16 @@
               <el-button v-if="hasPermission('system:dict:add')" type="primary" size="small" :icon="Plus" @click="handleAddType">新增</el-button>
             </div>
           </template>
-          <el-input v-model="typeSearch" placeholder="搜索字典类型" clearable class="mb-12" />
-          <div class="type-list">
+          <div class="dict-type-search">
+            <el-input v-model="typeQuery.dictName" placeholder="搜索字典类型" clearable @keyup.enter="handleTypeSearch">
+              <template #append>
+                <el-button :icon="Search" @click="handleTypeSearch" />
+              </template>
+            </el-input>
+          </div>
+          <div class="type-list" v-loading="typeLoading">
             <div
-              v-for="item in filteredTypes"
+              v-for="item in typeList"
               :key="item.id"
               class="type-item"
               :class="{ active: currentTypeId === item.id }"
@@ -26,7 +32,10 @@
                 <el-button v-if="hasPermission('system:dict:delete')" type="danger" plain size="small" @click.stop="handleDeleteType(item)">删除</el-button>
               </div>
             </div>
-            <el-empty v-if="filteredTypes.length === 0" description="暂无数据" :image-size="60" />
+            <el-empty v-if="typeList.length === 0" description="暂无数据" :image-size="60" />
+          </div>
+          <div class="pagination-wrapper--sm">
+            <el-pagination v-model:current-page="typeQuery.pageNum" v-model:page-size="typeQuery.pageSize" :total="typeTotal" :page-sizes="PAGE_SIZES" layout="total, prev, pager, next" small @size-change="handleTypeSearch" @current-change="loadTypeList" />
           </div>
         </el-card>
       </el-col>
@@ -43,6 +52,21 @@
               <el-button v-if="hasPermission('system:dict:add')" type="primary" size="small" :icon="Plus" :disabled="!currentDictType" @click="handleAddData">新增</el-button>
             </div>
           </template>
+
+          <div class="dict-data-search">
+            <el-form :model="dataQuery" inline>
+              <el-form-item label="字典标签">
+                <el-input v-model="dataQuery.dictLabel" placeholder="请输入字典标签" clearable @keyup.enter="handleDataSearch" />
+              </el-form-item>
+              <el-form-item label="字典值">
+                <el-input v-model="dataQuery.dictValue" placeholder="请输入字典值" clearable @keyup.enter="handleDataSearch" />
+              </el-form-item>
+              <el-form-item>
+                <el-button type="primary" :icon="Search" :disabled="!currentDictType" @click="handleDataSearch">搜索</el-button>
+                <el-button :icon="RefreshRight" :disabled="!currentDictType" @click="resetDataQuery">重置</el-button>
+              </el-form-item>
+            </el-form>
+          </div>
 
           <div class="table-responsive">
             <el-table v-loading="dataLoading" :data="dataList" border stripe empty-text="暂无数据" height="100%">
@@ -133,14 +157,14 @@
 
 <script setup>
 defineOptions({ name: 'DictManagement' })
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { formatTime } from '@/utils/format'
 import {
-  getDictTypeList, getDictType, createDictType, updateDictType, deleteDictType,
+  getDictTypePage, getDictType, createDictType, updateDictType, deleteDictType,
   getDictDataPage, getDictData, createDictData, updateDictData, deleteDictData
 } from '@/api/dict'
-import { Plus } from '@element-plus/icons-vue'
+import { Plus, Search, RefreshRight } from '@element-plus/icons-vue'
 import { usePermission } from '@/composables/usePermission'
 import { usePageQuery } from '@/composables/usePageQuery'
 import { useDictStore } from '@/stores/dict'
@@ -150,8 +174,7 @@ const { hasPermission } = usePermission()
 const dictStore = useDictStore()
 
 // --- 字典类型 ---
-const typeList = ref([])
-const typeSearch = ref('')
+const { loading: typeLoading, tableData: typeList, total: typeTotal, query: typeQuery, loadData: loadTypeList, handleSearch: handleTypeSearch, resetQuery: resetTypeQuery } = usePageQuery(getDictTypePage, { dictName: '', dictType: '' })
 const currentTypeId = ref(null)
 const currentDictType = ref(null)
 const typeDialogVisible = ref(false)
@@ -160,24 +183,11 @@ const editTypeId = ref(null)
 const typeFormRef = ref(null)
 const typeSubmitting = ref(false)
 
-const filteredTypes = computed(() => {
-  if (!typeSearch.value) return typeList.value
-  const kw = typeSearch.value.toLowerCase()
-  return typeList.value.filter(t =>
-    t.dictName.toLowerCase().includes(kw) || t.dictType.toLowerCase().includes(kw)
-  )
-})
-
 const defaultTypeForm = () => ({ dictName: '', dictType: '', remark: '' })
 const typeForm = reactive(defaultTypeForm())
 const typeRules = {
   dictName: [{ required: true, message: '请输入字典名称', trigger: 'blur' }],
   dictType: [{ required: true, message: '请输入字典类型编码', trigger: 'blur' }]
-}
-
-async function loadTypes() {
-  const res = await getDictTypeList()
-  typeList.value = res.data || []
 }
 
 function selectType(item) {
@@ -212,7 +222,7 @@ async function handleDeleteType(item) {
     currentDictType.value = null
     dataList.value = []
   }
-  loadTypes()
+  loadTypeList()
 }
 
 async function handleSubmitType() {
@@ -227,14 +237,14 @@ async function handleSubmitType() {
     }
     ElMessage.success(isEditType.value ? '更新成功' : '创建成功')
     typeDialogVisible.value = false
-    loadTypes()
+    loadTypeList()
   } finally {
     typeSubmitting.value = false
   }
 }
 
 // --- 字典数据 ---
-const { loading: dataLoading, tableData: dataList, total: dataTotal, query: dataQuery, loadData: loadDataList, handleSearch: handleDataSearch } = usePageQuery(getDictDataPage, { dictType: '' })
+const { loading: dataLoading, tableData: dataList, total: dataTotal, query: dataQuery, loadData: loadDataList, handleSearch: handleDataSearch, resetQuery: resetDataQuery } = usePageQuery(getDictDataPage, { dictType: '', dictLabel: '', dictValue: '' })
 const dataDialogVisible = ref(false)
 const isEditData = ref(false)
 const editDataId = ref(null)
@@ -299,7 +309,7 @@ async function handleSubmitData() {
   }
 }
 
-onMounted(() => loadTypes())
+onMounted(() => loadTypeList())
 </script>
 
 <style scoped>
@@ -309,8 +319,11 @@ onMounted(() => loadTypes())
   min-height: 0;
   display: flex;
 }
+/* 关键：el-col 需要 min-height:0 + overflow:hidden，否则内部内容会撑高导致整页滚动 */
 .dict-row :deep(.el-col) {
   display: flex;
+  min-height: 0;
+  overflow: hidden;
 }
 .dict-type-card,
 .dict-data-card {
@@ -318,6 +331,8 @@ onMounted(() => loadTypes())
   height: 100%;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
 }
 .dict-type-card :deep(.el-card__body),
 .dict-data-card :deep(.el-card__body) {
@@ -327,7 +342,8 @@ onMounted(() => loadTypes())
   flex-direction: column;
   overflow: hidden; /* card body 自身不滚动，滚动交给内部 type-list / el-table */
 }
-/* 左侧类型列表：撑满剩余空间，内部滚动 */
+/* 左侧搜索框固定，列表撑满剩余空间内部滚动，分页固定底部 */
+.dict-type-search { flex-shrink: 0; margin-bottom: 12px; }
 .type-list { flex: 1; min-height: 0; overflow-y: auto; }
 .type-item {
   display: flex; align-items: center; gap: 8px;
@@ -339,12 +355,17 @@ onMounted(() => loadTypes())
 .type-name { font-weight: 600; font-size: 0.875rem; flex-shrink: 0; }
 .type-code { flex: 1; font-size: 0.75rem; color: var(--bc-text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .type-actions { flex-shrink: 0; }
-/* 右侧搜索框固定 */
+/* 右侧搜索区固定高度，表格撑满剩余空间，分页固定底部 */
+.dict-data-search { flex-shrink: 0; margin-bottom: 12px; }
+.dict-data-search :deep(.el-form-item) { margin-bottom: 0; }
 .dict-data-card :deep(.el-card__body > .table-responsive) {
   flex: 1;
   min-height: 0;
 }
 .dict-data-card :deep(.el-card__body > .pagination-wrapper--sm) {
+  flex-shrink: 0;
+}
+.dict-type-card :deep(.el-card__body > .pagination-wrapper--sm) {
   flex-shrink: 0;
 }
 </style>

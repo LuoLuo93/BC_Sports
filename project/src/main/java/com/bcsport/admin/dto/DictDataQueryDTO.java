@@ -11,4 +11,14 @@ public class DictDataQueryDTO {
 
     @NotBlank(message = "字典类型不能为空")
     private String dictType;
+
+    /**
+     * 字典标签（模糊查询，可空）
+     */
+    private String dictLabel;
+
+    /**
+     * 字典值（模糊查询，可空）
+     */
+    private String dictValue;
 }

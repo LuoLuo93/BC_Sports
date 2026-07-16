@@ -1,7 +1,10 @@
 package com.bcsport.admin.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.bcsport.admin.dto.DictTypeQueryDTO;
 import com.bcsport.admin.entity.DictType;
 import com.bcsport.admin.mapper.DictTypeMapper;
 import com.bcsport.admin.service.DictTypeService;
@@ -21,6 +24,18 @@ public class DictTypeServiceImpl extends ServiceImpl<DictTypeMapper, DictType> i
         wrapper.eq(DictType::getStatus, 1)
                .orderByAsc(DictType::getDictName);
         return list(wrapper);
+    }
+
+    @Override
+    public IPage<DictType> pageDictType(DictTypeQueryDTO query, int pageNum, int pageSize) {
+        LambdaQueryWrapper<DictType> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(DictType::getStatus, 1)
+               .like(query != null && query.getDictName() != null && !query.getDictName().isBlank(),
+                       DictType::getDictName, query == null ? null : query.getDictName())
+               .like(query != null && query.getDictType() != null && !query.getDictType().isBlank(),
+                       DictType::getDictType, query == null ? null : query.getDictType())
+               .orderByAsc(DictType::getDictName);
+        return page(new Page<>(pageNum, pageSize), wrapper);
     }
 
     @Override

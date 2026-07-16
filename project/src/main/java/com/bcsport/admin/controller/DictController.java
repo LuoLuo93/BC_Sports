@@ -5,6 +5,7 @@ import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.common.Result;
 import com.bcsport.admin.dto.DictDataQueryDTO;
+import com.bcsport.admin.dto.DictTypeQueryDTO;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.bcsport.admin.entity.DictData;
 import com.bcsport.admin.entity.DictType;
@@ -39,6 +40,14 @@ public class DictController {
     @RequiresPermissions("system:dict:query")
     public Result<List<DictType>> listTypes() {
         return Result.success(dictTypeService.listAll());
+    }
+
+    @GetMapping("/type/page")
+    @ApiOperation("分页查询字典类型")
+    @RequiresPermissions("system:dict:query")
+    public Result<PageResult<DictType>> pageTypes(@Valid PageQuery pageQuery, @Valid DictTypeQueryDTO queryDTO) {
+        IPage<DictType> page = dictTypeService.pageDictType(queryDTO, pageQuery.getPageNum(), pageQuery.getPageSize());
+        return Result.success(new PageResult<>(page));
     }
 
     @GetMapping("/type/{id}")
@@ -88,7 +97,7 @@ public class DictController {
     @ApiOperation("分页查询字典数据")
     @RequiresPermissions("system:dict:query")
     public Result<PageResult<DictData>> pageData(@Valid PageQuery pageQuery, @Valid DictDataQueryDTO queryDTO) {
-        IPage<DictData> page = dictDataService.pageByDictType(queryDTO.getDictType(), pageQuery.getPageNum(), pageQuery.getPageSize());
+        IPage<DictData> page = dictDataService.pageByDictType(queryDTO.getDictType(), queryDTO.getDictLabel(), queryDTO.getDictValue(), pageQuery.getPageNum(), pageQuery.getPageSize());
         return Result.success(new PageResult<>(page));
     }
 

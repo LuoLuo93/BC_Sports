@@ -10,7 +10,7 @@ public interface DictDataService extends IService<DictData> {
 
     List<DictData> listByDictType(String dictType);
 
-    IPage<DictData> pageByDictType(String dictType, int pageNum, int pageSize);
+    IPage<DictData> pageByDictType(String dictType, String dictLabel, String dictValue, int pageNum, int pageSize);
 
     boolean addDictData(DictData dictData);
 

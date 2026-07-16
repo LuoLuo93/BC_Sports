@@ -28,9 +28,11 @@ public class DictDataServiceImpl extends ServiceImpl<DictDataMapper, DictData> i
     }
 
     @Override
-    public IPage<DictData> pageByDictType(String dictType, int pageNum, int pageSize) {
+    public IPage<DictData> pageByDictType(String dictType, String dictLabel, String dictValue, int pageNum, int pageSize) {
         LambdaQueryWrapper<DictData> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(DictData::getDictType, dictType)
+               .like(dictLabel != null && !dictLabel.isBlank(), DictData::getDictLabel, dictLabel)
+               .like(dictValue != null && !dictValue.isBlank(), DictData::getDictValue, dictValue)
                .orderByAsc(DictData::getSort);
         return page(new Page<>(pageNum, pageSize), wrapper);
     }

@@ -4,6 +4,10 @@ export function getDictTypeList(params) {
   return request.get('/api/dict/type/list', { params })
 }
 
+export function getDictTypePage(params) {
+  return request.get('/api/dict/type/page', { params })
+}
+
 export function getDictType(id) {
   return request.get(`/api/dict/type/${id}`)
 }

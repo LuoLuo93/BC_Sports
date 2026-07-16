@@ -177,6 +177,11 @@ public class ErpEmployeeSyncServiceImpl implements ErpEmployeeSyncService {
     @Override
     @Transactional(transactionManager = "ihrTransactionManager", rollbackFor = Exception.class)
     public void markSyncSkipped(String syncType, String employeeId, String staffName, String staffNo) {
+        // 状态不降级保护：已同步成功(1)的员工不再被覆盖成已跳过(3)，避免数据重推导致已同步→已跳过
+        Integer current = mapper.selectSyncStatusByKey(employeeId, syncType);
+        if (current != null && current == 1) {
+            return;
+        }
         ErpEmployeeSyncStatus status = new ErpEmployeeSyncStatus();
         status.setSyncType(syncType);
         status.setEmployeeId(employeeId);

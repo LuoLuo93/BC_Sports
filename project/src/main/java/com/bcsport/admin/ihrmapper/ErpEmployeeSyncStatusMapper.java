@@ -95,4 +95,7 @@ public interface ErpEmployeeSyncStatusMapper extends BaseMapper<ErpEmployeeSyncS
      * 查询待同步的离职人员（sync_status = 0, 2 或 null）
      */
     List<ErpEmployeeVO> selectPendingLeavings();
+
+    /** 按员工ID+同步类型查询当前同步状态(用于状态不降级保护)，无记录返回 null */
+    Integer selectSyncStatusByKey(@Param("employeeId") String employeeId, @Param("syncType") String syncType);
 }

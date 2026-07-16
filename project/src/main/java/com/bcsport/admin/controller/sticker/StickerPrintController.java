@@ -107,4 +107,11 @@ public class StickerPrintController {
     public Result<?> getBrands() {
         return Result.success(stickerPrintService.getBrands());
     }
+
+    @GetMapping("/product/sizes")
+    @ApiOperation("按商品ID查询尺码及条码")
+    @RequiresPermissions("sticker:print:query")
+    public Result<?> getProductSizes(@RequestParam String productId) {
+        return Result.success(stickerPrintService.getProductSizes(productId));
+    }
 }

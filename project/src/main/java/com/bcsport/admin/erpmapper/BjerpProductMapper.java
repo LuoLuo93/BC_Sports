@@ -17,4 +17,7 @@ public interface BjerpProductMapper {
     List<Map<String, Object>> getBrands();
 
     List<Map<String, Object>> getKinds();
+
+    /** 按 productId 查询该商品每个尺码对应的条码(M_PRODUCT_ALIAS) */
+    List<Map<String, Object>> getProductSizes(@Param("productId") String productId);
 }

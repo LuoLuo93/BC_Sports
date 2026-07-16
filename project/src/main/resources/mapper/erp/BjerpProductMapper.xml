@@ -28,7 +28,8 @@
     <select id="searchProducts" resultType="java.util.Map">
         SELECT * FROM (
             SELECT TMP.*, ROW_NUMBER() OVER (ORDER BY product_name) AS RN FROM (
-                SELECT product.name AS PRODUCT_NAME,
+                SELECT product.ID AS PRODUCT_ID,
+                product.name AS PRODUCT_NAME,
                 product.name AS MATERIAL_NUMBER,
                 product.VALUE AS MATERIAL_NAME,
                 product.VIRTUALNAME AS STYLE_NUMBER,
@@ -81,6 +82,20 @@
 
     <select id="getKinds" resultType="java.util.Map">
         SELECT ID, ATTRIBNAME FROM M_DIM WHERE M_DIMDEF_ID = 4 and DIMFLAG = 'DIM4' ORDER BY ATTRIBCODE ASC
+    </select>
+
+    <!-- 按商品ID查询每个尺码对应的条码：M_PRODUCT 别名条码 + 属性实例(颜色/尺码) -->
+    <select id="getProductSizes" resultType="java.util.Map">
+        SELECT product.NAME        AS MATERIAL_NUMBER,
+               product.VALUE       AS MATERIAL_NAME,
+               barcode.NO          AS BARCODE,
+               c.VALUE1_CODE       AS COLOR,
+               c.VALUE2_CODE       AS SIZE
+        FROM M_PRODUCT product
+                 LEFT JOIN M_PRODUCT_ALIAS barcode ON product.ID = barcode.M_PRODUCT_ID
+                 LEFT JOIN M_ATTRIBUTESETINSTANCE c ON barcode.M_ATTRIBUTESETINSTANCE_ID = c.id
+        WHERE product.ID = #{productId}
+          AND barcode.NO IS NOT NULL
     </select>
 
 </mapper>

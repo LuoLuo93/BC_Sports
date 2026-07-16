@@ -36,6 +36,10 @@ export function getProductBrands() {
   return request.get('/api/sticker/print/product/brands')
 }
 
+export function getProductSizes(productId) {
+  return request.get('/api/sticker/print/product/sizes', { params: { productId } })
+}
+
 export function getStickerDataPage(params) {
   return request.get('/api/sticker/data/page', { params })
 }

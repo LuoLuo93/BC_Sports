@@ -208,6 +208,9 @@
                   <span v-else style="color:#d9d9d9">-</span>
                 </template>
               </el-table-column>
+              <el-table-column label="条码" width="170" show-overflow-tooltip fixed="right">
+                <template #default="{ row }">{{ row.barcode || '-' }}</template>
+              </el-table-column>
               <el-table-column label="数量" width="70" align="center" fixed="right">
                 <template #default="{ row }">
                   <span v-if="row.sizeName" class="detail-qty">{{ row.printQty }}</span>
@@ -329,6 +332,7 @@
         <div v-for="(item, i) in filteredSizeAssignOptions" :key="i" class="sa-item" :class="{ 'sa-item--checked': item.checked, 'sa-item--existing': item.existing }" @click="item.checked = !item.checked">
           <el-checkbox v-model="item.checked" @click.stop />
           <span class="sa-item-size">{{ item.size }}</span>
+          <span v-if="item.barcode" class="sa-item-barcode">{{ item.barcode }}</span>
           <el-tag v-if="item.existing" type="warning" size="small" effect="plain">已添加</el-tag>
           <el-input-number v-model="item.qty" :min="1" :max="999" size="small" controls-position="right" style="width:110px" :disabled="!item.checked" @click.stop />
         </div>
@@ -350,7 +354,7 @@ import { useRouter, onBeforeRouteLeave } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Loading, Search, RefreshRight } from '@element-plus/icons-vue'
 import request from '@/api/request'
-import { getPrintOrderPage, getPrintOrder, createPrintOrder, updatePrintOrder, submitPrintOrder, reviewPrintOrder, deletePrintOrder, searchProducts, getProductBrands, createAgentPrintTasks } from '@/api/sticker'
+import { getPrintOrderPage, getPrintOrder, createPrintOrder, updatePrintOrder, submitPrintOrder, reviewPrintOrder, deletePrintOrder, searchProducts, getProductBrands, getProductSizes, createAgentPrintTasks } from '@/api/sticker'
 import { usePageQuery } from '@/composables/usePageQuery'
 import { usePermission } from '@/composables/usePermission'
 import { useAuthStore } from '@/stores/auth'
@@ -717,6 +721,7 @@ function confirmProductSelect() {
       continue
     }
     form.details.push({
+      productId: p.PRODUCT_ID || '',
       materialNumber: mn,
       styleNumber: sn,
       materialName: p.MATERIAL_NAME || '',
@@ -734,6 +739,7 @@ function confirmProductSelect() {
       contactPhone: p.CONTACT_PHONE || '',
       materialComposition: p.MATERIAL_COMPOSITION || '',
       sizeName: '',
+      barcode: '',
       printQty: 0
     })
   }
@@ -744,13 +750,23 @@ function confirmProductSelect() {
 }
 
 // ─── Size Assign ────────────────────────────────────────
-function openSizeAssign(row, index) {
+async function openSizeAssign(row, index) {
   sizeAssignRowIndex.value = index
   sizeAssignProductName.value = `${row.styleNumber || ''} ${row.materialName || ''}`
   sizeAssignMeta.brand = row.brandName || ''
   sizeAssignMeta.color = row.color || ''
   sizeAssignMeta.ean13 = row.ean13 || ''
-  const sizes = parseSizes(row.sizeGroup)
+  sizeAssignSearch.value = ''
+  showSizeAssignDialog.value = true
+
+  // 优先按 productId 查后端拿「尺码+条码」一一对应；没有 productId 时回退解析 sizeGroup
+  let sizeRows = []
+  if (row.productId) {
+    try {
+      const { data } = await getProductSizes(row.productId)
+      sizeRows = (data || []).filter(r => r.SIZE)
+    } catch { sizeRows = [] }
+  }
   // 找出同货号已添加的尺码及数量
   const existingMap = {}
   form.details.forEach((d, i) => {
@@ -758,18 +774,31 @@ function openSizeAssign(row, index) {
       existingMap[d.sizeName] = { qty: d.printQty, index: i }
     }
   })
-  sizeAssignOptions.value = sizes.map(s => {
-    const exist = existingMap[s]
-    return {
-      size: s,
-      checked: !!exist,
-      qty: exist ? exist.qty : 1,
-      existing: !!exist
-    }
-  })
+  if (sizeRows.length) {
+    sizeAssignOptions.value = sizeRows.map(r => {
+      const exist = existingMap[r.SIZE]
+      return {
+        size: r.SIZE,
+        barcode: r.BARCODE || '',
+        checked: !!exist,
+        qty: exist ? exist.qty : 1,
+        existing: !!exist
+      }
+    })
+  } else {
+    const sizes = parseSizes(row.sizeGroup)
+    sizeAssignOptions.value = sizes.map(s => {
+      const exist = existingMap[s]
+      return {
+        size: s,
+        barcode: '',
+        checked: !!exist,
+        qty: exist ? exist.qty : 1,
+        existing: !!exist
+      }
+    })
+  }
   sizeAssignAllChecked.value = sizeAssignOptions.value.every(o => o.checked)
-  sizeAssignSearch.value = ''
-  showSizeAssignDialog.value = true
 }
 
 function toggleSizeAssignAll(checked) {
@@ -803,6 +832,7 @@ function confirmSizeAssign() {
   const insertAt = firstIdx >= 0 ? firstIdx : idx
   for (let i = 0; i < checked.length; i++) {
     form.details.splice(insertAt + i, 0, {
+      productId: orig.productId,
       materialNumber: orig.materialNumber,
       styleNumber: orig.styleNumber,
       materialName: orig.materialName,
@@ -820,6 +850,7 @@ function confirmSizeAssign() {
       contactPhone: orig.contactPhone,
       materialComposition: orig.materialComposition,
       sizeName: checked[i].size,
+      barcode: checked[i].barcode || '',
       printQty: checked[i].qty
     })
   }
@@ -1097,6 +1128,17 @@ onBeforeUnmount(() => {
   color: #374151;
   flex: 1;
   min-width: 0;
+}
+.sa-item-barcode {
+  font-size: 12px;
+  color: #6b7280;
+  font-family: 'Consolas', monospace;
+  letter-spacing: 0.02em;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .sa-empty {
   text-align: center;

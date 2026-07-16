@@ -72,6 +72,10 @@ public class StickerPrintService {
         return bjerpProductMapper.getBrands();
     }
 
+    public List<Map<String, Object>> getProductSizes(String productId) {
+        return bjerpProductMapper.getProductSizes(productId);
+    }
+
     public PageResult<StickerPrintOrderVO> pageOrders(PageQuery pageQuery, StickerPrintQueryDTO queryDTO) {
         LambdaQueryWrapper<StickerPrintOrder> wrapper = new LambdaQueryWrapper<StickerPrintOrder>()
             .eq(StickerPrintOrder::getDeleted, 0)

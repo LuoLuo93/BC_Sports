@@ -133,7 +133,6 @@
             <el-table v-loading="productLoading" :data="productList" border size="small" @selection-change="handleProductSelect" height="100%">
               <el-table-column type="selection" width="35" fixed="left" />
               <el-table-column type="index" label="#" width="45" fixed="left" />
-              <el-table-column prop="PRODUCT_ID" label="商品ID" width="100" show-overflow-tooltip fixed="left" />
               <el-table-column prop="MATERIAL_NUMBER" label="货号" width="170" show-overflow-tooltip fixed="left" class-name="col-key" />
               <el-table-column prop="STYLE_NUMBER" label="款号" width="170" show-overflow-tooltip fixed="left" class-name="col-key" />
               <el-table-column prop="MATERIAL_NAME" label="商品名称" width="200" show-overflow-tooltip fixed="left" class-name="col-key" />
@@ -179,7 +178,6 @@
               <el-table-column label="#" width="45" fixed="left">
                 <template #default="{ $index }">{{ (detailPage - 1) * detailSize + $index + 1 }}</template>
               </el-table-column>
-              <el-table-column prop="productId" label="商品ID" width="100" show-overflow-tooltip fixed="left" />
               <el-table-column prop="materialNumber" label="货号" width="170" show-overflow-tooltip fixed="left" class-name="col-key" />
               <el-table-column prop="styleNumber" label="款号" width="170" show-overflow-tooltip fixed="left" class-name="col-key" />
               <el-table-column prop="materialName" label="货品名称" width="200" show-overflow-tooltip fixed="left" class-name="col-key" />
@@ -204,14 +202,14 @@
               <el-table-column prop="ean13" label="EAN13" width="150">
                 <template #default="{ row }">{{ row.ean13 || '-' }}</template>
               </el-table-column>
+              <el-table-column prop="barcode" label="条码" width="170" show-overflow-tooltip>
+                <template #default="{ row }">{{ row.barcode || '-' }}</template>
+              </el-table-column>
               <el-table-column label="尺码" width="80" align="center" fixed="right">
                 <template #default="{ row }">
                   <el-tag v-if="row.sizeName" type="warning" size="small" effect="dark">{{ row.sizeName }}</el-tag>
                   <span v-else style="color:#d9d9d9">-</span>
                 </template>
-              </el-table-column>
-              <el-table-column label="条码" width="170" show-overflow-tooltip fixed="right">
-                <template #default="{ row }">{{ row.barcode || '-' }}</template>
               </el-table-column>
               <el-table-column label="数量" width="70" align="center" fixed="right">
                 <template #default="{ row }">
@@ -498,7 +496,7 @@ async function handleEdit(row) {
   form.deptName = ''
   form.createTime = data.createTime || ''
   form.remark = data.remark || ''
-  form.details = data.details || []
+  form.details = (data.details || []).map(d => ({ ...d, barcode: '' }))
   selectedRows.value = []
   searchMaterialNumber.value = ''
   searchStyleNumber.value = ''

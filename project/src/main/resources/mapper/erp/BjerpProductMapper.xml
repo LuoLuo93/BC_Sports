@@ -47,7 +47,10 @@
                 '0592-8888888' AS CONTACT_PHONE,
                 '100%聚酯纤维' AS MATERIAL_COMPOSITION,
                 product.M_SIZEGROUP_ID AS SIZEGROUP_ID,
-                product.SIZES AS SIZES
+                (SELECT LISTAGG(c.VALUE2_CODE, ',') WITHIN GROUP (ORDER BY c.VALUE2_CODE)
+                 FROM M_PRODUCT_ALIAS a
+                 LEFT JOIN M_ATTRIBUTESETINSTANCE c ON a.M_ATTRIBUTESETINSTANCE_ID = c.id
+                 WHERE a.M_PRODUCT_ID = product.ID AND c.VALUE2_CODE IS NOT NULL) AS SIZES
                 FROM M_PRODUCT product
                 LEFT JOIN M_DIM brand ON product.M_DIM1_ID = brand.ID
                 LEFT JOIN M_DIM Kind ON product.M_DIM4_ID = Kind.ID

@@ -332,7 +332,6 @@
         <div v-for="(item, i) in filteredSizeAssignOptions" :key="i" class="sa-item" :class="{ 'sa-item--checked': item.checked, 'sa-item--existing': item.existing }" @click="item.checked = !item.checked">
           <el-checkbox v-model="item.checked" @click.stop />
           <span class="sa-item-size">{{ item.size }}</span>
-          <span v-if="item.barcode" class="sa-item-barcode">{{ item.barcode }}</span>
           <el-tag v-if="item.existing" type="warning" size="small" effect="plain">已添加</el-tag>
           <el-input-number v-model="item.qty" :min="1" :max="999" size="small" controls-position="right" style="width:110px" :disabled="!item.checked" @click.stop />
         </div>
@@ -496,7 +495,7 @@ async function handleEdit(row) {
   form.deptName = ''
   form.createTime = data.createTime || ''
   form.remark = data.remark || ''
-  form.details = (data.details || []).map(d => ({ ...d, barcode: '' }))
+  form.details = data.details || []
   selectedRows.value = []
   searchMaterialNumber.value = ''
   searchStyleNumber.value = ''

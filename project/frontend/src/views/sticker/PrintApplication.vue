@@ -145,12 +145,6 @@
               <el-table-column prop="EXECUTION_STANDARD" label="执行标准" width="160">
                 <template #default="{ row }">{{ row.EXECUTION_STANDARD || '-' }}</template>
               </el-table-column>
-              <el-table-column prop="ORIGIN" label="产地" width="90">
-                <template #default="{ row }">{{ row.ORIGIN || '-' }}</template>
-              </el-table-column>
-              <el-table-column prop="MANUFACTURER" label="制造商" width="140">
-                <template #default="{ row }">{{ row.MANUFACTURER || '-' }}</template>
-              </el-table-column>
               <el-table-column prop="MATERIAL_COMPOSITION" label="面料成分" width="160">
                 <template #default="{ row }">{{ row.MATERIAL_COMPOSITION || '-' }}</template>
               </el-table-column>
@@ -189,12 +183,6 @@
               </el-table-column>
               <el-table-column prop="executionStandard" label="执行标准" width="160">
                 <template #default="{ row }">{{ row.executionStandard || '-' }}</template>
-              </el-table-column>
-              <el-table-column prop="origin" label="产地" width="90">
-                <template #default="{ row }">{{ row.origin || '-' }}</template>
-              </el-table-column>
-              <el-table-column prop="manufacturer" label="制造商" width="140">
-                <template #default="{ row }">{{ row.manufacturer || '-' }}</template>
               </el-table-column>
               <el-table-column prop="materialComposition" label="面料成分" width="160">
                 <template #default="{ row }">{{ row.materialComposition || '-' }}</template>

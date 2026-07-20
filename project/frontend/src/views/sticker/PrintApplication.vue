@@ -167,7 +167,7 @@
                 <el-button type="danger" size="small" :disabled="!selectedRows.length" @click="handleBatchDelete">批量删除</el-button>
               </div>
             </div>
-            <el-table :data="pagedDetails" border size="small" @selection-change="handleDetailSelect" ref="detailTableRef" height="100%">
+            <el-table :data="pagedDetails" border size="small" class="detail-table" @selection-change="handleDetailSelect" ref="detailTableRef" height="100%">
               <el-table-column type="selection" width="35" fixed="left" />
               <el-table-column label="#" width="45" fixed="left">
                 <template #default="{ $index }">{{ (detailPage - 1) * detailSize + $index + 1 }}</template>
@@ -193,7 +193,7 @@
               <el-table-column prop="barcode" label="条码" width="170" show-overflow-tooltip>
                 <template #default="{ row }">{{ row.barcode || '-' }}</template>
               </el-table-column>
-              <el-table-column label="修正尺码组" width="160">
+              <el-table-column label="修正尺码组" width="180">
                 <template #default="{ row }">
                   <el-select
                     v-model="row.localGroupId"
@@ -210,7 +210,7 @@
                   </el-select>
                 </template>
               </el-table-column>
-              <el-table-column label="修正尺码" width="120">
+              <el-table-column label="修正尺码" width="140">
                 <template #default="{ row }">
                   <el-select
                     v-model="row.localSizeId"
@@ -1043,6 +1043,15 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+/* 表格内 filterable + clearable 下拉框：清除图标和箭头不重叠 */
+.detail-table :deep(.el-select .el-select__wrapper) {
+  min-height: 28px;
+  padding-right: 26px;
+}
+.detail-table :deep(.el-select .el-select__suffix) {
+  gap: 2px;
+}
+
 .form-header {
   display: flex;
   justify-content: space-between;

@@ -193,7 +193,7 @@
               <el-table-column prop="barcode" label="条码" width="170" show-overflow-tooltip>
                 <template #default="{ row }">{{ row.barcode || '-' }}</template>
               </el-table-column>
-              <el-table-column label="修正尺码组" width="150">
+              <el-table-column label="修正尺码组" width="60">
                 <template #default="{ row }">
                   <el-select
                     v-model="row.localGroupId"
@@ -210,7 +210,7 @@
                   </el-select>
                 </template>
               </el-table-column>
-              <el-table-column label="修正尺码" width="120">
+              <el-table-column label="修正尺码" width="60">
                 <template #default="{ row }">
                   <el-select
                     v-model="row.localSizeId"

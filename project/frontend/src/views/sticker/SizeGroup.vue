@@ -36,8 +36,8 @@
         <div class="card-header-row">
           <span class="card-header-title">本地尺码组维护</span>
           <div class="header-actions">
+            <el-button v-if="hasPermission('sticker:size-group:import')" type="warning" size="small" :icon="Upload" @click="showImportDialog = true">批量导入</el-button>
             <el-button v-if="hasPermission('sticker:size-group:add')" type="primary" size="small" :icon="Plus" @click="handleAdd">新增</el-button>
-            <el-button v-if="hasPermission('sticker:size-group:import')" type="warning" size="small" :icon="Upload" @click="showImportDialog = true">导入</el-button>
           </div>
         </div>
       </template>

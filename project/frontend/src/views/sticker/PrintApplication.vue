@@ -193,7 +193,7 @@
               <el-table-column prop="barcode" label="条码" width="170" show-overflow-tooltip>
                 <template #default="{ row }">{{ row.barcode || '-' }}</template>
               </el-table-column>
-              <el-table-column label="修正尺码组" width="180">
+              <el-table-column label="修正尺码组" width="150">
                 <template #default="{ row }">
                   <el-select
                     v-model="row.localGroupId"
@@ -210,7 +210,7 @@
                   </el-select>
                 </template>
               </el-table-column>
-              <el-table-column label="修正尺码" width="140">
+              <el-table-column label="修正尺码" width="120">
                 <template #default="{ row }">
                   <el-select
                     v-model="row.localSizeId"
@@ -1043,15 +1043,6 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-/* 表格内 filterable + clearable 下拉框：清除图标和箭头不重叠 */
-.detail-table :deep(.el-select .el-select__wrapper) {
-  min-height: 28px;
-  padding-right: 26px;
-}
-.detail-table :deep(.el-select .el-select__suffix) {
-  gap: 2px;
-}
-
 .form-header {
   display: flex;
   justify-content: space-between;

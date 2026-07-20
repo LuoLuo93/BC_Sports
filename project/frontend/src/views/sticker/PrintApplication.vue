@@ -93,7 +93,7 @@
         <div class="form-info-row">
           <div class="info-item">
             <span class="info-label">申请单号</span>
-            <span class="info-value">{{ form.orderNo }}</span>
+            <span class="info-value">{{ form.orderNo || '保存后自动生成' }}</span>
           </div>
           <div class="info-item">
             <span class="info-label">申请人</span>
@@ -386,18 +386,6 @@ const { hasPermission } = usePermission()
 const authStore = useAuthStore()
 const viewAll = computed(() => hasPermission('sticker:print:all'))
 
-function generateOrderNo() {
-  const now = new Date()
-  const y = now.getFullYear()
-  const m = String(now.getMonth() + 1).padStart(2, '0')
-  const d = String(now.getDate()).padStart(2, '0')
-  const hh = String(now.getHours()).padStart(2, '0')
-  const mm = String(now.getMinutes()).padStart(2, '0')
-  const ss = String(now.getSeconds()).padStart(2, '0')
-  const rand = String(Math.floor(Math.random() * 10000)).padStart(4, '0')
-  return `PRT${y}${m}${d}${hh}${mm}${ss}${rand}`
-}
-
 const router = useRouter()
 const { loading, tableData, total, query, loadData, handleSearch, resetQuery } = usePageQuery(
   (params) => getPrintOrderPage({ ...params, viewAll: viewAll.value }),
@@ -490,7 +478,7 @@ const statusTagType = (s) => STATUS_TAG[s] || 'info'
 function handleCreate() {
   isEdit.value = false
   editOrderId.value = ''
-  form.orderNo = generateOrderNo()
+  form.orderNo = ''
   form.applicant = authStore.nickname || authStore.username || ''
   form.deptName = authStore.deptName || ''
   form.createTime = formatTime(new Date())

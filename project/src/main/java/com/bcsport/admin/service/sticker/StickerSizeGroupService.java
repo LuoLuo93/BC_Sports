@@ -102,7 +102,7 @@ public class StickerSizeGroupService {
     }
 
     /**
-     * 修改尺码组(全量替换尺码明细)
+     * 修改尺码组(差量更新尺码明细,保留已有尺码id)
      */
     @Transactional(rollbackFor = Exception.class)
     public void update(String id, StickerSizeGroup entity) {
@@ -112,13 +112,15 @@ public class StickerSizeGroupService {
         }
         checkGroupCodeUnique(entity.getBrandId(), entity.getKindId(), entity.getGroupCode(), id);
         entity.setId(id);
+        // 防止前端回传覆盖创建信息
+        entity.setCreateBy(null);
+        entity.setCreateTime(null);
+        entity.setDeleted(null);
         entity.setUpdateBy(ShiroSecurityUtils.getCurrentUsername());
         entity.setUpdateTime(LocalDateTime.now());
-        // status/sort 允许改,deleted 不允许在此改
         groupMapper.updateById(entity);
-        // 全量替换尺码明细(软删旧 -> 插新)
-        sizeMapper.delete(new LambdaQueryWrapper<StickerSize>().eq(StickerSize::getGroupId, id));
-        saveSizes(id, entity.getSizes(), LocalDateTime.now());
+        // 差量更新尺码明细: 保留已有id -> 更新; 无id -> 新增; 前端去掉的 -> 软删
+        diffUpdateSizes(id, entity.getSizes(), LocalDateTime.now());
     }
 
     /**
@@ -152,7 +154,7 @@ public class StickerSizeGroupService {
     }
 
     /**
-     * 批量保存尺码明细(过滤空行,补排序)
+     * 批量保存尺码明细(过滤空行,补排序) —— 仅新增时使用
      */
     private void saveSizes(String groupId, List<StickerSize> sizes, LocalDateTime now) {
         if (sizes == null || sizes.isEmpty()) {
@@ -169,6 +171,56 @@ public class StickerSizeGroupService {
             s.setDeleted(0);
             s.setCreateTime(now);
             sizeMapper.insert(s);
+            sort++;
+        }
+    }
+
+    /**
+     * 差量更新尺码明细: 有id -> 更新, 无id -> 新增, 前端删除的 -> 软删
+     */
+    private void diffUpdateSizes(String groupId, List<StickerSize> incomingSizes, LocalDateTime now) {
+        // 获取当前数据库中的尺码列表
+        List<StickerSize> existingSizes = listSizesByGroupId(groupId);
+
+        // 收集前端传来的已有id集合
+        java.util.Set<String> incomingIds = new java.util.HashSet<>();
+        if (incomingSizes != null) {
+            for (StickerSize s : incomingSizes) {
+                if (s.getId() != null && !s.getId().isBlank()) {
+                    incomingIds.add(s.getId());
+                }
+            }
+        }
+
+        // 1. 软删前端已移除的尺码(数据库中有但前端没传的)
+        for (StickerSize existing : existingSizes) {
+            if (!incomingIds.contains(existing.getId())) {
+                sizeMapper.deleteById(existing.getId());
+            }
+        }
+
+        // 2. 处理前端传来的尺码
+        if (incomingSizes == null || incomingSizes.isEmpty()) {
+            return;
+        }
+        int sort = 0;
+        for (StickerSize s : incomingSizes) {
+            if (s.getSizeName() == null || s.getSizeName().isBlank()) {
+                continue; // 跳过空行
+            }
+            s.setGroupId(groupId);
+            s.setSort(s.getSort() == null ? sort : s.getSort());
+            if (s.getId() != null && !s.getId().isBlank()) {
+                // 已有id -> 更新
+                s.setDeleted(null); // 不覆盖 deleted
+                sizeMapper.updateById(s);
+            } else {
+                // 无id -> 新增
+                s.setId(null);
+                s.setDeleted(0);
+                s.setCreateTime(now);
+                sizeMapper.insert(s);
+            }
             sort++;
         }
     }

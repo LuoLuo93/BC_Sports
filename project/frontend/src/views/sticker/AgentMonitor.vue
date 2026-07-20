@@ -294,7 +294,7 @@
       </template>
       <template #footer>
         <div class="dialog-footer">
-          <el-button @click="taskDetailVisible = false">关闭</el-button>
+          <el-button class="btn-cancel" @click="taskDetailVisible = false">关闭</el-button>
         </div>
       </template>
     </el-dialog>
@@ -328,8 +328,8 @@
       </el-form>
       <template #footer>
         <div class="dialog-footer">
-          <el-button @click="reprintDialogVisible = false">取消</el-button>
-          <el-button type="primary" :loading="reprintLoading" :disabled="!reprintAgentId" @click="confirmReprint">下发补打</el-button>
+          <el-button class="btn-cancel" @click="reprintDialogVisible = false">取消</el-button>
+          <el-button class="btn-confirm" type="primary" :loading="reprintLoading" :disabled="!reprintAgentId" @click="confirmReprint">下发补打</el-button>
         </div>
       </template>
     </el-dialog>

@@ -101,8 +101,8 @@
       </el-form>
       <template #footer>
         <div class="dialog-footer">
-          <el-button @click="dialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="handleSave" :loading="saving">保存</el-button>
+          <el-button class="btn-cancel" @click="dialogVisible = false">取消</el-button>
+          <el-button class="btn-confirm" type="primary" @click="handleSave" :loading="saving">保存</el-button>
         </div>
       </template>
     </el-dialog>

@@ -515,7 +515,13 @@ async function handleEdit(row) {
   form.deptName = ''
   form.createTime = data.createTime || ''
   form.remark = data.remark || ''
-  form.details = data.details || []
+  form.details = (data.details || []).map(d => ({
+    ...d,
+    brandId: d.brandId ? String(d.brandId) : '',
+    kindId: d.kindId ? String(d.kindId) : '',
+    localGroupId: d.localGroupId ? String(d.localGroupId) : '',
+    localSizeId: d.localSizeId ? String(d.localSizeId) : ''
+  }))
   selectedRows.value = []
   searchMaterialNumber.value = ''
   searchStyleNumber.value = ''
@@ -526,6 +532,8 @@ async function handleEdit(row) {
   loadBrands()
   formVisible.value = true
   loadDefaultProducts()
+  // 编辑模式：预加载已有本地尺码组/尺码的选项缓存，确保 el-select 能显示 label 而非 id
+  preloadLocalCaches()
 }
 
 // 进入表单时默认加载前 20 条货品
@@ -748,8 +756,8 @@ function confirmProductSelect() {
       color: p.COLOR || '',
       ean13: p.EAN13 || '',
       brandName: p.BRAND_NAME || '',
-      brandId: p.BRAND_ID || '',
-      kindId: p.KIND_ID || '',
+      brandId: p.BRAND_ID ? String(p.BRAND_ID) : '',
+      kindId: p.KIND_ID ? String(p.KIND_ID) : '',
       kindName: p.KIND_NAME || '',
       price: p.PRICE || 0,
       executionStandard: p.EXECUTION_STANDARD || '',
@@ -933,6 +941,48 @@ async function ensureLocalSizeOptions(row) {
   } finally {
     sizeLoadingKeys.delete(key)
   }
+}
+
+// 编辑模式：遍历已有明细，预加载尺码组列表和尺码列表缓存
+async function preloadLocalCaches() {
+  const details = form.details
+  if (!details?.length) return
+  const groupKeys = new Set()
+  const sizeKeys = new Set()
+  for (const d of details) {
+    if (d.brandId && d.kindId) {
+      const gk = `${d.brandId}|${d.kindId}`
+      groupKeys.add(gk)
+    }
+    if (d.localGroupId) {
+      sizeKeys.add(d.localGroupId)
+    }
+  }
+  // 并行加载
+  const promises = []
+  for (const key of groupKeys) {
+    if (!localGroupCache[key] && !groupLoadingKeys.has(key)) {
+      groupLoadingKeys.add(key)
+      promises.push(
+        getSizeGroupList({ brandId: key.split('|')[0], kindId: key.split('|')[1] })
+          .then(({ data }) => { localGroupCache[key] = data || [] })
+          .catch(() => { localGroupCache[key] = [] })
+          .finally(() => groupLoadingKeys.delete(key))
+      )
+    }
+  }
+  for (const key of sizeKeys) {
+    if (!localSizeCache[key] && !sizeLoadingKeys.has(key)) {
+      sizeLoadingKeys.add(key)
+      promises.push(
+        getSizeGroupSizes(key)
+          .then(({ data }) => { localSizeCache[key] = data || [] })
+          .catch(() => { localSizeCache[key] = [] })
+          .finally(() => sizeLoadingKeys.delete(key))
+      )
+    }
+  }
+  if (promises.length) await Promise.all(promises)
 }
 
 function onLocalGroupChange(row) {

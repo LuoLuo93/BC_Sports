@@ -134,8 +134,8 @@
               <el-table-column type="selection" width="35" fixed="left" />
               <el-table-column type="index" label="#" width="45" fixed="left" />
               <el-table-column prop="MATERIAL_NUMBER" label="货号" width="170" show-overflow-tooltip fixed="left" class-name="col-key" />
-              <el-table-column prop="STYLE_NUMBER" label="款号" width="170" show-overflow-tooltip fixed="left" class-name="col-key" />
-              <el-table-column prop="MATERIAL_NAME" label="商品名称" width="200" show-overflow-tooltip fixed="left" class-name="col-key" />
+              <el-table-column prop="STYLE_NUMBER" label="款号" width="170" show-overflow-tooltip class-name="col-key" />
+              <el-table-column prop="MATERIAL_NAME" label="商品名称" width="200" show-overflow-tooltip class-name="col-key" />
               <el-table-column prop="BRAND_NAME" label="品牌" width="120" show-overflow-tooltip />
               <el-table-column prop="KIND_NAME" label="类别" width="100" show-overflow-tooltip />
               <el-table-column prop="COLOR" label="颜色" width="90" />
@@ -173,8 +173,8 @@
                 <template #default="{ $index }">{{ (detailPage - 1) * detailSize + $index + 1 }}</template>
               </el-table-column>
               <el-table-column prop="materialNumber" label="货号" width="170" show-overflow-tooltip fixed="left" class-name="col-key" />
-              <el-table-column prop="styleNumber" label="款号" width="170" show-overflow-tooltip fixed="left" class-name="col-key" />
-              <el-table-column prop="materialName" label="货品名称" width="200" show-overflow-tooltip fixed="left" class-name="col-key" />
+              <el-table-column prop="styleNumber" label="款号" width="170" show-overflow-tooltip class-name="col-key" />
+              <el-table-column prop="materialName" label="货品名称" width="200" show-overflow-tooltip class-name="col-key" />
               <el-table-column prop="brandName" label="品牌" width="120" />
               <el-table-column prop="kindName" label="类别" width="100" />
               <el-table-column prop="color" label="颜色" width="90" />
@@ -193,7 +193,7 @@
               <el-table-column prop="barcode" label="条码" width="170" show-overflow-tooltip>
                 <template #default="{ row }">{{ row.barcode || '-' }}</template>
               </el-table-column>
-              <el-table-column label="修正尺码组" width="120">
+              <el-table-column label="修正尺码组" width="120" fixed="right">
                 <template #default="{ row }">
                   <el-select
                     v-model="row.localGroupId"
@@ -210,7 +210,7 @@
                   </el-select>
                 </template>
               </el-table-column>
-              <el-table-column label="修正尺码" width="120">
+              <el-table-column label="修正尺码" width="120" fixed="right">
                 <template #default="{ row }">
                   <el-select
                     v-model="row.localSizeId"

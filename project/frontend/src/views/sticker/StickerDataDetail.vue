@@ -80,32 +80,6 @@
           </div>
         </div>
       </div>
-
-      <!-- 生产信息 -->
-      <div class="info-section">
-        <div class="section-title">
-          <el-icon><OfficeBuilding /></el-icon> 生产信息
-          <el-tag size="small" type="warning" effect="plain" style="margin-left:8px">可编辑</el-tag>
-        </div>
-        <div class="info-grid">
-          <div class="info-card editable">
-            <span class="info-card-label">产地</span>
-            <el-input v-model="row.ORIGIN" placeholder="请输入产地" size="small" />
-          </div>
-          <div class="info-card editable span-2">
-            <span class="info-card-label">制造商</span>
-            <el-input v-model="row.MANUFACTURER" placeholder="请输入制造商" size="small" />
-          </div>
-          <div class="info-card editable span-2">
-            <span class="info-card-label">制造商地址</span>
-            <el-input v-model="row.MANUFACTURER_ADDRESS" placeholder="请输入制造商地址" size="small" />
-          </div>
-          <div class="info-card editable">
-            <span class="info-card-label">联系电话</span>
-            <el-input v-model="row.CONTACT_PHONE" placeholder="请输入联系电话" size="small" />
-          </div>
-        </div>
-      </div>
     </div>
   </div>
 </template>
@@ -114,7 +88,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { ArrowLeft, Document, Stamp, OfficeBuilding } from '@element-plus/icons-vue'
+import { ArrowLeft, Document, Stamp } from '@element-plus/icons-vue'
 
 defineOptions({ name: 'StickerDataDetail' })
 

@@ -1131,6 +1131,10 @@ onBeforeUnmount(() => {
 .detail-table {
   flex: 1;
 }
+/* 表格内修正尺码组/修正尺码下拉框：覆盖全局 200px 强制宽度，跟随列宽 */
+.detail-table :deep(.el-select) {
+  width: 100% !important;
+}
 
 .search-bar {
   display: flex;

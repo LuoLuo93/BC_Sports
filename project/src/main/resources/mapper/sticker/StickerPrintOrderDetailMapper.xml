@@ -3,9 +3,9 @@
 <mapper namespace="com.bcsport.admin.mapper.sticker.StickerPrintOrderDetailMapper">
 
     <insert id="batchInsert">
-        INSERT INTO sticker_print_order_detail (id, order_id, product_id, barcode, style_number, material_name, material_number, color, execution_standard, size_code, size_name, size_group, ean13, brand_name, kind_id, kind_name, price, print_qty, sort, origin, manufacturer, manufacturer_address, contact_phone, material_composition, create_time)
+        INSERT INTO sticker_print_order_detail (id, order_id, product_id, barcode, style_number, material_name, material_number, color, execution_standard, size_code, size_name, size_group, ean13, brand_name, brand_id, kind_id, kind_name, price, print_qty, sort, origin, manufacturer, manufacturer_address, contact_phone, material_composition, local_group_id, local_group_name, local_size_id, local_size_name, create_time)
         <foreach collection="list" item="d" separator=" UNION ALL ">
-            SELECT #{d.id}, #{d.orderId}, #{d.productId}, #{d.barcode}, #{d.styleNumber}, #{d.materialName}, #{d.materialNumber}, #{d.color}, #{d.executionStandard}, #{d.sizeCode}, #{d.sizeName}, #{d.sizeGroup}, #{d.ean13}, #{d.brandName}, #{d.kindId}, #{d.kindName}, #{d.price}, #{d.printQty}, #{d.sort}, #{d.origin}, #{d.manufacturer}, #{d.manufacturerAddress}, #{d.contactPhone}, #{d.materialComposition}, #{d.createTime} FROM DUAL
+            SELECT #{d.id}, #{d.orderId}, #{d.productId}, #{d.barcode}, #{d.styleNumber}, #{d.materialName}, #{d.materialNumber}, #{d.color}, #{d.executionStandard}, #{d.sizeCode}, #{d.sizeName}, #{d.sizeGroup}, #{d.ean13}, #{d.brandName}, #{d.brandId}, #{d.kindId}, #{d.kindName}, #{d.price}, #{d.printQty}, #{d.sort}, #{d.origin}, #{d.manufacturer}, #{d.manufacturerAddress}, #{d.contactPhone}, #{d.materialComposition}, #{d.localGroupId}, #{d.localGroupName}, #{d.localSizeId}, #{d.localSizeName}, #{d.createTime} FROM DUAL
         </foreach>
     </insert>
 

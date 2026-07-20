@@ -97,6 +97,9 @@ public class StickerPrintOrderVO {
         @ApiModelProperty("品牌名称")
         private String brandName;
 
+        @ApiModelProperty("品牌ID")
+        private String brandId;
+
         @ApiModelProperty("类别ID")
         private String kindId;
 
@@ -126,5 +129,17 @@ public class StickerPrintOrderVO {
 
         @ApiModelProperty("材质/面料成分")
         private String materialComposition;
+
+        @ApiModelProperty("本地尺码组ID")
+        private String localGroupId;
+
+        @ApiModelProperty("本地尺码组名称")
+        private String localGroupName;
+
+        @ApiModelProperty("本地尺码ID")
+        private String localSizeId;
+
+        @ApiModelProperty("本地尺码名称")
+        private String localSizeName;
     }
 }

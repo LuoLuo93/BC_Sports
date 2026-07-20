@@ -62,6 +62,9 @@ public class StickerPrintOrderDetail {
     @TableField("brand_name")
     private String brandName;
 
+    @TableField("brand_id")
+    private String brandId;
+
     @TableField("kind_id")
     private String kindId;
 
@@ -102,4 +105,20 @@ public class StickerPrintOrderDetail {
 
     @TableField("create_time")
     private LocalDateTime createTime;
+
+    @FieldLabel("本地尺码组ID")
+    @TableField("local_group_id")
+    private String localGroupId;
+
+    @FieldLabel("本地尺码组名称")
+    @TableField("local_group_name")
+    private String localGroupName;
+
+    @FieldLabel("本地尺码ID")
+    @TableField("local_size_id")
+    private String localSizeId;
+
+    @FieldLabel("本地尺码名称")
+    @TableField("local_size_name")
+    private String localSizeName;
 }

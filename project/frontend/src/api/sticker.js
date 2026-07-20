@@ -132,3 +132,34 @@ export function getBrandTemplateNames() {
 export function getAvailableFields() {
   return request.get('/api/sticker/field-mapping/available-fields')
 }
+
+// ─── 本地尺码组维护 ──────────────────────
+export function getSizeGroupPage(params) {
+  return request.get('/api/sticker/size-group/page', { params })
+}
+
+// 按品牌+类别查启用组列表(供明细行下拉)
+export function getSizeGroupList(params) {
+  return request.get('/api/sticker/size-group/list', { params })
+}
+
+// 查某组下尺码明细
+export function getSizeGroupSizes(groupId) {
+  return request.get(`/api/sticker/size-group/${groupId}/sizes`)
+}
+
+export function getSizeGroup(id) {
+  return request.get(`/api/sticker/size-group/${id}`)
+}
+
+export function createSizeGroup(data) {
+  return request.post('/api/sticker/size-group', data)
+}
+
+export function updateSizeGroup(id, data) {
+  return request.put(`/api/sticker/size-group/${id}`, data)
+}
+
+export function deleteSizeGroup(id) {
+  return request.delete(`/api/sticker/size-group/${id}`)
+}

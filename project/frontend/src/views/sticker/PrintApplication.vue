@@ -193,6 +193,38 @@
               <el-table-column prop="barcode" label="条码" width="170" show-overflow-tooltip>
                 <template #default="{ row }">{{ row.barcode || '-' }}</template>
               </el-table-column>
+              <el-table-column label="本地尺码组" width="160">
+                <template #default="{ row }">
+                  <el-select
+                    v-model="row.localGroupId"
+                    placeholder="选择"
+                    filterable
+                    size="small"
+                    style="width:100%"
+                    :disabled="!row.brandId || !row.kindId"
+                    @change="onLocalGroupChange(row)"
+                    @visible-change="(v) => { if (v) ensureLocalGroupOptions(row) }"
+                  >
+                    <el-option v-for="g in getLocalGroupOptions(row)" :key="g.id" :label="g.groupName" :value="g.id" />
+                  </el-select>
+                </template>
+              </el-table-column>
+              <el-table-column label="本地尺码" width="120">
+                <template #default="{ row }">
+                  <el-select
+                    v-model="row.localSizeId"
+                    placeholder="选择"
+                    filterable
+                    size="small"
+                    style="width:100%"
+                    :disabled="!row.localGroupId"
+                    @change="onLocalSizeChange(row)"
+                    @visible-change="(v) => { if (v) ensureLocalSizeOptions(row) }"
+                  >
+                    <el-option v-for="s in getLocalSizeOptions(row)" :key="s.id" :label="s.sizeName" :value="s.id" />
+                  </el-select>
+                </template>
+              </el-table-column>
               <el-table-column label="尺码" width="80" align="center" fixed="right">
                 <template #default="{ row }">
                   <el-tag v-if="row.sizeName" type="warning" size="small" effect="dark">{{ row.sizeName }}</el-tag>
@@ -341,7 +373,7 @@ import { useRouter, onBeforeRouteLeave } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Loading, Search, RefreshRight } from '@element-plus/icons-vue'
 import request from '@/api/request'
-import { getPrintOrderPage, getPrintOrder, createPrintOrder, updatePrintOrder, submitPrintOrder, reviewPrintOrder, deletePrintOrder, searchProducts, getProductBrands, getProductSizes, createAgentPrintTasks } from '@/api/sticker'
+import { getPrintOrderPage, getPrintOrder, createPrintOrder, updatePrintOrder, submitPrintOrder, reviewPrintOrder, deletePrintOrder, searchProducts, getProductBrands, getProductSizes, createAgentPrintTasks, getSizeGroupList, getSizeGroupSizes } from '@/api/sticker'
 import { usePageQuery } from '@/composables/usePageQuery'
 import { usePermission } from '@/composables/usePermission'
 import { useAuthStore } from '@/stores/auth'
@@ -716,6 +748,7 @@ function confirmProductSelect() {
       color: p.COLOR || '',
       ean13: p.EAN13 || '',
       brandName: p.BRAND_NAME || '',
+      brandId: p.BRAND_ID || '',
       kindId: p.KIND_ID || '',
       kindName: p.KIND_NAME || '',
       price: p.PRICE || 0,
@@ -727,7 +760,11 @@ function confirmProductSelect() {
       materialComposition: p.MATERIAL_COMPOSITION || '',
       sizeName: '',
       barcode: '',
-      printQty: 0
+      printQty: 0,
+      localGroupId: '',
+      localGroupName: '',
+      localSizeId: '',
+      localSizeName: ''
     })
   }
   if (skipped.length) {
@@ -827,6 +864,7 @@ function confirmSizeAssign() {
       color: orig.color,
       ean13: orig.ean13,
       brandName: orig.brandName,
+      brandId: orig.brandId,
       kindId: orig.kindId,
       kindName: orig.kindName,
       price: orig.price,
@@ -838,10 +876,80 @@ function confirmSizeAssign() {
       materialComposition: orig.materialComposition,
       sizeName: checked[i].size,
       barcode: checked[i].barcode || '',
-      printQty: checked[i].qty
+      printQty: checked[i].qty,
+      localGroupId: orig.localGroupId || '',
+      localGroupName: orig.localGroupName || '',
+      localSizeId: orig.localSizeId || '',
+      localSizeName: orig.localSizeName || ''
     })
   }
   showSizeAssignDialog.value = false
+}
+
+// ─── Local Size Group (本地尺码组) ───────────────────────
+// 缓存: brandId|kindId -> 组列表 ; groupId -> 尺码列表
+const localGroupCache = reactive({})
+const localSizeCache = reactive({})
+const groupLoadingKeys = new Set()
+const sizeLoadingKeys = new Set()
+
+function groupKey(row) {
+  return `${row.brandId || ''}|${row.kindId || ''}`
+}
+
+function getLocalGroupOptions(row) {
+  return localGroupCache[groupKey(row)] || []
+}
+
+function getLocalSizeOptions(row) {
+  return localSizeCache[row.localGroupId] || []
+}
+
+async function ensureLocalGroupOptions(row) {
+  if (!row.brandId || !row.kindId) return
+  const key = groupKey(row)
+  if (localGroupCache[key] || groupLoadingKeys.has(key)) return
+  groupLoadingKeys.add(key)
+  try {
+    const { data } = await getSizeGroupList({ brandId: row.brandId, kindId: row.kindId })
+    localGroupCache[key] = data || []
+  } catch {
+    localGroupCache[key] = []
+  } finally {
+    groupLoadingKeys.delete(key)
+  }
+}
+
+async function ensureLocalSizeOptions(row) {
+  if (!row.localGroupId) return
+  const key = row.localGroupId
+  if (localSizeCache[key] || sizeLoadingKeys.has(key)) return
+  sizeLoadingKeys.add(key)
+  try {
+    const { data } = await getSizeGroupSizes(key)
+    localSizeCache[key] = data || []
+  } catch {
+    localSizeCache[key] = []
+  } finally {
+    sizeLoadingKeys.delete(key)
+  }
+}
+
+function onLocalGroupChange(row) {
+  // 切换组: 同步组名,清空本地尺码
+  const g = getLocalGroupOptions(row).find(item => item.id === row.localGroupId)
+  row.localGroupName = g ? g.groupName : ''
+  row.localSizeId = ''
+  row.localSizeName = ''
+  if (row.localGroupId) {
+    ensureLocalSizeOptions(row)
+  }
+}
+
+function onLocalSizeChange(row) {
+  // 选尺码: 同步尺码名
+  const s = getLocalSizeOptions(row).find(item => item.id === row.localSizeId)
+  row.localSizeName = s ? s.sizeName : ''
 }
 
 // ─── Size Parser ───────────────────────────────────────

@@ -463,15 +463,15 @@ html {
   border-radius: 12px;
   font-weight: 600;
   font-size: 0.9375rem;
-  background: transparent;
+  background: #f5f7fa;
   border: 1.5px solid #e5e7eb;
-  color: var(--bc-text-muted);
+  color: #4b5563;
   transition: all 0.25s ease;
 }
 .el-dialog__footer .el-button--default:hover {
-  border-color: #d1d5db;
-  color: var(--bc-text);
-  background: #f9fafb;
+  border-color: #c0c4cc;
+  color: #303133;
+  background: #ecf0f3;
 }
 /* Primary button - gradient premium */
 .el-dialog__footer .el-button--primary {
@@ -1112,6 +1112,15 @@ html {
   min-width: 110px;
   height: 42px;
   font-weight: 500;
+  background: #f5f7fa;
+  border: 1.5px solid #e5e7eb;
+  color: #4b5563;
+  transition: all 0.25s ease;
+}
+.dialog-footer .btn-cancel:hover {
+  border-color: #c0c4cc;
+  color: #303133;
+  background: #ecf0f3;
 }
 .dialog-footer .btn-confirm {
   border-radius: 8px;

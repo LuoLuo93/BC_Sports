@@ -199,6 +199,7 @@
                     v-model="row.localGroupId"
                     placeholder="选择"
                     filterable
+                    clearable
                     size="small"
                     style="width:100%"
                     :disabled="!row.brandId || !row.kindId"
@@ -215,6 +216,7 @@
                     v-model="row.localSizeId"
                     placeholder="选择"
                     filterable
+                    clearable
                     size="small"
                     style="width:100%"
                     :disabled="!row.localGroupId"

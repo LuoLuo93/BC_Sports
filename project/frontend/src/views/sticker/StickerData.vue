@@ -35,8 +35,8 @@
             <template #default="{ $index }">{{ (query.pageNum - 1) * query.pageSize + $index + 1 }}</template>
           </el-table-column>
           <el-table-column prop="MATERIAL_NUMBER" label="货号" width="170" show-overflow-tooltip fixed="left" class-name="col-key" />
-          <el-table-column prop="STYLE_NUMBER" label="款号" width="170" show-overflow-tooltip fixed="left" class-name="col-key" />
-          <el-table-column prop="MATERIAL_NAME" label="货品名称" width="200" show-overflow-tooltip fixed="left" class-name="col-key" />
+          <el-table-column prop="STYLE_NUMBER" label="款号" width="170" show-overflow-tooltip class-name="col-key" />
+          <el-table-column prop="MATERIAL_NAME" label="货品名称" width="200" show-overflow-tooltip class-name="col-key" />
           <el-table-column prop="BRAND_NAME" label="品牌" width="120" />
           <el-table-column prop="KIND_NAME" label="类别" width="100" show-overflow-tooltip />
           <el-table-column prop="COLOR" label="颜色" width="90" />

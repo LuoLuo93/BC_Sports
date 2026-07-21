@@ -76,6 +76,22 @@ public class StickerPrintService {
         return bjerpProductMapper.getProductSizes(productId);
     }
 
+    /**
+     * 按货号更新 ERP M_PRODUCT 的 4 个材质字段。
+     * 写入伯俊 ERP 核心商品表，需确保货号存在。
+     */
+    public int updateMaterialFields(String materialNumber, String fabCode, String fabElement, String acCode, String accElement) {
+        if (materialNumber == null || materialNumber.isBlank()) {
+            throw new BusinessException("货号不能为空");
+        }
+        int rows = bjerpProductMapper.updateMaterialFields(materialNumber, fabCode, fabElement, acCode, accElement);
+        if (rows == 0) {
+            throw new BusinessException("货号不存在，更新失败: " + materialNumber);
+        }
+        log.info("更新货品材质字段: materialNumber={}, rows={}", materialNumber, rows);
+        return rows;
+    }
+
     public PageResult<StickerPrintOrderVO> pageOrders(PageQuery pageQuery, StickerPrintQueryDTO queryDTO) {
         LambdaQueryWrapper<StickerPrintOrder> wrapper = new LambdaQueryWrapper<StickerPrintOrder>()
             .eq(StickerPrintOrder::getDeleted, 0)

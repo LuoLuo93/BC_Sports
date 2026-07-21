@@ -48,6 +48,11 @@ export function getStickerBrands() {
   return request.get('/api/sticker/data/brands')
 }
 
+// 保存货品材质字段（面料编码/面料成分/辅料编码/辅料成分），写回 ERP
+export function updateStickerDataMaterial(data) {
+  return request.put('/api/sticker/data/material', data)
+}
+
 // ─── Agent 打印 ──────────────────────
 export function createAgentPrintTasks(orderId, agentId) {
   return request.post(`/api/print/create-tasks/${orderId}?agentId=${encodeURIComponent(agentId)}`)

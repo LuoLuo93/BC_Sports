@@ -7,7 +7,7 @@
           <el-icon><ArrowLeft /></el-icon> 返回列表
         </el-button>
         <span class="form-header-title">贴纸资料详情</span>
-        <el-button type="primary" size="small" @click="handleSave">保存</el-button>
+        <el-button type="primary" size="small" :loading="saving" @click="handleSave">保存</el-button>
       </div>
 
       <!-- 基本信息卡片 -->
@@ -101,11 +101,13 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { ArrowLeft, Document, Stamp } from '@element-plus/icons-vue'
+import { updateStickerDataMaterial } from '@/api/sticker'
 
 defineOptions({ name: 'StickerDataDetail' })
 
 const router = useRouter()
 const row = ref({})
+const saving = ref(false)
 
 const colorMap = {
   '黑色': '#000', '白色': '#f5f5f5', '红色': '#ef4444', '蓝色': '#3b82f6',
@@ -118,8 +120,26 @@ function parseSizes(s) {
   return s.split(/[,，;；\s]+/).filter(Boolean)
 }
 
-function handleSave() {
-  ElMessage.info('后端接口待对接')
+async function handleSave() {
+  if (!row.value.MATERIAL_NUMBER) {
+    ElMessage.warning('缺少货号，无法保存')
+    return
+  }
+  saving.value = true
+  try {
+    await updateStickerDataMaterial({
+      materialNumber: row.value.MATERIAL_NUMBER,
+      fabCode: row.value.FAB_CODE || '',
+      fabElement: row.value.FAB_ELEMENT || '',
+      acCode: row.value.AC_CODE || '',
+      accElement: row.value.ACC_ELEMENT || ''
+    })
+    ElMessage.success('保存成功')
+  } catch (e) {
+    // request 拦截器已统一提示
+  } finally {
+    saving.value = false
+  }
 }
 
 onMounted(() => {

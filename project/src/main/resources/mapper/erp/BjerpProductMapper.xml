@@ -104,4 +104,14 @@
           AND barcode.NO IS NOT NULL
     </select>
 
+    <!-- 按货号(name)更新 4 个材质字段；空串转 NULL 避免 ERP 残留空白字符 -->
+    <update id="updateMaterialFields">
+        UPDATE M_PRODUCT
+        SET FABCODE    = NULLIF(TRIM(#{fabCode}), ''),
+            FABELEMENT = NULLIF(TRIM(#{fabElement}), ''),
+            ACCODE     = NULLIF(TRIM(#{acCode}), ''),
+            ACCELEMENT = NULLIF(TRIM(#{accElement}), '')
+        WHERE name = #{materialNumber}
+    </update>
+
 </mapper>

@@ -32,4 +32,21 @@ public class StickerDataController {
     public Result<?> brands() {
         return Result.success(stickerPrintService.getBrands());
     }
+
+    /**
+     * 保存货品材质字段（面料编码/面料成分/辅料编码/辅料成分），写回 ERP M_PRODUCT。
+     * body: { materialNumber, fabCode, fabElement, acCode, accElement }
+     */
+    @PutMapping("/material")
+    @RequiresPermissions("sticker:data:edit")
+    public Result<?> updateMaterial(@RequestBody Map<String, Object> body) {
+        String materialNumber = body.get("materialNumber") == null ? null : body.get("materialNumber").toString();
+        String fabCode = body.get("fabCode") == null ? null : body.get("fabCode").toString();
+        String fabElement = body.get("fabElement") == null ? null : body.get("fabElement").toString();
+        String acCode = body.get("acCode") == null ? null : body.get("acCode").toString();
+        String accElement = body.get("accElement") == null ? null : body.get("accElement").toString();
+
+        stickerPrintService.updateMaterialFields(materialNumber, fabCode, fabElement, acCode, accElement);
+        return Result.success("保存成功");
+    }
 }

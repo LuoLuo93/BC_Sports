@@ -199,11 +199,6 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  flex: 1;
-}
-/* 最后一个 section（材质信息）撑满剩余高度，覆盖底部空白 */
-.detail-content > .info-section:last-child {
-  flex: 1;
 }
 .detail-header {
   display: flex;
@@ -239,7 +234,7 @@ onMounted(() => {
 .info-section {
   background: #fff;
   border-radius: 10px;
-  padding: 14px 18px 16px;
+  padding: 16px 18px 18px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
 .section-title {
@@ -264,8 +259,8 @@ onMounted(() => {
 .info-card {
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  padding: 10px 12px;
+  gap: 6px;
+  padding: 14px 14px;
   background: #f8fafc;
   border-radius: 8px;
   border: 1px solid #f1f5f9;

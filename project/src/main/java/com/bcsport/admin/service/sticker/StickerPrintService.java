@@ -206,6 +206,11 @@ public class StickerPrintService {
             d.setOrderId(orderId);
             d.setSort(i);
             d.setCreateTime(LocalDateTime.now());
+            // 产地/制造商/制造商地址/联系电话 不入库（当前 ERP 返回的是占位常量，无业务价值）
+            d.setOrigin(null);
+            d.setManufacturer(null);
+            d.setManufacturerAddress(null);
+            d.setContactPhone(null);
         }
         detailMapper.batchInsert(details);
     }

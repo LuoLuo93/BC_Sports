@@ -1,110 +1,117 @@
 <template>
-  <div class="page-container">
-    <div class="form-view form-view--scroll">
-      <!-- 头部栏 -->
-      <div class="form-header">
-        <el-button type="warning" size="small" @click="$router.push('/sticker/data')">
-          <el-icon><ArrowLeft /></el-icon> 返回列表
-        </el-button>
-        <span class="form-header-title">贴纸资料详情</span>
-        <el-button type="primary" size="small" :loading="saving" @click="handleSave">保存</el-button>
-      </div>
+  <!-- 不用 form-view（它强制 height:100% 导致底部留白），直接自然滚动 -->
+  <div class="detail-page">
+    <!-- 头部栏（固定顶部） -->
+    <div class="detail-header">
+      <el-button type="warning" size="small" @click="$router.push('/sticker/data')">
+        <el-icon><ArrowLeft /></el-icon> 返回列表
+      </el-button>
+      <span class="detail-header-title">贴纸资料详情</span>
+      <el-button type="primary" size="small" :loading="saving" @click="handleSave">保存</el-button>
+    </div>
 
-      <!-- 基本信息卡片（只读，压缩为2行） -->
-      <div class="info-section">
-        <div class="section-title">
-          <el-icon><Document /></el-icon> 基本信息
-        </div>
-        <div class="info-grid">
-          <div class="info-card">
-            <span class="info-card-label">货号</span>
-            <span class="info-card-value key-value">{{ row.MATERIAL_NUMBER || '-' }}</span>
+    <!-- 内容区：左右两栏 -->
+    <div class="detail-body">
+      <!-- 左侧：可编辑字段（主工作区） -->
+      <div class="detail-main">
+        <!-- 贴纸信息（三等分） -->
+        <div class="info-section">
+          <div class="section-title">
+            <el-icon><Stamp /></el-icon> 贴纸信息
+            <el-tag size="small" type="warning" effect="plain" style="margin-left:8px">可编辑</el-tag>
           </div>
-          <div class="info-card">
-            <span class="info-card-label">款号</span>
-            <span class="info-card-value key-value">{{ row.STYLE_NUMBER || '-' }}</span>
-          </div>
-          <div class="info-card span-2">
-            <span class="info-card-label">货品名称</span>
-            <span class="info-card-value">{{ row.MATERIAL_NAME || '-' }}</span>
-          </div>
-          <div class="info-card">
-            <span class="info-card-label">品牌</span>
-            <span class="info-card-value">{{ row.BRAND_NAME || '-' }}</span>
-          </div>
-          <div class="info-card">
-            <span class="info-card-label">类别</span>
-            <span class="info-card-value">{{ row.KIND_NAME || '-' }}</span>
-          </div>
-          <div class="info-card">
-            <span class="info-card-label">颜色</span>
-            <span class="info-card-value">
-              <span v-if="row.COLOR" class="color-dot" :style="{ background: colorMap[row.COLOR] || '#909399' }"></span>
-              {{ row.COLOR || '-' }}
-            </span>
-          </div>
-          <div class="info-card">
-            <span class="info-card-label">价格</span>
-            <span class="info-card-value price-value">{{ row.PRICE != null ? '¥' + Number(row.PRICE).toFixed(2) : '-' }}</span>
-          </div>
-          <div class="info-card span-3">
-            <span class="info-card-label">尺码组</span>
-            <span class="info-card-value">
-              <template v-if="row.SIZES">
-                <el-tag v-for="s in parseSizes(row.SIZES)" :key="s" size="small" effect="plain" class="size-tag">{{ s }}</el-tag>
-              </template>
-              <span v-else>-</span>
-            </span>
+          <div class="info-grid-3">
+            <div class="info-card editable">
+              <span class="info-card-label">执行标准</span>
+              <el-input v-model="row.EXECUTION_STANDARD" placeholder="请输入执行标准" size="small" />
+            </div>
+            <div class="info-card editable">
+              <span class="info-card-label">EAN13</span>
+              <el-input v-model="row.EAN13" placeholder="请输入 EAN13" size="small" @blur="row.EAN13 = (row.EAN13 || '').replace(/\s/g, '')" />
+            </div>
+            <div class="info-card editable">
+              <span class="info-card-label">贴纸尺码组</span>
+              <el-select v-model="selectedSizeGroupId" placeholder="请选择" size="small" filterable clearable style="width:100%">
+                <el-option v-for="g in sizeGroupOptions" :key="g.id" :label="g.groupName" :value="g.id" />
+              </el-select>
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- 贴纸信息（三等分：执行标准 / EAN13 / 贴纸尺码组） -->
-      <div class="info-section">
-        <div class="section-title">
-          <el-icon><Stamp /></el-icon> 贴纸信息
-          <el-tag size="small" type="warning" effect="plain" style="margin-left:8px">可编辑</el-tag>
-        </div>
-        <div class="info-grid-3">
-          <div class="info-card editable">
-            <span class="info-card-label">执行标准</span>
-            <el-input v-model="row.EXECUTION_STANDARD" placeholder="请输入执行标准" size="small" />
+        <!-- 材质信息 -->
+        <div class="info-section">
+          <div class="section-title">
+            <el-icon><Files /></el-icon> 材质信息
+            <el-tag size="small" type="warning" effect="plain" style="margin-left:8px">可编辑</el-tag>
           </div>
-          <div class="info-card editable">
-            <span class="info-card-label">EAN13</span>
-            <el-input v-model="row.EAN13" placeholder="请输入 EAN13" size="small" @blur="row.EAN13 = (row.EAN13 || '').replace(/\s/g, '')" />
-          </div>
-          <div class="info-card editable">
-            <span class="info-card-label">贴纸尺码组</span>
-            <el-select v-model="selectedSizeGroupId" placeholder="请选择" size="small" filterable clearable style="width:100%">
-              <el-option v-for="g in sizeGroupOptions" :key="g.id" :label="g.groupName" :value="g.id" />
-            </el-select>
+          <div class="info-grid">
+            <div class="info-card editable">
+              <span class="info-card-label">面料成分1</span>
+              <el-input v-model="row.FAB_CODE" placeholder="请输入面料成分1" size="small" />
+            </div>
+            <div class="info-card editable">
+              <span class="info-card-label">面料成分2</span>
+              <el-input v-model="row.FAB_ELEMENT" placeholder="请输入面料成分2" size="small" />
+            </div>
+            <div class="info-card editable">
+              <span class="info-card-label">辅料成分1</span>
+              <el-input v-model="row.AC_CODE" placeholder="请输入辅料成分1" size="small" />
+            </div>
+            <div class="info-card editable">
+              <span class="info-card-label">辅料成分2</span>
+              <el-input v-model="row.ACC_ELEMENT" placeholder="请输入辅料成分2" size="small" />
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- 材质信息（可编辑） -->
-      <div class="info-section">
-        <div class="section-title">
-          <el-icon><Files /></el-icon> 材质信息
-          <el-tag size="small" type="warning" effect="plain" style="margin-left:8px">可编辑</el-tag>
-        </div>
-        <div class="info-grid">
-          <div class="info-card editable">
-            <span class="info-card-label">面料成分1</span>
-            <el-input v-model="row.FAB_CODE" placeholder="请输入面料成分1" size="small" />
+      <!-- 右侧：基本信息（只读侧栏） -->
+      <div class="detail-sidebar">
+        <div class="info-section sidebar-card">
+          <div class="section-title">
+            <el-icon><Document /></el-icon> 基本信息
           </div>
-          <div class="info-card editable">
-            <span class="info-card-label">面料成分2</span>
-            <el-input v-model="row.FAB_ELEMENT" placeholder="请输入面料成分2" size="small" />
-          </div>
-          <div class="info-card editable">
-            <span class="info-card-label">辅料成分1</span>
-            <el-input v-model="row.AC_CODE" placeholder="请输入辅料成分1" size="small" />
-          </div>
-          <div class="info-card editable">
-            <span class="info-card-label">辅料成分2</span>
-            <el-input v-model="row.ACC_ELEMENT" placeholder="请输入辅料成分2" size="small" />
+          <div class="sidebar-list">
+            <div class="sidebar-item">
+              <span class="sidebar-label">货号</span>
+              <span class="sidebar-value mono-value">{{ row.MATERIAL_NUMBER || '-' }}</span>
+            </div>
+            <div class="sidebar-item">
+              <span class="sidebar-label">款号</span>
+              <span class="sidebar-value mono-value">{{ row.STYLE_NUMBER || '-' }}</span>
+            </div>
+            <div class="sidebar-item">
+              <span class="sidebar-label">货品名称</span>
+              <span class="sidebar-value">{{ row.MATERIAL_NAME || '-' }}</span>
+            </div>
+            <div class="sidebar-item">
+              <span class="sidebar-label">品牌</span>
+              <span class="sidebar-value">{{ row.BRAND_NAME || '-' }}</span>
+            </div>
+            <div class="sidebar-item">
+              <span class="sidebar-label">类别</span>
+              <span class="sidebar-value">{{ row.KIND_NAME || '-' }}</span>
+            </div>
+            <div class="sidebar-item">
+              <span class="sidebar-label">颜色</span>
+              <span class="sidebar-value">
+                <span v-if="row.COLOR" class="color-dot" :style="{ background: colorMap[row.COLOR] || '#909399' }"></span>
+                {{ row.COLOR || '-' }}
+              </span>
+            </div>
+            <div class="sidebar-item">
+              <span class="sidebar-label">价格</span>
+              <span class="sidebar-value price-value">{{ row.PRICE != null ? '¥' + Number(row.PRICE).toFixed(2) : '-' }}</span>
+            </div>
+            <div class="sidebar-item">
+              <span class="sidebar-label">尺码组</span>
+              <div class="sidebar-value">
+                <template v-if="row.SIZES">
+                  <el-tag v-for="s in parseSizes(row.SIZES)" :key="s" size="small" effect="plain" class="size-tag">{{ s }}</el-tag>
+                </template>
+                <span v-else>-</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -178,7 +185,6 @@ onMounted(() => {
   const state = window.history.state
   if (state?.row) {
     row.value = state.row
-    // 加载尺码组选项（按货品的品牌+类别筛选）
     loadSizeGroups()
   } else {
     ElMessage.warning('数据加载失败，请从列表页进入')
@@ -188,7 +194,17 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.form-header {
+/* 页面整体：自然滚动，不用 form-view（它 height:100% 导致底部留白） */
+.detail-page {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #f1f5f9;
+  overflow-y: auto;
+}
+
+/* 头部栏 */
+.detail-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -200,23 +216,49 @@ onMounted(() => {
   top: 0;
   z-index: 10;
 }
-.form-header-title {
+.detail-header-title {
   font-size: 17px;
   font-weight: 700;
   color: #111827;
   letter-spacing: -0.02em;
 }
 
+/* 内容区：左右两栏 */
+.detail-body {
+  display: flex;
+  gap: 12px;
+  padding: 12px 16px 20px;
+  flex: 1;
+  min-height: 0;
+}
+
+/* 左侧主区域：可编辑字段 */
+.detail-main {
+  flex: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+/* 右侧侧栏：只读基本信息 */
+.detail-sidebar {
+  flex: 1;
+  min-width: 220px;
+  max-width: 300px;
+}
+
+/* 侧栏卡片跟主区等高 */
+.sidebar-card {
+  height: 100%;
+}
+
 /* 信息区块 */
 .info-section {
-  margin: 10px 16px 0;
   background: #fff;
   border-radius: 10px;
   padding: 14px 18px 16px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-}
-.info-section:last-child {
-  margin-bottom: 16px;
 }
 
 .section-title {
@@ -262,8 +304,38 @@ onMounted(() => {
 .info-card.span-2 {
   grid-column: span 2;
 }
-.info-card.span-4 {
-  grid-column: span 4;
+
+/* 侧栏列表（紧凑 key-value） */
+.sidebar-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.sidebar-item {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+.sidebar-item:last-child {
+  border-bottom: none;
+}
+.sidebar-label {
+  flex-shrink: 0;
+  width: 60px;
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.sidebar-value {
+  font-size: 14px;
+  color: #1e293b;
+  font-weight: 500;
+  word-break: break-all;
+  line-height: 1.5;
 }
 
 .info-card-label {
@@ -280,16 +352,12 @@ onMounted(() => {
   word-break: break-all;
   line-height: 1.5;
 }
-.key-value {
+.mono-value {
   font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
   font-weight: 700;
   color: #0f172a;
   font-size: 15px;
   letter-spacing: 0.02em;
-}
-.mono-value {
-  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
-  letter-spacing: 0.04em;
 }
 .price-value {
   color: #dc2626;
@@ -323,6 +391,5 @@ onMounted(() => {
 }
 .info-card.editable :deep(.el-input__inner) {
   font-size: 14px;
-  color: #1e293b;
 }
 </style>

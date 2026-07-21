@@ -189,13 +189,21 @@ onMounted(() => {
 
 <style scoped>
 .detail-page {
-  padding-bottom: 20px;
+  background: #f1f5f9;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 .detail-content {
-  padding: 12px 16px 0;
+  padding: 12px 16px 20px;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  flex: 1;
+}
+/* 最后一个 section（材质信息）撑满剩余高度，覆盖底部空白 */
+.detail-content > .info-section:last-child {
+  flex: 1;
 }
 .detail-header {
   display: flex;

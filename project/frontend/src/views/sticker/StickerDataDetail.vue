@@ -189,7 +189,6 @@ onMounted(() => {
 
 <style scoped>
 .detail-page {
-  background: #f1f5f9;
   padding-bottom: 20px;
 }
 .detail-content {

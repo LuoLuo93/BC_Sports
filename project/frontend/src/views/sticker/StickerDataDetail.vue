@@ -14,13 +14,13 @@
     <div class="detail-body">
       <!-- 左侧：可编辑字段（主工作区） -->
       <div class="detail-main">
-        <!-- 贴纸信息（三等分） -->
+        <!-- 贴纸信息（单列三行） -->
         <div class="info-section">
           <div class="section-title">
             <el-icon><Stamp /></el-icon> 贴纸信息
             <el-tag size="small" type="warning" effect="plain" style="margin-left:8px">可编辑</el-tag>
           </div>
-          <div class="info-grid-3">
+          <div class="editable-col">
             <div class="info-card editable">
               <span class="info-card-label">执行标准</span>
               <el-input v-model="row.EXECUTION_STANDARD" placeholder="请输入执行标准" size="small" />
@@ -38,13 +38,13 @@
           </div>
         </div>
 
-        <!-- 材质信息 -->
-        <div class="info-section">
+        <!-- 材质信息（2列×2行） -->
+        <div class="info-section fill-remaining">
           <div class="section-title">
             <el-icon><Files /></el-icon> 材质信息
             <el-tag size="small" type="warning" effect="plain" style="margin-left:8px">可编辑</el-tag>
           </div>
-          <div class="info-grid">
+          <div class="info-grid-2">
             <div class="info-card editable">
               <span class="info-card-label">面料成分1</span>
               <el-input v-model="row.FAB_CODE" placeholder="请输入面料成分1" size="small" />
@@ -234,7 +234,7 @@ onMounted(() => {
 
 /* 左侧主区域：可编辑字段 */
 .detail-main {
-  flex: 3;
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -283,10 +283,20 @@ onMounted(() => {
   grid-template-columns: repeat(4, 1fr);
   gap: 10px;
 }
-.info-grid-3 {
+.info-grid-2 {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 10px;
+}
+/* 单列纵向（贴纸信息：执行标准/EAN13/尺码组垂直堆叠） */
+.editable-col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+/* 填满剩余高度（材质信息卡片拉伸到和侧栏等高） */
+.fill-remaining {
+  flex: 1;
 }
 .info-card {
   display: flex;

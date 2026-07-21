@@ -59,10 +59,10 @@
         </div>
       </div>
 
-      <!-- 标识信息（可编辑） -->
+      <!-- 贴纸信息（可编辑） -->
       <div class="info-section">
         <div class="section-title">
-          <el-icon><Stamp /></el-icon> 标识信息
+          <el-icon><Stamp /></el-icon> 贴纸信息
           <el-tag size="small" type="warning" effect="plain" style="margin-left:8px">可编辑</el-tag>
         </div>
         <div class="info-grid">
@@ -73,6 +73,12 @@
           <div class="info-card editable">
             <span class="info-card-label">EAN13</span>
             <el-input v-model="row.EAN13" placeholder="请输入 EAN13" size="small" />
+          </div>
+          <div class="info-card editable">
+            <span class="info-card-label">打印矫正尺码组</span>
+            <el-select v-model="selectedSizeGroupId" placeholder="请选择" size="small" filterable clearable style="width:100%">
+              <el-option v-for="g in sizeGroupOptions" :key="g.id" :label="g.groupName" :value="g.id" />
+            </el-select>
           </div>
         </div>
       </div>
@@ -111,13 +117,27 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { ArrowLeft, Document, Stamp, Files } from '@element-plus/icons-vue'
-import { updateStickerDataMaterial } from '@/api/sticker'
+import { updateStickerDataMaterial, getSizeGroupList } from '@/api/sticker'
 
 defineOptions({ name: 'StickerDataDetail' })
 
 const router = useRouter()
 const row = ref({})
 const saving = ref(false)
+
+// 打印矫正尺码组（按品牌+类别筛选）
+const sizeGroupOptions = ref([])
+const selectedSizeGroupId = ref('')
+
+async function loadSizeGroups() {
+  const brandId = row.value.BRAND_ID
+  const kindId = row.value.KIND_ID
+  if (!brandId && !kindId) return
+  try {
+    const { data } = await getSizeGroupList({ brandId: brandId || undefined, kindId: kindId || undefined })
+    sizeGroupOptions.value = data || []
+  } catch {}
+}
 
 const colorMap = {
   '黑色': '#000', '白色': '#f5f5f5', '红色': '#ef4444', '蓝色': '#3b82f6',
@@ -158,6 +178,8 @@ onMounted(() => {
   const state = window.history.state
   if (state?.row) {
     row.value = state.row
+    // 加载尺码组选项（按货品的品牌+类别筛选）
+    loadSizeGroups()
   } else {
     ElMessage.warning('数据加载失败，请从列表页进入')
     router.push('/sticker/data')

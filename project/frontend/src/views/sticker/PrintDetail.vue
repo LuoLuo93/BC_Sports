@@ -72,8 +72,15 @@
           <el-table-column prop="manufacturer" label="制造商" width="140">
             <template #default="{ row }">{{ row.manufacturer || '-' }}</template>
           </el-table-column>
-          <el-table-column prop="materialComposition" label="面料成分" width="160">
-            <template #default="{ row }">{{ row.materialComposition || '-' }}</template>
+          <el-table-column label="面料/辅料成分" width="200" show-overflow-tooltip>
+            <template #default="{ row }">
+              <span v-if="row.fabElement || row.accElement">
+                <span v-if="row.fabElement">面料:{{ row.fabElement }}</span>
+                <span v-if="row.fabElement && row.accElement"> / </span>
+                <span v-if="row.accElement">辅料:{{ row.accElement }}</span>
+              </span>
+              <span v-else style="color:#d9d9d9">-</span>
+            </template>
           </el-table-column>
           <el-table-column prop="ean13" label="EAN13" width="150">
             <template #default="{ row }">{{ row.ean13 || '-' }}</template>

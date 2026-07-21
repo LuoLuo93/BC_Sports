@@ -145,8 +145,15 @@
               <el-table-column prop="EXECUTION_STANDARD" label="执行标准" width="160">
                 <template #default="{ row }">{{ row.EXECUTION_STANDARD || '-' }}</template>
               </el-table-column>
-              <el-table-column prop="MATERIAL_COMPOSITION" label="面料成分" width="160">
-                <template #default="{ row }">{{ row.MATERIAL_COMPOSITION || '-' }}</template>
+              <el-table-column label="面料/辅料成分" width="200" show-overflow-tooltip>
+                <template #default="{ row }">
+                  <span v-if="row.FAB_ELEMENT || row.ACC_ELEMENT">
+                    <span v-if="row.FAB_ELEMENT">面料:{{ row.FAB_ELEMENT }}</span>
+                    <span v-if="row.FAB_ELEMENT && row.ACC_ELEMENT"> / </span>
+                    <span v-if="row.ACC_ELEMENT">辅料:{{ row.ACC_ELEMENT }}</span>
+                  </span>
+                  <span v-else style="color:#d9d9d9">-</span>
+                </template>
               </el-table-column>
               <el-table-column prop="EAN13" label="EAN13" width="150">
                 <template #default="{ row }">{{ row.EAN13 || '-' }}</template>
@@ -183,9 +190,6 @@
               </el-table-column>
               <el-table-column prop="executionStandard" label="执行标准" width="160">
                 <template #default="{ row }">{{ row.executionStandard || '-' }}</template>
-              </el-table-column>
-              <el-table-column prop="materialComposition" label="面料成分" width="160">
-                <template #default="{ row }">{{ row.materialComposition || '-' }}</template>
               </el-table-column>
               <el-table-column prop="ean13" label="EAN13" width="150">
                 <template #default="{ row }">{{ row.ean13 || '-' }}</template>
@@ -755,7 +759,10 @@ function confirmProductSelect() {
       manufacturer: p.MANUFACTURER || '',
       manufacturerAddress: p.MANUFACTURER_ADDRESS || '',
       contactPhone: p.CONTACT_PHONE || '',
-      materialComposition: p.MATERIAL_COMPOSITION || '',
+      fabCode: p.FAB_CODE || '',
+      fabElement: p.FAB_ELEMENT || '',
+      acCode: p.AC_CODE || '',
+      accElement: p.ACC_ELEMENT || '',
       sizeName: '',
       barcode: '',
       printQty: 0,
@@ -871,7 +878,10 @@ function confirmSizeAssign() {
       manufacturer: orig.manufacturer,
       manufacturerAddress: orig.manufacturerAddress,
       contactPhone: orig.contactPhone,
-      materialComposition: orig.materialComposition,
+      fabCode: orig.fabCode || '',
+      fabElement: orig.fabElement || '',
+      acCode: orig.acCode || '',
+      accElement: orig.accElement || '',
       sizeName: checked[i].size,
       barcode: checked[i].barcode || '',
       printQty: checked[i].qty,

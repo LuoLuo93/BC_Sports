@@ -127,8 +127,17 @@ public class StickerPrintOrderVO {
         @ApiModelProperty("联系电话")
         private String contactPhone;
 
-        @ApiModelProperty("材质/面料成分")
-        private String materialComposition;
+        @ApiModelProperty("面料编码")
+        private String fabCode;
+
+        @ApiModelProperty("面料成分")
+        private String fabElement;
+
+        @ApiModelProperty("辅料编码")
+        private String acCode;
+
+        @ApiModelProperty("辅料成分")
+        private String accElement;
 
         @ApiModelProperty("本地尺码组ID")
         private String localGroupId;

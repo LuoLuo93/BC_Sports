@@ -99,9 +99,21 @@ public class StickerPrintOrderDetail {
     @TableField("contact_phone")
     private String contactPhone;
 
-    @FieldLabel("材质成分")
-    @TableField("material_composition")
-    private String materialComposition;
+    @FieldLabel("面料编码")
+    @TableField("fab_code")
+    private String fabCode;
+
+    @FieldLabel("面料成分")
+    @TableField("fab_element")
+    private String fabElement;
+
+    @FieldLabel("辅料编码")
+    @TableField("ac_code")
+    private String acCode;
+
+    @FieldLabel("辅料成分")
+    @TableField("acc_element")
+    private String accElement;
 
     @TableField("create_time")
     private LocalDateTime createTime;

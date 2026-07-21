@@ -413,7 +413,10 @@ public class PrintTaskService {
             case "MANUFACTURER" -> detail.getManufacturer();
             case "MANUFACTURER_ADDRESS", "MANUFACTURERADDRESS" -> detail.getManufacturerAddress();
             case "CONTACT_PHONE", "CONTACTPHONE" -> detail.getContactPhone();
-            case "MATERIAL_COMPOSITION", "MATERIALCOMPOSITION" -> detail.getMaterialComposition();
+            case "FAB_CODE", "FABCODE" -> detail.getFabCode();
+            case "FAB_ELEMENT", "FABELEMENT" -> detail.getFabElement();
+            case "AC_CODE", "ACCODE" -> detail.getAcCode();
+            case "ACC_ELEMENT", "ACCELEMENT" -> detail.getAccElement();
             default -> null;
         };
     }

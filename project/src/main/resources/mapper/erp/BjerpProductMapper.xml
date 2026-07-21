@@ -104,10 +104,12 @@
           AND barcode.NO IS NOT NULL
     </select>
 
-    <!-- 按货号(name)更新 4 个材质字段；空串转 NULL 避免 ERP 残留空白字符 -->
-    <update id="updateMaterialFields">
+    <!-- 按货号(name)更新可编辑字段(执行标准/EAN13/4材质); 空串转NULL避免ERP残留空白; 基本信息不更新 -->
+    <update id="updateEditableFields">
         UPDATE M_PRODUCT
-        SET FABCODE    = NULLIF(TRIM(#{fabCode}), ''),
+        SET THEME_NAME = NULLIF(TRIM(#{executionStandard}), ''),
+            INTSCODE   = NULLIF(TRIM(#{ean13}), ''),
+            FABCODE    = NULLIF(TRIM(#{fabCode}), ''),
             FABELEMENT = NULLIF(TRIM(#{fabElement}), ''),
             ACCODE     = NULLIF(TRIM(#{acCode}), ''),
             ACCELEMENT = NULLIF(TRIM(#{accElement}), '')

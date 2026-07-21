@@ -59,10 +59,10 @@
         </div>
       </div>
 
-      <!-- 质检与标识信息 -->
+      <!-- 标识信息（可编辑） -->
       <div class="info-section">
         <div class="section-title">
-          <el-icon><Stamp /></el-icon> 质检与标识
+          <el-icon><Stamp /></el-icon> 标识信息
           <el-tag size="small" type="warning" effect="plain" style="margin-left:8px">可编辑</el-tag>
         </div>
         <div class="info-grid">
@@ -74,6 +74,16 @@
             <span class="info-card-label">EAN13</span>
             <el-input v-model="row.EAN13" placeholder="请输入 EAN13" size="small" />
           </div>
+        </div>
+      </div>
+
+      <!-- 材质信息（可编辑） -->
+      <div class="info-section">
+        <div class="section-title">
+          <el-icon><Files /></el-icon> 材质信息
+          <el-tag size="small" type="warning" effect="plain" style="margin-left:8px">可编辑</el-tag>
+        </div>
+        <div class="info-grid">
           <div class="info-card editable">
             <span class="info-card-label">面料编码</span>
             <el-input v-model="row.FAB_CODE" placeholder="请输入面料编码" size="small" />
@@ -100,7 +110,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { ArrowLeft, Document, Stamp } from '@element-plus/icons-vue'
+import { ArrowLeft, Document, Stamp, Files } from '@element-plus/icons-vue'
 import { updateStickerDataMaterial } from '@/api/sticker'
 
 defineOptions({ name: 'StickerDataDetail' })
@@ -129,6 +139,8 @@ async function handleSave() {
   try {
     await updateStickerDataMaterial({
       materialNumber: row.value.MATERIAL_NUMBER,
+      executionStandard: row.value.EXECUTION_STANDARD || '',
+      ean13: row.value.EAN13 || '',
       fabCode: row.value.FAB_CODE || '',
       fabElement: row.value.FAB_ELEMENT || '',
       acCode: row.value.AC_CODE || '',

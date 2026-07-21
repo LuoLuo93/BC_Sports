@@ -22,11 +22,13 @@ public interface BjerpProductMapper {
     List<Map<String, Object>> getProductSizes(@Param("productId") String productId);
 
     /**
-     * 按货号(name)更新 M_PRODUCT 的 4 个材质字段。
-     * 用于「贴纸资料维护」详情页保存，字段在 ERP 当前为 NULL，首次写入即初始化。
+     * 按货号(name)更新 M_PRODUCT 的可编辑字段（执行标准/EAN13/4个材质字段）。
+     * 用于「贴纸资料维护」详情页保存。基本信息（货号/品名/品牌/价格等）不在此更新，避免侵入 ERP 主数据。
      * @return 受影响行数（0=货号不存在）
      */
-    int updateMaterialFields(@Param("materialNumber") String materialNumber,
+    int updateEditableFields(@Param("materialNumber") String materialNumber,
+                             @Param("executionStandard") String executionStandard,
+                             @Param("ean13") String ean13,
                              @Param("fabCode") String fabCode,
                              @Param("fabElement") String fabElement,
                              @Param("acCode") String acCode,

@@ -34,19 +34,23 @@ public class StickerDataController {
     }
 
     /**
-     * 保存货品材质字段（面料编码/面料成分/辅料编码/辅料成分），写回 ERP M_PRODUCT。
-     * body: { materialNumber, fabCode, fabElement, acCode, accElement }
+     * 保存货品可编辑字段（执行标准/EAN13/面料编码/面料成分/辅料编码/辅料成分），写回 ERP M_PRODUCT。
+     * 基本信息（货号/品名/品牌/价格等）不更新，避免侵入 ERP 主数据。
+     * body: { materialNumber, executionStandard, ean13, fabCode, fabElement, acCode, accElement }
      */
     @PutMapping("/material")
     @RequiresPermissions("sticker:data:edit")
     public Result<?> updateMaterial(@RequestBody Map<String, Object> body) {
         String materialNumber = body.get("materialNumber") == null ? null : body.get("materialNumber").toString();
+        String executionStandard = body.get("executionStandard") == null ? null : body.get("executionStandard").toString();
+        String ean13 = body.get("ean13") == null ? null : body.get("ean13").toString();
         String fabCode = body.get("fabCode") == null ? null : body.get("fabCode").toString();
         String fabElement = body.get("fabElement") == null ? null : body.get("fabElement").toString();
         String acCode = body.get("acCode") == null ? null : body.get("acCode").toString();
         String accElement = body.get("accElement") == null ? null : body.get("accElement").toString();
 
-        stickerPrintService.updateMaterialFields(materialNumber, fabCode, fabElement, acCode, accElement);
+        stickerPrintService.updateEditableFields(materialNumber, executionStandard, ean13,
+                fabCode, fabElement, acCode, accElement);
         return Result.success("保存成功");
     }
 }

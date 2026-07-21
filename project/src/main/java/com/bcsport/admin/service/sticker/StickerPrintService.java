@@ -77,18 +77,20 @@ public class StickerPrintService {
     }
 
     /**
-     * 按货号更新 ERP M_PRODUCT 的 4 个材质字段。
-     * 写入伯俊 ERP 核心商品表，需确保货号存在。
+     * 按货号更新 ERP M_PRODUCT 的可编辑字段（执行标准/EAN13/4个材质字段）。
+     * 基本信息不更新，避免侵入 ERP 主数据。
      */
-    public int updateMaterialFields(String materialNumber, String fabCode, String fabElement, String acCode, String accElement) {
+    public int updateEditableFields(String materialNumber, String executionStandard, String ean13,
+                                    String fabCode, String fabElement, String acCode, String accElement) {
         if (materialNumber == null || materialNumber.isBlank()) {
             throw new BusinessException("货号不能为空");
         }
-        int rows = bjerpProductMapper.updateMaterialFields(materialNumber, fabCode, fabElement, acCode, accElement);
+        int rows = bjerpProductMapper.updateEditableFields(materialNumber, executionStandard, ean13,
+                fabCode, fabElement, acCode, accElement);
         if (rows == 0) {
             throw new BusinessException("货号不存在，更新失败: " + materialNumber);
         }
-        log.info("更新货品材质字段: materialNumber={}, rows={}", materialNumber, rows);
+        log.info("更新货品可编辑字段: materialNumber={}, rows={}", materialNumber, rows);
         return rows;
     }
 

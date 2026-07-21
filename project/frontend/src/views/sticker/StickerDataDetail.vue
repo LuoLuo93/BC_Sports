@@ -189,11 +189,14 @@ onMounted(() => {
 
 <style scoped>
 .detail-page {
-  height: 100%;
+  background: #f1f5f9;
+  padding-bottom: 20px;
+}
+.detail-content {
+  padding: 12px 16px 0;
   display: flex;
   flex-direction: column;
-  background: #f1f5f9;
-  overflow-y: auto;
+  gap: 12px;
 }
 .detail-header {
   display: flex;

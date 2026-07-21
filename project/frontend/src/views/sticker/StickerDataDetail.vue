@@ -10,7 +10,7 @@
         <el-button type="primary" size="small" :loading="saving" @click="handleSave">保存</el-button>
       </div>
 
-      <!-- 基本信息卡片 -->
+      <!-- 基本信息卡片（只读，压缩为2行） -->
       <div class="info-section">
         <div class="section-title">
           <el-icon><Document /></el-icon> 基本信息
@@ -47,7 +47,7 @@
             <span class="info-card-label">价格</span>
             <span class="info-card-value price-value">{{ row.PRICE != null ? '¥' + Number(row.PRICE).toFixed(2) : '-' }}</span>
           </div>
-          <div class="info-card span-4">
+          <div class="info-card span-3">
             <span class="info-card-label">尺码组</span>
             <span class="info-card-value">
               <template v-if="row.SIZES">
@@ -218,10 +218,10 @@ onMounted(() => {
 
 /* 信息区块 */
 .info-section {
-  margin: 12px 16px 0;
+  margin: 10px 16px 0;
   background: #fff;
   border-radius: 10px;
-  padding: 16px 20px 20px;
+  padding: 14px 18px 16px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
 .info-section:last-child {
@@ -232,11 +232,11 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   color: #1e40af;
-  margin-bottom: 14px;
-  padding-bottom: 10px;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
   border-bottom: 2px solid #e0e7ff;
 }
 .section-title .el-icon {
@@ -248,13 +248,13 @@ onMounted(() => {
 .info-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
+  gap: 10px;
 }
 .info-card {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 12px 14px;
+  gap: 5px;
+  padding: 10px 12px;
   background: #f8fafc;
   border-radius: 8px;
   border: 1px solid #f1f5f9;
@@ -314,7 +314,7 @@ onMounted(() => {
 
 /* 尺码标签 */
 .size-tag {
-  margin: 2px 4px 2px 0;
+  margin: 1px 3px 1px 0;
 }
 
 /* 可编辑卡片 */

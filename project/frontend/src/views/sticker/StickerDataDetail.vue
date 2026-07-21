@@ -85,20 +85,20 @@
         </div>
         <div class="info-grid">
           <div class="info-card editable">
-            <span class="info-card-label">面料编码</span>
-            <el-input v-model="row.FAB_CODE" placeholder="请输入面料编码" size="small" />
+            <span class="info-card-label">面料成分1</span>
+            <el-input v-model="row.FAB_CODE" placeholder="请输入面料成分1" size="small" />
           </div>
           <div class="info-card editable">
-            <span class="info-card-label">面料成分</span>
-            <el-input v-model="row.FAB_ELEMENT" placeholder="请输入面料成分" size="small" />
+            <span class="info-card-label">面料成分2</span>
+            <el-input v-model="row.FAB_ELEMENT" placeholder="请输入面料成分2" size="small" />
           </div>
           <div class="info-card editable">
-            <span class="info-card-label">辅料编码</span>
-            <el-input v-model="row.AC_CODE" placeholder="请输入辅料编码" size="small" />
+            <span class="info-card-label">辅料成分1</span>
+            <el-input v-model="row.AC_CODE" placeholder="请输入辅料成分1" size="small" />
           </div>
           <div class="info-card editable">
-            <span class="info-card-label">辅料成分</span>
-            <el-input v-model="row.ACC_ELEMENT" placeholder="请输入辅料成分" size="small" />
+            <span class="info-card-label">辅料成分2</span>
+            <el-input v-model="row.ACC_ELEMENT" placeholder="请输入辅料成分2" size="small" />
           </div>
         </div>
       </div>

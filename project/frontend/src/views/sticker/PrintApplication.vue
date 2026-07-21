@@ -145,12 +145,16 @@
               <el-table-column prop="EXECUTION_STANDARD" label="执行标准" width="160">
                 <template #default="{ row }">{{ row.EXECUTION_STANDARD || '-' }}</template>
               </el-table-column>
-              <el-table-column label="面料/辅料成分" width="200" show-overflow-tooltip>
+              <el-table-column label="面料/辅料成分" width="240" show-overflow-tooltip>
                 <template #default="{ row }">
-                  <span v-if="row.FAB_ELEMENT || row.ACC_ELEMENT">
-                    <span v-if="row.FAB_ELEMENT">面料:{{ row.FAB_ELEMENT }}</span>
-                    <span v-if="row.FAB_ELEMENT && row.ACC_ELEMENT"> / </span>
-                    <span v-if="row.ACC_ELEMENT">辅料:{{ row.ACC_ELEMENT }}</span>
+                  <span v-if="row.FAB_CODE || row.FAB_ELEMENT || row.AC_CODE || row.ACC_ELEMENT">
+                    <span v-if="row.FAB_CODE">面料1:{{ row.FAB_CODE }}</span>
+                    <span v-if="row.FAB_CODE && (row.FAB_ELEMENT || row.AC_CODE || row.ACC_ELEMENT)"> / </span>
+                    <span v-if="row.FAB_ELEMENT">面料2:{{ row.FAB_ELEMENT }}</span>
+                    <span v-if="row.FAB_ELEMENT && (row.AC_CODE || row.ACC_ELEMENT)"> / </span>
+                    <span v-if="row.AC_CODE">辅料1:{{ row.AC_CODE }}</span>
+                    <span v-if="row.AC_CODE && row.ACC_ELEMENT"> / </span>
+                    <span v-if="row.ACC_ELEMENT">辅料2:{{ row.ACC_ELEMENT }}</span>
                   </span>
                   <span v-else style="color:#d9d9d9">-</span>
                 </template>

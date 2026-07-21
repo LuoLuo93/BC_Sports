@@ -59,23 +59,32 @@
         </div>
       </div>
 
-      <!-- 贴纸信息（可编辑） -->
-      <div class="info-section">
-        <div class="section-title">
-          <el-icon><Stamp /></el-icon> 贴纸信息
-          <el-tag size="small" type="warning" effect="plain" style="margin-left:8px">可编辑</el-tag>
+      <!-- 贴纸信息 + 矫正贴纸尺码（并排） -->
+      <div style="display:flex;gap:12px;margin:12px 16px 0;">
+        <!-- 左侧：贴纸信息 -->
+        <div class="info-section" style="flex:2;margin:0;">
+          <div class="section-title">
+            <el-icon><Stamp /></el-icon> 贴纸信息
+            <el-tag size="small" type="warning" effect="plain" style="margin-left:8px">可编辑</el-tag>
+          </div>
+          <div class="info-grid">
+            <div class="info-card editable">
+              <span class="info-card-label">执行标准</span>
+              <el-input v-model="row.EXECUTION_STANDARD" placeholder="请输入执行标准" size="small" />
+            </div>
+            <div class="info-card editable">
+              <span class="info-card-label">EAN13</span>
+              <el-input v-model="row.EAN13" placeholder="请输入 EAN13" size="small" />
+            </div>
+          </div>
         </div>
-        <div class="info-grid">
-          <div class="info-card editable">
-            <span class="info-card-label">执行标准</span>
-            <el-input v-model="row.EXECUTION_STANDARD" placeholder="请输入执行标准" size="small" />
+        <!-- 右侧：矫正贴纸尺码 -->
+        <div class="info-section" style="flex:1;margin:0;">
+          <div class="section-title">
+            <el-icon><Files /></el-icon> 矫正贴纸尺码
           </div>
-          <div class="info-card editable">
-            <span class="info-card-label">EAN13</span>
-            <el-input v-model="row.EAN13" placeholder="请输入 EAN13" size="small" />
-          </div>
-          <div class="info-card editable">
-            <span class="info-card-label">打印矫正尺码组</span>
+          <div class="info-card editable" style="margin:0;">
+            <span class="info-card-label">贴纸尺码组</span>
             <el-select v-model="selectedSizeGroupId" placeholder="请选择" size="small" filterable clearable style="width:100%">
               <el-option v-for="g in sizeGroupOptions" :key="g.id" :label="g.groupName" :value="g.id" />
             </el-select>

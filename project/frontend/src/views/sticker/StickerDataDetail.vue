@@ -74,9 +74,21 @@
             <span class="info-card-label">EAN13</span>
             <el-input v-model="row.EAN13" placeholder="请输入 EAN13" size="small" />
           </div>
-          <div class="info-card editable span-2">
+          <div class="info-card editable">
+            <span class="info-card-label">面料编码</span>
+            <el-input v-model="row.FAB_CODE" placeholder="请输入面料编码" size="small" />
+          </div>
+          <div class="info-card editable">
             <span class="info-card-label">面料成分</span>
-            <el-input v-model="row.MATERIAL_COMPOSITION" placeholder="请输入面料成分" size="small" />
+            <el-input v-model="row.FAB_ELEMENT" placeholder="请输入面料成分" size="small" />
+          </div>
+          <div class="info-card editable">
+            <span class="info-card-label">辅料编码</span>
+            <el-input v-model="row.AC_CODE" placeholder="请输入辅料编码" size="small" />
+          </div>
+          <div class="info-card editable">
+            <span class="info-card-label">辅料成分</span>
+            <el-input v-model="row.ACC_ELEMENT" placeholder="请输入辅料成分" size="small" />
           </div>
         </div>
       </div>

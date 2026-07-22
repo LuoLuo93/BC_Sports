@@ -34,7 +34,7 @@
     <el-card shadow="never">
       <template #header>
         <div class="card-header-row">
-          <span class="card-header-title">本地尺码组维护</span>
+          <span class="card-header-title">矫正尺码组维护</span>
           <div class="header-actions">
             <el-button v-if="hasPermission('sticker:size-group:import')" type="warning" size="small" :icon="Upload" @click="showImportDialog = true">批量导入</el-button>
             <el-button v-if="hasPermission('sticker:size-group:add')" type="primary" size="small" :icon="Plus" @click="handleAdd">新增</el-button>
@@ -174,7 +174,7 @@
           <el-icon :size="40" style="color:var(--el-text-color-placeholder)"><Upload /></el-icon>
           <div style="margin-top:8px">将 Excel 文件拖到此处，或 <em>点击上传</em></div>
           <template #tip>
-            <div class="upload-hint">仅支持 .xlsx / .xls 格式，同组编码+品牌+类别重复时自动更新，多行同组自动合并尺码</div>
+            <div class="upload-hint">仅支持 .xlsx / .xls 格式，每个尺码占一行，同组编码+品牌+类别重复时自动更新，多行同组自动合并尺码</div>
           </template>
         </el-upload>
         <div style="margin-top:12px;text-align:center">

@@ -50,6 +50,7 @@
                 product.ACCODE AS AC_CODE,
                 product.ACCELEMENT AS ACC_ELEMENT,
                 product.M_SIZEGROUP_ID AS SIZEGROUP_ID,
+                product.BOX_QTY_NEW AS SIZE_GROUP_ID,
                 (SELECT LISTAGG(c.VALUE2_CODE, ',') WITHIN GROUP (ORDER BY c.VALUE2_CODE)
                  FROM M_PRODUCT_ALIAS a
                  LEFT JOIN M_ATTRIBUTESETINSTANCE c ON a.M_ATTRIBUTESETINSTANCE_ID = c.id
@@ -82,6 +83,36 @@
         WHERE product.name = #{ean13}
     </select>
 
+    <!-- 按货号(name)查询单个货品完整信息(贴纸资料详情页用)，字段与 searchProducts 对齐 -->
+    <select id="getProductByMaterialNumber" resultType="java.util.Map">
+        SELECT product.ID AS PRODUCT_ID,
+               product.name AS MATERIAL_NUMBER,
+               product.VALUE AS MATERIAL_NAME,
+               product.VIRTUALNAME AS STYLE_NUMBER,
+               product.M_DIM1_ID AS BRAND_ID,
+               brand.ATTRIBNAME AS BRAND_NAME,
+               product.M_DIM4_ID AS KIND_ID,
+               Kind.ATTRIBNAME AS KIND_NAME,
+               product.colorsalias AS COLOR,
+               product.PRICELIST AS PRICE,
+               product.THEME_NAME AS EXECUTION_STANDARD,
+               product.INTSCODE AS EAN13,
+               product.FABCODE AS FAB_CODE,
+               product.FABELEMENT AS FAB_ELEMENT,
+               product.ACCODE AS AC_CODE,
+               product.ACCELEMENT AS ACC_ELEMENT,
+               product.M_SIZEGROUP_ID AS SIZEGROUP_ID,
+               product.BOX_QTY_NEW AS SIZE_GROUP_ID,
+               (SELECT LISTAGG(c.VALUE2_CODE, ',') WITHIN GROUP (ORDER BY c.VALUE2_CODE)
+                FROM M_PRODUCT_ALIAS a
+                LEFT JOIN M_ATTRIBUTESETINSTANCE c ON a.M_ATTRIBUTESETINSTANCE_ID = c.id
+                WHERE a.M_PRODUCT_ID = product.ID AND c.VALUE2_CODE IS NOT NULL) AS SIZES
+        FROM M_PRODUCT product
+        LEFT JOIN M_DIM brand ON product.M_DIM1_ID = brand.ID
+        LEFT JOIN M_DIM Kind ON product.M_DIM4_ID = Kind.ID
+        WHERE product.name = #{materialNumber}
+    </select>
+
     <select id="getBrands" resultType="java.util.Map">
         SELECT ID, ATTRIBNAME FROM M_DIM WHERE M_DIMDEF_ID = 1  and DIMFLAG = 'DIM1' ORDER BY ATTRIBCODE ASC
     </select>
@@ -104,7 +135,7 @@
           AND barcode.NO IS NOT NULL
     </select>
 
-    <!-- 按货号(name)更新可编辑字段(执行标准/EAN13/4材质); 空串转NULL避免ERP残留空白; 基本信息不更新 -->
+    <!-- 按货号(name)更新可编辑字段(执行标准/EAN13/4材质/矫正尺码组); 空串转NULL避免ERP残留空白; 基本信息不更新 -->
     <update id="updateEditableFields">
         UPDATE M_PRODUCT
         SET THEME_NAME = NULLIF(TRIM(#{executionStandard}), ''),
@@ -112,7 +143,8 @@
             FABCODE    = NULLIF(TRIM(#{fabCode}), ''),
             FABELEMENT = NULLIF(TRIM(#{fabElement}), ''),
             ACCODE     = NULLIF(TRIM(#{acCode}), ''),
-            ACCELEMENT = NULLIF(TRIM(#{accElement}), '')
+            ACCELEMENT = NULLIF(TRIM(#{accElement}), ''),
+            BOX_QTY_NEW = NULLIF(TRIM(#{sizeGroupId}), '')
         WHERE name = #{materialNumber}
     </update>
 

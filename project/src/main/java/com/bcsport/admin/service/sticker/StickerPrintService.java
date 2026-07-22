@@ -9,9 +9,11 @@ import com.bcsport.admin.common.exception.BusinessException;
 import com.bcsport.admin.dto.sticker.StickerPrintQueryDTO;
 import com.bcsport.admin.entity.sticker.StickerPrintOrder;
 import com.bcsport.admin.entity.sticker.StickerPrintOrderDetail;
+import com.bcsport.admin.entity.sticker.StickerSizeGroup;
 import com.bcsport.admin.erpmapper.BjerpProductMapper;
 import com.bcsport.admin.mapper.sticker.StickerPrintOrderDetailMapper;
 import com.bcsport.admin.mapper.sticker.StickerPrintOrderMapper;
+import com.bcsport.admin.mapper.sticker.StickerSizeGroupMapper;
 import com.bcsport.admin.util.BeanCopyUtils;
 import com.bcsport.admin.util.ShiroSecurityUtils;
 import com.bcsport.admin.vo.StickerPrintOrderVO;
@@ -24,9 +26,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -40,6 +41,9 @@ public class StickerPrintService {
 
     @Autowired
     private BjerpProductMapper bjerpProductMapper;
+
+    @Autowired
+    private StickerSizeGroupMapper stickerSizeGroupMapper;
 
     public List<Map<String, Object>> searchProducts(String materialNumber, String styleNumber, String materialName, String brandId) {
         return bjerpProductMapper.searchProducts(
@@ -57,6 +61,9 @@ public class StickerPrintService {
                 ? bjerpProductMapper.searchProducts(mn, sn, mname, brandId, offset, pageSize)
                 : Collections.emptyList();
 
+        // 跨库不能 JOIN：收集本页矫正组ID，批量查本地表回填组名
+        fillSizeGroupName(records);
+
         PageResult<Map<String, Object>> result = new PageResult<>();
         result.setPageNum((long) pageNum);
         result.setPageSize((long) pageSize);
@@ -68,8 +75,46 @@ public class StickerPrintService {
         return result;
     }
 
+    /**
+     * 批量回填矫正尺码组名称：ERP 存的是组ID(M_PRODUCT.BOX_QTY_NEW)，
+     * 本地表 sticker_size_group 跨库无法 JOIN，故取出本页出现的非空 ID 一次性查询后回填 SIZE_GROUP_NAME。
+     */
+    private void fillSizeGroupName(List<Map<String, Object>> records) {
+        if (records == null || records.isEmpty()) return;
+        Set<String> groupIds = new HashSet<>();
+        for (Map<String, Object> r : records) {
+            Object gid = r.get("SIZE_GROUP_ID");
+            if (gid != null && !gid.toString().isBlank()) {
+                groupIds.add(gid.toString().trim());
+            }
+        }
+        if (groupIds.isEmpty()) return;
+        List<StickerSizeGroup> groups = stickerSizeGroupMapper.selectBatchIds(groupIds);
+        Map<String, String> idToName = groups.stream()
+                .collect(Collectors.toMap(StickerSizeGroup::getId, StickerSizeGroup::getGroupName, (a, b) -> a));
+        for (Map<String, Object> r : records) {
+            Object gid = r.get("SIZE_GROUP_ID");
+            if (gid != null && !gid.toString().isBlank()) {
+                r.put("SIZE_GROUP_NAME", idToName.get(gid.toString().trim()));
+            }
+        }
+    }
+
     public List<Map<String, Object>> getBrands() {
         return bjerpProductMapper.getBrands();
+    }
+
+    /**
+     * 按货号查询单个货品完整信息（贴纸资料详情页用）。
+     * 含矫正组名回填：BOX_QTY_NEW 存的是组ID，跨库查本地表转名称。
+     */
+    public Map<String, Object> getProductByMaterialNumber(String materialNumber) {
+        Map<String, Object> product = bjerpProductMapper.getProductByMaterialNumber(materialNumber);
+        if (product == null) {
+            throw new BusinessException("货号不存在: " + materialNumber);
+        }
+        fillSizeGroupName(Collections.singletonList(product));
+        return product;
     }
 
     public List<Map<String, Object>> getProductSizes(String productId) {
@@ -77,16 +122,17 @@ public class StickerPrintService {
     }
 
     /**
-     * 按货号更新 ERP M_PRODUCT 的可编辑字段（执行标准/EAN13/4个材质字段）。
+     * 按货号更新 ERP M_PRODUCT 的可编辑字段（执行标准/EAN13/4个材质字段/矫正尺码组ID）。
      * 基本信息不更新，避免侵入 ERP 主数据。
      */
     public int updateEditableFields(String materialNumber, String executionStandard, String ean13,
-                                    String fabCode, String fabElement, String acCode, String accElement) {
+                                    String fabCode, String fabElement, String acCode, String accElement,
+                                    String sizeGroupId) {
         if (materialNumber == null || materialNumber.isBlank()) {
             throw new BusinessException("货号不能为空");
         }
         int rows = bjerpProductMapper.updateEditableFields(materialNumber, executionStandard, ean13,
-                fabCode, fabElement, acCode, accElement);
+                fabCode, fabElement, acCode, accElement, sizeGroupId);
         if (rows == 0) {
             throw new BusinessException("货号不存在，更新失败: " + materialNumber);
         }

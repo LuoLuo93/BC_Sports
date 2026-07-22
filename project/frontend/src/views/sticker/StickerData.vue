@@ -63,6 +63,12 @@
           <el-table-column prop="EAN13" label="EAN13" width="150">
             <template #default="{ row }">{{ row.EAN13 || '-' }}</template>
           </el-table-column>
+          <el-table-column prop="SIZE_GROUP_NAME" label="矫正尺码组" width="150" show-overflow-tooltip>
+            <template #default="{ row }">
+              <el-tag v-if="row.SIZE_GROUP_NAME" size="small" type="success" effect="plain">{{ row.SIZE_GROUP_NAME }}</el-tag>
+              <span v-else style="color:#d9d9d9">-</span>
+            </template>
+          </el-table-column>
           <el-table-column prop="SIZES" label="尺码组" width="160" show-overflow-tooltip />
           <el-table-column label="操作" width="70" align="center" fixed="right">
             <template #default="{ row }">

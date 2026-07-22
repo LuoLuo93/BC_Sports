@@ -48,6 +48,11 @@ export function getStickerBrands() {
   return request.get('/api/sticker/data/brands')
 }
 
+// 按货号查货品详情（贴纸资料详情页用）
+export function getStickerDataDetail(materialNumber) {
+  return request.get(`/api/sticker/data/${encodeURIComponent(materialNumber)}`)
+}
+
 // 保存货品材质字段（面料编码/面料成分/辅料编码/辅料成分），写回 ERP
 export function updateStickerDataMaterial(data) {
   return request.put('/api/sticker/data/material', data)
@@ -138,7 +143,7 @@ export function getAvailableFields() {
   return request.get('/api/sticker/field-mapping/available-fields')
 }
 
-// ─── 本地尺码组维护 ──────────────────────
+// ─── 矫正尺码组维护 ──────────────────────
 export function getSizeGroupPage(params) {
   return request.get('/api/sticker/size-group/page', { params })
 }

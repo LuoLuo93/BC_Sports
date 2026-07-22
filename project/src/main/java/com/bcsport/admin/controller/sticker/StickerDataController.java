@@ -34,9 +34,19 @@ public class StickerDataController {
     }
 
     /**
-     * 保存货品可编辑字段（执行标准/EAN13/面料编码/面料成分/辅料编码/辅料成分），写回 ERP M_PRODUCT。
+     * 按货号查询货品详情（贴纸资料详情页用），含矫正尺码组名回填。
+     */
+    @GetMapping("/{materialNumber}")
+    @RequiresPermissions("sticker:data:query")
+    public Result<Map<String, Object>> detail(@PathVariable String materialNumber) {
+        return Result.success(stickerPrintService.getProductByMaterialNumber(materialNumber));
+    }
+
+    /**
+     * 保存货品可编辑字段（执行标准/EAN13/面料编码/面料成分/辅料编码/辅料成分/矫正尺码组ID），写回 ERP M_PRODUCT。
      * 基本信息（货号/品名/品牌/价格等）不更新，避免侵入 ERP 主数据。
-     * body: { materialNumber, executionStandard, ean13, fabCode, fabElement, acCode, accElement }
+     * 矫正尺码组ID 复用 M_PRODUCT.BOX_QTY_NEW 列存储。
+     * body: { materialNumber, executionStandard, ean13, fabCode, fabElement, acCode, accElement, sizeGroupId }
      */
     @PutMapping("/material")
     @RequiresPermissions("sticker:data:edit")
@@ -48,9 +58,10 @@ public class StickerDataController {
         String fabElement = body.get("fabElement") == null ? null : body.get("fabElement").toString();
         String acCode = body.get("acCode") == null ? null : body.get("acCode").toString();
         String accElement = body.get("accElement") == null ? null : body.get("accElement").toString();
+        String sizeGroupId = body.get("sizeGroupId") == null ? null : body.get("sizeGroupId").toString();
 
         stickerPrintService.updateEditableFields(materialNumber, executionStandard, ean13,
-                fabCode, fabElement, acCode, accElement);
+                fabCode, fabElement, acCode, accElement, sizeGroupId);
         return Result.success("保存成功");
     }
 }

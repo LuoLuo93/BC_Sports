@@ -14,6 +14,9 @@ public interface BjerpProductMapper {
 
     Map<String, Object> getProductByEan13(@Param("ean13") String ean13);
 
+    /** 按货号(name)查询单个货品完整信息（贴纸资料详情页用），字段与 searchProducts 对齐 */
+    Map<String, Object> getProductByMaterialNumber(@Param("materialNumber") String materialNumber);
+
     List<Map<String, Object>> getBrands();
 
     List<Map<String, Object>> getKinds();
@@ -22,8 +25,9 @@ public interface BjerpProductMapper {
     List<Map<String, Object>> getProductSizes(@Param("productId") String productId);
 
     /**
-     * 按货号(name)更新 M_PRODUCT 的可编辑字段（执行标准/EAN13/4个材质字段）。
+     * 按货号(name)更新 M_PRODUCT 的可编辑字段（执行标准/EAN13/4个材质字段/矫正尺码组ID）。
      * 用于「贴纸资料维护」详情页保存。基本信息（货号/品名/品牌/价格等）不在此更新，避免侵入 ERP 主数据。
+     * 矫正尺码组ID 复用 BOX_QTY_NEW 列存储。
      * @return 受影响行数（0=货号不存在）
      */
     int updateEditableFields(@Param("materialNumber") String materialNumber,
@@ -32,5 +36,6 @@ public interface BjerpProductMapper {
                              @Param("fabCode") String fabCode,
                              @Param("fabElement") String fabElement,
                              @Param("acCode") String acCode,
-                             @Param("accElement") String accElement);
+                             @Param("accElement") String accElement,
+                             @Param("sizeGroupId") String sizeGroupId);
 }

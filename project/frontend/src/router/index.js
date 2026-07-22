@@ -53,7 +53,7 @@ const routes = [
       { path: 'sticker/data', name: 'StickerData', component: () => import('@/views/sticker/StickerData.vue'), meta: { pageTitle: '贴纸资料维护' } },
       { path: 'sticker/data/:materialNumber', name: 'StickerDataDetail', component: () => import('@/views/sticker/StickerDataDetail.vue'), meta: { pageTitle: '贴纸资料详情' } },
       { path: 'sticker/brand-template', name: 'BrandTemplateMatch', component: () => import('@/views/sticker/BrandTemplateMatch.vue'), meta: { pageTitle: '品牌模板关系' } },
-      { path: 'sticker/size-group', name: 'StickerSizeGroup', component: () => import('@/views/sticker/SizeGroup.vue'), meta: { pageTitle: '本地尺码组维护' } },
+      { path: 'sticker/size-group', name: 'StickerSizeGroup', component: () => import('@/views/sticker/SizeGroup.vue'), meta: { pageTitle: '矫正尺码组维护' } },
       { path: 'sticker/agent', name: 'AgentMonitor', component: () => import('@/views/sticker/AgentMonitor.vue'), meta: { pageTitle: 'Agent 监控' } },
       { path: 'sticker/field-mapping', name: 'FieldMapping', component: () => import('@/views/sticker/FieldMapping.vue'), meta: { pageTitle: '字段映射配置' } },
       // Monitor

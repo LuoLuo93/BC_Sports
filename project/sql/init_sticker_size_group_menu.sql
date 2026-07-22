@@ -1,11 +1,11 @@
 -- ============================================================
--- 贴纸打印 - 新增「本地尺码组维护」菜单 + 按钮权限
+-- 贴纸打印 - 新增「矫正尺码组维护」菜单 + 按钮权限
 -- 父级: STICKER_DIR (贴纸目录,已在线上数据中存在)
 -- ============================================================
 
 -- 1. 菜单
 INSERT INTO BC_SPORTS_SYS_MENU (ID, PARENT_ID, MENU_NAME, ICON, MENU_TYPE, PATH, PERMISSION, SORT, STATUS, VISIBLE, DESCRIPTION, ICON_COLOR, CREATE_TIME, UPDATE_TIME, CREATE_BY, UPDATE_BY, DELETED)
-VALUES ('STICKER_SIZE_GROUP', 'STICKER_DIR', '本地尺码组维护', 'bi-rulers', 1, '/sticker/size-group', 'sticker:size-group:query', 7, 1, 1, '本地尺码组维护(按品牌+类别隔离)', null, SYSTIMESTAMP, SYSTIMESTAMP, 'admin', 'admin', 0);
+VALUES ('STICKER_SIZE_GROUP', 'STICKER_DIR', '矫正尺码组维护', 'bi-rulers', 1, '/sticker/size-group', 'sticker:size-group:query', 7, 1, 1, '矫正尺码组维护(按品牌+类别隔离)', null, SYSTIMESTAMP, SYSTIMESTAMP, 'admin', 'admin', 0);
 
 -- 2. 按钮权限
 INSERT INTO BC_SPORTS_SYS_MENU (ID, PARENT_ID, MENU_NAME, ICON, MENU_TYPE, PATH, PERMISSION, SORT, STATUS, VISIBLE, DESCRIPTION, ICON_COLOR, CREATE_TIME, UPDATE_TIME, CREATE_BY, UPDATE_BY, DELETED)

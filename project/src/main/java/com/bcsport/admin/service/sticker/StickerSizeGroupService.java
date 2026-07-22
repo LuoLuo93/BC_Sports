@@ -21,7 +21,6 @@ import cn.hutool.poi.excel.ExcelUtil;
 
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * 贴纸本地尺码组 Service
@@ -237,8 +236,9 @@ public class StickerSizeGroupService {
     /**
      * Excel 批量导入尺码组(含尺码明细)
      * <p>
-     * Excel 格式：前 7 列固定(组编码/组名称/品牌/类别/排序/状态/备注)，
-     * 后续每两列一对(尺码编码+尺码名称)，同组编码+品牌+类别的多行自动合并。
+     * Excel 格式(纵向布局)：每行一个尺码，
+     * 列依次为 组编码/组名称/品牌/类别/尺码编码/尺码名称/排序/状态/备注。
+     * 组信息在每行重复，同组编码+品牌+类别的多行自动合并到同一组下。
      *
      * @return {total, success, fail, errors}
      */
@@ -283,6 +283,9 @@ public class StickerSizeGroupService {
                 String groupName = getCellString(raw, "组名称", "groupName", "GROUPNAME", "group_name");
                 String brandName = getCellString(raw, "品牌", "brandName", "BRANDNAME", "brand_name");
                 String kindName = getCellString(raw, "类别", "kindName", "KINDNAME", "kind_name");
+                // 纵向布局：每行一个尺码
+                String sizeCode = getCellString(raw, "尺码编码", "sizeCode", "SIZECODE", "size_code");
+                String sizeName = getCellString(raw, "尺码名称", "sizeName", "SIZENAME", "size_name");
                 String sortStr = getCellString(raw, "排序", "sort", "SORT");
                 String statusStr = getCellString(raw, "状态", "status", "STATUS");
                 String remark = getCellString(raw, "备注", "remark", "REMARK");
@@ -308,6 +311,8 @@ public class StickerSizeGroupService {
                 groupName = groupName.trim();
                 brandName = brandName.trim();
                 kindName = kindName.trim();
+                if (sizeCode != null) sizeCode = sizeCode.trim();
+                if (sizeName != null) sizeName = sizeName.trim();
 
                 // 用 final 变量捕获，供 lambda 使用
                 final String fGroupCode = groupCode;
@@ -357,24 +362,13 @@ public class StickerSizeGroupService {
                     return g;
                 });
 
-                // 3. 动态读取尺码列：从第 8 列(index 7)开始，每两列一对
-                // 用 ExcelReader 的 readAll 返回的是 LinkedHashMap，按列顺序排列
-                int colIdx = 0;
-                List<String> colValues = new ArrayList<>(raw.values().stream()
-                        .map(v -> v == null ? "" : v.toString().trim())
-                        .collect(Collectors.toList()));
-
-                // 跳过前 7 列，然后每 2 列取一对尺码
-                for (int si = 7; si + 1 < colValues.size(); si += 2) {
-                    String sizeCode = colValues.get(si);
-                    String sizeName = colValues.get(si + 1);
-                    if (sizeName != null && !sizeName.isBlank()) {
-                        StickerSize sz = new StickerSize();
-                        sz.setSizeCode(sizeCode);
-                        sz.setSizeName(sizeName.trim());
-                        sz.setSort(pg.sizes.size());
-                        pg.sizes.add(sz);
-                    }
+                // 3. 纵向布局：当前行即一个尺码(尺码名称为空则跳过该行尺码)
+                if (sizeName != null && !sizeName.isBlank()) {
+                    StickerSize sz = new StickerSize();
+                    sz.setSizeCode(sizeCode);
+                    sz.setSizeName(sizeName);
+                    sz.setSort(pg.sizes.size());
+                    pg.sizes.add(sz);
                 }
             } catch (Exception e) {
                 errors.add("第" + rowNum + "行：" + e.getMessage());

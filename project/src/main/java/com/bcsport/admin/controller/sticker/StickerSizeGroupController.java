@@ -24,11 +24,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 /**
- * 贴纸本地尺码组维护
+ * 贴纸矫正尺码组维护
  */
 @RestController
 @RequestMapping("/api/sticker/size-group")
-@Api(tags = "本地尺码组维护")
+@Api(tags = "矫正尺码组维护")
 @Slf4j
 public class StickerSizeGroupController {
 
@@ -126,79 +126,50 @@ public class StickerSizeGroupController {
 
         ExcelWriter writer = ExcelUtil.getWriter(true);
         try {
-            // 固定列
+            // 纵向布局：每行一个尺码，组信息在每行重复，同组编码+品牌+类别的多行自动合并
             writer.addHeaderAlias("groupCode", "组编码");
             writer.addHeaderAlias("groupName", "组名称");
             writer.addHeaderAlias("brandName", "品牌");
             writer.addHeaderAlias("kindName", "类别");
+            writer.addHeaderAlias("sizeCode", "尺码编码");
+            writer.addHeaderAlias("sizeName", "尺码名称");
             writer.addHeaderAlias("sort", "排序");
             writer.addHeaderAlias("status", "状态");
             writer.addHeaderAlias("remark", "备注");
 
-            // 示例行1：单行完整尺码
-            Map<String, Object> row1 = new LinkedHashMap<>();
-            row1.put("groupCode", "AD-OUTERWEAR");
-            row1.put("groupName", "阿迪外衣尺码组");
-            row1.put("brandName", "ADIDAS");
-            row1.put("kindName", "外衣");
-            row1.put("sort", "1");
-            row1.put("status", "1");
-            row1.put("remark", "");
-            // 尺码列(动态列，每两列一对：编码+名称)
-            row1.put("sizeCode1", "S");
-            row1.put("sizeName1", "160");
-            row1.put("sizeCode2", "M");
-            row1.put("sizeName2", "165");
-            row1.put("sizeCode3", "L");
-            row1.put("sizeName3", "170");
-            row1.put("sizeCode4", "XL");
-            row1.put("sizeName4", "175");
+            // 示例数据：每个尺码占一行，同一组的组信息(编码/名称/品牌/类别/排序/状态/备注)逐行重复
+            List<Map<String, Object>> rows = new ArrayList<>();
+            // 阿迪外衣尺码组：4 个尺码
+            rows.add(buildVerticalRow("AD-OUTERWEAR", "阿迪外衣尺码组", "ADIDAS", "外衣", "S", "160", "1", "1", ""));
+            rows.add(buildVerticalRow("AD-OUTERWEAR", "阿迪外衣尺码组", "ADIDAS", "外衣", "M", "165", "", "", ""));
+            rows.add(buildVerticalRow("AD-OUTERWEAR", "阿迪外衣尺码组", "ADIDAS", "外衣", "L", "170", "", "", ""));
+            rows.add(buildVerticalRow("AD-OUTERWEAR", "阿迪外衣尺码组", "ADIDAS", "外衣", "XL", "175", "", "", ""));
+            // 耐克T恤尺码组：3 个尺码
+            rows.add(buildVerticalRow("NK-TSHIRT", "耐克T恤尺码组", "NIKE", "T恤", "XS", "155", "2", "1", ""));
+            rows.add(buildVerticalRow("NK-TSHIRT", "耐克T恤尺码组", "NIKE", "T恤", "S", "160", "", "", ""));
+            rows.add(buildVerticalRow("NK-TSHIRT", "耐克T恤尺码组", "NIKE", "T恤", "M", "165", "", "", ""));
 
-            // 示例行2：同组编码+品牌+类别，追加尺码（演示多行合并）
-            Map<String, Object> row2 = new LinkedHashMap<>();
-            row2.put("groupCode", "AD-OUTERWEAR");
-            row2.put("groupName", "阿迪外衣尺码组");
-            row2.put("brandName", "ADIDAS");
-            row2.put("kindName", "外衣");
-            row2.put("sort", "");
-            row2.put("status", "");
-            row2.put("remark", "");
-            row2.put("sizeCode1", "XXL");
-            row2.put("sizeName1", "180");
-            row2.put("sizeCode2", "XXXL");
-            row2.put("sizeName2", "185");
-
-            // 示例行3：不同组
-            Map<String, Object> row3 = new LinkedHashMap<>();
-            row3.put("groupCode", "NK-TSHIRT");
-            row3.put("groupName", "耐克T恤尺码组");
-            row3.put("brandName", "NIKE");
-            row3.put("kindName", "T恤");
-            row3.put("sort", "2");
-            row3.put("status", "1");
-            row3.put("remark", "");
-            row3.put("sizeCode1", "XS");
-            row3.put("sizeName1", "155");
-            row3.put("sizeCode2", "S");
-            row3.put("sizeName2", "160");
-            row3.put("sizeCode3", "M");
-            row3.put("sizeName3", "165");
-            row3.put("sizeCode4", "L");
-            row3.put("sizeName4", "170");
-
-            writer.addHeaderAlias("sizeCode1", "尺码1编码");
-            writer.addHeaderAlias("sizeName1", "尺码1名称");
-            writer.addHeaderAlias("sizeCode2", "尺码2编码");
-            writer.addHeaderAlias("sizeName2", "尺码2名称");
-            writer.addHeaderAlias("sizeCode3", "尺码3编码");
-            writer.addHeaderAlias("sizeName3", "尺码3名称");
-            writer.addHeaderAlias("sizeCode4", "尺码4编码");
-            writer.addHeaderAlias("sizeName4", "尺码4名称");
-
-            writer.write(Arrays.asList(row1, row2, row3), true);
+            writer.write(rows, true);
             writer.flush(response.getOutputStream());
         } finally {
             writer.close();
         }
+    }
+
+    /** 构建纵向布局(每行一个尺码)的数据行 */
+    private static Map<String, Object> buildVerticalRow(String groupCode, String groupName, String brandName,
+                                                        String kindName, String sizeCode, String sizeName,
+                                                        String sort, String status, String remark) {
+        Map<String, Object> row = new LinkedHashMap<>();
+        row.put("groupCode", groupCode);
+        row.put("groupName", groupName);
+        row.put("brandName", brandName);
+        row.put("kindName", kindName);
+        row.put("sizeCode", sizeCode);
+        row.put("sizeName", sizeName);
+        row.put("sort", sort);
+        row.put("status", status);
+        row.put("remark", remark);
+        return row;
     }
 }

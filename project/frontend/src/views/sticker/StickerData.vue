@@ -84,8 +84,8 @@
           :total="total"
           :page-sizes="PAGE_SIZES"
           layout="total, sizes, prev, pager, next"
-          @size-change="handleSearch"
-          @current-change="loadData"
+          @size-change="onSizeChange"
+          @current-change="onPageChange"
         />
       </div>
     </el-card>
@@ -112,7 +112,32 @@ const brandList = ref([])
 
 function onSearch() {
   handleSearch()
-  sessionStorage.setItem('stickerDataQuery', JSON.stringify({ materialNumber: query.materialNumber, styleNumber: query.styleNumber, materialName: query.materialName, brandId: query.brandId }))
+  persistQuery()
+}
+
+/** 持久化搜索条件+分页，返回列表时恢复 */
+function persistQuery() {
+  sessionStorage.setItem('stickerDataQuery', JSON.stringify({
+    materialNumber: query.materialNumber,
+    styleNumber: query.styleNumber,
+    materialName: query.materialName,
+    brandId: query.brandId,
+    pageNum: query.pageNum,
+    pageSize: query.pageSize
+  }))
+}
+
+/** 改每页条数：回到第1页加载并持久化 */
+function onSizeChange() {
+  query.pageNum = 1
+  loadData()
+  persistQuery()
+}
+
+/** 翻页：加载并持久化分页状态 */
+function onPageChange() {
+  loadData()
+  persistQuery()
 }
 
 function onReset() {
@@ -150,6 +175,9 @@ function restoreAndLoad() {
     query.styleNumber = q.styleNumber || ''
     query.materialName = q.materialName || ''
     query.brandId = q.brandId || ''
+    // 恢复分页(翻页/每页条数)，避免返回后 pageSize 被重置为默认值
+    query.pageNum = q.pageNum || 1
+    query.pageSize = q.pageSize || query.pageSize
     loadData()
   } catch {
     sessionStorage.removeItem('stickerDataQuery')

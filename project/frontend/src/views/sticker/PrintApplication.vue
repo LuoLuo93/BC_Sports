@@ -204,6 +204,20 @@
               <el-table-column prop="ean13" label="EAN13" width="150">
                 <template #default="{ row }">{{ row.ean13 || '-' }}</template>
               </el-table-column>
+              <el-table-column label="面料/辅料成分" width="240" show-overflow-tooltip>
+                <template #default="{ row }">
+                  <span v-if="row.fabCode || row.fabElement || row.acCode || row.accElement">
+                    <span v-if="row.fabCode">面料1:{{ row.fabCode }}</span>
+                    <span v-if="row.fabCode && (row.fabElement || row.acCode || row.accElement)"> / </span>
+                    <span v-if="row.fabElement">面料2:{{ row.fabElement }}</span>
+                    <span v-if="row.fabElement && (row.acCode || row.accElement)"> / </span>
+                    <span v-if="row.acCode">辅料1:{{ row.acCode }}</span>
+                    <span v-if="row.acCode && row.accElement"> / </span>
+                    <span v-if="row.accElement">辅料2:{{ row.accElement }}</span>
+                  </span>
+                  <span v-else style="color:#d9d9d9">-</span>
+                </template>
+              </el-table-column>
               <el-table-column prop="barcode" label="条码" width="170" show-overflow-tooltip>
                 <template #default="{ row }">{{ row.barcode || '-' }}</template>
               </el-table-column>

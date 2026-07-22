@@ -55,8 +55,8 @@
             <template #default="{ $index }">{{ (detailPage - 1) * detailSize + $index + 1 }}</template>
           </el-table-column>
           <el-table-column prop="materialNumber" label="货号" width="170" show-overflow-tooltip fixed="left" class-name="col-key" />
-          <el-table-column prop="styleNumber" label="款号" width="170" show-overflow-tooltip fixed="left" class-name="col-key" />
-          <el-table-column prop="materialName" label="货品名称" width="200" show-overflow-tooltip fixed="left" class-name="col-key" />
+          <el-table-column prop="styleNumber" label="款号" width="170" show-overflow-tooltip class-name="col-key" />
+          <el-table-column prop="materialName" label="货品名称" width="200" show-overflow-tooltip class-name="col-key" />
           <el-table-column prop="brandName" label="品牌" width="120" />
           <el-table-column prop="kindName" label="类别" width="100" />
           <el-table-column prop="color" label="颜色" width="90" />
@@ -86,13 +86,13 @@
           <el-table-column prop="barcode" label="条码" width="170" show-overflow-tooltip>
             <template #default="{ row }">{{ row.barcode || '-' }}</template>
           </el-table-column>
-          <el-table-column prop="localGroupName" label="矫正尺码组" width="140" align="center" show-overflow-tooltip>
+          <el-table-column prop="localGroupName" label="矫正尺码组" width="140" align="center" show-overflow-tooltip fixed="right">
             <template #default="{ row }">
               <el-tag v-if="row.localGroupName" type="success" size="small" effect="dark">{{ row.localGroupName }}</el-tag>
               <span v-else style="color:#d9d9d9">-</span>
             </template>
           </el-table-column>
-          <el-table-column prop="localSizeName" label="矫正尺码" width="100" align="center">
+          <el-table-column prop="localSizeName" label="矫正尺码" width="100" align="center" fixed="right">
             <template #default="{ row }">
               <el-tag v-if="row.localSizeName" type="primary" size="small" effect="dark">{{ row.localSizeName }}</el-tag>
               <span v-else style="color:#d9d9d9">-</span>

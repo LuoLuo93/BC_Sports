@@ -68,11 +68,11 @@
             <el-tag size="small" type="warning" effect="plain" style="margin-left:8px">可编辑</el-tag>
           </div>
           <div class="info-grid">
-            <div class="info-card editable">
+            <div class="info-card editable span-2">
               <span class="info-card-label">执行标准</span>
               <el-input v-model="row.EXECUTION_STANDARD" placeholder="请输入执行标准" size="small" />
             </div>
-            <div class="info-card editable" :class="ean13InputClass">
+            <div class="info-card editable span-2" :class="ean13InputClass">
               <span class="info-card-label">
                 EAN13
                 <span v-if="ean13Check === 'error'" class="field-msg field-msg-error">需为 13 位纯数字</span>

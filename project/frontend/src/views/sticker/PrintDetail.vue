@@ -4,7 +4,7 @@
       <!-- 紧凑头部栏 -->
       <div class="form-header">
         <el-button type="warning" size="small" @click="$router.push('/sticker/print')">返回列表</el-button>
-        <span class="form-header-title">查看申请单</span>
+        <span class="form-header-title">查看打印申请单</span>
         <span v-if="order.status === 2" style="color:#f97316;font-size:12px;font-weight:600">已审核</span>
         <span v-else></span>
       </div>
@@ -86,11 +86,17 @@
           <el-table-column prop="barcode" label="条码" width="170" show-overflow-tooltip>
             <template #default="{ row }">{{ row.barcode || '-' }}</template>
           </el-table-column>
-          <el-table-column prop="localGroupName" label="矫正尺码组" width="140" show-overflow-tooltip>
-            <template #default="{ row }">{{ row.localGroupName || '-' }}</template>
+          <el-table-column prop="localGroupName" label="矫正尺码组" width="140" align="center" show-overflow-tooltip>
+            <template #default="{ row }">
+              <el-tag v-if="row.localGroupName" type="success" size="small" effect="dark">{{ row.localGroupName }}</el-tag>
+              <span v-else style="color:#d9d9d9">-</span>
+            </template>
           </el-table-column>
-          <el-table-column prop="localSizeName" label="矫正尺码" width="100">
-            <template #default="{ row }">{{ row.localSizeName || '-' }}</template>
+          <el-table-column prop="localSizeName" label="矫正尺码" width="100" align="center">
+            <template #default="{ row }">
+              <el-tag v-if="row.localSizeName" type="primary" size="small" effect="dark">{{ row.localSizeName }}</el-tag>
+              <span v-else style="color:#d9d9d9">-</span>
+            </template>
           </el-table-column>
           <el-table-column label="尺码" width="80" align="center" fixed="right">
             <template #default="{ row }">

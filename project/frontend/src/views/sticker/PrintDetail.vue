@@ -66,12 +66,6 @@
           <el-table-column prop="executionStandard" label="执行标准" width="160">
             <template #default="{ row }">{{ row.executionStandard || '-' }}</template>
           </el-table-column>
-          <el-table-column prop="origin" label="产地" width="90">
-            <template #default="{ row }">{{ row.origin || '-' }}</template>
-          </el-table-column>
-          <el-table-column prop="manufacturer" label="制造商" width="140">
-            <template #default="{ row }">{{ row.manufacturer || '-' }}</template>
-          </el-table-column>
           <el-table-column label="面料/辅料成分" width="240" show-overflow-tooltip>
             <template #default="{ row }">
               <span v-if="row.fabCode || row.fabElement || row.acCode || row.accElement">
@@ -91,6 +85,12 @@
           </el-table-column>
           <el-table-column prop="barcode" label="条码" width="170" show-overflow-tooltip>
             <template #default="{ row }">{{ row.barcode || '-' }}</template>
+          </el-table-column>
+          <el-table-column prop="localGroupName" label="矫正尺码组" width="140" show-overflow-tooltip>
+            <template #default="{ row }">{{ row.localGroupName || '-' }}</template>
+          </el-table-column>
+          <el-table-column prop="localSizeName" label="矫正尺码" width="100">
+            <template #default="{ row }">{{ row.localSizeName || '-' }}</template>
           </el-table-column>
           <el-table-column label="尺码" width="80" align="center" fixed="right">
             <template #default="{ row }">

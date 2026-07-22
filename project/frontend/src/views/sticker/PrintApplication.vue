@@ -207,24 +207,13 @@
               <el-table-column prop="barcode" label="条码" width="170" show-overflow-tooltip>
                 <template #default="{ row }">{{ row.barcode || '-' }}</template>
               </el-table-column>
-              <el-table-column label="修正尺码组" width="120" fixed="right">
+              <el-table-column label="矫正尺码组" width="140" fixed="right">
                 <template #default="{ row }">
-                  <el-select
-                    v-model="row.localGroupId"
-                    placeholder="选择"
-                    filterable
-                    clearable
-                    size="small"
-                    style="width:100%"
-                    :disabled="!row.brandId || !row.kindId"
-                    @change="onLocalGroupChange(row)"
-                    @visible-change="(v) => { if (v) ensureLocalGroupOptions(row) }"
-                  >
-                    <el-option v-for="g in getLocalGroupOptions(row)" :key="g.id" :label="g.groupName" :value="g.id" />
-                  </el-select>
+                  <span v-if="row.localGroupName">{{ row.localGroupName }}</span>
+                  <span v-else style="color:#c0c4cc">无</span>
                 </template>
               </el-table-column>
-              <el-table-column label="修正尺码" width="120" fixed="right">
+              <el-table-column label="矫正尺码" width="120" fixed="right">
                 <template #default="{ row }">
                   <el-select
                     v-model="row.localSizeId"
@@ -389,7 +378,7 @@ import { useRouter, onBeforeRouteLeave } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Loading, Search, RefreshRight } from '@element-plus/icons-vue'
 import request from '@/api/request'
-import { getPrintOrderPage, getPrintOrder, createPrintOrder, updatePrintOrder, submitPrintOrder, reviewPrintOrder, deletePrintOrder, searchProducts, getProductBrands, getProductSizes, createAgentPrintTasks, getSizeGroupList, getSizeGroupSizes } from '@/api/sticker'
+import { getPrintOrderPage, getPrintOrder, createPrintOrder, updatePrintOrder, submitPrintOrder, reviewPrintOrder, deletePrintOrder, searchProducts, getProductBrands, getProductSizes, createAgentPrintTasks, getSizeGroupSizes } from '@/api/sticker'
 import { usePageQuery } from '@/composables/usePageQuery'
 import { usePermission } from '@/composables/usePermission'
 import { useAuthStore } from '@/stores/auth'
@@ -728,6 +717,7 @@ function handleProductSelect(selection) {
 
 function confirmProductSelect() {
   const skipped = []
+  const groupIdsToPreload = new Set()
   for (const p of selectedProducts.value) {
     const mn = p.MATERIAL_NUMBER || ''
     const sn = p.STYLE_NUMBER || ''
@@ -736,6 +726,8 @@ function confirmProductSelect() {
       skipped.push(p.MATERIAL_NAME || mn)
       continue
     }
+    // 矫正尺码组：从货品搜索结果自动带入(来自 M_PRODUCT.BOX_QTY_NEW)，用户不可改
+    const gid = p.SIZE_GROUP_ID ? String(p.SIZE_GROUP_ID) : ''
     form.details.push({
       productId: p.PRODUCT_ID || '',
       materialNumber: mn,
@@ -761,11 +753,16 @@ function confirmProductSelect() {
       sizeName: '',
       barcode: '',
       printQty: 0,
-      localGroupId: '',
-      localGroupName: '',
+      localGroupId: gid,
+      localGroupName: p.SIZE_GROUP_NAME || '',
       localSizeId: '',
       localSizeName: ''
     })
+    if (gid) groupIdsToPreload.add(gid)
+  }
+  // 预加载所带入矫正组的尺码缓存，矫正尺码下拉才能直接用
+  for (const gid of groupIdsToPreload) {
+    ensureLocalSizeCache(gid)
   }
   if (skipped.length) {
     ElMessage.warning(`${skipped.join('、')} 已在明细中，已跳过`)
@@ -891,41 +888,23 @@ function confirmSizeAssign() {
 
 // ─── Local Size Group (本地尺码组) ───────────────────────
 // 缓存: brandId|kindId -> 组列表 ; groupId -> 尺码列表
-const localGroupCache = reactive({})
+// 缓存: groupId -> 尺码列表（矫正尺码组只读带入，只需尺码列表缓存）
 const localSizeCache = reactive({})
-const groupLoadingKeys = new Set()
 const sizeLoadingKeys = new Set()
-
-function groupKey(row) {
-  return `${row.brandId || ''}|${row.kindId || ''}`
-}
-
-function getLocalGroupOptions(row) {
-  return localGroupCache[groupKey(row)] || []
-}
 
 function getLocalSizeOptions(row) {
   return localSizeCache[row.localGroupId] || []
 }
 
-async function ensureLocalGroupOptions(row) {
-  if (!row.brandId || !row.kindId) return
-  const key = groupKey(row)
-  if (localGroupCache[key] || groupLoadingKeys.has(key)) return
-  groupLoadingKeys.add(key)
-  try {
-    const { data } = await getSizeGroupList({ brandId: row.brandId, kindId: row.kindId })
-    localGroupCache[key] = data || []
-  } catch {
-    localGroupCache[key] = []
-  } finally {
-    groupLoadingKeys.delete(key)
-  }
-}
-
 async function ensureLocalSizeOptions(row) {
   if (!row.localGroupId) return
-  const key = row.localGroupId
+  await ensureLocalSizeCache(row.localGroupId)
+}
+
+/** 按 groupId 预加载该组尺码列表到缓存(矫正尺码下拉用) */
+async function ensureLocalSizeCache(groupId) {
+  if (!groupId) return
+  const key = groupId
   if (localSizeCache[key] || sizeLoadingKeys.has(key)) return
   sizeLoadingKeys.add(key)
   try {
@@ -939,33 +918,17 @@ async function ensureLocalSizeOptions(row) {
 }
 
 // 编辑模式：遍历已有明细，预加载尺码组列表和尺码列表缓存
+// 编辑模式：遍历已有明细，预加载矫正组的尺码列表缓存（矫正尺码下拉用）
 async function preloadLocalCaches() {
   const details = form.details
   if (!details?.length) return
-  const groupKeys = new Set()
   const sizeKeys = new Set()
   for (const d of details) {
-    if (d.brandId && d.kindId) {
-      const gk = `${d.brandId}|${d.kindId}`
-      groupKeys.add(gk)
-    }
     if (d.localGroupId) {
       sizeKeys.add(d.localGroupId)
     }
   }
-  // 并行加载
   const promises = []
-  for (const key of groupKeys) {
-    if (!localGroupCache[key] && !groupLoadingKeys.has(key)) {
-      groupLoadingKeys.add(key)
-      promises.push(
-        getSizeGroupList({ brandId: key.split('|')[0], kindId: key.split('|')[1] })
-          .then(({ data }) => { localGroupCache[key] = data || [] })
-          .catch(() => { localGroupCache[key] = [] })
-          .finally(() => groupLoadingKeys.delete(key))
-      )
-    }
-  }
   for (const key of sizeKeys) {
     if (!localSizeCache[key] && !sizeLoadingKeys.has(key)) {
       sizeLoadingKeys.add(key)
@@ -978,17 +941,6 @@ async function preloadLocalCaches() {
     }
   }
   if (promises.length) await Promise.all(promises)
-}
-
-function onLocalGroupChange(row) {
-  // 切换组: 同步组名,清空本地尺码
-  const g = getLocalGroupOptions(row).find(item => item.id === row.localGroupId)
-  row.localGroupName = g ? g.groupName : ''
-  row.localSizeId = ''
-  row.localSizeName = ''
-  if (row.localGroupId) {
-    ensureLocalSizeOptions(row)
-  }
 }
 
 function onLocalSizeChange(row) {
@@ -1124,7 +1076,7 @@ onBeforeUnmount(() => {
 .detail-table {
   flex: 1;
 }
-/* 表格内修正尺码组/修正尺码下拉框：覆盖全局 200px 强制宽度，跟随列宽 */
+/* 表格内矫正尺码下拉框：覆盖全局 200px 强制宽度，跟随列宽 */
 .detail-table :deep(.el-select) {
   width: 100% !important;
 }

@@ -750,6 +750,7 @@ function confirmProductSelect() {
       fabElement: p.FAB_ELEMENT || '',
       acCode: p.AC_CODE || '',
       accElement: p.ACC_ELEMENT || '',
+      sizeCode: '',
       sizeName: '',
       barcode: '',
       printQty: 0,
@@ -800,6 +801,7 @@ async function openSizeAssign(row, index) {
       const exist = existingMap[r.SIZES]
       return {
         size: r.SIZES,
+        sizeCode: r.SIZESCODE || '',
         barcode: r.BARCODE || '',
         checked: !!exist,
         qty: exist ? exist.qty : 1,
@@ -812,6 +814,7 @@ async function openSizeAssign(row, index) {
       const exist = existingMap[s]
       return {
         size: s,
+        sizeCode: '',
         barcode: '',
         checked: !!exist,
         qty: exist ? exist.qty : 1,
@@ -874,6 +877,7 @@ function confirmSizeAssign() {
       fabElement: orig.fabElement || '',
       acCode: orig.acCode || '',
       accElement: orig.accElement || '',
+      sizeCode: checked[i].sizeCode || '',
       sizeName: checked[i].size,
       barcode: checked[i].barcode || '',
       printQty: checked[i].qty,

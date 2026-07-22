@@ -126,8 +126,10 @@
         SELECT product.NAME        AS MATERIAL_NUMBER,
                product.VALUE       AS MATERIAL_NAME,
                barcode.NO          AS BARCODE,
-               c.VALUE1_CODE       AS COLOR,
-               c.VALUE2_CODE       AS SIZES
+               c.VALUE1_ID         AS COLORCODE,
+               c.VALUE1            AS COLOR,
+               c.VALUE2_ID         AS SIZESCODE,
+               c.VALUE2            AS SIZES
         FROM M_PRODUCT product
                  LEFT JOIN M_PRODUCT_ALIAS barcode ON product.ID = barcode.M_PRODUCT_ID
                  LEFT JOIN M_ATTRIBUTESETINSTANCE c ON barcode.M_ATTRIBUTESETINSTANCE_ID = c.id

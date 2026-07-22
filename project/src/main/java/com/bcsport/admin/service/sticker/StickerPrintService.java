@@ -46,8 +46,10 @@ public class StickerPrintService {
     private StickerSizeGroupMapper stickerSizeGroupMapper;
 
     public List<Map<String, Object>> searchProducts(String materialNumber, String styleNumber, String materialName, String brandId) {
-        return bjerpProductMapper.searchProducts(
+        List<Map<String, Object>> records = bjerpProductMapper.searchProducts(
                 escapeLike(materialNumber), escapeLike(styleNumber), escapeLike(materialName), brandId, 0, 500);
+        fillSizeGroupName(records);
+        return records;
     }
 
     public PageResult<Map<String, Object>> searchProducts(PageQuery pageQuery, String materialNumber, String styleNumber, String materialName, String brandId) {

@@ -162,6 +162,12 @@
               <el-table-column prop="EAN13" label="EAN13" width="150">
                 <template #default="{ row }">{{ row.EAN13 || '-' }}</template>
               </el-table-column>
+              <el-table-column prop="SIZE_GROUP_NAME" label="矫正尺码组" width="150" show-overflow-tooltip>
+                <template #default="{ row }">
+                  <el-tag v-if="row.SIZE_GROUP_NAME" size="small" type="success" effect="plain">{{ row.SIZE_GROUP_NAME }}</el-tag>
+                  <span v-else style="color:#d9d9d9">-</span>
+                </template>
+              </el-table-column>
               <el-table-column prop="SIZES" label="尺码组列表" min-width="200" show-overflow-tooltip>
                 <template #default="{ row }">{{ row.SIZES || '-' }}</template>
               </el-table-column>
@@ -501,7 +507,6 @@ function handleCreate() {
   selectedProducts.value = []
   loadBrands()
   formVisible.value = true
-  loadDefaultProducts()
 }
 
 async function handleEdit(row) {
@@ -529,22 +534,8 @@ async function handleEdit(row) {
   selectedProducts.value = []
   loadBrands()
   formVisible.value = true
-  loadDefaultProducts()
   // 编辑模式：预加载已有本地尺码组/尺码的选项缓存，确保 el-select 能显示 label 而非 id
   preloadLocalCaches()
-}
-
-// 进入表单时默认加载前 20 条货品
-async function loadDefaultProducts() {
-  productLoading.value = true
-  try {
-    const { data } = await searchProducts({})
-    productList.value = (data || []).slice(0, 20)
-  } catch {
-    productList.value = []
-  } finally {
-    productLoading.value = false
-  }
 }
 
 function handleView(row) {

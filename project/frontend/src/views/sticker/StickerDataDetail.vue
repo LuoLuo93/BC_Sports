@@ -94,18 +94,20 @@
             <el-icon><Files /></el-icon> 矫正贴纸尺码
             <el-tag size="small" type="warning" effect="plain" style="margin-left:8px">可编辑</el-tag>
           </div>
-          <div class="info-card editable" style="margin:0;">
-            <span class="info-card-label">贴纸尺码组</span>
-            <el-select v-model="selectedSizeGroupId" placeholder="请选择尺码组" size="small" filterable clearable style="width:100%" @change="onSizeGroupChange">
-              <el-option v-for="g in sizeGroupOptions" :key="g.id" :label="g.groupName" :value="g.id" />
-            </el-select>
-          </div>
-          <div v-if="selectedGroupSizes.length" class="size-detail-list">
-            <span class="info-card-label">组内尺码</span>
-            <div class="size-tags-row">
-              <el-tag v-for="s in selectedGroupSizes" :key="s.id || s.sizeName" size="small" effect="plain" class="size-tag">
-                {{ s.sizeName }}<span v-if="s.sizeCode" class="size-code-suffix"> / {{ s.sizeCode }}</span>
-              </el-tag>
+          <div class="size-group-row">
+            <div class="info-card editable" style="margin:0;flex:0 0 auto;min-width:160px;">
+              <span class="info-card-label">贴纸尺码组</span>
+              <el-select v-model="selectedSizeGroupId" placeholder="请选择尺码组" size="small" filterable clearable style="width:100%" @change="onSizeGroupChange">
+                <el-option v-for="g in sizeGroupOptions" :key="g.id" :label="g.groupName" :value="g.id" />
+              </el-select>
+            </div>
+            <div v-if="selectedGroupSizes.length" class="info-card" style="margin:0;flex:1;">
+              <span class="info-card-label">组内尺码</span>
+              <div class="size-tags-row">
+                <el-tag v-for="s in selectedGroupSizes" :key="s.id || s.sizeName" size="small" effect="plain" class="size-tag">
+                  {{ s.sizeName }}
+                </el-tag>
+              </div>
             </div>
           </div>
         </div>
@@ -481,15 +483,13 @@ onBeforeRouteLeave(async (_to, _from) => {
 }
 .size-tag { margin: 1px 3px 1px 0; }
 
-/* 矫正组尺码明细展示 */
-.size-detail-list {
-  margin-top: 10px;
+/* 矫正组：下拉框 + 组内尺码 左右并排 */
+.size-group-row {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  gap: 10px;
+  align-items: stretch;
 }
-.size-tags-row { display: flex; flex-wrap: wrap; gap: 4px; }
-.size-code-suffix { color: #94a3b8; font-size: 11px; }
+.size-tags-row { display: flex; flex-wrap: wrap; gap: 4px; align-content: flex-start; }
 
 /* 可编辑卡片 */
 .info-card.editable {

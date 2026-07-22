@@ -77,6 +77,10 @@ spring:
         max-pool-prepared-statement-per-connection-size: 20
         filters: stat,wall,slf4j
         connection-properties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=5000
+        # 防止数据库重启后连接池自动关闭
+        break-after-acquire-failure: false
+        connection-error-retry-attempts: 3
+        time-between-connect-error-millis: 30000
     # 企业微信 SQL Server 数据源 (独立库 BC_SPORTS_QYWX)
     qywx:
       type: com.alibaba.druid.pool.DruidDataSource
@@ -102,6 +106,10 @@ spring:
         max-pool-prepared-statement-per-connection-size: 20
         filters: stat,wall,slf4j
         connection-properties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=5000
+        # 防止数据库重启后连接池自动关闭
+        break-after-acquire-failure: false
+        connection-error-retry-attempts: 3
+        time-between-connect-error-millis: 30000
     # 旧版HK ERP SQL Server 数据源 (独立库 HKERP)
     # 源项目 interfaceForHK 直写 Bas_Personnel 等表的链路，与伯俊ERP链路并存
     hkerp:
@@ -128,6 +136,10 @@ spring:
         max-pool-prepared-statement-per-connection-size: 20
         filters: stat,wall,slf4j
         connection-properties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=5000
+        # 防止数据库重启后连接池自动关闭
+        break-after-acquire-failure: false
+        connection-error-retry-attempts: 3
+        time-between-connect-error-millis: 30000
     # 伯俊ERP Oracle 数据源
     bjerp:
       type: com.alibaba.druid.pool.DruidDataSource

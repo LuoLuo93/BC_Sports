@@ -153,16 +153,61 @@ public class MaintenanceController {
     @RequiresPermissions("system:config:query")
     public Result<List<Map<String, Object>>> dbMonitor() {
         List<Map<String, Object>> list = new ArrayList<>();
-        list.add(buildPoolStats("主库 (Oracle)", mainDataSource));
-        list.add(buildPoolStats("伯俊ERP (Oracle)", bjerpDataSource));
-        list.add(buildPoolStats("IHR (SQL Server)", ihrDataSource));
-        list.add(buildPoolStats("企业微信 (SQL Server)", qywxDataSource));
-        list.add(buildPoolStats("HKERP主库 (SQL Server)", hkerpDataSource));
+        list.add(buildPoolStats("主库 (Oracle)", mainDataSource, "main"));
+        list.add(buildPoolStats("伯俊ERP (Oracle)", bjerpDataSource, "bjerp"));
+        list.add(buildPoolStats("IHR (SQL Server)", ihrDataSource, "ihr"));
+        list.add(buildPoolStats("企业微信 (SQL Server)", qywxDataSource, "qywx"));
+        list.add(buildPoolStats("HKERP主库 (SQL Server)", hkerpDataSource, "hkerp"));
         return Result.success(list);
     }
 
-    private Map<String, Object> buildPoolStats(String name, DruidDataSource ds) {
+    /**
+     * 重启已关闭的连接池
+     */
+    @PostMapping("/restart-pool")
+    @RequiresPermissions("system:config:edit")
+    public Result<Void> restartPool(@RequestParam String name) {
+        DruidDataSource ds = resolveDataSource(name);
+        if (ds == null) {
+            return Result.error("未知的数据源: " + name);
+        }
+        try {
+            if (ds.isClosed()) {
+                ds.restart();
+                log.info("[维护] 连接池 [{}] 已重启，验证连接中...", name);
+                // 重启后立即验证连接是否可用
+                try (var conn = ds.getConnection()) {
+                    if (conn.isValid(3)) {
+                        log.info("[维护] 连接池 [{}] 重启成功，连接验证通过", name);
+                        return Result.success("连接池已重启并验证成功", null);
+                    } else {
+                        log.warn("[维护] 连接池 [{}] 已重启，但连接验证失败", name);
+                        return Result.success("连接池已重启，但连接验证失败，请检查数据库状态", null);
+                    }
+                }
+            } else {
+                return Result.success("连接池未关闭，无需重启", null);
+            }
+        } catch (Exception e) {
+            log.error("[维护] 重启连接池 [{}] 失败", name, e);
+            return Result.error("重启失败: " + e.getMessage());
+        }
+    }
+
+    private DruidDataSource resolveDataSource(String name) {
+        return switch (name) {
+            case "main" -> mainDataSource;
+            case "bjerp" -> bjerpDataSource;
+            case "ihr" -> ihrDataSource;
+            case "qywx" -> qywxDataSource;
+            case "hkerp" -> hkerpDataSource;
+            default -> null;
+        };
+    }
+
+    private Map<String, Object> buildPoolStats(String name, DruidDataSource ds, String key) {
         Map<String, Object> m = new LinkedHashMap<>();
+        m.put("key", key);
         m.put("name", name);
         m.put("url", ds.getUrl());
         m.put("username", ds.getUsername());
@@ -176,11 +221,17 @@ public class MaintenanceController {
         m.put("waitThreadCount", ds.getWaitThreadCount());
         m.put("maxWait", ds.getMaxWait());
         m.put("phyTimeoutMillis", ds.getPhyTimeoutMillis());
-        // 连接测试
-        try (var conn = ds.getConnection()) {
-            m.put("status", conn.isValid(3) ? "正常" : "异常");
-        } catch (Exception e) {
-            m.put("status", "连接失败: " + e.getMessage());
+        boolean closed = ds.isClosed();
+        m.put("closed", closed);
+        // 连接测试（池已关闭时直接标记，避免无意义的异常调用）
+        if (closed) {
+            m.put("status", "连接失败: dataSource already closed");
+        } else {
+            try (var conn = ds.getConnection()) {
+                m.put("status", conn.isValid(3) ? "正常" : "异常");
+            } catch (Exception e) {
+                m.put("status", "连接失败: " + e.getMessage());
+            }
         }
         return m;
     }

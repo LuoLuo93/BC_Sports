@@ -276,9 +276,17 @@
               </div>
               <el-table v-loading="dbMonitorLoading" :data="dbMonitorData" border stripe empty-text="暂无数据" style="margin-top:16px">
               <el-table-column prop="name" label="数据源" min-width="160" />
-              <el-table-column label="状态" width="90" align="center">
+              <el-table-column label="状态" width="180" align="center">
                 <template #default="{ row }">
-                  <el-tag :type="row.status === '正常' ? 'success' : 'danger'" size="small">{{ row.status }}</el-tag>
+                  <div style="display:flex;align-items:center;justify-content:center;gap:6px">
+                    <el-tag :type="row.status === '正常' ? 'success' : 'danger'" size="small">{{ row.status }}</el-tag>
+                    <el-button
+                      v-if="row.status !== '正常' && hasPermission('system:config:edit')"
+                      type="warning" size="small" plain
+                      :loading="row._restarting"
+                      @click="restartPool(row)"
+                    >重启</el-button>
+                  </div>
                 </template>
               </el-table-column>
               <el-table-column prop="username" label="账号" width="120" show-overflow-tooltip />
@@ -517,12 +525,30 @@ async function loadDbMonitor() {
   try {
     const res = await request.get('/api/maintenance/db-monitor')
     if (res.code === 200) {
-      dbMonitorData.value = res.data || []
+      dbMonitorData.value = (res.data || []).map(item => ({ ...item, _restarting: false }))
     }
   } catch {
     // handled by interceptor
   } finally {
     dbMonitorLoading.value = false
+  }
+}
+
+async function restartPool(row) {
+  if (!row.key) return
+  row._restarting = true
+  try {
+    const res = await request.post(`/api/maintenance/restart-pool?name=${row.key}`)
+    if (res.code === 200) {
+      ElMessage.success(res.message || '连接池已重启')
+      await loadDbMonitor()
+    } else {
+      ElMessage.error(res.message || '重启失败')
+    }
+  } catch {
+    // handled by interceptor
+  } finally {
+    row._restarting = false
   }
 }
 

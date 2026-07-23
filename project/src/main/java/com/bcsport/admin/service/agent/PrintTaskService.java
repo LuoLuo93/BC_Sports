@@ -356,7 +356,7 @@ public class PrintTaskService {
             printData.put("Color", detail.getColor());
             printData.put("BrandName", detail.getBrandName());
             printData.put("KindName", detail.getKindName());
-            printData.put("SizeName", detail.getSizeName());
+            printData.put("SizeName", resolveSizeName(detail));
             printData.put("EAN13", detail.getEan13());
             printData.put("Price", detail.getPrice() != null ? detail.getPrice().toString() : "");
             return printData;
@@ -404,7 +404,7 @@ public class PrintTaskService {
             case "COLOR" -> detail.getColor();
             case "BRAND_NAME", "BRANDNAME" -> detail.getBrandName();
             case "KIND_NAME", "KINDNAME" -> detail.getKindName();
-            case "SIZE_NAME", "SIZENAME" -> detail.getSizeName();
+            case "SIZE_NAME", "SIZENAME" -> resolveSizeName(detail);
             case "SIZE_GROUP", "SIZEGROUP" -> detail.getSizeGroup();
             case "EAN13" -> detail.getEan13();
             case "PRICE" -> detail.getPrice() != null ? detail.getPrice().toString() : null;
@@ -419,6 +419,17 @@ public class PrintTaskService {
             case "ACC_ELEMENT", "ACCELEMENT" -> detail.getAccElement();
             default -> null;
         };
+    }
+
+    /**
+     * 解析尺码名称：以矫正尺码(localSizeName)优先，为空时回退到原始尺码(sizeName)。
+     */
+    private String resolveSizeName(StickerPrintOrderDetail detail) {
+        String local = detail.getLocalSizeName();
+        if (local != null && !local.isBlank()) {
+            return local;
+        }
+        return detail.getSizeName();
     }
 
     /**

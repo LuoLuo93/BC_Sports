@@ -118,19 +118,19 @@ public class StickerPrintOrderDetail {
     @TableField("create_time")
     private LocalDateTime createTime;
 
-    @FieldLabel("本地尺码组ID")
+    @FieldLabel(value = "修正尺码组ID", hidden = true)
     @TableField("local_group_id")
     private String localGroupId;
 
-    @FieldLabel("本地尺码组名称")
+    @FieldLabel(value = "修正尺码组名称", hidden = true)
     @TableField("local_group_name")
     private String localGroupName;
 
-    @FieldLabel("本地尺码ID")
+    @FieldLabel(value = "修正尺码ID", hidden = true)
     @TableField("local_size_id")
     private String localSizeId;
 
-    @FieldLabel("本地尺码名称")
+    @FieldLabel(value = "本修正尺码名称", hidden = true)
     @TableField("local_size_name")
     private String localSizeName;
 }

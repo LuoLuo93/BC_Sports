@@ -22,7 +22,7 @@ public class FieldLabelUtils {
         List<FieldOption> options = new ArrayList<>();
         for (Field field : clazz.getDeclaredFields()) {
             FieldLabel annotation = field.getAnnotation(FieldLabel.class);
-            if (annotation != null) {
+            if (annotation != null && !annotation.hidden()) {
                 options.add(new FieldOption(field.getName(), annotation.value()));
             }
         }

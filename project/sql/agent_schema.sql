@@ -74,7 +74,7 @@ COMMENT ON COLUMN print_task.template_file IS '模板文件名';
 COMMENT ON COLUMN print_task.printer_name IS '打印机名称';
 COMMENT ON COLUMN print_task.print_data IS '打印数据JSON';
 COMMENT ON COLUMN print_task.agent_id IS '目标Agent';
-COMMENT ON COLUMN print_task.status IS '状态 0待打印 1打印中 2成功 3失败';
+COMMENT ON COLUMN print_task.status IS '状态 0待打印 1打印中 2成功 3失败 4已暂停(断纸换纸后续打)';
 COMMENT ON COLUMN print_task.error_msg IS '错误信息';
 COMMENT ON COLUMN print_task.create_time IS '创建时间';
 COMMENT ON COLUMN print_task.print_time IS '打印时间';

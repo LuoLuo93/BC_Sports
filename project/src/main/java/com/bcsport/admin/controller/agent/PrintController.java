@@ -35,15 +35,18 @@ public class PrintController {
         String taskId = (String) body.get("taskId");
         Boolean success = (Boolean) body.get("success");
         String message = (String) body.get("message");
+        // 语义状态(可选)：completed/paused/failed。传了优先用；没传则按老协议 success 布尔值判断
+        String resultStatus = body.get("status") == null ? null : body.get("status").toString();
 
         if (taskId == null || taskId.isBlank()) {
             return Result.paramError("taskId 不能为空");
         }
-        if (success == null) {
+        // 向后兼容：没传 status 时，success 必填
+        if ((resultStatus == null || resultStatus.isBlank()) && success == null) {
             return Result.paramError("success 不能为空");
         }
 
-        printTaskService.reportResult(taskId, success, message != null ? message : "");
+        printTaskService.reportResult(taskId, resultStatus, success, message != null ? message : "");
         return Result.success("结果已记录");
     }
 

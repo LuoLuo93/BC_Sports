@@ -21,6 +21,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -47,11 +48,14 @@ public class PrintTaskService {
     @Autowired
     private ObjectMapper objectMapper;
 
-    /** 任务派发后超过该时长仍未回报，视为 Agent 崩溃/丢失，允许重新派发。
-     *  必须大于单任务最大物理打印耗时（含大数量批次），否则会误重派正在打印的任务导致重复打印。
-     *  改用 dispatch_time（真实派发时刻）而非 create_time 计时，避免排队等待时间被错误计入阈值。 */
-    @Value("${agent.task.stuck-minutes:5}")
-    private int stuckMinutes;
+    /** 卡住判定动态阈值基础分钟数：阈值 = stuckBaseMinutes + printQty × stuckMinutesPerQty。
+     *  按任务打印数量自适应，避免大数量任务(如1000张)因物理打印超时而被误判卡住导致重复打印。 */
+    @Value("${agent.task.stuck-base-minutes:3}")
+    private int stuckBaseMinutes;
+
+    /** 卡住判定每张追加分钟数，配合 stuckBaseMinutes 动态计算超时阈值。 */
+    @Value("${agent.task.stuck-minutes-per-qty:0.02}")
+    private double stuckMinutesPerQty;
 
     /** 单个任务最多重新派发次数，超过则标记失败，避免无限重发导致重复打印。 */
     @Value("${agent.task.max-redispatch:3}")
@@ -60,17 +64,32 @@ public class PrintTaskService {
     /** status=0 任务超过该分钟数仍未被拉取，巡检任务告警（agentId 配错 / Agent 长时间离线）。 */
     private static final int PENDING_WARN_MINUTES = 15;
 
-    public List<PrintTask> pullTasks(String agentId) {
-        LocalDateTime stuckBefore = LocalDateTime.now().minusMinutes(stuckMinutes);
+    /** 计算任务卡住超时阈值（分钟）：基础 + 每张追加，按 printQty 自适应。 */
+    private double stuckThresholdMinutes(PrintTask task) {
+        int qty = task.getPrintQty() != null ? task.getPrintQty() : 1;
+        return stuckBaseMinutes + qty * stuckMinutesPerQty;
+    }
 
-        // status=0(待打印) 直接拉取；
-        // status=1(已派发) 但 dispatch_time 超过阈值仍未回报，视为 Agent 异常，重新派发。
+    /** 判断打印中(status=1)的任务是否已超时卡住（按 printQty 动态阈值）。
+     *  用 Duration 保留小数精度，避免 minusMinutes(long) 截断导致 per-qty 对小数量失效。 */
+    private boolean isStuck(PrintTask task) {
+        if (task.getDispatchTime() == null) return false;
+        double thresholdMinutes = stuckThresholdMinutes(task);
+        long thresholdMillis = (long) (thresholdMinutes * 60_000);
+        return task.getDispatchTime().isBefore(LocalDateTime.now().minus(Duration.ofMillis(thresholdMillis)));
+    }
+
+    public List<PrintTask> pullTasks(String agentId) {
+        // status=0(待打印) / status=4(已暂停) 直接拉取；
+        // status=1(打印中) 先用基础阈值(base，所有任务的最小阈值)在 SQL 预筛——比 base 还新的绝对没卡住，不捞出来挤占名额；
+        //                捞出的候选再在 Java 侧按 printQty 动态阈值精确判断是否真卡住。
+        LocalDateTime baseStuckBefore = LocalDateTime.now().minusMinutes(stuckBaseMinutes);
         List<PrintTask> tasks = taskMapper.selectList(
             new LambdaQueryWrapper<PrintTask>()
                 .eq(PrintTask::getAgentId, agentId)
                 .and(w -> w
-                    .eq(PrintTask::getStatus, 0)
-                    .or(n -> n.eq(PrintTask::getStatus, 1).lt(PrintTask::getDispatchTime, stuckBefore))
+                    .in(PrintTask::getStatus, 0, 4)
+                    .or(n -> n.eq(PrintTask::getStatus, 1).lt(PrintTask::getDispatchTime, baseStuckBefore))
                 )
                 .orderByAsc(PrintTask::getCreateTime)
                 .last("FETCH FIRST 10 ROWS ONLY")
@@ -78,8 +97,12 @@ public class PrintTaskService {
 
         List<PrintTask> dispatched = new ArrayList<>();
         for (PrintTask task : tasks) {
-            // 重新派发的旧任务：计入重试次数，超过上限则标记失败不再下发
-            if (task.getStatus() != null && task.getStatus() == 1) {
+            Integer st = task.getStatus();
+            // 打印中(status=1)：按 printQty 动态阈值判断，未超时说明还在正常打印，跳过避免误重派
+            if (st != null && st == 1) {
+                if (!isStuck(task)) {
+                    continue; // 还在正常打印中，不重派
+                }
                 int retry = (task.getRetryCount() == null ? 0 : task.getRetryCount()) + 1;
                 if (retry > maxRedispatch) {
                     task.setStatus(3);
@@ -91,6 +114,11 @@ public class PrintTaskService {
                 }
                 task.setRetryCount(retry);
                 log.info("重新派发超时未回报的任务 {}，第 {} 次", task.getTaskId(), retry);
+            }
+            // 暂停态(status=4)续打：换纸后的正常恢复，不消耗 retryCount 配额
+            // （retryCount 本意是防 Agent 崩溃无限重派，断纸换纸是正常操作不该被计入）
+            if (st != null && st == 4) {
+                log.info("暂停任务 {} 换纸后续打", task.getTaskId());
             }
             task.setStatus(1);
             task.setDispatchTime(LocalDateTime.now());  // 记录真实派发时刻，用于精确判断卡住重派
@@ -121,7 +149,9 @@ public class PrintTaskService {
                 pending.stream().map(t -> t.getTaskId() + "@(" + t.getAgentId() + ")").limit(5).collect(Collectors.joining(", ")));
         }
 
-        long severeMinutes = (long) stuckMinutes * (maxRedispatch + 1);
+        // status=1/4 告警阈值：取 base×(maxRedispatch+1) 与保底值 60 分钟的较大者，
+        // 确保大数量任务(如1000张≈23分)正常打印时不会被误报为派发超时
+        long severeMinutes = Math.max((long) stuckBaseMinutes * (maxRedispatch + 1), 60);
         List<PrintTask> inFlight = taskMapper.selectList(
             new LambdaQueryWrapper<PrintTask>()
                 .eq(PrintTask::getStatus, 1)
@@ -133,20 +163,65 @@ public class PrintTaskService {
                 inFlight.size(), severeMinutes,
                 inFlight.stream().map(t -> t.getTaskId() + "@(" + t.getAgentId() + ")").limit(5).collect(Collectors.joining(", ")));
         }
+
+        // 暂停态(status=4)长时间未续打告警：可能忘换纸 / Agent 长时间未恢复
+        List<PrintTask> paused = taskMapper.selectList(
+            new LambdaQueryWrapper<PrintTask>()
+                .eq(PrintTask::getStatus, 4)
+                .lt(PrintTask::getDispatchTime, now.minusMinutes(severeMinutes))
+                .last("FETCH FIRST 20 ROWS ONLY")
+        );
+        if (!paused.isEmpty()) {
+            log.warn("巡检: {} 个暂停任务(status=4)超 {} 分钟仍未续打，请检查是否换纸 / Agent 是否恢复: {}",
+                paused.size(), severeMinutes,
+                paused.stream().map(t -> t.getTaskId() + "@(" + t.getAgentId() + ")").limit(5).collect(Collectors.joining(", ")));
+        }
     }
 
-    public void reportResult(String taskId, boolean success, String message) {
+    /**
+     * Agent 回报打印结果。
+     * @param taskId 任务ID
+     * @param resultStatus 语义状态：completed(成功) / failed(失败) / paused(暂停，断纸换纸后续打)
+     *                      为 null 时按老协议 success 布尔值判断（向后兼容）
+     * @param success 老协议布尔值（resultStatus 为 null 时生效）
+     * @param message 回报消息（失败原因 / 暂停原因）
+     */
+    public void reportResult(String taskId, String resultStatus, Boolean success, String message) {
         PrintTask task = taskMapper.selectOne(
             new LambdaQueryWrapper<PrintTask>()
                 .eq(PrintTask::getTaskId, taskId)
         );
 
-        if (task != null) {
-            task.setStatus(success ? 2 : 3);
-            task.setErrorMsg(success ? null : message);  // 成功时清空错误信息，失败时才记录
-            task.setPrintTime(LocalDateTime.now());
-            taskMapper.updateById(task);
+        if (task == null) {
+            return;
         }
+
+        // 解析语义状态：传了 resultStatus 优先用，没传则按老协议 success 推导
+        String status = resultStatus;
+        if (status == null || status.isBlank()) {
+            status = Boolean.TRUE.equals(success) ? "completed" : "failed";
+        }
+        status = status.trim().toLowerCase();
+
+        switch (status) {
+            case "completed":
+                task.setStatus(2);
+                task.setErrorMsg(null);
+                task.setPrintTime(LocalDateTime.now());
+                break;
+            case "paused":
+                // 暂停：断纸等异常，换纸后由 pullTasks 自动续打。不记 printTime、不累 retryCount。
+                task.setStatus(4);
+                task.setErrorMsg(message != null && !message.isBlank() ? message : "打印暂停（断纸/缺纸）");
+                break;
+            case "failed":
+            default:
+                task.setStatus(3);
+                task.setErrorMsg(message);
+                task.setPrintTime(LocalDateTime.now());
+                break;
+        }
+        taskMapper.updateById(task);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -160,14 +235,14 @@ public class PrintTaskService {
             throw new BusinessException("只有已审核的申请单才能下发打印");
         }
 
-        // 幂等：若该订单已有未完成(待打印/已派发)的任务，拒绝重复下发，避免重复打印
+        // 幂等：若该订单已有未完成任务(待打印0/打印中1/已暂停4)，拒绝重复下发，避免重复打印
         Long pending = taskMapper.selectCount(
             new LambdaQueryWrapper<PrintTask>()
                 .eq(PrintTask::getOrderId, orderId)
-                .in(PrintTask::getStatus, 0, 1)
+                .in(PrintTask::getStatus, 0, 1, 4)
         );
         if (pending != null && pending > 0) {
-            throw new BusinessException("该申请单已有未完成的打印任务，请勿重复下发");
+            throw new BusinessException("该申请单已有未完成的打印任务（含暂停中），请勿重复下发");
         }
 
         List<StickerPrintOrderDetail> details = detailMapper.selectList(
@@ -282,10 +357,10 @@ public class PrintTaskService {
         Long pending = taskMapper.selectCount(
             new LambdaQueryWrapper<PrintTask>()
                 .eq(PrintTask::getSourceTaskId, sourceTaskId)
-                .in(PrintTask::getStatus, 0, 1)
+                .in(PrintTask::getStatus, 0, 1, 4)
         );
         if (pending != null && pending > 0) {
-            throw new BusinessException("该任务已有未完成的补打任务，请等待打印完成");
+            throw new BusinessException("该任务已有未完成的补打任务（含暂停中），请等待打印完成");
         }
 
         PrintTask reprint = new PrintTask();

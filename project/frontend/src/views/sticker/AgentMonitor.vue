@@ -113,7 +113,7 @@
         <el-table-column prop="printQty" label="数量" width="70" align="center" />
         <el-table-column prop="status" label="状态" width="100" align="center">
           <template #default="{ row }">
-            <el-tooltip v-if="row.status === 3 && row.errorMsg" :content="row.errorMsg" placement="top">
+            <el-tooltip v-if="(row.status === 3 || row.status === 4) && row.errorMsg" :content="row.errorMsg" placement="top">
               <el-tag :type="statusTagType(row.status)" size="small">{{ statusLabel(row.status) }}</el-tag>
             </el-tooltip>
             <el-tag v-else :type="statusTagType(row.status)" size="small">{{ statusLabel(row.status) }}</el-tag>
@@ -389,8 +389,8 @@ function handleReset() {
   refreshAll()
 }
 
-const STATUS_MAP = { 0: '待打印', 1: '打印中', 2: '成功', 3: '失败' }
-const STATUS_TAG = { 0: 'info', 1: 'warning', 2: 'success', 3: 'danger' }
+const STATUS_MAP = { 0: '待打印', 1: '打印中', 2: '成功', 3: '失败', 4: '已暂停' }
+const STATUS_TAG = { 0: 'info', 1: 'warning', 2: 'success', 3: 'danger', 4: 'warning' }
 const statusLabel = (s) => STATUS_MAP[s] || '未知'
 const statusTagType = (s) => STATUS_TAG[s] || 'info'
 

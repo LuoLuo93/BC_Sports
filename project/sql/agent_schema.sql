@@ -40,6 +40,7 @@ CREATE TABLE print_task (
     brand_name      VARCHAR2(100),
     kind_name       VARCHAR2(100),
     size_name       VARCHAR2(50),
+    local_size_name VARCHAR2(50),
     print_qty       NUMBER(6)       DEFAULT 0 NOT NULL,
     template_file   VARCHAR2(200),
     printer_name    VARCHAR2(200),
@@ -69,6 +70,7 @@ COMMENT ON COLUMN print_task.color IS '颜色';
 COMMENT ON COLUMN print_task.brand_name IS '品牌';
 COMMENT ON COLUMN print_task.kind_name IS '类别';
 COMMENT ON COLUMN print_task.size_name IS '尺码';
+COMMENT ON COLUMN print_task.local_size_name IS '修正尺码(矫正尺码，空则展示size_name)';
 COMMENT ON COLUMN print_task.print_qty IS '打印数量';
 COMMENT ON COLUMN print_task.template_file IS '模板文件名';
 COMMENT ON COLUMN print_task.printer_name IS '打印机名称';

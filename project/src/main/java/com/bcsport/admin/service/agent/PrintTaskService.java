@@ -308,6 +308,7 @@ public class PrintTaskService {
             task.setBrandName(detail.getBrandName());
             task.setKindName(detail.getKindName());
             task.setSizeName(detail.getSizeName());
+            task.setLocalSizeName(detail.getLocalSizeName());
             task.setPrintQty(detail.getPrintQty());
             task.setTemplateFile(templateFile);
             task.setPrinterName(printerName);
@@ -375,6 +376,7 @@ public class PrintTaskService {
         reprint.setBrandName(source.getBrandName());
         reprint.setKindName(source.getKindName());
         reprint.setSizeName(source.getSizeName());
+        reprint.setLocalSizeName(source.getLocalSizeName());
         reprint.setPrintQty(source.getPrintQty());
         reprint.setTemplateFile(source.getTemplateFile());
         reprint.setPrinterName(source.getPrinterName());

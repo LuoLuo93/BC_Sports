@@ -109,7 +109,13 @@
         </el-table-column>
         <el-table-column prop="orderNo" label="申请单号" width="180" show-overflow-tooltip />
         <el-table-column prop="materialName" label="货品名称" min-width="120" show-overflow-tooltip />
-        <el-table-column prop="sizeName" label="尺码" width="70" align="center" />
+        <el-table-column label="尺码" width="80" align="center">
+          <template #default="{ row }">
+            <el-tag v-if="row.localSizeName" type="primary" size="small" effect="dark">{{ row.localSizeName }}</el-tag>
+            <el-tag v-else-if="row.sizeName" type="warning" size="small" effect="dark">{{ row.sizeName }}</el-tag>
+            <span v-else style="color:#d9d9d9">-</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="printQty" label="数量" width="70" align="center" />
         <el-table-column prop="status" label="状态" width="100" align="center">
           <template #default="{ row }">
@@ -228,6 +234,13 @@
                 <div class="detail-field">
                   <span class="detail-label">尺码</span>
                   <span class="detail-value">{{ currentTask.sizeName || '-' }}</span>
+                </div>
+                <div class="detail-field">
+                  <span class="detail-label">修正尺码</span>
+                  <span class="detail-value">
+                    <el-tag v-if="currentTask.localSizeName" type="primary" size="small" effect="dark">{{ currentTask.localSizeName }}</el-tag>
+                    <span v-else style="color:#d9d9d9">-</span>
+                  </span>
                 </div>
               </div>
             </div>

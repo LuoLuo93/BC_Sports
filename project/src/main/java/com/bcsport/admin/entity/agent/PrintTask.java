@@ -41,6 +41,10 @@ public class PrintTask {
     @TableField("size_name")
     private String sizeName;
 
+    /** 修正尺码(矫正尺码)，空则前端回退展示 sizeName */
+    @TableField("local_size_name")
+    private String localSizeName;
+
     @TableField("print_qty")
     private Integer printQty;
 

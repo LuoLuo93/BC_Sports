@@ -231,7 +231,109 @@
           </div>
         </el-card>
       </el-tab-pane>
-    </el-tabs>
+
+        <!-- 日志 -->
+        <el-tab-pane label="日志" name="log" lazy>
+          <el-card shadow="never" class="search-card">
+            <el-form :model="logQuery" inline>
+              <el-form-item label="同步类型">
+                <el-select v-model="logQuery.syncType" placeholder="全部" clearable style="width:120px">
+                  <el-option label="入职" value="ONBOARDING" />
+                  <el-option label="变动" value="UPDATE" />
+                  <el-option label="离职" value="LEAVING" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="员工姓名">
+                <el-input v-model="logQuery.staffName" placeholder="请输入员工姓名" clearable @keyup.enter="handleLogSearch" />
+              </el-form-item>
+              <el-form-item label="员工编号">
+                <el-input v-model="logQuery.staffNo" placeholder="请输入员工编号" clearable @keyup.enter="handleLogSearch" />
+              </el-form-item>
+              <el-form-item label="同步状态">
+                <el-select v-model="logQuery.syncStatus" placeholder="全部" clearable style="width:120px">
+                  <el-option label="成功" :value="1" />
+                  <el-option label="失败" :value="2" />
+                  <el-option label="已跳过" :value="3" />
+                </el-select>
+              </el-form-item>
+              <el-form-item>
+                <el-button type="primary" :icon="Search" @click="handleLogSearch">搜索</el-button>
+                <el-button :icon="RefreshRight" @click="resetLogQuery">重置</el-button>
+              </el-form-item>
+            </el-form>
+          </el-card>
+
+          <el-card shadow="never">
+            <template #header>
+              <div class="card-header-row">
+                <span class="card-header-title">同步日志</span>
+              </div>
+            </template>
+            <div class="table-responsive">
+              <el-table v-loading="logLoading" :data="logData" border stripe empty-text="暂无数据">
+                <el-table-column label="#" width="50" align="center">
+                  <template #default="{ $index }">{{ (logQuery.pageNum - 1) * logQuery.pageSize + $index + 1 }}</template>
+                </el-table-column>
+                <el-table-column label="同步类型" width="100" align="center">
+                  <template #default="{ row }">
+                    <el-tag :type="syncTypeTag(row.syncType)" size="small">{{ syncTypeLabel(row.syncType) }}</el-tag>
+                  </template>
+                </el-table-column>
+                <el-table-column prop="staffName" label="员工姓名" min-width="100" />
+                <el-table-column prop="staffNo" label="员工编号" min-width="110" />
+                <el-table-column label="同步状态" width="100" align="center">
+                  <template #default="{ row }">
+                    <el-tag :type="logStatusTag(row.syncStatus)" size="small">{{ logStatusLabel(row.syncStatus) }}</el-tag>
+                  </template>
+                </el-table-column>
+                <el-table-column prop="syncTime" label="同步时间" width="180" align="center">
+                  <template #default="{ row }">{{ formatTime(row.syncTime) }}</template>
+                </el-table-column>
+                <el-table-column prop="errorMessage" label="错误信息" min-width="200" show-overflow-tooltip />
+                <el-table-column label="操作" width="100" align="center" fixed="right">
+                  <template #default="{ row }">
+                    <el-button type="primary" plain size="small" @click="showLogDetail(row)">查看详情</el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </div>
+
+            <div class="pagination-wrapper--sm">
+              <el-pagination v-model:current-page="logQuery.pageNum" v-model:page-size="logQuery.pageSize" :total="logTotal" :page-sizes="PAGE_SIZES" layout="total, sizes, prev, pager, next" @size-change="handleLogSearch" @current-change="loadLogData" />
+            </div>
+          </el-card>
+        </el-tab-pane>
+      </el-tabs>
+
+      <!-- 日志详情弹窗 -->
+      <el-dialog v-model="logDetailVisible" title="同步日志详情" width="800px" top="5vh" destroy-on-close>
+        <div v-loading="logDetailLoading">
+          <el-descriptions :column="2" border size="small" style="margin-bottom:16px">
+            <el-descriptions-item label="同步类型">{{ syncTypeLabel(logDetail.syncType) }}</el-descriptions-item>
+            <el-descriptions-item label="同步状态">
+              <el-tag :type="logStatusTag(logDetail.syncStatus)" size="small">{{ logStatusLabel(logDetail.syncStatus) }}</el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item label="员工姓名">{{ logDetail.staffName || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="员工编号">{{ logDetail.staffNo || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="同步时间">{{ formatTime(logDetail.syncTime) }}</el-descriptions-item>
+            <el-descriptions-item label="错误信息">{{ logDetail.errorMessage || '-' }}</el-descriptions-item>
+          </el-descriptions>
+
+          <el-collapse>
+            <el-collapse-item title="请求参数" name="request">
+              <div class="log-code-block">
+                <pre>{{ logDetail.requestBody || '（无）' }}</pre>
+              </div>
+            </el-collapse-item>
+            <el-collapse-item title="返回参数" name="response">
+              <div class="log-code-block">
+                <pre>{{ formatJson(logDetail.responseBody) }}</pre>
+              </div>
+            </el-collapse-item>
+          </el-collapse>
+        </div>
+      </el-dialog>
+    </div>
   </div>
 </template>
 
@@ -240,7 +342,7 @@ defineOptions({ name: 'ErpEmployee' })
 import { ref, reactive, watch, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useSyncAction } from '@/composables/useSyncAction'
-import { getErpEmployeeOnboardingPage, getErpEmployeeUpdatePage, getErpEmployeeLeavingPage, syncErpEmployeeIhr, syncErpEmployee, syncErpEmployeeByType, getErpSyncStatus } from '@/api/erp-employee'
+import { getErpEmployeeOnboardingPage, getErpEmployeeUpdatePage, getErpEmployeeLeavingPage, syncErpEmployeeIhr, syncErpEmployee, syncErpEmployeeByType, getErpSyncStatus, getErpEmployeeLogPage, getErpEmployeeLogDetail } from '@/api/erp-employee'
 import { getIhrSyncStatus } from '@/api/ihr'
 import { syncStatusLabel, syncStatusTag } from '@/utils/syncStatus'
 import { Search, RefreshRight, Refresh } from '@element-plus/icons-vue'
@@ -310,10 +412,56 @@ async function handleLeaveSyncOne(row) {
   try { const res = await syncErpEmployeeByType('LEAVING', row.employeeId); ElMessage.success(res.data || '同步成功') } catch { /* interceptor showed error */ } finally { loadLeaveData() }
 }
 
+// ===== 日志 =====
+const logLoading = ref(false)
+const logData = ref([])
+const logTotal = ref(0)
+const logQuery = reactive({ syncType: '', staffName: '', staffNo: '', syncStatus: undefined, pageNum: 1, pageSize: defaultPageSize.value })
+
+async function loadLogData() {
+  logLoading.value = true
+  try { const res = await getErpEmployeeLogPage(logQuery); logData.value = res.data?.records || []; logTotal.value = res.data?.total || 0 } finally { logLoading.value = false }
+}
+function handleLogSearch() { logQuery.pageNum = 1; loadLogData() }
+function resetLogQuery() { logQuery.syncType = ''; logQuery.staffName = ''; logQuery.staffNo = ''; logQuery.syncStatus = undefined; logQuery.pageNum = 1; loadLogData() }
+
+// 日志详情弹窗
+const logDetailVisible = ref(false)
+const logDetailLoading = ref(false)
+const logDetail = ref({})
+
+async function showLogDetail(row) {
+  logDetailVisible.value = true
+  logDetailLoading.value = true
+  logDetail.value = {}
+  try {
+    const res = await getErpEmployeeLogDetail(row.id)
+    if (res.code === 200) logDetail.value = res.data || {}
+  } finally { logDetailLoading.value = false }
+}
+
+function syncTypeLabel(type) {
+  return { ONBOARDING: '入职', UPDATE: '变动', LEAVING: '离职' }[type] || type || '-'
+}
+function syncTypeTag(type) {
+  return { ONBOARDING: 'success', UPDATE: 'warning', LEAVING: 'info' }[type] || ''
+}
+function logStatusLabel(status) {
+  return { 1: '成功', 2: '失败', 3: '已跳过' }[status] || '-'
+}
+function logStatusTag(status) {
+  return { 1: 'success', 2: 'danger', 3: 'info' }[status] || ''
+}
+function formatJson(str) {
+  if (!str) return '（无）'
+  try { return JSON.stringify(JSON.parse(str), null, 2) } catch { return str }
+}
+
 watch(activeTab, (val) => {
   if (val === 'onboarding') loadOnboardData()
   else if (val === 'adjustment') loadAdjData()
   else if (val === 'leaving') loadLeaveData()
+  else if (val === 'log') loadLogData()
 })
 
 onMounted(async () => {
@@ -325,5 +473,20 @@ onMounted(async () => {
 <style scoped>
 .erp-tabs :deep(.el-tabs__header) {
   margin-bottom: 0;
+}
+.log-code-block {
+  max-height: 320px;
+  overflow: auto;
+  background: #f5f7fa;
+  border-radius: 6px;
+  padding: 12px;
+}
+.log-code-block pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-size: 12px;
+  line-height: 1.6;
+  font-family: 'Courier New', Consolas, monospace;
 }
 </style>

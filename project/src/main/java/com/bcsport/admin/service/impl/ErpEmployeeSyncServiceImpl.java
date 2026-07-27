@@ -3,7 +3,9 @@ package com.bcsport.admin.service.impl;
 import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.dto.ErpEmployeeQueryDTO;
+import com.bcsport.admin.entity.ihr.ErpEmployeeSyncLog;
 import com.bcsport.admin.entity.ihr.ErpEmployeeSyncStatus;
+import com.bcsport.admin.ihrmapper.ErpEmployeeSyncLogMapper;
 import com.bcsport.admin.ihrmapper.ErpEmployeeSyncStatusMapper;
 import com.bcsport.admin.ihrmapper.IhrEmployeeExclusionMapper;
 import com.bcsport.admin.service.ErpEmployeeSyncService;
@@ -27,6 +29,9 @@ public class ErpEmployeeSyncServiceImpl implements ErpEmployeeSyncService {
 
     @Autowired
     private ErpEmployeeSyncStatusMapper mapper;
+
+    @Autowired
+    private ErpEmployeeSyncLogMapper syncLogMapper;
 
     @Autowired
     private IhrEmployeeExclusionMapper exclusionMapper;
@@ -190,6 +195,56 @@ public class ErpEmployeeSyncServiceImpl implements ErpEmployeeSyncService {
         status.setSyncStatus(3);
         status.setSyncTime(new Date());
         mapper.upsertByEmployeeIdAndType(status);
+    }
+
+    // ==================== 同步日志 ====================
+
+    @Override
+    public PageResult<ErpEmployeeSyncLog> pageLogs(PageQuery pageQuery, String syncType, String staffName, String staffNo, Integer syncStatus) {
+        long total = syncLogMapper.countLog(syncType, staffName, staffNo, syncStatus);
+        int pageNum = pageQuery.getPageNum();
+        int pageSize = pageQuery.getPageSize();
+        long offset = (long) (pageNum - 1) * pageSize;
+        List<ErpEmployeeSyncLog> records = syncLogMapper.selectLogPage(syncType, staffName, staffNo, syncStatus, offset, pageSize);
+        return buildLogPageResult(records, total, pageNum, pageSize);
+    }
+
+    @Override
+    public ErpEmployeeSyncLog getLogById(Long id) {
+        return syncLogMapper.selectDetailById(id);
+    }
+
+    @Override
+    public void recordLog(String syncType, String employeeId, String staffName, String staffNo,
+                          Integer syncStatus, String requestBody, String responseBody, String errorMessage) {
+        try {
+            ErpEmployeeSyncLog log = new ErpEmployeeSyncLog();
+            log.setSyncType(syncType);
+            log.setEmployeeId(employeeId);
+            log.setStaffName(staffName);
+            log.setStaffNo(staffNo);
+            log.setSyncStatus(syncStatus);
+            log.setRequestBody(requestBody);
+            log.setResponseBody(responseBody);
+            log.setErrorMessage(errorMessage != null && errorMessage.length() > 500
+                    ? errorMessage.substring(0, 500) : errorMessage);
+            syncLogMapper.insertLog(log);
+        } catch (Exception e) {
+            // 日志写入失败不影响主同步流程，仅打印错误日志
+            log.error("[ERP同步] 写入同步日志失败: syncType={}, employeeId={}, error={}", syncType, employeeId, e.getMessage(), e);
+        }
+    }
+
+    private PageResult<ErpEmployeeSyncLog> buildLogPageResult(List<ErpEmployeeSyncLog> records, long total, int pageNum, int pageSize) {
+        PageResult<ErpEmployeeSyncLog> result = new PageResult<>();
+        result.setPageNum((long) pageNum);
+        result.setPageSize((long) pageSize);
+        result.setTotal(total);
+        result.setPages((total + pageSize - 1) / pageSize);
+        result.setRecords(records);
+        result.setHasPrevious(pageNum > 1);
+        result.setHasNext((long) pageNum < result.getPages());
+        return result;
     }
 
     private PageResult<ErpEmployeeVO> buildPageResult(List<ErpEmployeeVO> records, long total, int pageNum, int pageSize) {

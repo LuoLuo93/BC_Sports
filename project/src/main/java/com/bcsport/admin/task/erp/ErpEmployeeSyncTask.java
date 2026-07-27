@@ -119,16 +119,16 @@ public class ErpEmployeeSyncTask {
                 return new int[]{0, 0, 1};
             }
 
-            Long erpObjectId;
+            SyncResult result;
             switch (syncType) {
                 case "ONBOARDING":
-                    erpObjectId = syncOnboarding(detail);
+                    result = syncOnboarding(detail);
                     break;
                 case "UPDATE":
-                    erpObjectId = syncUpdate(detail);
+                    result = syncUpdate(detail);
                     break;
                 case "LEAVING":
-                    erpObjectId = syncLeaving(detail);
+                    result = syncLeaving(detail);
                     break;
                 default:
                     log.warn("未知同步类型: {}, employeeId={}, 跳过", syncType, employeeId);
@@ -136,22 +136,32 @@ public class ErpEmployeeSyncTask {
                     return new int[]{0, 0, 1};
             }
 
-            erpSyncService.markSyncSuccess(syncType, employeeId, staffName, staffNo, erpObjectId);
-            log.debug("同步成功: {} {} ({}), erpObjectId={}", syncType, staffName, staffNo, erpObjectId);
+            erpSyncService.markSyncSuccess(syncType, employeeId, staffName, staffNo, result.erpObjectId);
+            // 记录成功日志（含完整请求体/响应体）
+            erpSyncService.recordLog(syncType, employeeId, staffName, staffNo, 1,
+                    result.requestBody, result.responseBody, null);
+            log.debug("同步成功: {} {} ({}), erpObjectId={}", syncType, staffName, staffNo, result.erpObjectId);
             return new int[]{1, 0, 0};
 
         } catch (Exception e) {
             String errMsg = e.getMessage();
+            // 从异常中提取请求/响应体（业务错误或同步方法抛出）
+            String reqBody = extractReqBody(e);
+            String respBody = extractRespBody(e);
             // 入职报"编号已存在" → 标记已跳过(3)，而非失败(2)
             if (BjErpApiClient.isAlreadyExists(errMsg)) {
                 log.info("同步跳过(数据已存在): syncType={}, staffNo={}, staffName={}, employeeId={}",
                         syncType, staffNo, staffName, employeeId);
                 erpSyncService.markSyncSkipped(syncType, employeeId, staffName, staffNo);
+                // 已跳过也记日志，方便排查（状态3）
+                erpSyncService.recordLog(syncType, employeeId, staffName, staffNo, 3, reqBody, respBody, errMsg);
                 return new int[]{0, 0, 1};
             }
             log.error("同步失败: syncType={}, staffNo={}, staffName={}, employeeId={}, error={}",
                     syncType, staffNo, staffName, employeeId, errMsg, e);
             erpSyncService.markSyncFailed(syncType, employeeId, staffName, staffNo, errMsg);
+            // 失败也记日志（含请求/响应体），状态2
+            erpSyncService.recordLog(syncType, employeeId, staffName, staffNo, 2, reqBody, respBody, errMsg);
             return new int[]{0, 1, 0};
         }
     }
@@ -182,16 +192,16 @@ public class ErpEmployeeSyncTask {
             String staffName = detail.getStaffName();
             String staffNo = detail.getStaffNo();
 
-            Long erpObjectId = null;
+            SyncResult result;
             switch (syncType) {
                 case "ONBOARDING":
-                    erpObjectId = syncOnboarding(detail);
+                    result = syncOnboarding(detail);
                     break;
                 case "UPDATE":
-                    erpObjectId = syncUpdate(detail);
+                    result = syncUpdate(detail);
                     break;
                 case "LEAVING":
-                    erpObjectId = syncLeaving(detail);
+                    result = syncLeaving(detail);
                     break;
                 default:
                     String err = "未知同步类型: " + syncType;
@@ -199,11 +209,15 @@ public class ErpEmployeeSyncTask {
                     return err;
             }
 
-            // 成功：写入同步状态
-            erpSyncService.markSyncSuccess(syncType, employeeId, staffName, staffNo, erpObjectId);
+            // 成功：写入同步状态 + 记录日志
+            erpSyncService.markSyncSuccess(syncType, employeeId, staffName, staffNo, result.erpObjectId);
+            erpSyncService.recordLog(syncType, employeeId, staffName, staffNo, 1,
+                    result.requestBody, result.responseBody, null);
             return null;
         } catch (Exception e) {
             String errMsg = e.getMessage();
+            String reqBody = extractReqBody(e);
+            String respBody = extractRespBody(e);
             try {
                 IhrEmployeeDetail detail = employeeDetailMapper.selectById(employeeId);
                 String staffName = detail != null ? detail.getStaffName() : "";
@@ -212,10 +226,12 @@ public class ErpEmployeeSyncTask {
                 if (BjErpApiClient.isAlreadyExists(errMsg)) {
                     log.info("单人同步跳过(数据已存在): syncType={}, employeeId={}", syncType, employeeId);
                     erpSyncService.markSyncSkipped(syncType, employeeId, staffName, staffNo);
+                    erpSyncService.recordLog(syncType, employeeId, staffName, staffNo, 3, reqBody, respBody, errMsg);
                     return "数据已存在，已跳过";
                 }
                 log.error("单人同步失败: syncType={}, employeeId={}, error={}", syncType, employeeId, errMsg, e);
                 erpSyncService.markSyncFailed(syncType, employeeId, staffName, staffNo, errMsg);
+                erpSyncService.recordLog(syncType, employeeId, staffName, staffNo, 2, reqBody, respBody, errMsg);
             } catch (Exception ex) {
                 log.error("写入同步失败状态异常", ex);
             }
@@ -227,61 +243,40 @@ public class ErpEmployeeSyncTask {
 
     /**
      * 入职同步 - ObjectCreate 新增员工到伯俊ERP
-     *
-     * @return erpObjectId（伯俊返回的记录ID），失败返回null
      */
-    private Long syncOnboarding(IhrEmployeeDetail detail) {
+    private SyncResult syncOnboarding(IhrEmployeeDetail detail) {
         JSONObject data = IhrToBjErpConverter.toCreateParams(detail);
         log.info("入职同步请求: staffNo={}, staffName={}, params={}", detail.getStaffNo(), detail.getStaffName(), data);
-        JSONArray resp = bjErpApiClient.call(buildTransactions("ObjectCreate", data));
-        if (!BjErpApiClient.isSuccess(resp)) {
-            String errMsg = BjErpApiClient.extractErrorMessage(resp);
-            log.warn("入职同步失败: staffNo={}, staffName={}, error={}", detail.getStaffNo(), detail.getStaffName(), errMsg);
-            throw new RuntimeException(errMsg);
-        }
-        Long objectId = BjErpApiClient.extractObjectId(resp);
+        BjErpApiClient.CallRecord record = bjErpApiClient.call(buildTransactions("ObjectCreate", data));
+        Long objectId = BjErpApiClient.extractObjectId(record.getResponse());
         log.info("入职同步成功: staffNo={}, staffName={}, erpObjectId={}", detail.getStaffNo(), detail.getStaffName(), objectId);
-        return objectId;
+        return new SyncResult(objectId, record.getRequestBody(), record.getResponseBody());
     }
 
     /**
      * 变更同步 - ObjectModify 增量更新伯俊ERP员工
      * 伯俊框架通过params中的ak（员工工号）自动定位记录
-     *
-     * @return erpObjectId（伯俊返回的记录ID），失败返回null
      */
-    private Long syncUpdate(IhrEmployeeDetail detail) {
+    private SyncResult syncUpdate(IhrEmployeeDetail detail) {
         JSONObject data = IhrToBjErpConverter.toModifyParams(detail);
         log.debug("变更同步: staffNo={}, staffName={}, params={}", detail.getStaffNo(), detail.getStaffName(), data);
-        JSONArray resp = bjErpApiClient.call(buildTransactions("ObjectModify", data));
-        if (!BjErpApiClient.isSuccess(resp)) {
-            String errMsg = BjErpApiClient.extractErrorMessage(resp);
-            log.warn("变更同步失败: staffNo={}, staffName={}, error={}", detail.getStaffNo(), detail.getStaffName(), errMsg);
-            throw new RuntimeException(errMsg);
-        }
-        Long objectId = BjErpApiClient.extractObjectId(resp);
+        BjErpApiClient.CallRecord record = bjErpApiClient.call(buildTransactions("ObjectModify", data));
+        Long objectId = BjErpApiClient.extractObjectId(record.getResponse());
         log.info("变更同步成功: staffNo={}, staffName={}, erpObjectId={}", detail.getStaffNo(), detail.getStaffName(), objectId);
-        return objectId;
+        return new SyncResult(objectId, record.getRequestBody(), record.getResponseBody());
     }
 
     /**
      * 离职同步 - ObjectModify 更新伯俊ERP员工为离职状态
      * 伯俊框架通过params中的ak（员工工号）自动定位记录
-     *
-     * @return erpObjectId（伯俊返回的记录ID），失败返回null
      */
-    private Long syncLeaving(IhrEmployeeDetail detail) {
+    private SyncResult syncLeaving(IhrEmployeeDetail detail) {
         JSONObject data = IhrToBjErpConverter.toLeavingParams(detail);
         log.debug("离职同步: staffNo={}, staffName={}, params={}", detail.getStaffNo(), detail.getStaffName(), data);
-        JSONArray resp = bjErpApiClient.call(buildTransactions("ObjectModify", data));
-        if (!BjErpApiClient.isSuccess(resp)) {
-            String errMsg = BjErpApiClient.extractErrorMessage(resp);
-            log.warn("离职同步失败: staffNo={}, staffName={}, error={}", detail.getStaffNo(), detail.getStaffName(), errMsg);
-            throw new RuntimeException(errMsg);
-        }
-        Long objectId = BjErpApiClient.extractObjectId(resp);
+        BjErpApiClient.CallRecord record = bjErpApiClient.call(buildTransactions("ObjectModify", data));
+        Long objectId = BjErpApiClient.extractObjectId(record.getResponse());
         log.info("离职同步成功: staffNo={}, staffName={}, erpObjectId={}", detail.getStaffNo(), detail.getStaffName(), objectId);
-        return objectId;
+        return new SyncResult(objectId, record.getRequestBody(), record.getResponseBody());
     }
 
     /**
@@ -299,5 +294,42 @@ public class ErpEmployeeSyncTask {
         JSONArray transactions = new JSONArray();
         transactions.add(transaction);
         return transactions;
+    }
+
+    // ==================== 内部数据载体 ====================
+
+    /**
+     * 同步成功结果：持有 erpObjectId + 完整请求体/响应体（用于日志落库）
+     */
+    private static class SyncResult {
+        final Long erpObjectId;
+        final String requestBody;
+        final String responseBody;
+
+        SyncResult(Long erpObjectId, String requestBody, String responseBody) {
+            this.erpObjectId = erpObjectId;
+            this.requestBody = requestBody;
+            this.responseBody = responseBody;
+        }
+    }
+
+    /**
+     * 从异常中提取请求体（仅 BusinessCallException 携带请求/响应体）
+     */
+    private static String extractReqBody(Exception e) {
+        if (e instanceof BjErpApiClient.BusinessCallException) {
+            return ((BjErpApiClient.BusinessCallException) e).getRequestBody();
+        }
+        return null;
+    }
+
+    /**
+     * 从异常中提取响应体（仅 BusinessCallException 携带请求/响应体）
+     */
+    private static String extractRespBody(Exception e) {
+        if (e instanceof BjErpApiClient.BusinessCallException) {
+            return ((BjErpApiClient.BusinessCallException) e).getResponseBody();
+        }
+        return null;
     }
 }

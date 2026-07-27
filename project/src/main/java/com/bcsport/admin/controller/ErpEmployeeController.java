@@ -4,6 +4,7 @@ import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.common.Result;
 import com.bcsport.admin.dto.ErpEmployeeQueryDTO;
+import com.bcsport.admin.entity.ihr.ErpEmployeeSyncLog;
 import com.bcsport.admin.service.ErpEmployeeSyncService;
 import com.bcsport.admin.task.erp.ErpEmployeeSyncTask;
 import com.bcsport.admin.task.ihr.IhrEmployeeTask;
@@ -67,6 +68,30 @@ public class ErpEmployeeController {
     public Result<PageResult<ErpEmployeeVO>> leavingPage(PageQuery pageQuery, ErpEmployeeQueryDTO queryDTO) {
         PageResult<ErpEmployeeVO> result = erpSyncService.pageLeavings(pageQuery, queryDTO);
         return Result.success(result);
+    }
+
+    @GetMapping("/log/page")
+    @ApiOperation("分页查询ERP同步日志")
+    @RequiresPermissions("erp:employee:query")
+    public Result<PageResult<ErpEmployeeSyncLog>> logPage(
+            PageQuery pageQuery,
+            @RequestParam(required = false) String syncType,
+            @RequestParam(required = false) String staffName,
+            @RequestParam(required = false) String staffNo,
+            @RequestParam(required = false) Integer syncStatus) {
+        PageResult<ErpEmployeeSyncLog> result = erpSyncService.pageLogs(pageQuery, syncType, staffName, staffNo, syncStatus);
+        return Result.success(result);
+    }
+
+    @GetMapping("/log/{id}")
+    @ApiOperation("查询同步日志详情(含完整请求/响应体)")
+    @RequiresPermissions("erp:employee:query")
+    public Result<ErpEmployeeSyncLog> logDetail(@PathVariable Long id) {
+        ErpEmployeeSyncLog log = erpSyncService.getLogById(id);
+        if (log == null) {
+            return Result.error("日志记录不存在");
+        }
+        return Result.success(log);
     }
 
     @PostMapping("/sync-ihr")

@@ -27,3 +27,11 @@ export function syncErpEmployeeByType(syncType, employeeId) {
 export function getErpSyncStatus() {
   return request.get('/api/erp-employee/sync-status')
 }
+
+export function getErpEmployeeLogPage(params) {
+  return request.get('/api/erp-employee/log/page', { params })
+}
+
+export function getErpEmployeeLogDetail(id) {
+  return request.get(`/api/erp-employee/log/${id}`)
+}

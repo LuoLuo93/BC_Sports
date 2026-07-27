@@ -59,16 +59,40 @@ public class BjErpApiClient {
     // ==================== 核心调用 ====================
 
     /**
+     * 调用结果记录：封装响应数据 + 完整请求体/响应体，用于日志落库
+     */
+    public static class CallRecord {
+        /** 伯俊返回的解析结果 */
+        private final JSONArray response;
+        /** 完整请求体(form-urlencoded，含签名) */
+        private final String requestBody;
+        /** 伯俊返回的原始响应体 */
+        private final String responseBody;
+
+        public CallRecord(JSONArray response, String requestBody, String responseBody) {
+            this.response = response;
+            this.requestBody = requestBody;
+            this.responseBody = responseBody;
+        }
+
+        public JSONArray getResponse() { return response; }
+        public String getRequestBody() { return requestBody; }
+        public String getResponseBody() { return responseBody; }
+    }
+
+    /**
      * 调用伯俊ERP接口
      *
      * @param transactions 业务数据JSONArray，每项格式: {id, command, params}
-     * @return 原始响应JSONArray，格式: [{code, id, message, objectid}]
+     * @return CallRecord（含响应JSONArray + 完整请求体/响应体）
      */
-    public JSONArray call(JSONArray transactions) {
+    public CallRecord call(JSONArray transactions) {
         return doCall(transactions, 0);
     }
 
-    private JSONArray doCall(JSONArray transactions, int retryCount) {
+    private CallRecord doCall(JSONArray transactions, int retryCount) {
+        String body = null;
+        String respBody = null;
         try {
             // 1. 时间戳
             String timestamp = DateUtil.format(new Date(), "yyyy-MM-dd HH:mm:ss.SSS");
@@ -78,7 +102,7 @@ public class BjErpApiClient {
             String sign = DigestUtil.md5Hex(appKey + timestamp + secretMd5);
 
             // 3. 拼接请求体并URL编码
-            String body = "sip_appkey=" + encode(appKey)
+            body = "sip_appkey=" + encode(appKey)
                     + "&sip_timestamp=" + encode(timestamp)
                     + "&sip_sign=" + encode(sign)
                     + "&transactions=" + encode(transactions.toString());
@@ -95,7 +119,7 @@ public class BjErpApiClient {
 
             // 5. 解析响应（伯俊返回JSONArray格式）
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                String respBody = response.getBody().trim();
+                respBody = response.getBody().trim();
                 JSONArray result;
                 if (respBody.startsWith("[")) {
                     result = JSONUtil.parseArray(respBody);
@@ -109,11 +133,12 @@ public class BjErpApiClient {
                 if (!isSuccess(result)) {
                     String errMsg = extractErrorMessage(result);
                     log.error("伯俊ERP业务错误: apiUrl={}, transactions={}, response={}", apiUrl, transactions, result);
-                    throw new RuntimeException("伯俊ERP业务错误: " + errMsg);
+                    // 抛出携带请求/响应体的异常，便于上层记录失败日志
+                    throw new BusinessCallException(errMsg, body, respBody);
                 }
 
                 log.debug("伯俊ERP响应: {}", result);
-                return result;
+                return new CallRecord(result, body, respBody);
             }
             log.error("伯俊ERP返回非200: apiUrl={}, statusCode={}", apiUrl, response.getStatusCode());
             throw new RuntimeException("伯俊ERP返回非200: " + response.getStatusCode());
@@ -204,5 +229,22 @@ public class BjErpApiClient {
         } catch (InterruptedException ie) {
             Thread.currentThread().interrupt();
         }
+    }
+
+    /**
+     * 业务调用异常：伯俊返回了业务错误(code!=0)，携带请求体/响应体以便上层记录日志
+     */
+    public static class BusinessCallException extends RuntimeException {
+        private final String requestBody;
+        private final String responseBody;
+
+        public BusinessCallException(String message, String requestBody, String responseBody) {
+            super(message);
+            this.requestBody = requestBody;
+            this.responseBody = responseBody;
+        }
+
+        public String getRequestBody() { return requestBody; }
+        public String getResponseBody() { return responseBody; }
     }
 }

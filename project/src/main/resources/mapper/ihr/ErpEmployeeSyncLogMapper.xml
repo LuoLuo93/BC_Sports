@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bcsport.admin.ihrmapper.ErpEmployeeSyncLogMapper">
+
+    <!-- 公共查询条件 -->
+    <sql id="logWhere">
+        <where>
+            <if test="syncType != null and syncType != ''">
+                AND sync_type = #{syncType}
+            </if>
+            <if test="staffName != null and staffName != ''">
+                AND staff_name LIKE '%' + #{staffName} + '%'
+            </if>
+            <if test="staffNo != null and staffNo != ''">
+                AND staff_no LIKE '%' + #{staffNo} + '%'
+            </if>
+            <if test="syncStatus != null">
+                AND sync_status = #{syncStatus}
+            </if>
+        </where>
+    </sql>
+
+    <!-- 分页查询（按时间倒序），列表不返回请求/响应体大字段，按需查看详情 -->
+    <select id="selectLogPage" resultType="com.bcsport.admin.entity.ihr.ErpEmployeeSyncLog">
+        SELECT id, sync_type, employee_id, staff_name, staff_no, sync_status,
+               error_message, sync_time
+        FROM erp_employee_sync_log
+        <include refid="logWhere"/>
+        ORDER BY sync_time DESC, id DESC
+        OFFSET #{offset} ROWS FETCH NEXT #{limit} ROWS ONLY
+    </select>
+
+    <!-- 查询总数 -->
+    <select id="countLog" resultType="java.lang.Long">
+        SELECT COUNT(1) FROM erp_employee_sync_log
+        <include refid="logWhere"/>
+    </select>
+
+    <!-- 按 id 查询完整记录（含请求/响应体，用于详情弹窗）。自定义方法避免与 BaseMapper.selectById 冲突 -->
+    <select id="selectDetailById" resultType="com.bcsport.admin.entity.ihr.ErpEmployeeSyncLog">
+        SELECT id, sync_type, employee_id, staff_name, staff_no, sync_status,
+               request_body, response_body, error_message, sync_time
+        FROM erp_employee_sync_log
+        WHERE id = #{id}
+    </select>
+
+    <!-- 插入一条同步日志 -->
+    <insert id="insertLog">
+        INSERT INTO erp_employee_sync_log
+            (sync_type, employee_id, staff_name, staff_no, sync_status,
+             request_body, response_body, error_message, sync_time)
+        VALUES
+            (#{entity.syncType}, #{entity.employeeId}, #{entity.staffName}, #{entity.staffNo}, #{entity.syncStatus},
+             #{entity.requestBody}, #{entity.responseBody}, #{entity.errorMessage}, GETDATE())
+    </insert>
+
+</mapper>

@@ -30,7 +30,7 @@
         </div>
       </template>
       <div class="table-responsive">
-          <el-table v-loading="loading" :data="tableData" border size="small" height="100%">
+          <el-table v-loading="loading" :data="tableData" border size="small" height="100%" empty-text="请输入查询条件后点击搜索">
           <el-table-column label="#" width="45" fixed="left">
             <template #default="{ $index }">{{ (query.pageNum - 1) * query.pageSize + $index + 1 }}</template>
           </el-table-column>
@@ -165,8 +165,7 @@ async function loadBrands() {
 function restoreAndLoad() {
   const saved = sessionStorage.getItem('stickerDataQuery')
   if (!saved) {
-    // 首次进入无缓存：默认加载第一页
-    loadData()
+    // 首次进入无缓存：数据量较大，默认不查询，等用户输入条件点搜索
     return
   }
   try {
@@ -181,7 +180,6 @@ function restoreAndLoad() {
     loadData()
   } catch {
     sessionStorage.removeItem('stickerDataQuery')
-    loadData()
   }
 }
 

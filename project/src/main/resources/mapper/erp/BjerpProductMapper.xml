@@ -150,4 +150,47 @@
         WHERE name = #{materialNumber}
     </update>
 
+    <!-- ==================== 预估成本管理 ==================== -->
+
+    <sql id="estimatedCostWhere">
+        <where>
+            <if test="materialNumber != null and materialNumber != ''">
+                AND product.name LIKE '%' || #{materialNumber} || '%' ESCAPE '\'
+            </if>
+            <if test="styleNumber != null and styleNumber != ''">
+                AND product.STYLE_NO LIKE '%' || #{styleNumber} || '%' ESCAPE '\'
+            </if>
+            <if test="materialName != null and materialName != ''">
+                AND product.VALUE LIKE '%' || #{materialName} || '%' ESCAPE '\'
+            </if>
+        </where>
+    </sql>
+
+    <select id="countEstimatedCost" resultType="long">
+        SELECT COUNT(*)
+        FROM M_PRODUCT product
+        <include refid="estimatedCostWhere"/>
+    </select>
+
+    <select id="searchEstimatedCost" resultType="java.util.Map">
+        SELECT * FROM (
+            SELECT TMP.*, ROW_NUMBER() OVER (ORDER BY MATERIAL_NUMBER) AS RN FROM (
+                SELECT product.ID           AS PRODUCT_ID,
+                       product.name         AS MATERIAL_NUMBER,
+                       product.VALUE        AS MATERIAL_NAME,
+                       product.STYLE_NO     AS STYLE_NUMBER,
+                       product.PRECOST      AS PRECOST
+                FROM M_PRODUCT product
+                <include refid="estimatedCostWhere"/>
+            ) TMP
+        ) WHERE RN &gt; #{offset} AND RN &lt;= #{offset} + #{pageSize}
+    </select>
+
+    <!-- 按物料编号(name)更新预估成本; 空串转NULL -->
+    <update id="updatePrecost">
+        UPDATE M_PRODUCT
+        SET PRECOST = NULLIF(TRIM(#{precost}), '')
+        WHERE name = #{materialNumber}
+    </update>
+
 </mapper>

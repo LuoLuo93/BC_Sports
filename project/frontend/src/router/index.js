@@ -65,6 +65,7 @@ const routes = [
       // ERP
       { path: 'erp/employee-management', name: 'ErpEmployee', component: () => import('@/views/erp/EmployeeManagement.vue'), meta: { pageTitle: 'ERP员工' } },
       { path: 'erp/lz-customer', name: 'LzCustomer', component: () => import('@/views/erp/LzCustomer.vue'), meta: { pageTitle: '揽众资料' } },
+      { path: 'erp/estimated-cost', name: 'ErpEstimatedCost', component: () => import('@/views/erp/EstimatedCost.vue'), meta: { pageTitle: '预估成本管理' } },
       // HK ERP（旧版直写链路，移植自 interfaceForHK）
       { path: 'hkerp/personnel-sync', name: 'HkPersonnelSync', component: () => import('@/views/hkerp/PersonnelSync.vue'), meta: { pageTitle: 'HK ERP同步' } },
       // User

@@ -38,4 +38,25 @@ public interface BjerpProductMapper {
                              @Param("acCode") String acCode,
                              @Param("accElement") String accElement,
                              @Param("sizeGroupId") String sizeGroupId);
+
+    // ==================== 预估成本管理 ====================
+
+    /** 预估成本管理 - 计数 */
+    long countEstimatedCost(@Param("materialNumber") String materialNumber,
+                            @Param("styleNumber") String styleNumber,
+                            @Param("materialName") String materialName);
+
+    /** 预估成本管理 - 分页查询（物料编号/物料名称/款号/预估成本） */
+    List<Map<String, Object>> searchEstimatedCost(@Param("materialNumber") String materialNumber,
+                                                   @Param("styleNumber") String styleNumber,
+                                                   @Param("materialName") String materialName,
+                                                   @Param("offset") long offset,
+                                                   @Param("pageSize") long pageSize);
+
+    /**
+     * 按物料编号(name)更新预估成本(PRECOST)
+     * @return 受影响行数（0=物料编号不存在）
+     */
+    int updatePrecost(@Param("materialNumber") String materialNumber,
+                      @Param("precost") String precost);
 }

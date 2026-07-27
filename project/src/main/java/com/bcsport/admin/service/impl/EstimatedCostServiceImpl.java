@@ -180,17 +180,26 @@ public class EstimatedCostServiceImpl implements EstimatedCostService {
         // 3. 在伯俊数据源事务内批量更新：任意异常整体回滚，保护货品主数据
         int[] success = {0};
         if (!validRows.isEmpty()) {
-            new TransactionTemplate(bjerpTransactionManager).execute(status -> {
-                for (Map.Entry<String, String> e : validRows.entrySet()) {
-                    int rows = bjerpProductMapper.updatePrecost(e.getKey(), e.getValue());
-                    if (rows == 0) {
-                        if (errors.size() < MAX_ERRORS) errors.add("货号 [" + e.getKey() + "] 不存在");
-                    } else {
-                        success[0]++;
+            try {
+                new TransactionTemplate(bjerpTransactionManager).execute(status -> {
+                    for (Map.Entry<String, String> e : validRows.entrySet()) {
+                        int rows = bjerpProductMapper.updatePrecost(e.getKey(), e.getValue());
+                        if (rows == 0) {
+                            if (errors.size() < MAX_ERRORS) errors.add("货号 [" + e.getKey() + "] 不存在");
+                        } else {
+                            success[0]++;
+                        }
                     }
+                    return null;
+                });
+            } catch (Exception e) {
+                // 事务已回滚：DB 实际未更新任何记录，success 归零，全部算失败
+                log.error("预估成本导入事务失败，已整体回滚: {}", e.getMessage(), e);
+                success[0] = 0;
+                if (errors.size() < MAX_ERRORS) {
+                    errors.add("导入失败已整体回滚: " + e.getMessage());
                 }
-                return null;
-            });
+            }
         }
 
         int fail = total[0] - success[0];

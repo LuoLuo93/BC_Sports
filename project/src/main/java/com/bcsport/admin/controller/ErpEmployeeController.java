@@ -157,6 +157,10 @@ public class ErpEmployeeController {
         try {
             String error = erpSyncTask.syncSingle(syncType, employeeId);
             if (error != null) {
+                // "已跳过"类提示不是错误，用 success 返回，前端弹绿色而非红色
+                if (error.contains("已跳过") || error.contains("已存在")) {
+                    return Result.success(error);
+                }
                 return Result.error(error);
             }
             return Result.success("同步成功");

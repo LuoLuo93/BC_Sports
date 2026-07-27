@@ -8,7 +8,7 @@
                 product.name LIKE '%' || #{materialNumber} || '%' ESCAPE '\'
             </if>
             <if test="styleNumber != null and styleNumber != ''">
-                AND product.VIRTUALNAME LIKE '%' || #{styleNumber} || '%' ESCAPE '\'
+                AND product.STYLE_NO LIKE '%' || #{styleNumber} || '%' ESCAPE '\'
             </if>
             <if test="materialName != null and materialName != ''">
                 AND product.VALUE LIKE '%' || #{materialName} || '%' ESCAPE '\'
@@ -32,7 +32,7 @@
                 product.name AS PRODUCT_NAME,
                 product.name AS MATERIAL_NUMBER,
                 product.VALUE AS MATERIAL_NAME,
-                product.VIRTUALNAME AS STYLE_NUMBER,
+                product.STYLE_NO AS STYLE_NUMBER,
                 product.M_DIM1_ID AS BRAND_ID,
                 brand.ATTRIBNAME AS BRAND_NAME,
                 product.M_DIM4_ID AS KIND_ID,
@@ -66,7 +66,7 @@
     <select id="getProductByEan13" resultType="java.util.Map">
         SELECT product.name           AS MATERIAL_NUMBER,
                product.VALUE          AS MATERIAL_NAME,
-               product.VIRTUALNAME    AS STYLE_NUMBER,
+               product.STYLE_NO    AS STYLE_NUMBER,
                product.M_DIM1_ID      AS BRAND_ID,
                brand.ATTRIBNAME       AS BRAND_NAME,
                product.M_DIM4_ID      AS KIND_ID,
@@ -88,7 +88,7 @@
         SELECT product.ID AS PRODUCT_ID,
                product.name AS MATERIAL_NUMBER,
                product.VALUE AS MATERIAL_NAME,
-               product.VIRTUALNAME AS STYLE_NUMBER,
+               product.STYLE_NO AS STYLE_NUMBER,
                product.M_DIM1_ID AS BRAND_ID,
                brand.ATTRIBNAME AS BRAND_NAME,
                product.M_DIM4_ID AS KIND_ID,

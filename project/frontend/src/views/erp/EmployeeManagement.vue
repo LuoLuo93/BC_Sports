@@ -322,7 +322,7 @@
           <el-collapse>
             <el-collapse-item title="请求参数" name="request">
               <div class="log-code-block">
-                <pre>{{ logDetail.requestBody || '（无）' }}</pre>
+                <pre>{{ formatRequestBody(logDetail.requestBody) }}</pre>
               </div>
             </el-collapse-item>
             <el-collapse-item title="返回参数" name="response">
@@ -454,6 +454,38 @@ function logStatusTag(status) {
 function formatJson(str) {
   if (!str) return '（无）'
   try { return JSON.stringify(JSON.parse(str), null, 2) } catch { return str }
+}
+
+/**
+ * 格式化请求参数：URL解码后，把 transactions 里的JSON美化展示
+ * 原始存储的是 application/x-www-form-urlencoded 编码后的字符串
+ */
+function formatRequestBody(str) {
+  if (!str) return '（无）'
+  try {
+    // 1. 按 & 拆分键值对，分别 decodeURIComponent
+    const lines = []
+    const pairs = str.split('&')
+    for (const pair of pairs) {
+      const idx = pair.indexOf('=')
+      const key = idx >= 0 ? pair.substring(0, idx) : pair
+      const val = idx >= 0 ? pair.substring(idx + 1) : ''
+      const decKey = decodeURIComponent(key.replace(/\+/g, ' '))
+      const decVal = decodeURIComponent(val.replace(/\+/g, ' '))
+      if (decKey === 'transactions') {
+        // transactions 是JSON字符串，解析后美化
+        try {
+          lines.push(`${decKey}:`)
+          lines.push(JSON.stringify(JSON.parse(decVal), null, 2))
+        } catch {
+          lines.push(`${decKey}: ${decVal}`)
+        }
+      } else {
+        lines.push(`${decKey}: ${decVal}`)
+      }
+    }
+    return lines.join('\n')
+  } catch { return str }
 }
 
 watch(activeTab, (val) => {

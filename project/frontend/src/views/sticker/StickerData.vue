@@ -30,7 +30,7 @@
         </div>
       </template>
       <div class="table-responsive">
-          <el-table v-loading="loading" :data="tableData" border size="small" height="100%" empty-text="请输入查询条件后点击搜索">
+          <el-table v-loading="loading" :data="tableData" border size="small" height="100%" :empty-text="hasSearched ? '暂无数据' : '请输入查询条件后点击搜索'">
           <el-table-column label="#" width="45" fixed="left">
             <template #default="{ $index }">{{ (query.pageNum - 1) * query.pageSize + $index + 1 }}</template>
           </el-table-column>
@@ -109,8 +109,11 @@ const { loading, tableData, total, query, loadData, handleSearch } = usePageQuer
 })
 
 const brandList = ref([])
+// 是否已执行过搜索（首次进入未搜索前绝不加载数据，避免大数据量首屏卡顿）
+const hasSearched = ref(false)
 
 function onSearch() {
+  hasSearched.value = true
   handleSearch()
   persistQuery()
 }
@@ -148,6 +151,7 @@ function onReset() {
   query.pageNum = 1
   tableData.value = []
   total.value = 0
+  hasSearched.value = false
   sessionStorage.removeItem('stickerDataQuery')
 }
 
@@ -166,6 +170,7 @@ function restoreAndLoad() {
   const saved = sessionStorage.getItem('stickerDataQuery')
   if (!saved) {
     // 首次进入无缓存：数据量较大，默认不查询，等用户输入条件点搜索
+    hasSearched.value = false
     return
   }
   try {
@@ -177,9 +182,11 @@ function restoreAndLoad() {
     // 恢复分页(翻页/每页条数)，避免返回后 pageSize 被重置为默认值
     query.pageNum = q.pageNum || 1
     query.pageSize = q.pageSize || query.pageSize
+    hasSearched.value = true
     loadData()
   } catch {
     sessionStorage.removeItem('stickerDataQuery')
+    hasSearched.value = false
   }
 }
 

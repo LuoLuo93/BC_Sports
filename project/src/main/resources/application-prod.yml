@@ -28,6 +28,12 @@ spring:
       filters: stat,wall,slf4j
       connection-properties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=5000
       use-global-data-source-stat: true
+    # 伯俊ERP Oracle 数据源（生产环境 - SID方式连接）
+    # 注意：orcl 是 SID 不是服务名，URL用冒号格式 jdbc:oracle:thin:@host:port:sid
+    bjerp:
+      url: jdbc:oracle:thin:@10.0.1.22:1521:orcl
+      username: bosnds3
+      password: abc123
 
 # 生产环境日志级别
 logging:

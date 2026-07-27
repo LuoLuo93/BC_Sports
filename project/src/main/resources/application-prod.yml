@@ -46,6 +46,12 @@ logging:
 # 生产环境上传路径（必须在项目外部，避免重新部署时文件丢失）
 bc.upload.path: D:/B.C.Sports/uploads
 
+# 伯俊ERP HTTP OpenAPI（生产环境）- 人员同步用，账号密码与测试环境相同
+bjerp:
+  api-url: http://bos.bc-sports.com.cn:8876/servlets/binserv/Rest
+  app-key: ${BJERP_APP_KEY:bcapitest@northland-pro.com.cn}
+  app-secret: ${BJERP_APP_SECRET:northland2047.}
+
 # 贴纸打印 Agent 共享密钥：生产环境通过环境变量 AGENT_API_KEY 注入，不在仓库存明文
 agent:
   api-key: ${AGENT_API_KEY:}

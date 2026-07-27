@@ -14,7 +14,10 @@ import com.bcsport.admin.service.EstimatedCostService;
 import com.bcsport.admin.util.ShiroSecurityUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -50,6 +53,11 @@ public class EstimatedCostServiceImpl implements EstimatedCostService {
     @Autowired
     private EstimatedCostImportLogMapper importLogMapper;
 
+    /** 伯俊ERP数据源事务管理器（导入整体回滚用） */
+    @Autowired
+    @Qualifier("bjerpTransactionManager")
+    private PlatformTransactionManager bjerpTransactionManager;
+
     @Override
     public PageResult<Map<String, Object>> page(PageQuery pageQuery, String materialNumber, String styleNumber, String materialName) {
         int pageSize = Math.max(Math.min(pageQuery.getPageSize() != null ? pageQuery.getPageSize() : 20, 500), 1);
@@ -76,13 +84,25 @@ public class EstimatedCostServiceImpl implements EstimatedCostService {
     @Override
     public void updatePrecost(String materialNumber, String precost) {
         if (!StringUtils.hasText(materialNumber)) {
-            throw new BusinessException("物料编号不能为空");
+            throw new BusinessException("货号不能为空");
         }
+        validatePrecost(precost);
         int rows = bjerpProductMapper.updatePrecost(materialNumber, precost);
         if (rows == 0) {
-            throw new BusinessException("物料编号不存在: " + materialNumber);
+            throw new BusinessException("货号不存在: " + materialNumber);
         }
         log.info("预估成本已更新: materialNumber={}, precost={}, rows={}", materialNumber, precost, rows);
+    }
+
+    /**
+     * 校验预估成本：允许空（清空值），非空则必须是合法数字（整数或小数，可为负）。
+     */
+    private void validatePrecost(String precost) {
+        if (!StringUtils.hasText(precost)) return;
+        String trimmed = precost.trim();
+        if (!trimmed.matches("-?\\d+(\\.\\d+)?")) {
+            throw new BusinessException("预估成本必须是数字: " + precost);
+        }
     }
 
     @Override
@@ -95,15 +115,15 @@ public class EstimatedCostServiceImpl implements EstimatedCostService {
                     "文件不是标准的 Excel 格式（检测为 " + realFormat + "），请用 Excel 打开后另存为 .xlsx 再上传"));
         }
 
-        int[] total = {0};
-        int[] success = {0};
-        List<String> errors = Collections.synchronizedList(new ArrayList<>());
-
+        // 1. SAX 流式读取全部行到内存（仅货号+预估成本两列，占用极小），同时做行级校验
         Map<String, Integer> columnIndex = new HashMap<>();
+        // 有效数据（货号 -> 预估成本），同一货号后行覆盖前行
+        LinkedHashMap<String, String> validRows = new LinkedHashMap<>();
+        List<String> errors = Collections.synchronizedList(new ArrayList<>());
+        int[] total = {0};
 
         RowHandler handler = (sheetIndex, rowIndex, rowCells) -> {
             if (rowIndex == 0) {
-                // 解析表头
                 if (columnIndex.isEmpty() && rowCells != null) {
                     for (int i = 0; i < rowCells.size(); i++) {
                         Object h = rowCells.get(i);
@@ -128,37 +148,49 @@ public class EstimatedCostServiceImpl implements EstimatedCostService {
             String materialNumber = cellStr(rowCells, columnIndex.get("materialNumber"));
             String precost = cellStr(rowCells, columnIndex.get("precost"));
 
-            // 校验必填：物料编号
+            // 校验：货号必填
             if (!StringUtils.hasText(materialNumber)) {
-                if (errors.size() < MAX_ERRORS) errors.add("第" + rowNum + "行：物料编号不能为空");
+                if (errors.size() < MAX_ERRORS) errors.add("第" + rowNum + "行：货号不能为空");
                 return;
             }
-            // 预估成本为空也允许（清空值），但记录提示
+            // 预估成本为空：跳过该行（不写 NULL，避免误清空主数据）
             if (!StringUtils.hasText(precost)) {
-                precost = "";
+                if (errors.size() < MAX_ERRORS) errors.add("第" + rowNum + "行：预估成本为空，已跳过");
+                return;
             }
-
-            try {
-                int rows = bjerpProductMapper.updatePrecost(materialNumber, precost);
-                if (rows == 0) {
-                    if (errors.size() < MAX_ERRORS) errors.add("第" + rowNum + "行：物料编号 [" + materialNumber + "] 不存在");
-                } else {
-                    success[0]++;
-                }
-            } catch (Exception e) {
-                if (errors.size() < MAX_ERRORS) errors.add("第" + rowNum + "行：更新异常 - " + e.getMessage());
+            // 校验：预估成本必须是数字
+            if (!precost.trim().matches("-?\\d+(\\.\\d+)?")) {
+                if (errors.size() < MAX_ERRORS) errors.add("第" + rowNum + "行：预估成本必须是数字（当前值：" + precost + "）");
+                return;
             }
+            validRows.put(materialNumber, precost);
         };
 
         readAllSheets(file, realFormat, handler);
 
-        // 表头缺失校验
+        // 2. 表头缺失校验（缺列直接返回，不执行任何更新）
         List<String> missingHeaders = new ArrayList<>();
         if (!columnIndex.containsKey("materialNumber")) missingHeaders.add("货号");
         if (!columnIndex.containsKey("precost")) missingHeaders.add("预估成本");
         if (!missingHeaders.isEmpty()) {
             return buildResult(0, 0, 0, Collections.singletonList(
                     "Excel缺少必需列：" + String.join("、", missingHeaders) + "，请检查表头或下载导入模板"));
+        }
+
+        // 3. 在伯俊数据源事务内批量更新：任意异常整体回滚，保护货品主数据
+        int[] success = {0};
+        if (!validRows.isEmpty()) {
+            new TransactionTemplate(bjerpTransactionManager).execute(status -> {
+                for (Map.Entry<String, String> e : validRows.entrySet()) {
+                    int rows = bjerpProductMapper.updatePrecost(e.getKey(), e.getValue());
+                    if (rows == 0) {
+                        if (errors.size() < MAX_ERRORS) errors.add("货号 [" + e.getKey() + "] 不存在");
+                    } else {
+                        success[0]++;
+                    }
+                }
+                return null;
+            });
         }
 
         int fail = total[0] - success[0];

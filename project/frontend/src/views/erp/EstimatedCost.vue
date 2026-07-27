@@ -244,7 +244,12 @@ function openEdit(row) {
 }
 
 async function submitEdit() {
-  if (!editForm.materialNumber) { ElMessage.warning('物料编号不能为空'); return }
+  if (!editForm.materialNumber) { ElMessage.warning('货号不能为空'); return }
+  // 预估成本非空时必须是数字
+  if (editForm.precost && editForm.precost.trim() && !editForm.precost.trim().match(/^-?\d+(\.\d+)?$/)) {
+    ElMessage.warning('预估成本必须是数字')
+    return
+  }
   editLoading.value = true
   try {
     await updateEstimatedCost({ materialNumber: editForm.materialNumber, precost: editForm.precost })

@@ -3,6 +3,7 @@ package com.bcsport.admin.common;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import lombok.Data;
 import java.io.Serializable;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -65,5 +66,20 @@ public class PageResult<T> implements Serializable {
      */
     public static <T> PageResult<T> of(IPage<T> page) {
         return new PageResult<>(page);
+    }
+
+    /**
+     * 创建空分页结果（用于无条件等场景拒绝查询）
+     */
+    public static <T> PageResult<T> empty(PageQuery pageQuery) {
+        PageResult<T> r = new PageResult<>();
+        r.setPageNum((long) pageQuery.getPageNum());
+        r.setPageSize((long) pageQuery.getPageSize());
+        r.setTotal(0L);
+        r.setPages(0L);
+        r.setRecords(Collections.emptyList());
+        r.setHasPrevious(false);
+        r.setHasNext(false);
+        return r;
     }
 }

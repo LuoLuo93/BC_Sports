@@ -22,9 +22,20 @@ public class StickerDataController {
     @GetMapping("/page")
     @RequiresPermissions("sticker:data:query")
     public Result<PageResult<Map<String, Object>>> page(@Valid PageQuery pageQuery, StickerDataQueryDTO queryDTO) {
-        // 无条件时默认查第一页（分页保护，避免全表一次性加载）
+        // 数据量较大，必须至少传入一个查询条件才查询，无条件直接返回空（前端已默认不查询，此处为兜底）
+        if (isAllEmpty(queryDTO.getMaterialNumber(), queryDTO.getStyleNumber(),
+                queryDTO.getMaterialName(), queryDTO.getBrandId())) {
+            return Result.success(PageResult.empty(pageQuery));
+        }
         PageResult<Map<String, Object>> result = stickerPrintService.searchProducts(pageQuery, queryDTO.getMaterialNumber(), queryDTO.getStyleNumber(), queryDTO.getMaterialName(), queryDTO.getBrandId());
         return Result.success(result);
+    }
+
+    private boolean isAllEmpty(String... values) {
+        for (String v : values) {
+            if (v != null && !v.trim().isEmpty()) return false;
+        }
+        return true;
     }
 
     @GetMapping("/brands")

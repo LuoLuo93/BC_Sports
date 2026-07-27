@@ -36,6 +36,7 @@ public class EstimatedCostServiceImpl implements EstimatedCostService {
     /** 表头别名 → 字段标识 */
     private static final Map<String, String> HEADER_ALIAS = new HashMap<>();
     static {
+        HEADER_ALIAS.put("货号", "materialNumber");
         HEADER_ALIAS.put("物料编号", "materialNumber");
         HEADER_ALIAS.put("materialNumber", "materialNumber");
         HEADER_ALIAS.put("预估成本", "precost");
@@ -153,7 +154,7 @@ public class EstimatedCostServiceImpl implements EstimatedCostService {
 
         // 表头缺失校验
         List<String> missingHeaders = new ArrayList<>();
-        if (!columnIndex.containsKey("materialNumber")) missingHeaders.add("物料编号");
+        if (!columnIndex.containsKey("materialNumber")) missingHeaders.add("货号");
         if (!columnIndex.containsKey("precost")) missingHeaders.add("预估成本");
         if (!missingHeaders.isEmpty()) {
             return buildResult(0, 0, 0, Collections.singletonList(

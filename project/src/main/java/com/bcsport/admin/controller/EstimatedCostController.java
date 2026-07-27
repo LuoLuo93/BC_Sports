@@ -94,11 +94,11 @@ public class EstimatedCostController {
 
         ExcelWriter writer = ExcelUtil.getWriter(true);
         try {
-            writer.addHeaderAlias("物料编号", "物料编号");
+            writer.addHeaderAlias("货号", "货号");
             writer.addHeaderAlias("预估成本", "预估成本");
 
             Map<String, Object> sample = new LinkedHashMap<>();
-            sample.put("物料编号", "NLM25001");
+            sample.put("货号", "NLM25001");
             sample.put("预估成本", "120.50");
             writer.write(Collections.singletonList(sample), true);
             writer.flush(response.getOutputStream());

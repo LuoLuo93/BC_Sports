@@ -281,11 +281,11 @@ public class ErpEmployeeSyncTask {
 
     /**
      * 构建伯俊transactions
-     * 默认使用员工表 12462
+     * 默认使用员工表 14630
      */
     private JSONArray buildTransactions(String command, JSONObject params) {
         if (!params.containsKey("table")) {
-            params.set("table", "12462");
+            params.set("table", "14630");
         }
         JSONObject transaction = new JSONObject();
         transaction.set("id", java.util.UUID.randomUUID().toString());

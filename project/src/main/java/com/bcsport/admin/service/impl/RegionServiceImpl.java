@@ -255,6 +255,7 @@ public class RegionServiceImpl extends ServiceImpl<RegionMapper, Region> impleme
 
     @Override
     public Long getNextId() {
-        return regionMapper.selectNextId();
+        // 基于表内最大数字 id + 1（不依赖序列，避免序列与表数据不同步导致主键冲突）
+        return regionMapper.selectMaxId();
     }
 }

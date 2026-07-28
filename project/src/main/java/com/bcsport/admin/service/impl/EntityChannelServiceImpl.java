@@ -716,13 +716,12 @@ public class EntityChannelServiceImpl implements EntityChannelService {
     }
 
     /**
-     * 统一生成主键：优先 Oracle 序列 SEQ_BC_SPORTS_SYS_ENTITY_CHANNEL，
-     * 序列不可用时回退 UUID。单条新增/批量保存/Excel导入三条路径共用，
-     * 与项目其它实体 selectNextId 约定一致，避免 ID 生成逻辑散落。
+     * 统一生成主键：优先基于表内最大数字 id + 1（不依赖序列，避免序列与表数据不同步导致主键冲突），
+     * 异常时回退 UUID。单条新增/批量保存/Excel导入三条路径共用。
      */
     private String generateId() {
         try {
-            return String.valueOf(entityChannelMapper.selectNextId());
+            return String.valueOf(entityChannelMapper.selectMaxId());
         } catch (Exception e) {
             return UUID.randomUUID().toString().replace("-", "").substring(0, 32);
         }

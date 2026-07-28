@@ -72,9 +72,9 @@ public class BrandController {
     @ApiOperation("新增品牌")
     @RequiresPermissions("bi:brand:add")
     public Result<?> add(@Valid @RequestBody BrandDTO brandDTO) {
-        // 使用数据库序列生成递增 ID
+        // 使用表内最大数字 id + 1 生成递增 ID（不依赖序列，避免与表数据不同步导致主键冲突）
         if (brandDTO.getId() == null || brandDTO.getId().isEmpty()) {
-            brandDTO.setId(String.valueOf(brandMapper.selectNextId()));
+            brandDTO.setId(String.valueOf(brandMapper.selectMaxId()));
         }
         boolean success = brandService.addBrand(brandDTO);
         return success ? Result.success("新增成功") : Result.error("新增失败");

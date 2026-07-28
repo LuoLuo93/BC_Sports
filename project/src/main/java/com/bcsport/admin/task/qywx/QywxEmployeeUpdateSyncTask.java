@@ -154,6 +154,14 @@ public class QywxEmployeeUpdateSyncTask {
                         continue;
                     }
 
+                    // 离职状态(LEAVED/QUIT)不同步到企微
+                    if (isLeftEmployee(employee.getStaffStatus())) {
+                        log.info("员工 {}({}) 已离职({}), 跳过企微同步", staffName, staffNo, employee.getStaffStatus());
+                        updateService.markSyncSkipped(employee.getId(), staffName, staffNo);
+                        skipCount++;
+                        continue;
+                    }
+
                     // Look up userid from pre-loaded Map
                     String userid = staffNoToUserid.get(staffNo);
                     if ((userid == null || userid.isEmpty()) && mobile != null && !mobile.isEmpty()) {
@@ -251,6 +259,12 @@ public class QywxEmployeeUpdateSyncTask {
         if (exclusionService.checkExcluded(staffName, staffNo, 1)) {
             updateService.markSyncSkipped(staffId, staffName, staffNo);
             return "员工在排除列表中";
+        }
+
+        // 离职状态(LEAVED/QUIT)不同步到企微
+        if (isLeftEmployee(employee.getStaffStatus())) {
+            updateService.markSyncSkipped(staffId, staffName, staffNo);
+            return "员工已离职(" + employee.getStaffStatus() + "), 跳过同步";
         }
 
         String userid = attrsBaseMapper.selectUseridByStaffNo(staffNo);
@@ -484,5 +498,12 @@ public class QywxEmployeeUpdateSyncTask {
         attr.set("text", text);
         attr.set("value", value);
         return attr;
+    }
+
+    /**
+     * 判断员工是否已离职。IHR 离职状态有两种值：LEAVED 和 QUIT。
+     */
+    private static boolean isLeftEmployee(String staffStatus) {
+        return "LEAVED".equals(staffStatus) || "QUIT".equals(staffStatus);
     }
 }

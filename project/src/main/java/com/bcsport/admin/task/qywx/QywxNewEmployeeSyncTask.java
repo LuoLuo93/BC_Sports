@@ -143,6 +143,14 @@ public class QywxNewEmployeeSyncTask {
                         continue;
                     }
 
+                    // 离职状态(LEAVED/QUIT)不创建企微账号
+                    if (isLeftEmployee(employee.getStaffStatus())) {
+                        log.warn("员工 {}({}) 已离职({}), 跳过创建企微账号", staffName, staffNo, employee.getStaffStatus());
+                        onboardingService.markSyncSkipped(employee.getId(), staffName, staffNo);
+                        skipCount++;
+                        continue;
+                    }
+
                     // Check exclusion using pre-loaded Set
                     if (exclusionSet.contains(staffName + "|" + staffNo)) {
                         log.info("员工 {}({}) 在入职排除列表中，跳过", staffName, staffNo);
@@ -225,6 +233,12 @@ public class QywxNewEmployeeSyncTask {
 
         if (mobile == null || mobile.isEmpty() || "null".equals(mobile)) {
             return "员工无手机号";
+        }
+
+        // 离职状态(LEAVED/QUIT)不创建企微账号
+        if (isLeftEmployee(employee.getStaffStatus())) {
+            onboardingService.markSyncSkipped(employeesId, staffName, staffNo);
+            return "员工已离职(" + employee.getStaffStatus() + "), 跳过创建";
         }
 
         // 检查排除列表
@@ -386,5 +400,12 @@ public class QywxNewEmployeeSyncTask {
         attr.set("text", text);
         attr.set("value", value);
         return attr;
+    }
+
+    /**
+     * 判断员工是否已离职。IHR 离职状态有两种值：LEAVED 和 QUIT。
+     */
+    private static boolean isLeftEmployee(String staffStatus) {
+        return "LEAVED".equals(staffStatus) || "QUIT".equals(staffStatus);
     }
 }

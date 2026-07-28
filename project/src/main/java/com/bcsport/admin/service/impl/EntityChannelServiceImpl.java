@@ -530,21 +530,18 @@ public class EntityChannelServiceImpl implements EntityChannelService {
                     // 存量 customer 记录不参与比对池、不更新、不删除。
 
                     // 外部ID
-                    String externalId = strVal(row.get("外部ID(ERP编码)"));
-                    if (externalId == null) externalId = strVal(row.get("externalId"));
+                    String externalId = getCol(row, "外部ID(ERP编码)", "externalId");
                     if (externalId == null || externalId.isEmpty()) {
                         if (errors.size() < maxErrors) errors.add("第" + rowNum + "行：外部ID不能为空");
                         continue;
                     }
 
                     // 实体名称
-                    String entityName = strVal(row.get("实体名称"));
-                    if (entityName == null) entityName = strVal(row.get("entityName"));
+                    String entityName = getCol(row, "实体名称", "entityName");
                     if (entityName == null || entityName.isEmpty()) entityName = externalId;
 
                     // 品牌 —— 唯一行 = 店铺(externalId)+品牌(brandId)，brandId 必填
-                    String brandName = strVal(row.get("品牌名称"));
-                    if (brandName == null) brandName = strVal(row.get("brandName"));
+                    String brandName = getCol(row, "品牌名称", "brandName");
                     String brandId = null;
                     if (brandName == null || brandName.isEmpty()) {
                         if (errors.size() < maxErrors) errors.add("第" + rowNum + "行：品牌名称不能为空（店铺+品牌为唯一行）");
@@ -557,8 +554,7 @@ public class EntityChannelServiceImpl implements EntityChannelService {
                     }
 
                     // 一级地区
-                    String region1 = strVal(row.get("一级地区"));
-                    if (region1 == null) region1 = strVal(row.get("regionLevel1Name"));
+                    String region1 = getCol(row, "一级地区", "regionLevel1Name");
                     String region1Id = null;
                     if (region1 != null && !region1.isEmpty()) {
                         region1Id = regionNameMap.get(region1);
@@ -569,8 +565,7 @@ public class EntityChannelServiceImpl implements EntityChannelService {
                     }
 
                     // 二级地区
-                    String region2 = strVal(row.get("二级地区"));
-                    if (region2 == null) region2 = strVal(row.get("regionLevel2Name"));
+                    String region2 = getCol(row, "二级地区", "regionLevel2Name");
                     String region2Id = null;
                     if (region2 != null && !region2.isEmpty() && region1Id != null) {
                         Map<String, String> children = regionChildMap.get(region1Id);
@@ -583,8 +578,7 @@ public class EntityChannelServiceImpl implements EntityChannelService {
                     }
 
                     // 渠道类型
-                    String ctName = strVal(row.get("渠道类型"));
-                    if (ctName == null) ctName = strVal(row.get("channelTypeName"));
+                    String ctName = getCol(row, "渠道类型", "channelTypeName");
                     String ctId = null;
                     if (ctName != null && !ctName.isEmpty()) {
                         ctId = ctNameMap.get(ctName);
@@ -595,8 +589,7 @@ public class EntityChannelServiceImpl implements EntityChannelService {
                     }
 
                     // 渠道定义
-                    String cdName = strVal(row.get("渠道定义"));
-                    if (cdName == null) cdName = strVal(row.get("channelDefName"));
+                    String cdName = getCol(row, "渠道定义", "channelDefName");
                     String cdId = null;
                     if (cdName != null && !cdName.isEmpty() && ctId != null) {
                         Map<String, String> children = ctChildMap.get(ctId);
@@ -609,8 +602,7 @@ public class EntityChannelServiceImpl implements EntityChannelService {
                     }
 
                     // 渠道性质
-                    String cnName = strVal(row.get("渠道性质"));
-                    if (cnName == null) cnName = strVal(row.get("channelNatureName"));
+                    String cnName = getCol(row, "渠道性质", "channelNatureName");
                     String cnId = null;
                     if (cnName != null && !cnName.isEmpty()) {
                         cnId = cnNameMap.get(cnName);
@@ -621,8 +613,7 @@ public class EntityChannelServiceImpl implements EntityChannelService {
                     }
 
                     // 销售类型
-                    String btName = strVal(row.get("销售类型"));
-                    if (btName == null) btName = strVal(row.get("businessTypeName"));
+                    String btName = getCol(row, "销售类型", "businessTypeName");
                     String btId = null;
                     if (btName != null && !btName.isEmpty() && cnId != null) {
                         Map<String, String> children = cnChildMap.get(cnId);
@@ -753,6 +744,30 @@ public class EntityChannelServiceImpl implements EntityChannelService {
         if (val == null) return null;
         String s = String.valueOf(val).trim();
         return s.isEmpty() ? null : s;
+    }
+
+    /**
+     * 从 Excel 行 Map 中按列名取值（兼容表头变体）。
+     * 查找顺序：精确匹配主键 → 精确匹配备用键 → 表头以主键开头(如"品牌名称(必填)"匹配"品牌名称")。
+     * 解决模板表头加"(必填)"等提示后缀导致 row.get("品牌名称") 取不到值的问题。
+     */
+    private String getCol(Map<String, Object> row, String primary, String fallback) {
+        // 1. 精确匹配
+        String val = strVal(row.get(primary));
+        if (val != null) return val;
+        if (fallback != null) {
+            val = strVal(row.get(fallback));
+            if (val != null) return val;
+        }
+        // 2. 模糊匹配：表头以 primary 开头（兼容 "品牌名称(必填)" 这类带后缀的表头）
+        for (Map.Entry<String, Object> e : row.entrySet()) {
+            String header = e.getKey();
+            if (header != null && header.startsWith(primary)) {
+                String v = strVal(e.getValue());
+                if (v != null) return v;
+            }
+        }
+        return null;
     }
 
     private <T> Map<String, String> buildNameToIdMap(List<T> list, Function<T, String> nameMapper, Function<T, String> idMapper) {

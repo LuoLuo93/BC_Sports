@@ -41,6 +41,9 @@ public class IhrToBjErpConverter {
         // EMAIL - 电子邮件
         putIfNotNull(data, "EMAIL", firstNonNull(detail.getEmail(), detail.getWorkEmail()));
 
+        // IS_NEED_SYNC_CRM - 是否需要同步CRM（入职同步ERP时固定传Y）
+        data.set("IS_NEED_SYNC_CRM", "Y");
+
         return data;
     }
 

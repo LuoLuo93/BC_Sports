@@ -439,9 +439,9 @@ public class QywxEmployeeUpdateSyncTask {
             body.set("position", employee.getPositionName());
         }
 
-        if (apiClient.isValidEmail(employee.getWorkEmail())) {
-            body.set("email", employee.getWorkEmail());
-        }
+        // 变动(update)不带 email：邮箱在创建用户(create)时一次性写入，
+        // 变动时再带会导致 60106(邮箱已被本企业其他成员占用)，
+        // 尤其是部门公共邮箱被多人共用的场景。
 
         JSONArray deptArray = new JSONArray();
         try {

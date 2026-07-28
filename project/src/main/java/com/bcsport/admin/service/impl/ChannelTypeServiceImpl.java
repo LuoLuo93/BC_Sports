@@ -251,7 +251,7 @@ public class ChannelTypeServiceImpl extends ServiceImpl<ChannelTypeMapper, Chann
 
     @Override
     public Long getNextId() {
-        // 基于表内最大数字 id + 1（不依赖序列，避免序列与表数据不同步导致主键冲突）
-        return channelTypeMapper.selectMaxId();
+        // 使用 Oracle 序列（NEXTVAL 原子递增，并发安全，不会拿到重复值）
+        return channelTypeMapper.selectNextId();
     }
 }

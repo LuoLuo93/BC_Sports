@@ -514,6 +514,15 @@ public class EntityChannelServiceImpl implements EntityChannelService {
             List<EntityChannel> toInsert = new ArrayList<>();
             List<EntityChannel> toUpdate = new ArrayList<>();   // upsert 命中的待更新记录
 
+            // 预取起始 id：循环外一次性查 max(id)+1，循环内自增分配。
+            // 不能每行都调 selectMaxId()——事务未提交时 max(id) 不变，会取到相同值导致主键冲突。
+            long nextId = 1;
+            try {
+                nextId = entityChannelMapper.selectMaxId();
+            } catch (Exception ignored) {
+                // 查询失败时回退 UUID（generateId 兜底），nextId 不使用
+            }
+
             // ========== 4. 逐行解析 + 校验 + 收集待插入实体 ==========
             for (int i = 0; i < rows.size(); i++) {
                 int rowNum = i + 2;
@@ -619,9 +628,8 @@ public class EntityChannelServiceImpl implements EntityChannelService {
                         }
                     }
 
-                    // 构建 EntityChannel 实体
+                    // 构建 EntityChannel 实体（id 延迟到判定新增分支后再分配，避免命中更新时浪费 id 段）
                     EntityChannel entity = new EntityChannel();
-                    entity.setId(generateId());
                     // 导入一律按 store 处理（业务已无客户概念）；customer 历史记录不动
                     entity.setEntityType("store");
                     entity.setExternalId(externalId);
@@ -656,7 +664,14 @@ public class EntityChannelServiceImpl implements EntityChannelService {
                         }
                         toUpdate.add(entity);
                     } else {
-                        // 未命中：新增时补默认值；登记到 map 防本批次内 (externalId+brandId) 重复
+                        // 未命中：分配新 id（用循环外预取的 nextId 自增，保证批次内不重复）；
+                        // 补默认值；登记到 map 防本批次内 (externalId+brandId) 重复
+                        if (nextId > 0) {
+                            entity.setId(String.valueOf(nextId++));
+                        } else {
+                            // selectMaxId 查询失败的兜底：用 UUID
+                            entity.setId(generateId());
+                        }
                         entity.setStatus(1);
                         entity.setSort(0);
                         entity.setCreateTime(new java.util.Date());

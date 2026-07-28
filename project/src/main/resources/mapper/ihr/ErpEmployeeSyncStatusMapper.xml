@@ -245,7 +245,7 @@
         INNER JOIN employee_information ei ON ea_latest.employees_id = ei.id
         LEFT JOIN erp_employee_sync_status es ON ea_latest.employees_id = es.employee_id AND es.sync_type = 'ONBOARDING'
         WHERE <include refid="onboardingEffectiveSyncStatus"/> IN (0, 2)
-        AND ei.staff_status != 'LEAVED'
+        AND ei.staff_status NOT IN ('LEAVED', 'QUIT')
         AND ei.department_id IN (SELECT department_id FROM dept_tree)
     </select>
 

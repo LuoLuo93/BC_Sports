@@ -88,8 +88,9 @@ public class IhrToBjErpConverter {
         if (staffStatus == null) return null;
         switch (staffStatus) {
             case "IN_SERVICE": return "在职";
-            case "LEAVED": return "离职";
             case "PROBATION": return "试用";
+            case "LEAVED":
+            case "QUIT":       return "离职";   // IHR 离职有两种状态值：LEAVED 和 QUIT
             default: return staffStatus;
         }
     }

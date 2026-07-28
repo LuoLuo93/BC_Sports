@@ -320,7 +320,26 @@ async function handleRegionDelete(row) { if (row.children?.length) { ElMessage.w
 async function handleRegionSubmit() {
   const valid = await regionFormRef.value?.validate().catch(() => false); if (!valid) return
   regionSubmitting.value = true
-  try { if (regionIsEdit.value) { await updateRegion(regionEditId.value, { ...regionForm }) } else { await createRegion({ ...regionForm }) }; ElMessage.success(regionIsEdit.value ? '更新成功' : '创建成功'); regionDialogVisible.value = false; loadRegions() } finally { regionSubmitting.value = false }
+  try {
+    // regionType(层级)根据 parentId 推算：顶级(parentId='0')为一级(1)，否则为父级 type+1。
+    // 表单不暴露该字段，避免用户选错层级导致树结构混乱。
+    const payload = { ...regionForm }
+    if (payload.parentId === '0' || !payload.parentId) {
+      payload.regionType = 1
+    } else {
+      const parentType = findRegionType(regionList.value, payload.parentId)
+      payload.regionType = parentType ? parentType + 1 : 2
+    }
+    if (regionIsEdit.value) { await updateRegion(regionEditId.value, payload) } else { await createRegion(payload) }; ElMessage.success(regionIsEdit.value ? '更新成功' : '创建成功'); regionDialogVisible.value = false; loadRegions() } finally { regionSubmitting.value = false }
+}
+
+// 在地区树中按 id 查找节点返回其 regionType
+function findRegionType(nodes, id) {
+  for (const n of nodes) {
+    if (n.id === id) return n.regionType
+    if (n.children?.length) { const t = findRegionType(n.children, id); if (t != null) return t }
+  }
+  return null
 }
 
 // ==================== 渠道类型 ====================

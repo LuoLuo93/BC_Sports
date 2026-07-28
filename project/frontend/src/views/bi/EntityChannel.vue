@@ -5,7 +5,6 @@
         <el-form-item label="实体类型">
           <el-select v-model="query.entityType" placeholder="全部" clearable >
             <el-option label="店仓" value="store" />
-            <el-option label="客户" value="customer" />
           </el-select>
         </el-form-item>
         <el-form-item label="外部ID">
@@ -144,7 +143,7 @@
       <!-- 导入结果 -->
       <div v-if="importResult" style="margin-top:16px">
         <el-alert
-          :title="`导入完成：共 ${importResult.total} 条，成功 ${importResult.success} 条，失败 ${importResult.fail} 条`"
+          :title="`导入完成：共 ${importResult.total} 条，新增 ${importResult.inserted ?? importResult.success} 条${importResult.updated != null ? '，更新 ' + importResult.updated + ' 条' : ''}，失败 ${importResult.fail} 条`"
           :type="importResult.fail === 0 ? 'success' : (importResult.success === 0 ? 'error' : 'warning')"
           show-icon
           :closable="false"
@@ -179,7 +178,7 @@ import { PAGE_SIZES } from '@/utils/appConfig'
 const { hasPermission } = usePermission()
 
 const router = useRouter()
-const { loading, tableData, total, query, loadData, handleSearch, resetQuery } = usePageQuery(getEntityChannelPage, { entityType: undefined, externalId: '', entityName: '', status: undefined })
+const { loading, tableData, total, query, loadData, handleSearch, resetQuery } = usePageQuery(getEntityChannelPage, { entityType: 'store', externalId: '', entityName: '', status: undefined })
 
 const typeMap = { store: ['店仓', 'success'], customer: ['客户', 'warning'] }
 function entityTypeLabel(t) { return typeMap[t]?.[0] || t }

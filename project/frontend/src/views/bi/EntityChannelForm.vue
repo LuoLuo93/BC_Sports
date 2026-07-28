@@ -14,11 +14,7 @@
         <div class="search-panel">
           <div class="search-bar">
             <span class="panel-bar-title">实体搜索</span>
-            <el-radio-group v-model="searchType" size="small" :disabled="isEdit" @change="onSearchTypeChange">
-              <el-radio-button value="store">店仓</el-radio-button>
-              <el-radio-button value="customer">客户</el-radio-button>
-            </el-radio-group>
-            <el-input v-model="searchKeyword" placeholder="输入编码或名称搜索" size="small" clearable :disabled="isEdit" style="min-width:200px;max-width:240px" @keyup.enter="searchEntities" />
+            <el-input v-model="searchKeyword" placeholder="输入编码或名称搜索店仓" size="small" clearable :disabled="isEdit" style="min-width:200px;max-width:240px" @keyup.enter="searchEntities" />
             <el-button type="primary" size="small" :loading="entitySearching" :disabled="isEdit" style="width:80px" @click="searchEntities">搜索</el-button>
             <el-button type="success" size="small" :disabled="!selectedEntities.length" @click="confirmEntitySelect">
               添加({{ selectedEntities.length }})
@@ -48,7 +44,7 @@
             </el-table-column>
             <el-table-column prop="entityType" label="类型" width="70" align="center">
               <template #default="{ row }">
-                <el-tag :type="row.entityType === 'store' ? 'success' : 'warning'" size="small">{{ row.entityType === 'store' ? '店仓' : '客户' }}</el-tag>
+                <el-tag :type="row.entityType === 'store' ? 'success' : 'warning'" size="small">{{ entityTypeLabel(row.entityType) }}</el-tag>
               </template>
             </el-table-column>
             <el-table-column prop="externalId" label="编码" min-width="100" class-name="col-key" />
@@ -111,7 +107,7 @@ import { getEntityChannel, getEntityChannelListByEntity, batchSaveEntityChannel,
 import { getChannelTypeTree, getChannelNatureTree } from '@/api/channel'
 import { getBrandList } from '@/api/brand'
 import { getRegionTree } from '@/api/region'
-import { getErpStorePage, getErpCustomerPage } from '@/api/erp'
+import { getErpStorePage } from '@/api/erp'
 import { PAGE_SIZES } from '@/utils/appConfig'
 
 const router = useRouter()
@@ -216,11 +212,9 @@ function validateChildSelect(val, treeData, row, field) {
   }
 }
 
-function onSearchTypeChange() {
-  searchKeyword.value = ''
-  entityList.value = []
-  selectedEntities.value = []
-}
+// 类型标签：保留 customer→客户 映射以正确展示存量历史记录（新建统一为 store）
+const typeMap = { store: '店仓', customer: '客户' }
+function entityTypeLabel(t) { return typeMap[t] || t }
 
 async function searchEntities() {
   entitySearching.value = true
@@ -230,9 +224,8 @@ async function searchEntities() {
       params.code = searchKeyword.value
       params.name = searchKeyword.value
     }
-    const res = searchType.value === 'store'
-      ? await getErpStorePage(params)
-      : await getErpCustomerPage(params)
+    // 业务已无客户概念，只搜店仓
+    const res = await getErpStorePage(params)
     entityList.value = res.data?.records || []
   } finally { entitySearching.value = false }
 }
@@ -248,14 +241,17 @@ function handleRowClick(row) {
 function confirmEntitySelect() {
   let added = 0
   for (const entity of selectedEntities.value) {
-    // 编辑模式下只能添加同一个实体
-    if (isEdit.value && (entity.CODE !== editExternalId.value || searchType.value !== editEntityType.value)) {
+    // 编辑模式下只能添加同一个实体（按 externalId 校验；searchType 已固定 store，
+    // 不再参与比较，避免编辑 customer 存量记录时因类型不等而无法添加行）
+    if (isEdit.value && entity.CODE !== editExternalId.value) {
       ElMessage.warning('编辑模式下只能添加同一个实体的渠道配置')
       continue
     }
-    // 同一个实体可以添加多行，每次都是新行（渠道属性不同）
+    // 编辑模式下 entityType 跟随原记录（保持一致），新建统一为 store
+    const rowEntityType = isEdit.value ? editEntityType.value : 'store'
+    // 同一店铺可挂多个不同品牌（brandId 不同），每次都是新行
     selectedDetail.value.push({
-      entityType: searchType.value,
+      entityType: rowEntityType,
       externalId: entity.CODE,
       entityName: entity.NAME,
       id: '',
@@ -393,8 +389,8 @@ onMounted(async () => {
           editEntityName.value = res.data[0].entityName || ''
         }
       }
-      // 搜索区类型自动匹配
-      searchType.value = entType
+      // 搜索区类型固定为 store（业务已无客户概念，仅编辑 customer 存量记录时 editEntityType 保留展示用）
+      searchType.value = 'store'
       searchKeyword.value = extId
       // 编辑模式搜索栏已禁用，直接显示当前实体，不走模糊搜索避免带出无关结果
       entityList.value = [{ CODE: extId, NAME: editEntityName.value || extId }]
@@ -441,8 +437,8 @@ watch(() => route.fullPath, async () => {
         editEntityName.value = res.data[0].entityName || ''
       }
     }
-    // 搜索区类型自动匹配
-    searchType.value = finalEntType
+    // 搜索区类型固定为 store（业务已无客户概念）
+    searchType.value = 'store'
     searchKeyword.value = finalExtId
     // 编辑模式搜索栏已禁用，直接显示当前实体，不走模糊搜索避免带出无关结果
     entityList.value = [{ CODE: finalExtId, NAME: editEntityName.value || finalExtId }]

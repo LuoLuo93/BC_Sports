@@ -148,10 +148,10 @@ public class EntityChannelController {
 
         ExcelWriter writer = ExcelUtil.getWriter(true);
         try {
-            writer.addHeaderAlias("entityType", "实体类型(store/customer)");
+            // 导入一律按 store 处理，不再暴露"实体类型"列；品牌为唯一行组成部分，标注必填
             writer.addHeaderAlias("externalId", "外部ID(ERP编码)");
             writer.addHeaderAlias("entityName", "实体名称");
-            writer.addHeaderAlias("brandName", "品牌名称");
+            writer.addHeaderAlias("brandName", "品牌名称(必填)");
             writer.addHeaderAlias("regionLevel1Name", "一级地区");
             writer.addHeaderAlias("regionLevel2Name", "二级地区");
             writer.addHeaderAlias("channelTypeName", "渠道类型");
@@ -160,7 +160,6 @@ public class EntityChannelController {
             writer.addHeaderAlias("businessTypeName", "销售类型");
 
             Map<String, Object> sample = new LinkedHashMap<>();
-            sample.put("entityType", "store");
             sample.put("externalId", "D001");
             sample.put("entityName", "深圳旗舰店");
             sample.put("brandName", "BC");

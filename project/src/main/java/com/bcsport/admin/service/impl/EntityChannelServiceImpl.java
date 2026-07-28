@@ -163,6 +163,11 @@ public class EntityChannelServiceImpl implements EntityChannelService {
         EntityChannel entity = new EntityChannel();
         BeanUtils.copyProperties(dto, entity);
 
+        // 优先复活软删记录：避免 deleted=1 的旧行占着唯一键导致 INSERT 报 ORA-00001
+        if (reviveIfSoftDeleted(entity)) {
+            return true;
+        }
+
         // 生成ID
         if (entity.getId() == null || entity.getId().isEmpty()) {
             entity.setId(generateId());
@@ -178,6 +183,16 @@ public class EntityChannelServiceImpl implements EntityChannelService {
             throw new IllegalArgumentException("该实体渠道配置已存在，请勿重复提交");
         }
 
+        // 编辑可能导致 brandId 变更：若目标 (externalId+新brandId+entityType) 存在软删记录，
+        // 其仍占着唯一键 uk_external_brand，updateById 改名后会触发 ORA-00001。
+        // 处理：物理删除该软删废弃记录（已 deleted=1，属废弃数据），腾出唯一键。
+        QueryWrapper<EntityChannel> softDelWrapper = new QueryWrapper<>();
+        softDelWrapper.eq("deleted", 1);
+        softDelWrapper.eq("entity_type", dto.getEntityType());
+        softDelWrapper.eq("external_id", dto.getExternalId());
+        addEqOrIsNull(softDelWrapper, "brand_id", dto.getBrandId());
+        entityChannelMapper.delete(softDelWrapper);
+
         EntityChannel entity = new EntityChannel();
         BeanUtils.copyProperties(dto, entity);
         return entityChannelMapper.updateById(entity) > 0;
@@ -185,6 +200,8 @@ public class EntityChannelServiceImpl implements EntityChannelService {
 
     /**
      * 检查业务字段组合是否已存在
+     * 唯一行 = external_id + brand_id (+ entity_type)，与 DB 唯一约束 uk_external_brand 一致。
+     * （旧逻辑按 9 个渠道维度字段组合判重，现已废弃——一店铺+一品牌只允许一行，多渠道维度不再产生多条）
      */
     private boolean isDuplicate(EntityChannelDTO dto, String excludeId) {
         QueryWrapper<EntityChannel> wrapper = new QueryWrapper<>();
@@ -192,14 +209,7 @@ public class EntityChannelServiceImpl implements EntityChannelService {
 
         wrapper.eq("entity_type", dto.getEntityType());
         wrapper.eq("external_id", dto.getExternalId());
-
         addEqOrIsNull(wrapper, "brand_id", dto.getBrandId());
-        addEqOrIsNull(wrapper, "channel_type_id", dto.getChannelTypeId());
-        addEqOrIsNull(wrapper, "channel_def_id", dto.getChannelDefId());
-        addEqOrIsNull(wrapper, "channel_nature_id", dto.getChannelNatureId());
-        addEqOrIsNull(wrapper, "business_type_id", dto.getBusinessTypeId());
-        addEqOrIsNull(wrapper, "region_level1_id", dto.getRegionLevel1Id());
-        addEqOrIsNull(wrapper, "region_level2_id", dto.getRegionLevel2Id());
 
         if (excludeId != null && !excludeId.isEmpty()) {
             wrapper.ne("id", excludeId);
@@ -214,6 +224,35 @@ public class EntityChannelServiceImpl implements EntityChannelService {
         } else {
             wrapper.isNull(column);
         }
+    }
+
+    /**
+     * 复活软删记录：逻辑删除 + 物理唯一约束(uk_external_brand)存在天然冲突——
+     * 软删(deleted=1)的行仍占着 (external_id, brand_id) 唯一键，导致删除后无法重新添加同店铺同品牌。
+     * 新增/导入时，若发现存在同 (external_id, brand_id, store) 的软删记录，则将其"复活"并更新属性，
+     * 而非 INSERT 新行，从而绕开唯一约束冲突。
+     *
+     * @param entity 待写入的实体（externalId/brandId/entityType 必须已赋值）
+     * @return true=已复活并更新了一条软删记录；false=无软删记录，调用方应走 INSERT
+     */
+    private boolean reviveIfSoftDeleted(EntityChannel entity) {
+        QueryWrapper<EntityChannel> wrapper = new QueryWrapper<>();
+        wrapper.eq("deleted", 1);
+        wrapper.eq("entity_type", entity.getEntityType());
+        wrapper.eq("external_id", entity.getExternalId());
+        addEqOrIsNull(wrapper, "brand_id", entity.getBrandId());
+        wrapper.last("FETCH FIRST 1 ROWS ONLY");   // Oracle 12c+ 行限语法
+
+        EntityChannel softDeleted = entityChannelMapper.selectOne(wrapper);
+        if (softDeleted == null) {
+            return false;
+        }
+        // 复用软删记录 id，覆盖属性并复活
+        entity.setId(softDeleted.getId());
+        entity.setDeleted(0);
+        entity.setUpdateTime(new java.util.Date());
+        entityChannelMapper.updateById(entity);
+        return true;
     }
 
     @Override
@@ -244,17 +283,16 @@ public class EntityChannelServiceImpl implements EntityChannelService {
             throw new IllegalArgumentException("没有可保存的配置");
         }
 
-        // 批次内组合去重：编辑页已允许新增多行，拦截维度完全相同的重复配置
-        // (externalId/entityType 全批相同，仅比对 7 个维度字段；与 isDuplicate 字段组合一致)
+        // 批次内组合去重：唯一行 = external_id + brand_id（batchSave 内 externalId/entityType 固定，
+        // 故仅比对 brandId）。一店铺+一品牌只允许一行，与 isDuplicate / DB 唯一约束一致。
         Set<String> seenKeys = new HashSet<>();
         for (EntityChannelDTO dto : list) {
-            String key = String.join("|",
-                    nullSafe(dto.getBrandId()), nullSafe(dto.getChannelTypeId()),
-                    nullSafe(dto.getChannelDefId()), nullSafe(dto.getChannelNatureId()),
-                    nullSafe(dto.getBusinessTypeId()), nullSafe(dto.getRegionLevel1Id()),
-                    nullSafe(dto.getRegionLevel2Id()));
+            if (dto.getBrandId() == null || dto.getBrandId().trim().isEmpty()) {
+                throw new IllegalArgumentException("品牌不能为空（店铺+品牌为唯一行）");
+            }
+            String key = nullSafe(dto.getBrandId());
             if (!seenKeys.add(key)) {
-                throw new IllegalArgumentException("存在维度完全相同的重复配置，请去重后再保存");
+                throw new IllegalArgumentException("存在品牌相同的重复配置，请去重后再保存");
             }
         }
 
@@ -287,8 +325,11 @@ public class EntityChannelServiceImpl implements EntityChannelService {
                 if (entity.getEntityType() == null || entity.getEntityType().isEmpty()) {
                     entity.setEntityType(entityType);
                 }
-                entity.setId(generateId());
-                entityChannelMapper.insert(entity);
+                // 优先复活软删记录，避免唯一键冲突；复活失败才走 INSERT
+                if (!reviveIfSoftDeleted(entity)) {
+                    entity.setId(generateId());
+                    entityChannelMapper.insert(entity);
+                }
             }
         }
 
@@ -435,12 +476,18 @@ public class EntityChannelServiceImpl implements EntityChannelService {
             }
         }
 
-        // ========== 2. 预加载已有记录用于去重（一次查表） ==========
+        // ========== 2. 预加载已有 store 记录用于 upsert（一次查表） ==========
+        // 业务已无"客户"概念：导入数据一律按 store 处理，仅与存量 store 记录比对。
+        // 存量 customer 记录完全不参与（不查、不更新、不动），匹配不上即新增。
+        // 命中维度：external_id + brand_id（与 DB 唯一约束 uk_external_brand 一致）
+        //
+        // 同时纳入 deleted=1 的软删记录：逻辑删除 + 物理唯一约束存在冲突，
+        // 软删行仍占着唯一键，命中时走"复活更新"而非 INSERT，避免 ORA-00001。
         List<EntityChannel> existingList = entityChannelMapper.selectList(
-                new QueryWrapper<EntityChannel>().eq("deleted", 0));
-        Set<String> existingKeys = new HashSet<>();
+                new QueryWrapper<EntityChannel>().eq("entity_type", "store"));
+        Map<String, EntityChannel> existingMap = new HashMap<>();
         for (EntityChannel ec : existingList) {
-            existingKeys.add(buildDuplicateKey(ec));
+            existingMap.put(buildUpsertKey(ec.getExternalId(), ec.getBrandId()), ec);
         }
 
         // ========== 3. 解析Excel ==========
@@ -471,6 +518,7 @@ public class EntityChannelServiceImpl implements EntityChannelService {
             int maxErrors = 100;
             List<String> errors = new ArrayList<>();
             List<EntityChannel> toInsert = new ArrayList<>();
+            List<EntityChannel> toUpdate = new ArrayList<>();   // upsert 命中的待更新记录
 
             // ========== 4. 逐行解析 + 校验 + 收集待插入实体 ==========
             for (int i = 0; i < rows.size(); i++) {
@@ -478,21 +526,8 @@ public class EntityChannelServiceImpl implements EntityChannelService {
                 try {
                     Map<String, Object> row = rows.get(i);
 
-                    // 实体类型
-                    String entityType = strVal(row.get("实体类型(store/customer)"));
-                    if (entityType == null) entityType = strVal(row.get("entityType"));
-                    if (entityType == null || entityType.isEmpty()) {
-                        String raw = strVal(row.values().iterator().next());
-                        if ("店仓".equals(raw) || "store".equalsIgnoreCase(raw)) entityType = "store";
-                        else if ("客户".equals(raw) || "customer".equalsIgnoreCase(raw)) entityType = "customer";
-                    }
-                    if (!"store".equals(entityType) && !"customer".equals(entityType)) {
-                        entityType = normalizeEntityType(entityType);
-                    }
-                    if (entityType == null || entityType.isEmpty()) {
-                        if (errors.size() < maxErrors) errors.add("第" + rowNum + "行：实体类型无效，请填 store 或 customer");
-                        continue;
-                    }
+                    // 实体类型：导入一律按 store 处理（业务已无客户概念），不再读取 Excel 中"实体类型"列。
+                    // 存量 customer 记录不参与比对池、不更新、不删除。
 
                     // 外部ID
                     String externalId = strVal(row.get("外部ID(ERP编码)"));
@@ -507,16 +542,18 @@ public class EntityChannelServiceImpl implements EntityChannelService {
                     if (entityName == null) entityName = strVal(row.get("entityName"));
                     if (entityName == null || entityName.isEmpty()) entityName = externalId;
 
-                    // 品牌
+                    // 品牌 —— 唯一行 = 店铺(externalId)+品牌(brandId)，brandId 必填
                     String brandName = strVal(row.get("品牌名称"));
                     if (brandName == null) brandName = strVal(row.get("brandName"));
                     String brandId = null;
-                    if (brandName != null && !brandName.isEmpty()) {
-                        brandId = brandNameMap.get(brandName);
-                        if (brandId == null) {
-                            if (errors.size() < maxErrors) errors.add("第" + rowNum + "行：品牌「" + brandName + "」未找到");
-                            continue;
-                        }
+                    if (brandName == null || brandName.isEmpty()) {
+                        if (errors.size() < maxErrors) errors.add("第" + rowNum + "行：品牌名称不能为空（店铺+品牌为唯一行）");
+                        continue;
+                    }
+                    brandId = brandNameMap.get(brandName);
+                    if (brandId == null) {
+                        if (errors.size() < maxErrors) errors.add("第" + rowNum + "行：品牌「" + brandName + "」未找到");
+                        continue;
                     }
 
                     // 一级地区
@@ -600,7 +637,8 @@ public class EntityChannelServiceImpl implements EntityChannelService {
                     // 构建 EntityChannel 实体
                     EntityChannel entity = new EntityChannel();
                     entity.setId(generateId());
-                    entity.setEntityType(entityType);
+                    // 导入一律按 store 处理（业务已无客户概念）；customer 历史记录不动
+                    entity.setEntityType("store");
                     entity.setExternalId(externalId);
                     entity.setEntityName(entityName);
                     entity.setBrandId(brandId);
@@ -610,28 +648,44 @@ public class EntityChannelServiceImpl implements EntityChannelService {
                     entity.setChannelDefId(cdId);
                     entity.setChannelNatureId(cnId);
                     entity.setBusinessTypeId(btId);
-                    entity.setStatus(1);
-                    entity.setSort(0);
+                    entity.setStatus(null);
+                    entity.setSort(null);
                     entity.setDeleted(0);
-                    entity.setCreateTime(new java.util.Date());
+                    // createTime/status/sort 仅新增时设；更新时置 null 避免 updateById 覆盖原值
+                    // （尤其 status：导入不应把用户手动停用的记录强制改回启用）
+                    entity.setCreateTime(null);
                     entity.setUpdateTime(new java.util.Date());
 
-                    // 内存去重：与已有记录 + 本批次已收集的记录比对
-                    String dupKey = buildDuplicateKey(entity);
-                    if (existingKeys.contains(dupKey)) {
-                        if (errors.size() < maxErrors)
-                            errors.add("第" + rowNum + "行：该实体渠道配置已存在（重复）");
-                        continue;
+                    // upsert 判定：命中(externalId+brandId 的 store 记录) → 收集待更新；否则 → 待新增
+                    String upsertKey = buildUpsertKey(externalId, brandId);
+                    EntityChannel existed = existingMap.get(upsertKey);
+                    if (existed != null) {
+                        // 命中：复用已存在记录 id，按新属性更新
+                        entity.setId(existed.getId());
+                        // 软删记录命中 → 一并复活(deleted 置回 0)，否则唯一键仍被占用
+                        if (existed.getDeleted() != null && existed.getDeleted() == 1) {
+                            entity.setDeleted(0);
+                        } else {
+                            // 正常记录更新时不应动 deleted 字段，置 null 让 updateById 跳过
+                            entity.setDeleted(null);
+                        }
+                        toUpdate.add(entity);
+                    } else {
+                        // 未命中：新增时补默认值；登记到 map 防本批次内 (externalId+brandId) 重复
+                        entity.setStatus(1);
+                        entity.setSort(0);
+                        entity.setCreateTime(new java.util.Date());
+                        existingMap.put(upsertKey, entity);
+                        toInsert.add(entity);
                     }
-                    existingKeys.add(dupKey); // 加入集合，防止本批次内重复
-                    toInsert.add(entity);
 
                 } catch (Exception e) {
                     if (errors.size() < maxErrors) errors.add("第" + rowNum + "行：解析异常 - " + e.getMessage());
                 }
             }
 
-            // ========== 5. 批量插入（SqlSession BATCH 模式） ==========
+            // ========== 5. 批量写入：新增走 BATCH insert，更新走逐条 updateById ==========
+            // 新增：SqlSession BATCH 模式批量插入
             if (!toInsert.isEmpty()) {
                 try (SqlSession sqlSession = sqlSessionFactory.openSession(ExecutorType.BATCH, false)) {
                     EntityChannelMapper batchMapper = sqlSession.getMapper(EntityChannelMapper.class);
@@ -646,15 +700,22 @@ public class EntityChannelServiceImpl implements EntityChannelService {
                     sqlSession.commit();
                 }
             }
+            // 更新：upsert 命中的记录，按 id 更新渠道属性/地区等字段
+            for (EntityChannel upd : toUpdate) {
+                entityChannelMapper.updateById(upd);
+            }
 
-            int failCount = rows.size() - toInsert.size();
+            // fail = 总行数 - 新增 - 更新（剩下的都是校验报错跳过的）
+            int failCount = rows.size() - toInsert.size() - toUpdate.size();
             if (failCount > maxErrors && !errors.isEmpty()) {
                 errors.add("...共 " + failCount + " 条错误，仅显示前 " + maxErrors + " 条");
             }
 
             Map<String, Object> result = new HashMap<>();
             result.put("total", rows.size());
-            result.put("success", toInsert.size());
+            result.put("success", toInsert.size() + toUpdate.size());  // 成功 = 新增 + 更新
+            result.put("inserted", toInsert.size());                    // 新增条数
+            result.put("updated", toUpdate.size());                     // 更新条数
             result.put("fail", failCount);
             result.put("errors", errors);
             return result;
@@ -677,19 +738,11 @@ public class EntityChannelServiceImpl implements EntityChannelService {
     }
 
     /**
-     * 构建去重key：与 isDuplicate 逻辑一致的字段组合
+     * 构建 upsert 命中 key：external_id + brand_id
+     * 与 DB 唯一约束 uk_external_brand 维度一致，用于导入时判定"新增 vs 更新"。
      */
-    private String buildDuplicateKey(EntityChannel ec) {
-        return String.join("|",
-                nullSafe(ec.getEntityType()),
-                nullSafe(ec.getExternalId()),
-                nullSafe(ec.getBrandId()),
-                nullSafe(ec.getChannelTypeId()),
-                nullSafe(ec.getChannelDefId()),
-                nullSafe(ec.getChannelNatureId()),
-                nullSafe(ec.getBusinessTypeId()),
-                nullSafe(ec.getRegionLevel1Id()),
-                nullSafe(ec.getRegionLevel2Id()));
+    private String buildUpsertKey(String externalId, String brandId) {
+        return nullSafe(externalId) + "|" + nullSafe(brandId);
     }
 
     private String nullSafe(String val) {
@@ -700,15 +753,6 @@ public class EntityChannelServiceImpl implements EntityChannelService {
         if (val == null) return null;
         String s = String.valueOf(val).trim();
         return s.isEmpty() ? null : s;
-    }
-
-    private String normalizeEntityType(String raw) {
-        if (raw == null) return null;
-        switch (raw) {
-            case "店仓": case "店铺": case "门店": return "store";
-            case "客户": return "customer";
-            default: return raw.equalsIgnoreCase("store") ? "store" : (raw.equalsIgnoreCase("customer") ? "customer" : null);
-        }
     }
 
     private <T> Map<String, String> buildNameToIdMap(List<T> list, Function<T, String> nameMapper, Function<T, String> idMapper) {

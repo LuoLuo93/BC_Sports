@@ -192,6 +192,14 @@ public class ErpEmployeeSyncTask {
             String staffName = detail.getStaffName();
             String staffNo = detail.getStaffNo();
 
+            // 离职状态(LEAVED/QUIT)不同步到ERP
+            String staffStatus = detail.getStaffStatus();
+            if ("LEAVED".equals(staffStatus) || "QUIT".equals(staffStatus)) {
+                String msg = "员工已离职(" + staffStatus + "), 跳过同步";
+                erpSyncService.markSyncSkipped(syncType, employeeId, staffName, staffNo);
+                return msg;
+            }
+
             SyncResult result;
             switch (syncType) {
                 case "ONBOARDING":

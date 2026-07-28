@@ -24,9 +24,6 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.apache.ibatis.session.SqlSessionFactory;
-import org.apache.ibatis.session.SqlSession;
-import org.apache.ibatis.session.ExecutorType;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -63,9 +60,6 @@ public class EntityChannelServiceImpl implements EntityChannelService {
 
     @Autowired
     private BrandMapper brandMapper;
-
-    @Autowired
-    private SqlSessionFactory sqlSessionFactory;
 
     @Override
     public PageResult<EntityChannelVO> pageEntityChannels(PageQuery pageQuery, EntityChannelQueryDTO queryDTO) {
@@ -675,37 +669,35 @@ public class EntityChannelServiceImpl implements EntityChannelService {
                 }
             }
 
-            // ========== 5. 批量写入：新增走 BATCH insert，更新走逐条 updateById ==========
-            // 新增：SqlSession BATCH 模式批量插入
-            if (!toInsert.isEmpty()) {
-                try (SqlSession sqlSession = sqlSessionFactory.openSession(ExecutorType.BATCH, false)) {
-                    EntityChannelMapper batchMapper = sqlSession.getMapper(EntityChannelMapper.class);
-                    for (int i = 0; i < toInsert.size(); i++) {
-                        batchMapper.insert(toInsert.get(i));
-                        // 每1000条 flush 一次，避免内存堆积
-                        if ((i + 1) % 1000 == 0) {
-                            sqlSession.flushStatements();
-                        }
+            // ========== 5. 批量写入：新增逐条 insert(冲突降级为错误而非整批失败)，更新走 updateById ==========
+            // 原方案用 BATCH insert，但任何一条违反唯一约束会导致整批 flushStatements 抛 BatchUpdateException，
+            // 已成功的也无法提交，用户体验差。改为逐条 insert：单条冲突只记错误跳过，其余继续。
+            for (EntityChannel ins : toInsert) {
+                try {
+                    entityChannelMapper.insert(ins);
+                } catch (org.springframework.dao.DuplicateKeyException dke) {
+                    if (errors.size() < maxErrors) {
+                        errors.add("店铺「" + ins.getExternalId() + "」+品牌冲突：该组合已存在或与其它行重复（" + dke.getMostSpecificCause().getMessage() + "）");
                     }
-                    sqlSession.flushStatements();
-                    sqlSession.commit();
                 }
             }
+            // 统计实际新增成功条数（toInsert 中未抛冲突的）
+            int insertedOk = toInsert.size() - (int) errors.stream().filter(e -> e.contains("冲突")).count();
             // 更新：upsert 命中的记录，按 id 更新渠道属性/地区等字段
             for (EntityChannel upd : toUpdate) {
                 entityChannelMapper.updateById(upd);
             }
 
-            // fail = 总行数 - 新增 - 更新（剩下的都是校验报错跳过的）
-            int failCount = rows.size() - toInsert.size() - toUpdate.size();
+            // fail = 总行数 - 成功新增 - 更新（剩下的都是校验报错跳过的）
+            int failCount = rows.size() - insertedOk - toUpdate.size();
             if (failCount > maxErrors && !errors.isEmpty()) {
                 errors.add("...共 " + failCount + " 条错误，仅显示前 " + maxErrors + " 条");
             }
 
             Map<String, Object> result = new HashMap<>();
             result.put("total", rows.size());
-            result.put("success", toInsert.size() + toUpdate.size());  // 成功 = 新增 + 更新
-            result.put("inserted", toInsert.size());                    // 新增条数
+            result.put("success", insertedOk + toUpdate.size());  // 成功 = 新增 + 更新
+            result.put("inserted", insertedOk);                        // 实际新增成功条数（排除冲突）
             result.put("updated", toUpdate.size());                     // 更新条数
             result.put("fail", failCount);
             result.put("errors", errors);

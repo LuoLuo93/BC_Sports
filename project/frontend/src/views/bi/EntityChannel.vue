@@ -39,7 +39,7 @@
 
       <div class="table-responsive">
         <el-table v-loading="loading" :data="tableData" border stripe empty-text="暂无数据" :default-sort="{ prop: 'entityType', order: 'ascending' }" @sort-change="handleSortChange">
-          <el-table-column label="#" width="50" align="center">
+          <el-table-column label="#" width="70" align="center">
             <template #default="{ $index }">{{ (query.pageNum - 1) * query.pageSize + $index + 1 }}</template>
           </el-table-column>
           <el-table-column label="类型" width="80" align="center" prop="entityType" sortable="custom">

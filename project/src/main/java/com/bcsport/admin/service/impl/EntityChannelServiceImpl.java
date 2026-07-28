@@ -449,8 +449,11 @@ public class EntityChannelServiceImpl implements EntityChannelService {
         }
 
         List<ChannelType> allChannelTypes = channelTypeMapper.selectList(new QueryWrapper<ChannelType>().eq("deleted", 0));
-        Map<String, String> ctNameMap = allChannelTypes.stream()
-                .collect(Collectors.toMap(ChannelType::getTypeName, ChannelType::getId, (a, b) -> a));
+        // 渠道类型名 → 所有同名节点 id 列表（同名可挂在不同父级下，属正常树结构）
+        Map<String, List<String>> ctNameToIds = new HashMap<>();
+        for (ChannelType ct : allChannelTypes) {
+            ctNameToIds.computeIfAbsent(ct.getTypeName(), k -> new ArrayList<>()).add(ct.getId());
+        }
         Map<String, Map<String, String>> ctChildMap = new HashMap<>();
         for (ChannelType ct : allChannelTypes) {
             if (ct.getParentId() != null && !ct.getParentId().isEmpty()) {
@@ -460,8 +463,11 @@ public class EntityChannelServiceImpl implements EntityChannelService {
         }
 
         List<ChannelNature> allChannelNatures = channelNatureMapper.selectList(new QueryWrapper<ChannelNature>().eq("deleted", 0));
-        Map<String, String> cnNameMap = allChannelNatures.stream()
-                .collect(Collectors.toMap(ChannelNature::getNatureName, ChannelNature::getId, (a, b) -> a));
+        // 渠道性质名 → 所有同名节点 id 列表（同名可挂在不同父级下，与渠道类型同理）
+        Map<String, List<String>> cnNameToIds = new HashMap<>();
+        for (ChannelNature cn : allChannelNatures) {
+            cnNameToIds.computeIfAbsent(cn.getNatureName(), k -> new ArrayList<>()).add(cn.getId());
+        }
         Map<String, Map<String, String>> cnChildMap = new HashMap<>();
         for (ChannelNature cn : allChannelNatures) {
             if (cn.getParentId() != null && !cn.getParentId().isEmpty()) {
@@ -580,23 +586,29 @@ public class EntityChannelServiceImpl implements EntityChannelService {
                         }
                     }
 
-                    // 渠道类型
+                    // 渠道类型（同名可挂在不同父级下，取所有同名节点 id）
                     String ctName = getCol(row, "渠道类型", "channelTypeName");
-                    String ctId = null;
+                    List<String> ctIds = null;
                     if (ctName != null && !ctName.isEmpty()) {
-                        ctId = ctNameMap.get(ctName);
-                        if (ctId == null) {
+                        ctIds = ctNameToIds.get(ctName);
+                        if (ctIds == null || ctIds.isEmpty()) {
                             if (errors.size() < maxErrors) errors.add("第" + rowNum + "行：渠道类型「" + ctName + "」未找到");
                             continue;
                         }
                     }
 
-                    // 渠道定义
+                    // 渠道定义（在所有同名渠道类型的子节点里查找，任一命中即可）
                     String cdName = getCol(row, "渠道定义", "channelDefName");
                     String cdId = null;
-                    if (cdName != null && !cdName.isEmpty() && ctId != null) {
-                        Map<String, String> children = ctChildMap.get(ctId);
-                        cdId = children != null ? children.get(cdName) : null;
+                    String matchedCtId = ctIds != null && !ctIds.isEmpty() ? ctIds.get(0) : null;  // 默认取第一个，命中后覆盖
+                    if (cdName != null && !cdName.isEmpty() && ctIds != null) {
+                        for (String pid : ctIds) {
+                            Map<String, String> children = ctChildMap.get(pid);
+                            if (children != null) {
+                                cdId = children.get(cdName);
+                                if (cdId != null) { matchedCtId = pid; break; }   // 命中即停，记录命中的父级 id
+                            }
+                        }
                         if (cdId == null) {
                             if (errors.size() < maxErrors)
                                 errors.add("第" + rowNum + "行：渠道定义「" + cdName + "」在「" + ctName + "」下未找到");
@@ -604,23 +616,29 @@ public class EntityChannelServiceImpl implements EntityChannelService {
                         }
                     }
 
-                    // 渠道性质
+                    // 渠道性质（同名可挂在不同父级下，取所有同名节点 id）
                     String cnName = getCol(row, "渠道性质", "channelNatureName");
-                    String cnId = null;
+                    List<String> cnIds = null;
                     if (cnName != null && !cnName.isEmpty()) {
-                        cnId = cnNameMap.get(cnName);
-                        if (cnId == null) {
+                        cnIds = cnNameToIds.get(cnName);
+                        if (cnIds == null || cnIds.isEmpty()) {
                             if (errors.size() < maxErrors) errors.add("第" + rowNum + "行：渠道性质「" + cnName + "」未找到");
                             continue;
                         }
                     }
 
-                    // 销售类型
+                    // 销售类型（在所有同名渠道性质的子节点里查找，任一命中即可）
                     String btName = getCol(row, "销售类型", "businessTypeName");
                     String btId = null;
-                    if (btName != null && !btName.isEmpty() && cnId != null) {
-                        Map<String, String> children = cnChildMap.get(cnId);
-                        btId = children != null ? children.get(btName) : null;
+                    String matchedCnId = cnIds != null && !cnIds.isEmpty() ? cnIds.get(0) : null;  // 默认取第一个，命中后覆盖
+                    if (btName != null && !btName.isEmpty() && cnIds != null) {
+                        for (String pid : cnIds) {
+                            Map<String, String> children = cnChildMap.get(pid);
+                            if (children != null) {
+                                btId = children.get(btName);
+                                if (btId != null) { matchedCnId = pid; break; }   // 命中即停，记录命中的父级 id
+                            }
+                        }
                         if (btId == null) {
                             if (errors.size() < maxErrors)
                                 errors.add("第" + rowNum + "行：销售类型「" + btName + "」在「" + cnName + "」下未找到");
@@ -637,9 +655,9 @@ public class EntityChannelServiceImpl implements EntityChannelService {
                     entity.setBrandId(brandId);
                     entity.setRegionLevel1Id(region1Id);
                     entity.setRegionLevel2Id(region2Id);
-                    entity.setChannelTypeId(ctId);
+                    entity.setChannelTypeId(matchedCtId);
                     entity.setChannelDefId(cdId);
-                    entity.setChannelNatureId(cnId);
+                    entity.setChannelNatureId(matchedCnId);
                     entity.setBusinessTypeId(btId);
                     entity.setStatus(null);
                     entity.setSort(null);

@@ -105,7 +105,7 @@
           </el-table-column>
           <el-table-column label="操作" width="140" align="center" fixed="right">
             <template #default="{ row }">
-              <el-button v-if="hasPermission('bi:entity:edit')" type="primary" plain size="small" @click="router.push(`/bi/entity-channel/form?id=${row.id}`)">编辑</el-button>
+              <el-button v-if="hasPermission('bi:entity:edit')" type="primary" plain size="small" @click="goEdit(row)">编辑</el-button>
               <el-button v-if="hasPermission('bi:entity:delete')" type="danger" plain size="small" @click="handleDelete(row)">删除</el-button>
             </template>
           </el-table-column>
@@ -195,6 +195,18 @@ function handleSortChange({ prop, order }) {
     query.orderDirection = undefined
   }
   handleSearch()
+}
+
+// 跳转编辑：把 externalId/entityType/entityName 一并带入 url，
+// 编辑页据此可直接查明细，省掉"按 id 查单条"那次请求
+function goEdit(row) {
+  const params = new URLSearchParams({
+    id: row.id,
+    externalId: row.externalId || '',
+    entityType: row.entityType || '',
+    entityName: row.entityName || ''
+  })
+  router.push(`/bi/entity-channel/form?${params.toString()}`)
 }
 
 async function handleDelete(row) {

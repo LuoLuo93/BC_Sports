@@ -355,7 +355,8 @@ async function handleSubmit() {
   } finally { submitting.value = false }
 }
 
-onMounted(async () => {
+// 加载下拉数据（4 个并行，与明细加载互不阻塞）
+async function loadDropdowns() {
   const [brands, ctTree, cnTree, regions] = await Promise.all([
     getBrandList(), getChannelTypeTree(), getChannelNatureTree(), getRegionTree()
   ])
@@ -363,24 +364,45 @@ onMounted(async () => {
   channelTypeTree.value = ctTree.data || []
   channelNatureTree.value = cnTree.data || []
   regionTree.value = regions.data || []
+}
 
-  if (isEdit.value) {
-    let extId = editExternalId.value
-    let entType = editEntityType.value
+// 加载编辑明细：优先用 url 已带的 externalId/entityType 直接查明细，
+// 仅当只传了 id 没带 externalId 时才"按 id 查单条"补全（兜底）
+// loadingDetail 锁防止 onMounted 与 watch 重复触发导致明细被查 2 次
+const loadingDetail = ref(false)
+async function loadEditData() {
+  if (loadingDetail.value) return
+  loadingDetail.value = true
+  try {
+    // 重置状态
+    selectedDetail.value = []
+    selectedEntities.value = []
+    entityList.value = []
+    searchKeyword.value = ''
+    editEntityName.value = ''
 
-    // 如果是按ID编辑，先获取单条记录拿到实体信息
-    if (editId.value) {
-      const singleRes = await getEntityChannel(editId.value)
+    const id = route.query.id
+    let extId = route.query.externalId || ''
+    let entType = route.query.entityType || ''
+
+    // url 已带 entityName 时直接用（省一次查单条）
+    if (route.query.entityName) {
+      editEntityName.value = route.query.entityName
+    }
+
+    // 兜底：只传了 id 没带 externalId 时，按 id 查单条补全实体信息
+    if (id && !(extId && entType)) {
+      const singleRes = await getEntityChannel(id)
       if (singleRes.data) {
         extId = singleRes.data.externalId
         entType = singleRes.data.entityType
-        editEntityName.value = singleRes.data.entityName || ''
-        editExternalId.value = extId
-        editEntityType.value = entType
+        if (!editEntityName.value) editEntityName.value = singleRes.data.entityName || ''
       }
     }
 
-    // 加载该实体的所有配置
+    editExternalId.value = extId
+    editEntityType.value = entType
+
     if (extId && entType) {
       const res = await getEntityChannelListByEntity(extId, entType)
       if (res.data) {
@@ -389,60 +411,37 @@ onMounted(async () => {
           editEntityName.value = res.data[0].entityName || ''
         }
       }
-      // 搜索区类型固定为 store（业务已无客户概念，仅编辑 customer 存量记录时 editEntityType 保留展示用）
+      // 搜索区类型固定为 store（业务已无客户概念）
       searchType.value = 'store'
       searchKeyword.value = extId
       // 编辑模式搜索栏已禁用，直接显示当前实体，不走模糊搜索避免带出无关结果
       entityList.value = [{ CODE: extId, NAME: editEntityName.value || extId }]
+    } else {
+      searchType.value = 'store'
     }
+  } finally {
+    loadingDetail.value = false
   }
+}
+
+onMounted(() => {
+  // 下拉与明细两组并行：明细不再被下拉加载阻塞，显著减少串行等待
+  loadDropdowns()
+  if (isEdit.value) loadEditData()
 })
 
-// 监听路由变化，处理新建/编辑切换
-watch(() => route.fullPath, async () => {
-  const id = route.query.id
-  const extId = route.query.externalId
-  const entType = route.query.entityType
-
-  // 重置状态
-  selectedDetail.value = []
-  selectedEntities.value = []
-  entityList.value = []
-  searchKeyword.value = ''
-  editEntityName.value = ''
+// 监听路由变化，处理同组件内新建/编辑切换（keep-alive 复用时触发）
+watch(() => route.fullPath, () => {
   editExternalId.value = route.query.externalId || ''
   editEntityType.value = route.query.entityType || ''
-
-  let finalExtId = extId
-  let finalEntType = entType
-
-  if (id) {
-    // 按ID加载单条记录，获取实体信息
-    const singleRes = await getEntityChannel(id)
-    if (singleRes.data) {
-      finalExtId = singleRes.data.externalId
-      finalEntType = singleRes.data.entityType
-      editEntityName.value = singleRes.data.entityName || ''
-      editExternalId.value = finalExtId
-      editEntityType.value = finalEntType
-    }
-  }
-
-  if (finalExtId && finalEntType) {
-    // 加载该实体的所有配置
-    const res = await getEntityChannelListByEntity(finalExtId, finalEntType)
-    if (res.data) {
-      selectedDetail.value = res.data
-      if (res.data.length > 0 && !editEntityName.value) {
-        editEntityName.value = res.data[0].entityName || ''
-      }
-    }
-    // 搜索区类型固定为 store（业务已无客户概念）
-    searchType.value = 'store'
-    searchKeyword.value = finalExtId
-    // 编辑模式搜索栏已禁用，直接显示当前实体，不走模糊搜索避免带出无关结果
-    entityList.value = [{ CODE: finalExtId, NAME: editEntityName.value || finalExtId }]
-  } else {
+  if (isEdit.value) loadEditData()
+  else {
+    // 新建模式：重置明细
+    selectedDetail.value = []
+    selectedEntities.value = []
+    entityList.value = []
+    searchKeyword.value = ''
+    editEntityName.value = ''
     searchType.value = 'store'
   }
 })

@@ -62,13 +62,13 @@
               </div>
             </template>
           </el-table-column>
-          <el-table-column prop="brandName" label="品牌" min-width="90">
+          <el-table-column prop="brandName" label="品牌" min-width="120">
             <template #default="{ row }">
               <div v-if="row.brandName" class="name-cell"><el-icon class="icon-brand" :size="14"><PriceTag /></el-icon><span>{{ row.brandName }}</span></div>
               <span v-else>-</span>
             </template>
           </el-table-column>
-          <el-table-column label="一二级地区" min-width="160">
+          <el-table-column label="一二级地区" min-width="200">
             <template #default="{ row }">
               <template v-if="row.regionLevel1Name">
                 <span>{{ row.regionLevel1Name }}</span>
@@ -78,7 +78,7 @@
               <span v-else>-</span>
             </template>
           </el-table-column>
-          <el-table-column label="渠道类型/定义" min-width="160">
+          <el-table-column label="渠道类型/定义" min-width="130">
             <template #default="{ row }">
               <template v-if="row.channelTypeName">
                 <span>{{ row.channelTypeName }}</span>
@@ -88,7 +88,7 @@
               <span v-else>-</span>
             </template>
           </el-table-column>
-          <el-table-column label="渠道性质/经营类型" min-width="140">
+          <el-table-column label="渠道性质/经营类型" min-width="110">
             <template #default="{ row }">
               <template v-if="row.channelNatureName">
                 <span>{{ row.channelNatureName }}</span>

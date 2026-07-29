@@ -68,7 +68,7 @@
               <span v-else>-</span>
             </template>
           </el-table-column>
-          <el-table-column label="一二级地区" min-width="200">
+          <el-table-column label="一二级地区" min-width="220">
             <template #default="{ row }">
               <template v-if="row.regionLevel1Name">
                 <span>{{ row.regionLevel1Name }}</span>
@@ -78,7 +78,7 @@
               <span v-else>-</span>
             </template>
           </el-table-column>
-          <el-table-column label="渠道类型/定义" min-width="130">
+          <el-table-column label="渠道类型/定义" min-width="110">
             <template #default="{ row }">
               <template v-if="row.channelTypeName">
                 <span>{{ row.channelTypeName }}</span>

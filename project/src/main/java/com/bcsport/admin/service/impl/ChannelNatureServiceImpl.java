@@ -216,7 +216,19 @@ public class ChannelNatureServiceImpl extends ServiceImpl<ChannelNatureMapper, C
             channelNature.setId(getNextId().toString());
         }
         // 日期和删除字段由 MybatisPlusAutoFillHandler 自动填充
-        save(channelNature);
+        // 主键冲突重试：序列偶发不同步时，重新取序列值重试，最多 3 次
+        int maxRetry = 3;
+        for (int i = 0; i < maxRetry; i++) {
+            try {
+                save(channelNature);
+                return;
+            } catch (org.springframework.dao.DuplicateKeyException e) {
+                if (i == maxRetry - 1) {
+                    throw e;
+                }
+                channelNature.setId(getNextId().toString());
+            }
+        }
     }
 
     @Override

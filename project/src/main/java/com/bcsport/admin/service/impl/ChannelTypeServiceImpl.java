@@ -216,7 +216,19 @@ public class ChannelTypeServiceImpl extends ServiceImpl<ChannelTypeMapper, Chann
             channelType.setId(getNextId().toString());
         }
         // 日期和删除字段由 MybatisPlusAutoFillHandler 自动填充
-        save(channelType);
+        // 主键冲突重试：序列偶发不同步时，重新取序列值重试，最多 3 次
+        int maxRetry = 3;
+        for (int i = 0; i < maxRetry; i++) {
+            try {
+                save(channelType);
+                return;
+            } catch (org.springframework.dao.DuplicateKeyException e) {
+                if (i == maxRetry - 1) {
+                    throw e;
+                }
+                channelType.setId(getNextId().toString());
+            }
+        }
     }
 
     @Override

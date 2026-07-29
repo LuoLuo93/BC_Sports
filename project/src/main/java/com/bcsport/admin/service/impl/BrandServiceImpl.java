@@ -55,7 +55,28 @@ public class BrandServiceImpl extends ServiceImpl<BrandMapper, Brand> implements
     @Override
     public boolean addBrand(BrandDTO brandDTO) {
         Brand brand = BeanCopyUtils.copy(brandDTO, Brand.class);
-        return save(brand);
+        // 主键冲突重试：序列偶发与表数据不同步时，重新取序列值重试，最多 3 次
+        return saveWithIdRetry(brand);
+    }
+
+    /**
+     * 带 id 重试的保存：撞主键(DuplicateKeyException)时重新取序列值再试。
+     * 兜底序列与表数据不同步、并发撞 id 等偶发主键冲突。
+     */
+    private boolean saveWithIdRetry(Brand brand) {
+        int maxRetry = 3;
+        for (int i = 0; i < maxRetry; i++) {
+            try {
+                return save(brand);
+            } catch (org.springframework.dao.DuplicateKeyException e) {
+                if (i == maxRetry - 1) {
+                    throw e;   // 最后一次仍冲突，抛出让上层提示
+                }
+                // 重新取序列值再试
+                brand.setId(String.valueOf(baseMapper.selectNextId()));
+            }
+        }
+        return false;
     }
 
     @Override

@@ -82,14 +82,16 @@ public interface ErpEmployeeSyncStatusMapper extends BaseMapper<ErpEmployeeSyncS
     void upsertByEmployeeIdAndType(@Param("entity") ErpEmployeeSyncStatus entity);
 
     /**
-     * 查询待同步的入职人员（effective sync status = 0 或 2）
+     * 查询待同步的入职人员（最近 days 天内新增 且 effective sync status = 0 或 2）
+     * @param syncDates 限定的 sync_date 日期列表（通常为 [昨天, 今天]）
      */
-    List<ErpEmployeeVO> selectPendingOnboardings();
+    List<ErpEmployeeVO> selectPendingOnboardings(@Param("syncDates") List<java.util.Date> syncDates);
 
     /**
-     * 查询待同步的变更人员（effective sync status = 0 或 2）
+     * 查询待同步的变更人员（最近 days 天内修改 且 effective sync status = 0 或 2）
+     * @param syncDates 限定的 sync_date 日期列表（通常为 [昨天, 今天]）
      */
-    List<ErpEmployeeVO> selectPendingUpdates();
+    List<ErpEmployeeVO> selectPendingUpdates(@Param("syncDates") List<java.util.Date> syncDates);
 
     /**
      * 查询待同步的离职人员（sync_status = 0, 2 或 null）

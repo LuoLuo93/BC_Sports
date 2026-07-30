@@ -11,6 +11,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -65,9 +68,21 @@ public class ErpEmployeeSyncTask {
         int skipCount = 0;
 
         try {
-            // 1. 入职同步
-            List<ErpEmployeeVO> onboardings = syncStatusMapper.selectPendingOnboardings();
-            log.info("待同步入职人员: {}", onboardings.size());
+            // 时间窗口：今天 + 昨天（对齐企微同步，避免全表扫描历史数据）
+            // 漏数据时可通过管理页面手动点击 syncSingle 补偿
+            Calendar cal = Calendar.getInstance();
+            cal.set(Calendar.HOUR_OF_DAY, 0);
+            cal.set(Calendar.MINUTE, 0);
+            cal.set(Calendar.SECOND, 0);
+            cal.set(Calendar.MILLISECOND, 0);
+            Date today = cal.getTime();
+            cal.add(Calendar.DAY_OF_MONTH, -1);
+            Date yesterday = cal.getTime();
+            List<Date> syncDates = Arrays.asList(yesterday, today);
+
+            // 1. 入职同步（限最近2天，且 effective sync status = 0/2）
+            List<ErpEmployeeVO> onboardings = syncStatusMapper.selectPendingOnboardings(syncDates);
+            log.info("待同步入职人员(最近2天): {}", onboardings.size());
             for (ErpEmployeeVO vo : onboardings) {
                 int[] result = syncOne("ONBOARDING", vo.getEmployeeId(), vo.getStaffName(), vo.getStaffNo());
                 successCount += result[0];
@@ -75,9 +90,9 @@ public class ErpEmployeeSyncTask {
                 skipCount += result[2];
             }
 
-            // 2. 变更同步
-            List<ErpEmployeeVO> updates = syncStatusMapper.selectPendingUpdates();
-            log.info("待同步变更人员: {}", updates.size());
+            // 2. 变更同步（限最近2天，且 effective sync status = 0/2）
+            List<ErpEmployeeVO> updates = syncStatusMapper.selectPendingUpdates(syncDates);
+            log.info("待同步变更人员(最近2天): {}", updates.size());
             for (ErpEmployeeVO vo : updates) {
                 int[] result = syncOne("UPDATE", vo.getEmployeeId(), vo.getStaffName(), vo.getStaffNo());
                 successCount += result[0];

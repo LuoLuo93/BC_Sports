@@ -240,6 +240,14 @@
         FROM (
             SELECT employees_id, MAX(sync_date) AS sync_date
             FROM employee_additions
+            <where>
+                <if test="syncDates != null and syncDates.size() > 0">
+                    AND CONVERT(DATE, sync_date) IN
+                    <foreach collection="syncDates" item="d" open="(" separator="," close=")">
+                        #{d}
+                    </foreach>
+                </if>
+            </where>
             GROUP BY employees_id
         ) ea_latest
         INNER JOIN employee_information ei ON ea_latest.employees_id = ei.id
@@ -265,6 +273,14 @@
         FROM (
             SELECT staff_id, MAX(sync_date) AS sync_date
             FROM employee_modifications
+            <where>
+                <if test="syncDates != null and syncDates.size() > 0">
+                    AND CONVERT(DATE, sync_date) IN
+                    <foreach collection="syncDates" item="d" open="(" separator="," close=")">
+                        #{d}
+                    </foreach>
+                </if>
+            </where>
             GROUP BY staff_id
         ) em_latest
         INNER JOIN employee_information ei ON em_latest.staff_id = ei.id

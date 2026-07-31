@@ -106,6 +106,7 @@ public class StickerSizeGroupService {
         entity.setUpdateBy(currentUser);
         entity.setUpdateTime(now);
         groupMapper.insert(entity);
+        validateSizes(entity.getSizes());
         saveSizes(entity.getId(), entity.getSizes(), now);
     }
 
@@ -127,6 +128,7 @@ public class StickerSizeGroupService {
         entity.setUpdateBy(ShiroSecurityUtils.getCurrentUsername());
         entity.setUpdateTime(LocalDateTime.now());
         groupMapper.updateById(entity);
+        validateSizes(entity.getSizes());
         // 差量更新尺码明细: 保留已有id -> 更新; 无id -> 新增; 前端去掉的 -> 软删
         diffUpdateSizes(id, entity.getSizes(), LocalDateTime.now());
     }
@@ -142,6 +144,34 @@ public class StickerSizeGroupService {
         }
         groupMapper.deleteById(id);
         sizeMapper.delete(new LambdaQueryWrapper<StickerSize>().eq(StickerSize::getGroupId, id));
+    }
+
+    /**
+     * 校验尺码明细列表：尺码编码/名称都必填，且尺码编码在本组内唯一。
+     * 适用于新增、编辑、导入三个入口（在 saveSizes/diffUpdateSizes 前调用）。
+     */
+    private void validateSizes(List<StickerSize> sizes) {
+        if (sizes == null || sizes.isEmpty()) {
+            throw new BusinessException("请至少添加一个尺码");
+        }
+        Set<String> seenCodes = new HashSet<>();
+        int idx = 0;
+        for (StickerSize s : sizes) {
+            idx++;
+            String code = s.getSizeCode() == null ? "" : s.getSizeCode().trim();
+            String name = s.getSizeName() == null ? "" : s.getSizeName().trim();
+            if (code.isEmpty()) {
+                throw new BusinessException("第" + idx + "个尺码：尺码编码不能为空");
+            }
+            if (name.isEmpty()) {
+                throw new BusinessException("第" + idx + "个尺码：尺码名称不能为空");
+            }
+            // 组内尺码编码唯一（trim 后比较，忽略大小写以避免重复）
+            String key = code.toLowerCase();
+            if (!seenCodes.add(key)) {
+                throw new BusinessException("第" + idx + "个尺码：尺码编码「" + code + "」在本组内重复");
+            }
+        }
     }
 
     /**
@@ -362,14 +392,25 @@ public class StickerSizeGroupService {
                     return g;
                 });
 
-                // 3. 纵向布局：当前行即一个尺码(尺码名称为空则跳过该行尺码)
-                if (sizeName != null && !sizeName.isBlank()) {
-                    StickerSize sz = new StickerSize();
-                    sz.setSizeCode(sizeCode);
-                    sz.setSizeName(sizeName);
-                    sz.setSort(pg.sizes.size());
-                    pg.sizes.add(sz);
+                // 3. 纵向布局：当前行即一个尺码(尺码编码/名称都必填)
+                boolean codeBlank = sizeCode == null || sizeCode.isBlank();
+                boolean nameBlank = sizeName == null || sizeName.isBlank();
+                if (codeBlank && nameBlank) {
+                    continue; // 编码名称都空 → 空行跳过
                 }
+                if (codeBlank) {
+                    errors.add("第" + rowNum + "行：尺码编码不能为空");
+                    continue;
+                }
+                if (nameBlank) {
+                    errors.add("第" + rowNum + "行：尺码名称不能为空");
+                    continue;
+                }
+                StickerSize sz = new StickerSize();
+                sz.setSizeCode(sizeCode);
+                sz.setSizeName(sizeName);
+                sz.setSort(pg.sizes.size());
+                pg.sizes.add(sz);
             } catch (Exception e) {
                 errors.add("第" + rowNum + "行：" + e.getMessage());
             }
@@ -382,6 +423,8 @@ public class StickerSizeGroupService {
 
         for (ParsedGroup pg : groupMap.values()) {
             try {
+                // 校验尺码明细：编码/名称必填 + 组内编码唯一（含本次新增与已有存量的合并校验见下）
+                validateSizes(pg.sizes);
                 // 查重：同 brandId + kindId + groupCode
                 StickerSizeGroup existing = groupMapper.selectOne(
                         new LambdaQueryWrapper<StickerSizeGroup>()

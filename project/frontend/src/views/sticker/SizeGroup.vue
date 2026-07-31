@@ -81,83 +81,95 @@
     </el-card>
 
     <!-- 新增/编辑弹窗 -->
-    <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑尺码组' : '新增尺码组'" width="780px" class="size-group-dialog" destroy-on-close>
+    <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑尺码组' : '新增尺码组'" width="820px" class="size-group-dialog" destroy-on-close>
       <el-form :model="form" :rules="rules" ref="formRef" label-width="80px" class="size-group-form">
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="组编码" prop="groupCode">
-              <el-input v-model="form.groupCode" placeholder="如 AD-OUTERWEAR" maxlength="50" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="组名称" prop="groupName">
-              <el-input v-model="form.groupName" placeholder="如 阿迪外衣尺码组" maxlength="100" />
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="品牌" prop="brandId">
-              <el-select v-model="form.brandId" placeholder="选择品牌" filterable style="width:100%" @change="onBrandChange">
-                <el-option v-for="b in brandList" :key="b.ID" :label="b.ATTRIBNAME" :value="b.ID" />
-              </el-select>
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="类别" prop="kindId">
-              <el-select v-model="form.kindId" placeholder="选择类别" filterable style="width:100%" @change="onKindChange">
-                <el-option v-for="k in kindList" :key="k.ID" :label="k.ATTRIBNAME" :value="k.ID" />
-              </el-select>
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="排序">
-              <el-input-number v-model="form.sort" :min="0" :max="999999" controls-position="right" style="width:100%" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="状态">
-              <el-radio-group v-model="form.status">
-                <el-radio :value="1">启用</el-radio>
-                <el-radio :value="0">停用</el-radio>
-              </el-radio-group>
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-form-item label="备注">
-          <el-input v-model="form.remark" type="textarea" :rows="2" maxlength="500" placeholder="请输入备注" />
-        </el-form-item>
-
-        <el-divider content-position="left">尺码明细</el-divider>
-        <div style="margin-bottom:12px">
-          <el-button type="primary" plain size="small" :icon="Plus" @click="addSizeRow">添加尺码</el-button>
-          <span style="margin-left:8px;color:var(--el-text-color-secondary);font-size:12px">尺码名称为空的行保存时自动忽略</span>
+        <!-- 区块一：基本信息 -->
+        <div class="sg-section">
+          <div class="sg-section-title">
+            <el-icon><InfoFilled /></el-icon>
+            <span>基本信息</span>
+          </div>
+          <el-row :gutter="20">
+            <el-col :span="12">
+              <el-form-item label="组编码" prop="groupCode">
+                <el-input v-model="form.groupCode" placeholder="如 AD-OUTERWEAR" maxlength="50" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="组名称" prop="groupName">
+                <el-input v-model="form.groupName" placeholder="如 阿迪外衣尺码组" maxlength="100" />
+              </el-form-item>
+            </el-col>
+          </el-row>
+          <el-row :gutter="20">
+            <el-col :span="12">
+              <el-form-item label="品牌" prop="brandId">
+                <el-select v-model="form.brandId" placeholder="选择品牌" filterable style="width:100%" @change="onBrandChange">
+                  <el-option v-for="b in brandList" :key="b.ID" :label="b.ATTRIBNAME" :value="b.ID" />
+                </el-select>
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="类别" prop="kindId">
+                <el-select v-model="form.kindId" placeholder="选择类别" filterable style="width:100%" @change="onKindChange">
+                  <el-option v-for="k in kindList" :key="k.ID" :label="k.ATTRIBNAME" :value="k.ID" />
+                </el-select>
+              </el-form-item>
+            </el-col>
+          </el-row>
+          <el-row :gutter="20">
+            <el-col :span="12">
+              <el-form-item label="排序">
+                <el-input-number v-model="form.sort" :min="0" :max="999999" controls-position="right" style="width:100%" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="状态">
+                <el-radio-group v-model="form.status">
+                  <el-radio :value="1">启用</el-radio>
+                  <el-radio :value="0">停用</el-radio>
+                </el-radio-group>
+              </el-form-item>
+            </el-col>
+          </el-row>
+          <el-form-item label="备注">
+            <el-input v-model="form.remark" type="textarea" :rows="2" maxlength="500" placeholder="请输入备注" />
+          </el-form-item>
         </div>
-        <el-table :data="form.sizes" border size="small">
-          <el-table-column type="index" label="#" width="50" align="center" />
-          <el-table-column label="尺码编码" width="160">
-            <template #default="{ row }">
-              <el-input v-model="row.sizeCode" placeholder="如 S / 38" size="small" maxlength="50" />
-            </template>
-          </el-table-column>
-          <el-table-column label="尺码名称" min-width="160">
-            <template #default="{ row }">
-              <el-input v-model="row.sizeName" placeholder="必填" size="small" maxlength="50" />
-            </template>
-          </el-table-column>
-          <el-table-column label="排序" width="120">
-            <template #default="{ row }">
-              <el-input-number v-model="row.sort" :min="0" :max="999999" size="small" controls-position="right" style="width:100%" />
-            </template>
-          </el-table-column>
-          <el-table-column label="操作" width="80" align="center">
-            <template #default="{ $index }">
-              <el-button type="danger" plain size="small" @click="removeSizeRow($index)">删除</el-button>
-            </template>
-          </el-table-column>
-        </el-table>
+
+        <!-- 区块二：尺码明细 -->
+        <div class="sg-section">
+          <div class="sg-section-title">
+            <el-icon><Operation /></el-icon>
+            <span>尺码明细</span>
+            <span class="sg-section-count">共 {{ form.sizes.length }} 条</span>
+            <el-button class="sg-section-add" type="primary" plain size="small" :icon="Plus" @click="addSizeRow">添加尺码</el-button>
+          </div>
+          <el-table :data="form.sizes" border size="small" empty-text="暂无尺码，点击「添加尺码」">
+            <el-table-column type="index" label="#" width="50" align="center" />
+            <el-table-column label="尺码编码" width="180">
+              <template #default="{ row }">
+                <el-input v-model="row.sizeCode" placeholder="如 S / 38" size="small" maxlength="50" />
+              </template>
+            </el-table-column>
+            <el-table-column label="尺码名称" min-width="180">
+              <template #default="{ row }">
+                <el-input v-model="row.sizeName" placeholder="必填" size="small" maxlength="50" />
+              </template>
+            </el-table-column>
+            <el-table-column label="排序" width="130">
+              <template #default="{ row }">
+                <el-input-number v-model="row.sort" :min="0" :max="999999" size="small" controls-position="right" style="width:100%" />
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="80" align="center">
+              <template #default="{ $index }">
+                <el-button type="danger" plain size="small" @click="removeSizeRow($index)">删除</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+          <div class="sg-hint">尺码名称为空的行保存时自动忽略</div>
+        </div>
       </el-form>
       <template #footer>
         <div class="dialog-footer">
@@ -205,7 +217,7 @@
 <script setup>
 import { ref, reactive, onMounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, RefreshRight, Plus, Upload } from '@element-plus/icons-vue'
+import { Search, RefreshRight, Plus, Upload, InfoFilled, Operation } from '@element-plus/icons-vue'
 import request from '@/api/request'
 import { getProductBrands, getSizeGroupPage, getSizeGroup, createSizeGroup, updateSizeGroup, deleteSizeGroup } from '@/api/sticker'
 import { usePageQuery } from '@/composables/usePageQuery'
@@ -320,8 +332,29 @@ async function handleSave() {
   try {
     await formRef.value.validate()
   } catch { return }
-  // 校验至少有一条非空尺码名称
-  const validSizes = (form.sizes || []).filter(s => s.sizeName && s.sizeName.trim())
+  // 校验尺码明细：尺码编码/名称都必填 + 尺码编码组内唯一
+  const seenCodes = new Set()
+  for (let i = 0; i < (form.sizes || []).length; i++) {
+    const s = form.sizes[i]
+    const code = (s.sizeCode || '').trim()
+    const name = (s.sizeName || '').trim()
+    if (!code && !name) continue // 空行忽略
+    if (!code) {
+      ElMessage.warning(`第${i + 1}行：尺码编码不能为空`)
+      return
+    }
+    if (!name) {
+      ElMessage.warning(`第${i + 1}行：尺码名称不能为空`)
+      return
+    }
+    const key = code.toLowerCase()
+    if (seenCodes.has(key)) {
+      ElMessage.warning(`第${i + 1}行：尺码编码「${code}」在本组内重复`)
+      return
+    }
+    seenCodes.add(key)
+  }
+  const validSizes = (form.sizes || []).filter(s => s.sizeCode?.trim() && s.sizeName?.trim())
   if (!validSizes.length) {
     ElMessage.warning('请至少添加一个尺码')
     return
@@ -440,6 +473,47 @@ onMounted(() => {
 .size-group-form :deep(.el-form-item__label) {
   font-weight: 500;
   color: #374151;
+}
+
+/* 区块：基本信息 / 尺码明细 */
+.sg-section {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px 16px 4px;
+  margin-bottom: 16px;
+}
+.sg-section-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e40af;
+  padding-bottom: 10px;
+  margin-bottom: 12px;
+  border-bottom: 2px solid #e0e7ff;
+}
+.sg-section-title .el-icon {
+  font-size: 16px;
+  color: #6366f1;
+}
+.sg-section-count {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6366f1;
+  background: #eef2ff;
+  padding: 1px 8px;
+  border-radius: 10px;
+}
+.sg-section-add {
+  margin-left: 8px;
+}
+.sg-hint {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
 }
 
 /* 行间距 */

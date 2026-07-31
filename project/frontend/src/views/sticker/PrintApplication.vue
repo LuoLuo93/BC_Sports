@@ -229,19 +229,8 @@
               </el-table-column>
               <el-table-column label="矫正尺码" width="120" fixed="right">
                 <template #default="{ row }">
-                  <el-select
-                    v-model="row.localSizeId"
-                    placeholder="选择"
-                    filterable
-                    clearable
-                    size="small"
-                    style="width:100%"
-                    :disabled="!row.localGroupId"
-                    @change="onLocalSizeChange(row)"
-                    @visible-change="(v) => { if (v) ensureLocalSizeOptions(row) }"
-                  >
-                    <el-option v-for="s in getLocalSizeOptions(row)" :key="s.id" :label="s.sizeName" :value="s.id" />
-                  </el-select>
+                  <el-tag v-if="row.localSizeName" type="success" size="small" effect="plain">{{ row.localSizeName }}</el-tag>
+                  <span v-else style="color:#c0c4cc">无</span>
                 </template>
               </el-table-column>
               <el-table-column label="尺码" width="80" align="center" fixed="right">
@@ -537,8 +526,14 @@ async function handleEdit(row) {
   selectedProducts.value = []
   loadBrands()
   formVisible.value = true
-  // 编辑模式：预加载已有本地尺码组/尺码的选项缓存，确保 el-select 能显示 label 而非 id
-  preloadLocalCaches()
+  // 编辑模式：预加载已有矫正组的尺码缓存(确保 el-select 显示 label 而非 id)，
+  // 随后按 sizeName↔sizeCode 规则对已存明细重新匹配矫正尺码，覆盖历史数据(所见即所得)
+  await preloadLocalCaches()
+  for (const d of form.details) {
+    if (d.sizeName && d.localGroupId) {
+      autoMatchLocalSize(d)
+    }
+  }
 }
 
 function handleView(row) {
@@ -845,7 +840,7 @@ function toggleSizeAssignAll(checked) {
   }
 }
 
-function confirmSizeAssign() {
+async function confirmSizeAssign() {
   const checked = sizeAssignOptions.value.filter(item => item.checked)
   if (!checked.length) {
     ElMessage.warning('请至少选择一个尺码')
@@ -853,6 +848,10 @@ function confirmSizeAssign() {
   }
   const idx = sizeAssignRowIndex.value
   const orig = form.details[idx]
+  // 确保该货品的矫正尺码组明细已加载进缓存，供下方按 sizeName↔sizeCode 自动匹配
+  if (orig.localGroupId) {
+    await ensureLocalSizeCache(orig.localGroupId)
+  }
   // 找到同货号所有行的位置，记录首个位置用于插入
   let firstIdx = -1
   const removeIndices = []
@@ -869,7 +868,7 @@ function confirmSizeAssign() {
   // 在原首个位置插入勾选的尺码
   const insertAt = firstIdx >= 0 ? firstIdx : idx
   for (let i = 0; i < checked.length; i++) {
-    form.details.splice(insertAt + i, 0, {
+    const newRow = {
       productId: orig.productId,
       materialNumber: orig.materialNumber,
       styleNumber: orig.styleNumber,
@@ -897,29 +896,22 @@ function confirmSizeAssign() {
       printQty: checked[i].qty,
       localGroupId: orig.localGroupId || '',
       localGroupName: orig.localGroupName || '',
-      localSizeId: orig.localSizeId || '',
-      localSizeName: orig.localSizeName || ''
-    })
+      localSizeId: '',
+      localSizeName: ''
+    }
+    // 按显示尺码(sizeName)↔ 矫正尺码 sizeCode 自动匹配矫正尺码(每行独立)
+    autoMatchLocalSize(newRow)
+    form.details.splice(insertAt + i, 0, newRow)
   }
   showSizeAssignDialog.value = false
 }
 
 // ─── Local Size Group (本地尺码组) ───────────────────────
-// 缓存: brandId|kindId -> 组列表 ; groupId -> 尺码列表
-// 缓存: groupId -> 尺码列表（矫正尺码组只读带入，只需尺码列表缓存）
+// 缓存: groupId -> 尺码列表（矫正尺码组只读带入，自动匹配 sizeName↔sizeCode 时读取）
 const localSizeCache = reactive({})
 const sizeLoadingKeys = new Set()
 
-function getLocalSizeOptions(row) {
-  return localSizeCache[row.localGroupId] || []
-}
-
-async function ensureLocalSizeOptions(row) {
-  if (!row.localGroupId) return
-  await ensureLocalSizeCache(row.localGroupId)
-}
-
-/** 按 groupId 预加载该组尺码列表到缓存(矫正尺码下拉用) */
+/** 按 groupId 预加载该组尺码列表到缓存(自动匹配矫正尺码用) */
 async function ensureLocalSizeCache(groupId) {
   if (!groupId) return
   const key = groupId
@@ -935,8 +927,7 @@ async function ensureLocalSizeCache(groupId) {
   }
 }
 
-// 编辑模式：遍历已有明细，预加载尺码组列表和尺码列表缓存
-// 编辑模式：遍历已有明细，预加载矫正组的尺码列表缓存（矫正尺码下拉用）
+// 编辑模式：遍历已有明细，预加载矫正组的尺码列表缓存（自动匹配矫正尺码用）
 async function preloadLocalCaches() {
   const details = form.details
   if (!details?.length) return
@@ -961,10 +952,31 @@ async function preloadLocalCaches() {
   if (promises.length) await Promise.all(promises)
 }
 
-function onLocalSizeChange(row) {
-  // 选尺码: 同步尺码名
-  const s = getLocalSizeOptions(row).find(item => item.id === row.localSizeId)
-  row.localSizeName = s ? s.sizeName : ''
+/**
+ * 自动匹配矫正尺码：拿明细行显示的 ERP 尺码值(sizeName)，
+ * 去 localGroupId 对应的矫正尺码组明细里按 sizeCode 查同名项。
+ * 匹配上 → localSizeId = 该矫正尺码id, localSizeName = 该矫正尺码 sizeName(打印用)；
+ * 匹配不上 → 两者置空(不显示)。
+ * @param row 明细行(就地修改 localSizeId/localSizeName)
+ */
+function autoMatchLocalSize(row) {
+  if (!row.localGroupId || !row.sizeName) {
+    row.localSizeId = ''
+    row.localSizeName = ''
+    return
+  }
+  // sizeName 比较：统一去空白后精确比较，避免 "40 " vs "40" 差异
+  const target = String(row.sizeName).trim()
+  const match = (localSizeCache[row.localGroupId] || []).find(
+    s => String(s.sizeCode || '').trim() === target
+  )
+  if (match) {
+    row.localSizeId = match.id || ''
+    row.localSizeName = match.sizeName || ''
+  } else {
+    row.localSizeId = ''
+    row.localSizeName = ''
+  }
 }
 
 // ─── Size Parser ───────────────────────────────────────

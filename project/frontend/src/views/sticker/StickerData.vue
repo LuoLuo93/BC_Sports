@@ -5,15 +5,17 @@
         <el-form-item label="货号">
           <el-input v-model="query.materialNumber" placeholder="请输入货号" clearable style="min-width:130px;max-width:170px" @keyup.enter="onSearch" />
         </el-form-item>
-        <el-form-item label="款号">
-          <el-input v-model="query.styleNumber" placeholder="请输入款号" clearable style="min-width:130px;max-width:170px" @keyup.enter="onSearch" />
-        </el-form-item>
         <el-form-item label="货品名称">
           <el-input v-model="query.materialName" placeholder="请输入货品名称" clearable style="min-width:150px;max-width:200px" @keyup.enter="onSearch" />
         </el-form-item>
         <el-form-item label="品牌">
           <el-select v-model="query.brandId" placeholder="全部" clearable filterable style="min-width:110px;max-width:140px">
             <el-option v-for="b in brandList" :key="b.ID" :label="b.ATTRIBNAME" :value="b.ID" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="类别">
+          <el-select v-model="query.kindId" placeholder="全部" clearable filterable style="min-width:110px;max-width:140px">
+            <el-option v-for="k in kindList" :key="k.ID" :label="k.ATTRIBNAME" :value="k.ID" />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -98,17 +100,18 @@ import { useRouter } from 'vue-router'
 import { Search, RefreshRight } from '@element-plus/icons-vue'
 import { usePageQuery } from '@/composables/usePageQuery'
 import { PAGE_SIZES } from '@/utils/appConfig'
-import { getStickerDataPage, getStickerBrands } from '@/api/sticker'
+import { getStickerDataPage, getStickerBrands, getStickerKinds } from '@/api/sticker'
 
 defineOptions({ name: 'StickerData' })
 
 const router = useRouter()
 
 const { loading, tableData, total, query, loadData, handleSearch } = usePageQuery(getStickerDataPage, {
-  materialNumber: '', styleNumber: '', materialName: '', brandId: ''
+  materialNumber: '', materialName: '', brandId: '', kindId: ''
 })
 
 const brandList = ref([])
+const kindList = ref([])
 // 是否已执行过搜索（首次进入未搜索前绝不加载数据，避免大数据量首屏卡顿）
 const hasSearched = ref(false)
 
@@ -122,9 +125,9 @@ function onSearch() {
 function persistQuery() {
   sessionStorage.setItem('stickerDataQuery', JSON.stringify({
     materialNumber: query.materialNumber,
-    styleNumber: query.styleNumber,
     materialName: query.materialName,
     brandId: query.brandId,
+    kindId: query.kindId,
     pageNum: query.pageNum,
     pageSize: query.pageSize
   }))
@@ -145,9 +148,9 @@ function onPageChange() {
 
 function onReset() {
   query.materialNumber = ''
-  query.styleNumber = ''
   query.materialName = ''
   query.brandId = ''
+  query.kindId = ''
   query.pageNum = 1
   tableData.value = []
   total.value = 0
@@ -166,6 +169,13 @@ async function loadBrands() {
   } catch {}
 }
 
+async function loadKinds() {
+  try {
+    const { data } = await getStickerKinds()
+    kindList.value = data || []
+  } catch {}
+}
+
 function restoreAndLoad() {
   const saved = sessionStorage.getItem('stickerDataQuery')
   if (!saved) {
@@ -176,9 +186,9 @@ function restoreAndLoad() {
   try {
     const q = JSON.parse(saved)
     query.materialNumber = q.materialNumber || ''
-    query.styleNumber = q.styleNumber || ''
     query.materialName = q.materialName || ''
     query.brandId = q.brandId || ''
+    query.kindId = q.kindId || ''
     // 恢复分页(翻页/每页条数)，避免返回后 pageSize 被重置为默认值
     query.pageNum = q.pageNum || 1
     query.pageSize = q.pageSize || query.pageSize
@@ -192,6 +202,7 @@ function restoreAndLoad() {
 
 onMounted(() => {
   loadBrands()
+  loadKinds()
   restoreAndLoad()
 })
 

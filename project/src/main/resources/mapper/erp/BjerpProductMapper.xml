@@ -16,6 +16,9 @@
             <if test="brandId != null and brandId != ''">
                 AND product.M_DIM1_ID = #{brandId}
             </if>
+            <if test="kindId != null and kindId != ''">
+                AND product.M_DIM4_ID = #{kindId}
+            </if>
         </where>
     </sql>
 

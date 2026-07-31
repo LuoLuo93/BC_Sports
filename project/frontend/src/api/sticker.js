@@ -48,6 +48,10 @@ export function getStickerBrands() {
   return request.get('/api/sticker/data/brands')
 }
 
+export function getStickerKinds() {
+  return request.get('/api/sticker/data/kinds')
+}
+
 // 按货号查货品详情（贴纸资料详情页用）
 export function getStickerDataDetail(materialNumber) {
   return request.get(`/api/sticker/data/${encodeURIComponent(materialNumber)}`)

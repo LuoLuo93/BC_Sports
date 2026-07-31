@@ -23,11 +23,11 @@ public class StickerDataController {
     @RequiresPermissions("sticker:data:query")
     public Result<PageResult<Map<String, Object>>> page(@Valid PageQuery pageQuery, StickerDataQueryDTO queryDTO) {
         // 数据量较大，必须至少传入一个查询条件才查询，无条件直接返回空（前端已默认不查询，此处为兜底）
-        if (isAllEmpty(queryDTO.getMaterialNumber(), queryDTO.getStyleNumber(),
+        if (isAllEmpty(queryDTO.getMaterialNumber(), queryDTO.getKindId(),
                 queryDTO.getMaterialName(), queryDTO.getBrandId())) {
             return Result.success(PageResult.empty(pageQuery));
         }
-        PageResult<Map<String, Object>> result = stickerPrintService.searchProducts(pageQuery, queryDTO.getMaterialNumber(), queryDTO.getStyleNumber(), queryDTO.getMaterialName(), queryDTO.getBrandId());
+        PageResult<Map<String, Object>> result = stickerPrintService.searchProducts(pageQuery, queryDTO.getMaterialNumber(), queryDTO.getKindId(), queryDTO.getMaterialName(), queryDTO.getBrandId());
         return Result.success(result);
     }
 
@@ -42,6 +42,15 @@ public class StickerDataController {
     @RequiresPermissions("sticker:data:query")
     public Result<?> brands() {
         return Result.success(stickerPrintService.getBrands());
+    }
+
+    /**
+     * 类别下拉（从 ERP M_DIM DIM4 查询），供搜索栏“类别”筛选使用。
+     */
+    @GetMapping("/kinds")
+    @RequiresPermissions("sticker:data:query")
+    public Result<?> kinds() {
+        return Result.success(stickerPrintService.getKinds());
     }
 
     /**

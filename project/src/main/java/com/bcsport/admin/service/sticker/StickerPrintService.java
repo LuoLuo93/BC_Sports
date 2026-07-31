@@ -47,20 +47,20 @@ public class StickerPrintService {
 
     public List<Map<String, Object>> searchProducts(String materialNumber, String styleNumber, String materialName, String brandId) {
         List<Map<String, Object>> records = bjerpProductMapper.searchProducts(
-                escapeLike(materialNumber), escapeLike(styleNumber), escapeLike(materialName), brandId, 0, 500);
+                escapeLike(materialNumber), escapeLike(styleNumber), escapeLike(materialName), brandId, null, 0, 500);
         fillSizeGroupName(records);
         return records;
     }
 
-    public PageResult<Map<String, Object>> searchProducts(PageQuery pageQuery, String materialNumber, String styleNumber, String materialName, String brandId) {
+    public PageResult<Map<String, Object>> searchProducts(PageQuery pageQuery, String materialNumber, String kindId, String materialName, String brandId) {
         int pageSize = Math.max(Math.min(pageQuery.getPageSize() != null ? pageQuery.getPageSize() : 20, 500), 1);
         int pageNum = Math.max(pageQuery.getPageNum() != null ? pageQuery.getPageNum() : 1, 1);
         int offset = (pageNum - 1) * pageSize;
 
-        String mn = escapeLike(materialNumber), sn = escapeLike(styleNumber), mname = escapeLike(materialName);
-        long total = bjerpProductMapper.countProducts(mn, sn, mname, brandId);
+        String mn = escapeLike(materialNumber), mname = escapeLike(materialName);
+        long total = bjerpProductMapper.countProducts(mn, null, mname, brandId, kindId);
         List<Map<String, Object>> records = total > 0
-                ? bjerpProductMapper.searchProducts(mn, sn, mname, brandId, offset, pageSize)
+                ? bjerpProductMapper.searchProducts(mn, null, mname, brandId, kindId, offset, pageSize)
                 : Collections.emptyList();
 
         // 跨库不能 JOIN：收集本页矫正组ID，批量查本地表回填组名
@@ -104,6 +104,10 @@ public class StickerPrintService {
 
     public List<Map<String, Object>> getBrands() {
         return bjerpProductMapper.getBrands();
+    }
+
+    public List<Map<String, Object>> getKinds() {
+        return bjerpProductMapper.getKinds();
     }
 
     /**

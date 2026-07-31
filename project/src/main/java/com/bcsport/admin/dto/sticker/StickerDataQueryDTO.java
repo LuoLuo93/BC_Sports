@@ -15,4 +15,6 @@ public class StickerDataQueryDTO {
     private String materialName;
 
     private String brandId;
+
+    private String kindId;
 }

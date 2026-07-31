@@ -112,7 +112,7 @@
               <span class="info-card-label">组内尺码</span>
               <div class="size-tags-row">
                 <el-tag v-for="s in selectedGroupSizes" :key="s.id || s.sizeName" size="small" effect="plain" class="size-tag">
-                  {{ s.sizeName }}
+                  <span class="size-tag-code">{{ s.sizeCode }}</span><span class="size-tag-sep" v-if="s.sizeCode && s.sizeName">:</span>{{ s.sizeName }}
                 </el-tag>
               </div>
             </div>
@@ -181,17 +181,25 @@
             <el-empty v-if="!sgLoading && !filteredSgOptions.length" description="无匹配尺码组" :image-size="60" />
           </div>
         </div>
-        <!-- 右侧：组内尺码明细 -->
+        <!-- 右侧：组内尺码明细（尺码编码 / 尺码名称 两列） -->
         <div class="sg-picker-right">
           <div class="sg-detail-title">
             组内尺码明细
             <span v-if="tempGroupName" class="sg-detail-sub">— {{ tempGroupName }}</span>
+            <span v-if="tempGroupSizes.length" class="sg-detail-count">共 {{ tempGroupSizes.length }} 条</span>
           </div>
           <div class="sg-detail-body" v-loading="tempSizesLoading">
             <template v-if="tempGroupSizes.length">
-              <el-tag v-for="s in tempGroupSizes" :key="s.id || s.sizeName" size="large" effect="plain" class="sg-size-tag">
-                {{ s.sizeName }}
-              </el-tag>
+              <div class="sg-size-header">
+                <span>尺码编码</span>
+                <span>尺码名称</span>
+              </div>
+              <div class="sg-size-rows">
+                <div v-for="s in tempGroupSizes" :key="s.id || s.sizeName" class="sg-size-row">
+                  <span class="sg-size-code">{{ s.sizeCode || '-' }}</span>
+                  <span class="sg-size-name">{{ s.sizeName || '-' }}</span>
+                </div>
+              </div>
             </template>
             <el-empty v-else-if="!tempSizesLoading" description="请先在左侧选择尺码组" :image-size="60" />
           </div>
@@ -624,6 +632,8 @@ onBeforeRouteLeave(async (_to, _from) => {
   border: 1px solid rgba(0,0,0,0.1);
 }
 .size-tag { margin: 1px 3px 1px 0; }
+.size-tag-code { font-family: 'Cascadia Code', monospace; color: #0f766e; font-weight: 600; }
+.size-tag-sep { margin: 0 1px; color: #cbd5e1; }
 
 /* 矫正组：下拉框 + 组内尺码 左右并排 */
 .size-group-row {
@@ -665,8 +675,8 @@ onBeforeRouteLeave(async (_to, _from) => {
 /* 矫正尺码组选择模态框：左右分栏 */
 .sg-picker {
   display: flex;
-  gap: 12px;
-  height: 440px;
+  gap: 14px;
+  height: 460px;
 }
 .sg-picker-left {
   flex: 0 0 300px;
@@ -678,47 +688,98 @@ onBeforeRouteLeave(async (_to, _from) => {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  background: #f8fafc;
-  border-radius: 8px;
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  border-radius: 10px;
   border: 1px solid #e2e8f0;
-  padding: 10px 12px;
+  padding: 12px 14px;
 }
 /* 左侧组列表（可滚动） */
 .sg-list {
   flex: 1;
   overflow-y: auto;
   border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  border-radius: 10px;
   background: #fff;
 }
 .sg-item {
-  padding: 9px 12px;
+  padding: 10px 14px;
   border-bottom: 1px solid #f1f5f9;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: all 0.15s;
+  border-left: 3px solid transparent;
 }
 .sg-item:last-child { border-bottom: none; }
-.sg-item:hover { background: #f1f5ff; }
-.sg-item.is-active { background: #ecfdf5; border-left: 3px solid #10b981; padding-left: 9px; }
+.sg-item:hover { background: #eff6ff; }
+.sg-item.is-active {
+  background: linear-gradient(90deg, #ecfdf5 0%, #f0fdf4 100%);
+  border-left-color: #10b981;
+}
 .sg-item-name { font-size: 13px; font-weight: 600; color: #1e293b; }
 .sg-item-code { font-size: 11px; color: #94a3b8; margin-top: 2px; font-family: 'Cascadia Code', monospace; }
-/* 右侧明细标题 + 标签 */
+/* 右侧明细标题 */
 .sg-detail-title {
   font-size: 13px;
   font-weight: 700;
   color: #1e40af;
-  padding-bottom: 8px;
+  padding-bottom: 10px;
   border-bottom: 2px solid #e0e7ff;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
 }
 .sg-detail-sub { font-size: 12px; font-weight: 500; color: #64748b; }
+.sg-detail-count {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 600;
+  color: #6366f1;
+  background: #eef2ff;
+  padding: 1px 8px;
+  border-radius: 10px;
+}
 .sg-detail-body {
   flex: 1;
   overflow-y: auto;
-  display: flex;
-  flex-wrap: wrap;
-  align-content: flex-start;
-  gap: 6px;
+  min-height: 0;
 }
-.sg-size-tag { margin: 0; font-size: 13px; }
+/* 两列明细表头 */
+.sg-size-header {
+  display: flex;
+  gap: 10px;
+  padding: 7px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: #e2e8f0;
+  border-radius: 6px 6px 0 0;
+}
+.sg-size-header span { flex: 1; }
+/* 明细行 */
+.sg-size-rows {
+  border: 1px solid #e2e8f0;
+  border-top: none;
+  border-radius: 0 0 6px 6px;
+  overflow: hidden;
+  background: #fff;
+}
+.sg-size-row {
+  display: flex;
+  gap: 10px;
+  padding: 9px 12px;
+  border-bottom: 1px solid #f1f5f9;
+  transition: background 0.12s;
+}
+.sg-size-row:last-child { border-bottom: none; }
+.sg-size-row:hover { background: #f8fafc; }
+.sg-size-row span { flex: 1; font-size: 13px; line-height: 1.4; }
+.sg-size-code {
+  font-family: 'Cascadia Code', 'Consolas', monospace;
+  font-weight: 600;
+  color: #0f766e;
+}
+.sg-size-name { color: #1e293b; font-weight: 500; }
+
 </style>

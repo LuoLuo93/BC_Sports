@@ -97,9 +97,16 @@
           <div class="size-group-row">
             <div class="info-card editable" style="margin:0;flex:0 0 auto;min-width:160px;">
               <span class="info-card-label">贴纸尺码组</span>
-              <el-select v-model="selectedSizeGroupId" placeholder="请选择尺码组" size="small" filterable clearable style="width:100%" @change="onSizeGroupChange">
-                <el-option v-for="g in sizeGroupOptions" :key="g.id" :label="g.groupName" :value="g.id" />
-              </el-select>
+              <el-button
+                :type="selectedSizeGroupId ? 'primary' : 'default'"
+                size="small"
+                plain
+                style="width:100%"
+                @click="openSizeGroupDialog"
+              >
+                <el-icon style="margin-right:4px"><Search /></el-icon>
+                {{ selectedSizeGroupId ? selectedGroupName : '点击选择尺码组' }}
+              </el-button>
             </div>
             <div v-if="selectedGroupSizes.length" class="info-card" style="margin:0;flex:1;">
               <span class="info-card-label">组内尺码</span>
@@ -139,6 +146,63 @@
         </div>
       </div>
     </div>
+
+    <!-- 矫正尺码组选择模态框：左组列表 / 右组内尺码明细 -->
+    <el-dialog
+      v-model="sizeGroupDialogVisible"
+      title="选择矫正尺码组"
+      width="860px"
+      top="6vh"
+      append-to-body
+      :close-on-click-modal="false"
+    >
+      <div class="sg-picker">
+        <!-- 左侧：组列表 + 搜索 -->
+        <div class="sg-picker-left">
+          <el-input
+            v-model="sgKeyword"
+            placeholder="搜索组编码/组名称"
+            size="small"
+            clearable
+            :prefix-icon="Search"
+            style="margin-bottom:8px"
+          />
+          <div class="sg-list" v-loading="sgLoading">
+            <div
+              v-for="g in filteredSgOptions"
+              :key="g.id"
+              class="sg-item"
+              :class="{ 'is-active': tempSizeGroupId === g.id }"
+              @click="onPickGroup(g)"
+            >
+              <div class="sg-item-name">{{ g.groupName }}</div>
+              <div class="sg-item-code">{{ g.groupCode }}</div>
+            </div>
+            <el-empty v-if="!sgLoading && !filteredSgOptions.length" description="无匹配尺码组" :image-size="60" />
+          </div>
+        </div>
+        <!-- 右侧：组内尺码明细 -->
+        <div class="sg-picker-right">
+          <div class="sg-detail-title">
+            组内尺码明细
+            <span v-if="tempGroupName" class="sg-detail-sub">— {{ tempGroupName }}</span>
+          </div>
+          <div class="sg-detail-body" v-loading="tempSizesLoading">
+            <template v-if="tempGroupSizes.length">
+              <el-tag v-for="s in tempGroupSizes" :key="s.id || s.sizeName" size="large" effect="plain" class="sg-size-tag">
+                {{ s.sizeName }}
+              </el-tag>
+            </template>
+            <el-empty v-else-if="!tempSizesLoading" description="请先在左侧选择尺码组" :image-size="60" />
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <el-button v-if="tempSizeGroupId" type="danger" plain @click="onClearSizeGroup">清除选择</el-button>
+        <el-button @click="sizeGroupDialogVisible = false">取消</el-button>
+        <el-button type="primary" :disabled="!tempSizeGroupId" @click="onConfirmSizeGroup">确定</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -146,7 +210,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter, useRoute, onBeforeRouteLeave } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ArrowLeft, Document, Stamp, Files } from '@element-plus/icons-vue'
+import { ArrowLeft, Document, Stamp, Files, Search } from '@element-plus/icons-vue'
 import { updateStickerDataMaterial, getSizeGroupList, getSizeGroupSizes, getStickerDataDetail } from '@/api/sticker'
 
 defineOptions({ name: 'StickerDataDetail' })
@@ -159,6 +223,89 @@ const sizeGroupOptions = ref([])
 const selectedSizeGroupId = ref('')
 const selectedGroupSizes = ref([]) // 当前选中组的尺码明细
 const originalRow = ref({})         // 脏检查基线（深拷贝的初始数据）
+
+// 当前选中组的名称（详情页按钮上回显用）
+const selectedGroupName = computed(() => {
+  const g = sizeGroupOptions.value.find(x => x.id === selectedSizeGroupId.value)
+  return g ? g.groupName : ''
+})
+
+// ── 矫正尺码组选择模态框 ──
+const sizeGroupDialogVisible = ref(false)
+const sgKeyword = ref('')           // 模态框左侧搜索关键字
+const sgLoading = ref(false)        // 组列表加载中
+const tempSizeGroupId = ref('')     // 模态框内临时选中的组ID（确认前不回填）
+const tempGroupName = ref('')       // 模态框内临时选中组名
+const tempGroupSizes = ref([])      // 模态框内临时选中组的尺码明细
+const tempSizesLoading = ref(false) // 明细加载中
+const tempSizesCache = {}           // groupId → 尺码明细 缓存，避免重复请求
+
+/** 打开模态框：重新拉取当前品牌+类别下的启用组，预选当前组 */
+async function openSizeGroupDialog() {
+  sizeGroupDialogVisible.value = true
+  sgKeyword.value = ''
+  tempSizeGroupId.value = selectedSizeGroupId.value
+  tempGroupName.value = selectedGroupName.value
+  tempGroupSizes.value = selectedGroupSizes.value.slice()
+  sgLoading.value = true
+  try {
+    const brandId = row.value.BRAND_ID
+    const kindId = row.value.KIND_ID
+    const { data } = await getSizeGroupList({ brandId: brandId || undefined, kindId: kindId || undefined })
+    sizeGroupOptions.value = data || []
+  } catch {
+    sizeGroupOptions.value = []
+  } finally {
+    sgLoading.value = false
+  }
+}
+
+/** 模态框内左侧点中某个组：右侧带出尺码明细 */
+async function onPickGroup(g) {
+  tempSizeGroupId.value = g.id
+  tempGroupName.value = g.groupName
+  if (tempSizesCache[g.id]) {
+    tempGroupSizes.value = tempSizesCache[g.id]
+    return
+  }
+  tempSizesLoading.value = true
+  try {
+    const { data } = await getSizeGroupSizes(g.id)
+    tempSizesCache[g.id] = data || []
+    tempGroupSizes.value = tempSizesCache[g.id]
+  } catch {
+    tempGroupSizes.value = []
+  } finally {
+    tempSizesLoading.value = false
+  }
+}
+
+/** 确认：把模态框内的临时选择回填到详情页 */
+function onConfirmSizeGroup() {
+  selectedSizeGroupId.value = tempSizeGroupId.value
+  selectedGroupSizes.value = tempGroupSizes.value.slice()
+  sizeGroupDialogVisible.value = false
+}
+
+/** 清除选择：解绑矫正尺码组（保存时写空） */
+function onClearSizeGroup() {
+  tempSizeGroupId.value = ''
+  tempGroupName.value = ''
+  tempGroupSizes.value = []
+  sizeGroupDialogVisible.value = false
+  selectedSizeGroupId.value = ''
+  selectedGroupSizes.value = []
+}
+
+/** 模态框左侧列表按关键字过滤（组编码/组名称） */
+const filteredSgOptions = computed(() => {
+  const kw = sgKeyword.value.trim().toLowerCase()
+  if (!kw) return sizeGroupOptions.value
+  return sizeGroupOptions.value.filter(g =>
+    (g.groupName || '').toLowerCase().includes(kw) ||
+    (g.groupCode || '').toLowerCase().includes(kw)
+  )
+})
 const originalSizeGroupId = ref('') // 脏检查基线（初始尺码组ID）
 const dirty = ref(false)            // 是否有未保存改动
 
@@ -187,11 +334,6 @@ async function loadGroupSizes(groupId) {
   } catch {
     selectedGroupSizes.value = []
   }
-}
-
-/** 下拉切换：重新加载组内尺码 */
-function onSizeGroupChange(val) {
-  loadGroupSizes(val)
 }
 
 const colorMap = {
@@ -519,4 +661,64 @@ onBeforeRouteLeave(async (_to, _from) => {
 .field-msg { font-size: 11px; font-weight: 500; text-transform: none; letter-spacing: 0; }
 .field-msg-error { color: #ef4444; }
 .field-msg-warn { color: #d97706; }
+
+/* 矫正尺码组选择模态框：左右分栏 */
+.sg-picker {
+  display: flex;
+  gap: 12px;
+  height: 440px;
+}
+.sg-picker-left {
+  flex: 0 0 300px;
+  display: flex;
+  flex-direction: column;
+}
+.sg-picker-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  padding: 10px 12px;
+}
+/* 左侧组列表（可滚动） */
+.sg-list {
+  flex: 1;
+  overflow-y: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+}
+.sg-item {
+  padding: 9px 12px;
+  border-bottom: 1px solid #f1f5f9;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.sg-item:last-child { border-bottom: none; }
+.sg-item:hover { background: #f1f5ff; }
+.sg-item.is-active { background: #ecfdf5; border-left: 3px solid #10b981; padding-left: 9px; }
+.sg-item-name { font-size: 13px; font-weight: 600; color: #1e293b; }
+.sg-item-code { font-size: 11px; color: #94a3b8; margin-top: 2px; font-family: 'Cascadia Code', monospace; }
+/* 右侧明细标题 + 标签 */
+.sg-detail-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e40af;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e0e7ff;
+  margin-bottom: 10px;
+}
+.sg-detail-sub { font-size: 12px; font-weight: 500; color: #64748b; }
+.sg-detail-body {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 6px;
+}
+.sg-size-tag { margin: 0; font-size: 13px; }
 </style>

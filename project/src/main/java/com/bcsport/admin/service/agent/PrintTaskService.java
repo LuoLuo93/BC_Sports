@@ -276,8 +276,11 @@ public class PrintTaskService {
         // 本次下发共享同一个批次号，便于在任务记录中区分"同一批次"
         String batchId = UUID.randomUUID().toString().replace("-", "");
 
-        // 预加载每个模板的字段映射（按模板名称缓存，同一模板名称共享映射配置）
-        Map<String, List<PrintFieldMapping>> mappingCache = new HashMap<>();
+        // 字段映射为全局单套（所有打印模板字段名一致），所有明细共用同一份映射配置
+        List<PrintFieldMapping> mappings = fieldMappingService.getAll();
+        if (mappings == null) {
+            mappings = Collections.emptyList();
+        }
 
         for (int i = 0; i < details.size(); i++) {
             StickerPrintOrderDetail detail = details.get(i);
@@ -285,12 +288,6 @@ public class PrintTaskService {
 
             String templateFile = match.getTemplateName();
             String printerName = match.getPrinterName() != null ? match.getPrinterName() : "";
-
-            // 获取该模板的字段映射（按模板名称查询）
-            List<PrintFieldMapping> mappings = mappingCache.computeIfAbsent(templateFile, name -> {
-                List<PrintFieldMapping> list = fieldMappingService.getByTemplateName(name);
-                return list != null ? list : Collections.emptyList();
-            });
 
             // 根据映射构建 printData
             Map<String, String> printData = buildPrintData(detail, mappings);

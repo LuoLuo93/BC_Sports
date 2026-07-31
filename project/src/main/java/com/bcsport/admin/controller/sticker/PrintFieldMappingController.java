@@ -28,16 +28,8 @@ public class PrintFieldMappingController {
     @GetMapping("/page")
     @ApiOperation("分页查询")
     @RequiresPermissions("sticker:field-mapping:query")
-    public Result<PageResult<PrintFieldMapping>> page(@Valid PageQuery pageQuery,
-                                                      @RequestParam(required = false) String templateId) {
-        return Result.success(PageResult.of(service.page(pageQuery.getPageNum(), pageQuery.getPageSize(), templateId)));
-    }
-
-    @GetMapping("/list")
-    @ApiOperation("按模板名称查询字段映射列表")
-    @RequiresPermissions("sticker:field-mapping:query")
-    public Result<List<PrintFieldMapping>> list(@RequestParam String templateName) {
-        return Result.success(service.getByTemplateName(templateName));
+    public Result<PageResult<PrintFieldMapping>> page(@Valid PageQuery pageQuery) {
+        return Result.success(PageResult.of(service.page(pageQuery.getPageNum(), pageQuery.getPageSize())));
     }
 
     @PostMapping
@@ -61,14 +53,6 @@ public class PrintFieldMappingController {
     @RequiresPermissions("sticker:field-mapping:delete")
     public Result<?> delete(@PathVariable String id) {
         service.delete(id);
-        return Result.success("删除成功");
-    }
-
-    @DeleteMapping("/by-template/{templateName}")
-    @ApiOperation("按模板名称删除所有映射")
-    @RequiresPermissions("sticker:field-mapping:delete")
-    public Result<?> deleteByTemplateName(@PathVariable String templateName) {
-        service.deleteByTemplateName(templateName);
         return Result.success("删除成功");
     }
 

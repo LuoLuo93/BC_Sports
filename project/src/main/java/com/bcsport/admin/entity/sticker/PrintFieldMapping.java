@@ -11,9 +11,6 @@ public class PrintFieldMapping {
     @TableId(value = "id", type = IdType.ASSIGN_UUID)
     private String id;
 
-    @TableField("template_id")
-    private String templateId;
-
     @TableField("db_field")
     private String dbField;
 

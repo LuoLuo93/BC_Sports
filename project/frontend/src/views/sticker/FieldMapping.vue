@@ -2,19 +2,11 @@
   <div class="page-container">
     <el-card shadow="never" class="search-card">
       <el-form inline>
-        <el-form-item label="选择模板">
-          <el-select v-model="selectedTemplateName" placeholder="请选择打印模板" filterable style="min-width:220px;max-width:300px" @change="onTemplateChange">
-            <el-option
-              v-for="name in templateNames"
-              :key="name"
-              :label="name"
-              :value="name"
-            />
-          </el-select>
+        <el-form-item>
+          <el-button type="primary" :icon="Plus" @click="handleAdd">新增映射</el-button>
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" :icon="Plus" @click="handleAdd" :disabled="!selectedTemplateName">新增映射</el-button>
-          <el-button type="success" :icon="CopyDocument" @click="handleCopyFrom" :disabled="!selectedTemplateName">从其他模板复制</el-button>
+          <span style="font-size:12px;color:#909399">字段映射为全局配置，所有打印模板共用同一份</span>
         </el-form-item>
       </el-form>
     </el-card>
@@ -23,11 +15,10 @@
       <template #header>
         <div class="card-header-row">
           <span class="card-header-title">字段映射配置</span>
-          <span v-if="selectedTemplateName" style="font-size:13px;color:#909399;margin-left:12px">当前模板：{{ selectedTemplateName }}</span>
         </div>
       </template>
       <div class="table-responsive">
-        <el-table :data="mappingList" border stripe v-loading="loading" empty-text="请选择模板后配置字段映射">
+        <el-table :data="mappingList" border stripe v-loading="loading" empty-text="暂无映射，点击新增映射">
           <el-table-column type="index" label="#" width="60" align="center" />
           <el-table-column prop="dbField" label="数据字段" width="280">
             <template #default="{ row }">
@@ -114,43 +105,18 @@
         />
       </div>
     </el-card>
-
-    <!-- 从其他模板复制 -->
-    <el-dialog v-model="copyVisible" title="从其他模板复制" width="400px">
-      <el-form label-width="80px">
-        <el-form-item label="源模板">
-          <el-select v-model="copySourceName" placeholder="选择源模板" filterable style="width:100%">
-            <el-option
-              v-for="name in copyTemplateOptions"
-              :key="name"
-              :label="name"
-              :value="name"
-            />
-          </el-select>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="copyVisible = false">取消</el-button>
-        <el-button type="primary" :loading="copying" @click="confirmCopy">确定复制</el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, CopyDocument, Right } from '@element-plus/icons-vue'
-import { getFieldMappingPage, createFieldMapping, updateFieldMapping, deleteFieldMapping, deleteFieldMappingByTemplate, getAvailableFields } from '@/api/sticker'
-import { useDictStore } from '@/stores/dict'
+import { Plus, Right } from '@element-plus/icons-vue'
+import { getFieldMappingPage, createFieldMapping, updateFieldMapping, deleteFieldMapping, getAvailableFields } from '@/api/sticker'
 import { PAGE_SIZES } from '@/utils/appConfig'
 
 defineOptions({ name: 'FieldMapping' })
 
-const dictStore = useDictStore()
-
-const templateNames = ref([])
-const selectedTemplateName = ref('')
 const loading = ref(false)
 const mappingList = ref([])
 const availableFields = ref([])
@@ -161,18 +127,9 @@ const pageSize = ref(PAGE_SIZES[0])
 const total = ref(0)
 
 onMounted(async () => {
-  await loadTemplateNames()
   await loadAvailableFields()
+  loadMappings()
 })
-
-async function loadTemplateNames() {
-  try {
-    const data = await dictStore.loadDict('sticker_template')
-    templateNames.value = (data || []).map(d => d.dictValue)
-  } catch {
-    templateNames.value = []
-  }
-}
 
 async function loadAvailableFields() {
   try {
@@ -199,23 +156,12 @@ function fieldFormatLabel(value) {
   return fieldFormatMap[value] || '不格式化'
 }
 
-function onTemplateChange() {
-  pageNum.value = 1
-  loadMappings()
-}
-
 async function loadMappings() {
-  if (!selectedTemplateName.value) {
-    mappingList.value = []
-    total.value = 0
-    return
-  }
   loading.value = true
   try {
     const { data } = await getFieldMappingPage({
       pageNum: pageNum.value,
-      pageSize: pageSize.value,
-      templateId: selectedTemplateName.value
+      pageSize: pageSize.value
     })
     mappingList.value = (data?.records || []).map(item => ({ ...item, _editing: false }))
     total.value = data?.total || 0
@@ -227,7 +173,6 @@ async function loadMappings() {
 function handleAdd() {
   mappingList.value.push({
     id: '',
-    templateId: selectedTemplateName.value,
     dbField: '',
     templateField: '',
     defaultValue: '',
@@ -266,7 +211,6 @@ async function handleSave(row) {
   try {
     if (row._isNew) {
       await createFieldMapping({
-        templateId: selectedTemplateName.value,
         dbField: row.dbField?.trim() || null,
         templateField: row.templateField.trim(),
         defaultValue: row.defaultValue?.trim() || null,
@@ -297,64 +241,5 @@ async function handleDelete(row) {
   await deleteFieldMapping(row.id)
   ElMessage.success('删除成功')
   loadMappings()
-}
-
-// 从其他模板复制
-const copyVisible = ref(false)
-const copySourceName = ref('')
-const copyTemplateOptions = ref([])
-const copying = ref(false)
-
-function handleCopyFrom() {
-  copyTemplateOptions.value = templateNames.value.filter(name => name !== selectedTemplateName.value)
-  copySourceName.value = ''
-  copyVisible.value = true
-}
-
-async function confirmCopy() {
-  if (!copySourceName.value) {
-    ElMessage.warning('请选择源模板')
-    return
-  }
-
-  copying.value = true
-  try {
-    const { data } = await getFieldMappingPage({
-      pageNum: 1,
-      pageSize: 500,
-      templateId: copySourceName.value
-    })
-    const sourceList = data?.records || []
-    if (!sourceList.length) {
-      ElMessage.warning('源模板没有字段映射配置')
-      return
-    }
-
-    await ElMessageBox.confirm(`将复制 ${sourceList.length} 条映射到当前模板，已有映射将被覆盖？`, '提示', { type: 'warning' })
-
-    // 删除现有映射
-    await deleteFieldMappingByTemplate(selectedTemplateName.value)
-
-    // 复制新映射
-    for (const item of sourceList) {
-      await createFieldMapping({
-        templateId: selectedTemplateName.value,
-        dbField: item.dbField,
-        templateField: item.templateField,
-        defaultValue: item.defaultValue,
-        fieldFormat: item.fieldFormat,
-        sortOrder: item.sortOrder
-      })
-    }
-
-    ElMessage.success('复制成功')
-    copyVisible.value = false
-    pageNum.value = 1
-    loadMappings()
-  } catch {
-    // cancelled or error
-  } finally {
-    copying.value = false
-  }
 }
 </script>

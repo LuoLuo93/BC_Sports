@@ -85,13 +85,9 @@ export function getAgentTasksPage(agentId, params) {
   return request.get(`/api/agent/${agentId}/tasks/page`, { params })
 }
 
-// ─── 打印字段映射 ──────────────────────
+// ─── 打印字段映射（全局单套，不再按模板绑定） ──────────────────────
 export function getFieldMappingPage(params) {
   return request.get('/api/sticker/field-mapping/page', { params })
-}
-
-export function getFieldMappingList(templateName) {
-  return request.get('/api/sticker/field-mapping/list', { params: { templateName } })
 }
 
 export function createFieldMapping(data) {
@@ -104,10 +100,6 @@ export function updateFieldMapping(id, data) {
 
 export function deleteFieldMapping(id) {
   return request.delete(`/api/sticker/field-mapping/${id}`)
-}
-
-export function deleteFieldMappingByTemplate(templateName) {
-  return request.delete(`/api/sticker/field-mapping/by-template/${templateName}`)
 }
 
 // ─── 品牌模板关系 ──────────────────────

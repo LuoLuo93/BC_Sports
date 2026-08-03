@@ -11,9 +11,6 @@
             <el-form-item label="店仓品牌">
               <el-input v-model="query.brandName" placeholder="请输入店仓品牌" clearable @keyup.enter="handleSearch" />
             </el-form-item>
-            <el-form-item label="一级地区">
-              <el-input v-model="query.regionLevel1" placeholder="请输入一级地区" clearable @keyup.enter="handleSearch" />
-            </el-form-item>
             <el-form-item label="预算日期">
               <el-date-picker v-model="budgetDateRange" type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" value-format="YYYY-MM-DD" style="width:240px" />
             </el-form-item>
@@ -219,7 +216,7 @@ function onTabChange(tab) {
 const loading = ref(false)
 const tableData = ref([])
 const total = ref(0)
-const query = reactive({ pageNum: 1, pageSize: defaultPageSize.value, storeName: '', brandName: '', regionLevel1: '', channelDef: '', budgetDtmStart: '', budgetDtmEnd: '' })
+const query = reactive({ pageNum: 1, pageSize: defaultPageSize.value, storeName: '', brandName: '', budgetDtmStart: '', budgetDtmEnd: '' })
 const budgetDateRange = ref(null)
 
 async function loadData() {
@@ -242,7 +239,7 @@ async function loadData() {
 }
 function handleSearch() { query.pageNum = 1; loadData() }
 function resetQuery() {
-  query.storeName = ''; query.brandName = ''; query.regionLevel1 = ''; query.channelDef = ''
+  query.storeName = ''; query.brandName = ''
   budgetDateRange.value = null
   handleSearch()
 }

@@ -627,8 +627,8 @@ public class EntityChannelServiceImpl implements EntityChannelService {
                         }
                     }
 
-                    // 销售类型（在所有同名渠道性质的子节点里查找，任一命中即可）
-                    String btName = getCol(row, "销售类型", "businessTypeName");
+                    // 经营类型（在所有同名渠道性质的子节点里查找，任一命中即可）
+                    String btName = getCol(row, "经营类型", "businessTypeName");
                     String btId = null;
                     String matchedCnId = cnIds != null && !cnIds.isEmpty() ? cnIds.get(0) : null;  // 默认取第一个，命中后覆盖
                     if (btName != null && !btName.isEmpty() && cnIds != null) {
@@ -641,7 +641,7 @@ public class EntityChannelServiceImpl implements EntityChannelService {
                         }
                         if (btId == null) {
                             if (errors.size() < maxErrors)
-                                errors.add("第" + rowNum + "行：销售类型「" + btName + "」在「" + cnName + "」下未找到");
+                                errors.add("第" + rowNum + "行：经营类型「" + btName + "」在「" + cnName + "」下未找到");
                             continue;
                         }
                     }

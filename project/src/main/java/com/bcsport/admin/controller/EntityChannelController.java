@@ -157,7 +157,7 @@ public class EntityChannelController {
             writer.addHeaderAlias("channelTypeName", "渠道类型");
             writer.addHeaderAlias("channelDefName", "渠道定义");
             writer.addHeaderAlias("channelNatureName", "渠道性质");
-            writer.addHeaderAlias("businessTypeName", "销售类型");
+            writer.addHeaderAlias("businessTypeName", "经营类型");
 
             Map<String, Object> sample = new LinkedHashMap<>();
             sample.put("externalId", "D001");

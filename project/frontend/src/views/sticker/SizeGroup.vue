@@ -122,7 +122,7 @@
               <span class="sg-right-title">尺码明细</span>
               <el-button type="primary" size="small" :icon="Plus" @click="addSizeRow">添加尺码</el-button>
             </div>
-            <el-table :data="form.sizes" border size="small" empty-text="暂无尺码，点击「添加尺码」" class="sg-right-table">
+            <el-table :data="form.sizes" border size="small" height="100%" empty-text="暂无尺码，点击「添加尺码」" class="sg-right-table">
               <el-table-column type="index" label="#" width="42" align="center" />
               <el-table-column label="尺码编码" width="120">
                 <template #default="{ row }">
@@ -447,20 +447,23 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* 弹窗内左右分栏布局 */
+/* 弹窗内左右分栏布局：固定高度，左右等高，右侧表格中间滚动 */
 .sg-layout {
   display: flex;
   gap: 20px;
   align-items: stretch;
+  height: 440px;
 }
 .sg-left {
   flex: 0 0 300px;
   border-right: 1px solid var(--el-border-color-lighter);
   padding-right: 20px;
+  overflow-y: auto;
 }
 .sg-right {
   flex: 1;
   min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }
@@ -469,16 +472,23 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 10px;
+  flex-shrink: 0;
 }
 .sg-right-title {
   font-size: 14px;
   font-weight: 600;
   color: #303133;
 }
+/* 表格占满中间剩余高度，表头固定 + body 滚动 */
+.sg-right-table {
+  flex: 1;
+  min-height: 0;
+}
 .sg-right-hint {
   margin-top: 8px;
   font-size: 12px;
   color: var(--el-text-color-secondary);
+  flex-shrink: 0;
 }
 
 /* label 样式 - 与用户管理弹窗一致 */

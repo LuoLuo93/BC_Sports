@@ -5,11 +5,11 @@
       <el-tab-pane label="数据列表" name="data">
         <el-card shadow="never" class="search-card">
           <el-form :model="query" inline>
-            <el-form-item label="店铺">
-              <el-input v-model="query.storeName" placeholder="请输入店铺" clearable @keyup.enter="handleSearch" />
+            <el-form-item label="店仓名称">
+              <el-input v-model="query.storeName" placeholder="请输入店仓名称" clearable @keyup.enter="handleSearch" />
             </el-form-item>
-            <el-form-item label="品牌">
-              <el-input v-model="query.brandName" placeholder="请输入品牌" clearable @keyup.enter="handleSearch" />
+            <el-form-item label="店仓品牌">
+              <el-input v-model="query.brandName" placeholder="请输入店仓品牌" clearable @keyup.enter="handleSearch" />
             </el-form-item>
             <el-form-item label="一级地区">
               <el-input v-model="query.regionLevel1" placeholder="请输入一级地区" clearable @keyup.enter="handleSearch" />

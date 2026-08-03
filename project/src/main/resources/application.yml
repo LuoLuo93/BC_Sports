@@ -167,6 +167,66 @@ spring:
         max-pool-prepared-statement-per-connection-size: 20
         filters: stat,wall,slf4j
         connection-properties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=5000
+    # BI 数仓 Oracle 数据源 (192.168.5.177 / schema: BI_DW)
+    bidw:
+      type: com.alibaba.druid.pool.DruidDataSource
+      driver-class-name: oracle.jdbc.OracleDriver
+      url: jdbc:oracle:thin:@//${BIDW_DB_HOST:192.168.5.177}:${BIDW_DB_PORT:1521}/${BIDW_DB_SERVICE:ORCL}
+      username: ${BIDW_DB_USERNAME:bi_dw}
+      password: ${BIDW_DB_PASSWORD:123456}
+      druid:
+        initial-size: 3
+        min-idle: 3
+        max-active: 15
+        max-wait: 60000
+        time-between-eviction-runs-millis: 60000
+        min-evictable-idle-time-millis: 300000
+        phy-timeout-millis: 1800000
+        validation-query: SELECT 1 FROM DUAL
+        validation-query-timeout: 5
+        test-while-idle: true
+        test-on-borrow: false
+        test-on-return: false
+        keep-alive: true
+        pool-prepared-statements: true
+        max-pool-prepared-statements-per-connection-size: 20
+        # 防止数据库重启后连接池自动关闭
+        break-after-acquire-failure: false
+        connection-error-retry-attempts: 3
+        time-between-connect-error-millis: 30000
+      # filters/connection-properties 必须在 druid: 同级(<name>下), Druid 才生效
+      filters: stat,wall,slf4j
+      connection-properties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=5000
+    # BC_SPORTS 业务表 Oracle 数据源 (192.168.5.177 / schema: BC_SPORTS)
+    bcsp:
+      type: com.alibaba.druid.pool.DruidDataSource
+      driver-class-name: oracle.jdbc.OracleDriver
+      url: jdbc:oracle:thin:@//${BCSP_DB_HOST:192.168.5.177}:${BCSP_DB_PORT:1521}/${BCSP_DB_SERVICE:ORCL}
+      username: ${BCSP_DB_USERNAME:bc_sports}
+      password: ${BCSP_DB_PASSWORD:123456}
+      druid:
+        initial-size: 3
+        min-idle: 3
+        max-active: 15
+        max-wait: 60000
+        time-between-eviction-runs-millis: 60000
+        min-evictable-idle-time-millis: 300000
+        phy-timeout-millis: 1800000
+        validation-query: SELECT 1 FROM DUAL
+        validation-query-timeout: 5
+        test-while-idle: true
+        test-on-borrow: false
+        test-on-return: false
+        keep-alive: true
+        pool-prepared-statements: true
+        max-pool-prepared-statements-per-connection-size: 20
+        # 防止数据库重启后连接池自动关闭
+        break-after-acquire-failure: false
+        connection-error-retry-attempts: 3
+        time-between-connect-error-millis: 30000
+      # filters/connection-properties 必须在 druid: 同级(<name>下), Druid 才生效
+      filters: stat,wall,slf4j
+      connection-properties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=5000
   # Redis 配置（Spring Boot 3.x 使用 spring.data.redis 前缀）
   data:
     redis:

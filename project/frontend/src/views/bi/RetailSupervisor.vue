@@ -131,7 +131,7 @@ defineOptions({ name: 'RetailSupervisor' })
 import { ref, onMounted } from 'vue'
 import { Search, RefreshRight, Edit } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { PAGE_SIZES } from '@/utils/appConfig'
+import { PAGE_SIZES, defaultPageSize } from '@/utils/appConfig'
 
 // ===== Tab =====
 const activeTab = ref('store')
@@ -144,7 +144,7 @@ function onTabChange(tab) {
 const storeLoading = ref(false)
 const storeData = ref([])
 const storeTotal = ref(0)
-const storeQuery = ref({ pageNum: 1, pageSize: 10, code: '', name: '', supervisorName: '', erpJobNo: '' })
+const storeQuery = ref({ pageNum: 1, pageSize: defaultPageSize.value, code: '', name: '', supervisorName: '', erpJobNo: '' })
 
 async function loadStoreData() {
   storeLoading.value = true
@@ -166,7 +166,7 @@ function storeReset() { storeQuery.value.code = ''; storeQuery.value.name = ''; 
 const customerLoading = ref(false)
 const customerData = ref([])
 const customerTotal = ref(0)
-const customerQuery = ref({ pageNum: 1, pageSize: 10, code: '', name: '', supervisorName: '', erpJobNo: '' })
+const customerQuery = ref({ pageNum: 1, pageSize: defaultPageSize.value, code: '', name: '', supervisorName: '', erpJobNo: '' })
 
 async function loadCustomerData() {
   customerLoading.value = true

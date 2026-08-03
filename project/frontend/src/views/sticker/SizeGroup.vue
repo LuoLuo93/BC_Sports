@@ -374,7 +374,7 @@ const importLoading = ref(false)
 const templateLoading = ref(false)
 const selectedFile = ref(null)
 const importResult = ref(null)
-const MAX_FILE_SIZE = 50 * 1024 * 1024
+const MAX_FILE_SIZE = 100 * 1024 * 1024
 
 function resetImportState() {
   selectedFile.value = null
@@ -384,7 +384,7 @@ function resetImportState() {
 function beforeUpload(file) {
   const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls')
   if (!isExcel) { ElMessage.error('仅支持 .xlsx / .xls 格式的 Excel 文件'); return false }
-  if (file.size > MAX_FILE_SIZE) { ElMessage.error('文件大小不能超过 50MB'); return false }
+  if (file.size > MAX_FILE_SIZE) { ElMessage.error('文件大小不能超过 100MB'); return false }
   return true
 }
 

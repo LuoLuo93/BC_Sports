@@ -118,7 +118,7 @@
           <el-icon :size="40" style="color:var(--el-text-color-placeholder)"><Upload /></el-icon>
           <div style="margin-top:8px">将 Excel 文件拖到此处，或 <em>点击上传</em></div>
           <template #tip>
-            <div class="upload-hint">仅支持 .xlsx / .xls 格式，文件大小不超过 50MB，客户id重复时自动更新</div>
+            <div class="upload-hint">仅支持 .xlsx / .xls 格式，文件大小不超过 100MB，客户id重复时自动更新</div>
           </template>
         </el-upload>
         <div style="margin-top:12px;text-align:center">
@@ -164,7 +164,7 @@ import { Search, RefreshRight, Upload } from '@element-plus/icons-vue'
 import { getFirstAddPage, importFirstAdd, getFirstAddTemplate, getFirstAddImportLogPage } from '@/api/qywx'
 import { formatTime } from '@/utils/format'
 import { usePermission } from '@/composables/usePermission'
-import { PAGE_SIZES } from '@/utils/appConfig'
+import { PAGE_SIZES, defaultPageSize } from '@/utils/appConfig'
 
 const { hasPermission } = usePermission()
 
@@ -178,7 +178,7 @@ function onTabChange(tab) {
 const loading = ref(false)
 const tableData = ref([])
 const total = ref(0)
-const query = reactive({ pageNum: 1, pageSize: 10, customerId: '', firstAdder: '' })
+const query = reactive({ pageNum: 1, pageSize: defaultPageSize.value, customerId: '', firstAdder: '' })
 
 async function loadData() {
   loading.value = true
@@ -197,7 +197,7 @@ function resetQuery() { query.customerId = ''; query.firstAdder = ''; handleSear
 const logLoading = ref(false)
 const logData = ref([])
 const logTotal = ref(0)
-const logQuery = reactive({ pageNum: 1, pageSize: 10 })
+const logQuery = reactive({ pageNum: 1, pageSize: defaultPageSize.value })
 
 async function loadLogData() {
   logLoading.value = true
@@ -238,7 +238,7 @@ const templateLoading = ref(false)
 const importResult = ref(null)
 const selectedFile = ref(null)
 
-const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB
+const MAX_FILE_SIZE = 100 * 1024 * 1024 // 100MB
 
 /** 上传前校验：文件格式 + 大小 */
 function beforeUpload(file) {
@@ -248,7 +248,7 @@ function beforeUpload(file) {
     return false
   }
   if (file.size > MAX_FILE_SIZE) {
-    ElMessage.error(`文件大小不能超过 50MB（当前 ${(file.size / 1024 / 1024).toFixed(1)}MB）`)
+    ElMessage.error(`文件大小不能超过 100MB（当前 ${(file.size / 1024 / 1024).toFixed(1)}MB）`)
     return false
   }
   return true
@@ -263,7 +263,7 @@ function handleFileChange(uploadFile) {
     return
   }
   if (raw.size > MAX_FILE_SIZE) {
-    ElMessage.error(`文件大小不能超过 50MB（当前 ${(raw.size / 1024 / 1024).toFixed(1)}MB）`)
+    ElMessage.error(`文件大小不能超过 100MB（当前 ${(raw.size / 1024 / 1024).toFixed(1)}MB）`)
     return
   }
   selectedFile.value = raw

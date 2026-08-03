@@ -163,7 +163,7 @@ import { Search, RefreshRight, Upload } from '@element-plus/icons-vue'
 import { getGoodsDataPage, importGoodsData, getGoodsDataTemplate, getGoodsImportLogPage } from '@/api/bi'
 import { formatTime } from '@/utils/format'
 import { usePermission } from '@/composables/usePermission'
-import { PAGE_SIZES } from '@/utils/appConfig'
+import { PAGE_SIZES, defaultPageSize } from '@/utils/appConfig'
 
 const { hasPermission } = usePermission()
 
@@ -177,7 +177,7 @@ function onTabChange(tab) {
 const loading = ref(false)
 const tableData = ref([])
 const total = ref(0)
-const query = reactive({ pageNum: 1, pageSize: 10, brand: '', articleNo: '' })
+const query = reactive({ pageNum: 1, pageSize: defaultPageSize.value, brand: '', articleNo: '' })
 
 async function loadData() {
   loading.value = true
@@ -196,7 +196,7 @@ function resetQuery() { query.brand = ''; query.articleNo = ''; handleSearch() }
 const logLoading = ref(false)
 const logData = ref([])
 const logTotal = ref(0)
-const logQuery = reactive({ pageNum: 1, pageSize: 10 })
+const logQuery = reactive({ pageNum: 1, pageSize: defaultPageSize.value })
 
 async function loadLogData() {
   logLoading.value = true

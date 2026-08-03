@@ -121,8 +121,10 @@ import { getDeptList, getDept, createDept, updateDept, deleteDept } from '@/api/
 import { formatTime } from '@/utils/format'
 import { Plus, Search, RefreshRight } from '@element-plus/icons-vue'
 import { usePermission } from '@/composables/usePermission'
+import { useRefStore } from '@/stores/reference'
 
 const { hasPermission } = usePermission()
+const refStore = useRefStore()
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -196,6 +198,7 @@ async function handleDelete(row) {
   await deleteDept(row.id)
   ElMessage.success('删除成功')
   loadData()
+  refStore.loadDeptTree(true)   // 刷新全局部门缓存，避免其它页面下拉读到旧数据
 }
 
 async function handleSubmit() {
@@ -211,6 +214,7 @@ async function handleSubmit() {
     ElMessage.success(isEdit.value ? '更新成功' : '创建成功')
     dialogVisible.value = false
     loadData()
+    refStore.loadDeptTree(true)   // 刷新全局部门缓存，避免其它页面下拉读到旧数据
   } finally {
     submitting.value = false
   }

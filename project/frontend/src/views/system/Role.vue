@@ -113,6 +113,7 @@ import { usePageQuery } from '@/composables/usePageQuery'
 import { useRefStore } from '@/stores/reference'
 
 const { hasPermission } = usePermission()
+const refStore = useRefStore()
 
 const { loading, tableData, total, query, loadData, handleSearch, resetQuery } = usePageQuery(getRolePage, { roleName: '', roleCode: '', status: undefined })
 
@@ -160,6 +161,7 @@ async function handleDelete(row) {
   await deleteRole(row.id)
   ElMessage.success('删除成功')
   loadData()
+  refStore.loadRoleList(true)   // 刷新全局角色缓存，避免其它页面下拉读到旧数据
 }
 
 async function handleSubmit() {
@@ -175,6 +177,7 @@ async function handleSubmit() {
     ElMessage.success(isEdit.value ? '更新成功' : '创建成功')
     dialogVisible.value = false
     loadData()
+    refStore.loadRoleList(true)   // 刷新全局角色缓存，避免其它页面下拉读到旧数据
   } finally {
     submitting.value = false
   }

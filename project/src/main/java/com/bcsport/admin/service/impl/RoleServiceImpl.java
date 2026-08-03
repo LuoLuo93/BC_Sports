@@ -108,7 +108,12 @@ public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements Ro
         
         Role role = BeanCopyUtils.copy(roleDTO, Role.class);
         role.setStatus(1); // 默认启用
-        return baseMapper.insert(role) > 0;
+        boolean result = baseMapper.insert(role) > 0;
+        if (result) {
+            // 与 update/delete/assignPermissions 保持一致：写操作后清权限缓存
+            authCacheService.evictAll();
+        }
+        return result;
     }
     
     @Override

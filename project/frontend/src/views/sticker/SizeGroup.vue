@@ -120,6 +120,7 @@
           <div class="sg-right">
             <div class="sg-right-head">
               <span class="sg-right-title">尺码明细</span>
+              <span class="sg-right-rule">尺码编码/名称都必填，且编码组内唯一</span>
               <el-button type="primary" size="small" :icon="Plus" @click="addSizeRow">添加尺码</el-button>
             </div>
             <el-table :data="form.sizes" border size="small" height="100%" empty-text="暂无尺码，点击「添加尺码」" class="sg-right-table">
@@ -145,7 +146,6 @@
                 </template>
               </el-table-column>
             </el-table>
-            <div class="sg-right-hint">尺码编码/名称都必填，且编码组内唯一</div>
           </div>
         </div>
       </el-form>
@@ -484,11 +484,14 @@ onMounted(() => {
   flex: 1;
   min-height: 0;
 }
-.sg-right-hint {
-  margin-top: 8px;
+.sg-right-rule {
+  margin-left: 10px;
   font-size: 12px;
-  color: var(--el-text-color-secondary);
-  flex-shrink: 0;
+  color: #f56c6c;
+}
+/* 添加按钮推到最右 */
+.sg-right-head .el-button {
+  margin-left: auto;
 }
 
 /* label 样式 - 与用户管理弹窗一致 */

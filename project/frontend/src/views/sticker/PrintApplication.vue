@@ -130,7 +130,17 @@
                 添加({{ selectedProducts.length }})
               </el-button>
             </div>
-            <el-table v-loading="productLoading" :data="productList" border size="small" @selection-change="handleProductSelect" height="100%">
+            <el-table
+              v-loading="productLoading"
+              :data="productList"
+              border
+              size="small"
+              ref="productTableRef"
+              height="100%"
+              @selection-change="handleProductSelect"
+              @row-click="onProductRowClick"
+              :row-class-name="productRowClassName"
+            >
               <el-table-column type="selection" width="35" fixed="left" />
               <el-table-column type="index" label="#" width="45" fixed="left" />
               <el-table-column prop="MATERIAL_NUMBER" label="货号" width="170" show-overflow-tooltip fixed="left" class-name="col-key" />
@@ -443,6 +453,7 @@ const brandList = ref([])
 const productList = ref([])
 const productLoading = ref(false)
 const selectedProducts = ref([])
+const productTableRef = ref()
 
 // Review
 const reviewVisible = ref(false)
@@ -722,6 +733,16 @@ async function searchProductsAction() {
 
 function handleProductSelect(selection) {
   selectedProducts.value = selection
+}
+
+/** 点击行任意位置切换选中（不用非得点最前面的 checkbox） */
+function onProductRowClick(row) {
+  productTableRef.value?.toggleRowSelection(row)
+}
+
+/** 选中的行加高亮 class */
+function productRowClassName({ row }) {
+  return selectedProducts.value.some(p => p === row) ? 'row-selected' : ''
 }
 
 function confirmProductSelect() {
@@ -1092,6 +1113,17 @@ onBeforeUnmount(() => {
 }
 .search-table {
   flex: 1;
+}
+
+/* 货品搜索表格：整行可点切换选中 + 选中行高亮 */
+.search-panel :deep(.el-table__row) {
+  cursor: pointer;
+}
+.search-panel :deep(.el-table__row.row-selected td) {
+  background-color: #ecfdf5 !important;
+}
+.search-panel :deep(.el-table__body) tr.row-selected:hover > td {
+  background-color: #d1fae5 !important;
 }
 
 .detail-panel {

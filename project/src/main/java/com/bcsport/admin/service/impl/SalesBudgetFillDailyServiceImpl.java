@@ -61,11 +61,14 @@ public class SalesBudgetFillDailyServiceImpl
         HEADER_ALIAS.put("业务类型", "channelDef");      // 兼容旧模板
         HEADER_ALIAS.put("channel_def", "channelDef");
         HEADER_ALIAS.put("profession_type", "channelDef"); // 兼容旧列名
-        HEADER_ALIAS.put("店铺名称", "storeName");
+        HEADER_ALIAS.put("店仓名称", "storeName");
+        HEADER_ALIAS.put("店铺名称", "storeName");      // 兼容旧模板
         HEADER_ALIAS.put("store_name", "storeName");
-        HEADER_ALIAS.put("品牌名称", "brandName");
+        HEADER_ALIAS.put("店仓品牌", "brandName");
+        HEADER_ALIAS.put("品牌名称", "brandName");      // 兼容旧模板
         HEADER_ALIAS.put("brand_name", "brandName");
-        HEADER_ALIAS.put("月份", "monthlyName");
+        HEADER_ALIAS.put("预算月份", "monthlyName");
+        HEADER_ALIAS.put("月份", "monthlyName");          // 兼容旧模板
         HEADER_ALIAS.put("monthly_name", "monthlyName");
         HEADER_ALIAS.put("预算日期", "budgetDtm");
         HEADER_ALIAS.put("budget_dtm", "budgetDtm");

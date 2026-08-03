@@ -99,18 +99,18 @@ public class ShopDailyBudgetController {
         ExcelWriter writer = ExcelUtil.getWriter(true);
         try {
             // 表头别名（中文）
+            writer.addHeaderAlias("storeName", "店仓名称");
+            writer.addHeaderAlias("brandName", "店仓品牌");
+            writer.addHeaderAlias("budgetDtm", "预算日期");
+            writer.addHeaderAlias("monthlyName", "预算月份");
             writer.addHeaderAlias("regionLevel1", "一级地区");
             writer.addHeaderAlias("regionLevel2", "二级地区");
             writer.addHeaderAlias("channelProperty", "渠道类型");
             writer.addHeaderAlias("channelDef", "渠道定义");
-            writer.addHeaderAlias("storeName", "店铺名称");
-            writer.addHeaderAlias("brandName", "品牌名称");
-            writer.addHeaderAlias("monthlyName", "月份");
-            writer.addHeaderAlias("budgetDtm", "预算日期");
-            writer.addHeaderAlias("budgetAmount", "预算金额");
             writer.addHeaderAlias("businessType", "渠道性质");
             writer.addHeaderAlias("businessProperty", "经营类型");
             writer.addHeaderAlias("salesType", "销售类型");
+            writer.addHeaderAlias("budgetAmount", "预算金额");
 
             // 示例数据
             Map<String, Object> sample = new LinkedHashMap<>();

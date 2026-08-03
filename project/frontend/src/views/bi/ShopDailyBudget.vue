@@ -37,6 +37,12 @@
               <el-table-column label="#" width="55" align="center" fixed>
                 <template #default="{ $index }">{{ (query.pageNum - 1) * query.pageSize + $index + 1 }}</template>
               </el-table-column>
+              <el-table-column prop="storeName" label="店仓名称" min-width="140" show-overflow-tooltip />
+              <el-table-column prop="brandName" label="店仓品牌" min-width="120" show-overflow-tooltip />
+              <el-table-column label="预算日期" width="120">
+                <template #default="{ row }">{{ formatDate(row.budgetDtm) }}</template>
+              </el-table-column>
+              <el-table-column prop="monthlyName" label="预算月份" width="100" />
               <el-table-column label="一二级地区" min-width="200">
                 <template #default="{ row }">
                   <template v-if="row.regionLevel1">
@@ -57,15 +63,6 @@
                   <span v-else>-</span>
                 </template>
               </el-table-column>
-              <el-table-column prop="storeName" label="店铺名称" min-width="140" show-overflow-tooltip />
-              <el-table-column prop="brandName" label="品牌名称" min-width="120" show-overflow-tooltip />
-              <el-table-column prop="monthlyName" label="月份" width="100" />
-              <el-table-column label="预算日期" width="120">
-                <template #default="{ row }">{{ formatDate(row.budgetDtm) }}</template>
-              </el-table-column>
-              <el-table-column label="预算金额" width="130" align="right">
-                <template #default="{ row }">{{ formatAmount(row.budgetAmount) }}</template>
-              </el-table-column>
               <el-table-column label="渠道性质/经营类型" min-width="140">
                 <template #default="{ row }">
                   <template v-if="row.businessType">
@@ -77,6 +74,9 @@
                 </template>
               </el-table-column>
               <el-table-column prop="salesType" label="销售类型" min-width="100" show-overflow-tooltip />
+              <el-table-column label="预算金额" width="130" align="right">
+                <template #default="{ row }">{{ formatAmount(row.budgetAmount) }}</template>
+              </el-table-column>
             </el-table>
           </div>
 

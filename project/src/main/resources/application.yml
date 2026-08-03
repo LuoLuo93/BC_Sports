@@ -171,7 +171,8 @@ spring:
     bidw:
       type: com.alibaba.druid.pool.DruidDataSource
       driver-class-name: oracle.jdbc.OracleDriver
-      url: jdbc:oracle:thin:@//${BIDW_DB_HOST:192.168.5.177}:${BIDW_DB_PORT:1521}/${BIDW_DB_SERVICE:ORCL}
+      # SID 方式连接(:orcl), 与生产主库 BCSports 写法一致
+      url: jdbc:oracle:thin:@${BIDW_DB_HOST:192.168.5.177}:${BIDW_DB_PORT:1521}:${BIDW_DB_SID:orcl}
       username: ${BIDW_DB_USERNAME:bi_dw}
       password: ${BIDW_DB_PASSWORD:123456}
       druid:
@@ -200,7 +201,8 @@ spring:
     bcsp:
       type: com.alibaba.druid.pool.DruidDataSource
       driver-class-name: oracle.jdbc.OracleDriver
-      url: jdbc:oracle:thin:@//${BCSP_DB_HOST:192.168.5.177}:${BCSP_DB_PORT:1521}/${BCSP_DB_SERVICE:ORCL}
+      # SID 方式连接(:orcl), 与生产主库 BCSports 写法一致
+      url: jdbc:oracle:thin:@${BCSP_DB_HOST:192.168.5.177}:${BCSP_DB_PORT:1521}:${BCSP_DB_SID:orcl}
       username: ${BCSP_DB_USERNAME:bc_sports}
       password: ${BCSP_DB_PASSWORD:123456}
       druid:

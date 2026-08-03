@@ -34,14 +34,14 @@ spring:
       url: jdbc:oracle:thin:@10.0.1.22:1521:orcl
       username: bosnds3
       password: abc123
-    # BI 数仓 Oracle 数据源（生产环境）
+    # BI 数仓 Oracle 数据源（生产环境，SID 方式连接）
     bidw:
-      url: jdbc:oracle:thin:@//192.168.5.177:1521/ORCL
+      url: jdbc:oracle:thin:@192.168.5.177:1521:orcl
       username: ${BIDW_DB_USERNAME:bi_dw}
       password: ${BIDW_DB_PASSWORD:123456}
-    # BC_SPORTS 业务表 Oracle 数据源（生产环境）
+    # BC_SPORTS 业务表 Oracle 数据源（生产环境，SID 方式连接）
     bcsp:
-      url: jdbc:oracle:thin:@//192.168.5.177:1521/ORCL
+      url: jdbc:oracle:thin:@192.168.5.177:1521:orcl
       username: ${BCSP_DB_USERNAME:bc_sports}
       password: ${BCSP_DB_PASSWORD:123456}
 

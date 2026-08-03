@@ -8,10 +8,10 @@
         USING (
             <foreach collection="list" item="item" separator=" UNION ALL ">
                 SELECT
-                    #{item.department1}      AS department_1,
-                    #{item.department2}      AS department_2,
+                    #{item.regionLevel1}     AS region_level1,
+                    #{item.regionLevel2}     AS region_level2,
                     #{item.channelProperty}  AS channel_property,
-                    #{item.professionType}   AS profession_type,
+                    #{item.channelDef}       AS channel_def,
                     #{item.storeName}        AS store_name,
                     #{item.brandName}        AS brand_name,
                     #{item.monthlyName}      AS monthly_name,
@@ -28,20 +28,20 @@
             AND target.budget_dtm = source.budget_dtm)
         WHEN MATCHED THEN
             UPDATE SET
-                target.department_1      = source.department_1,
-                target.department_2      = source.department_2,
+                target.region_level1     = source.region_level1,
+                target.region_level2     = source.region_level2,
                 target.channel_property  = source.channel_property,
-                target.profession_type   = source.profession_type,
+                target.channel_def       = source.channel_def,
                 target.monthly_name      = source.monthly_name,
                 target.budget_amount     = source.budget_amount,
                 target.business_type     = source.business_type,
                 target.business_property = source.business_property,
                 target.sales_type        = source.sales_type
         WHEN NOT MATCHED THEN
-            INSERT (department_1, department_2, channel_property, profession_type,
+            INSERT (region_level1, region_level2, channel_property, channel_def,
                     store_name, brand_name, monthly_name, budget_dtm, budget_amount,
                     business_type, business_property, sales_type)
-            VALUES (source.department_1, source.department_2, source.channel_property, source.profession_type,
+            VALUES (source.region_level1, source.region_level2, source.channel_property, source.channel_def,
                     source.store_name, source.brand_name, source.monthly_name, source.budget_dtm, source.budget_amount,
                     source.business_type, source.business_property, source.sales_type)
     </insert>

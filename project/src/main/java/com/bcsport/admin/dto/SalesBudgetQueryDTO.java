@@ -28,9 +28,9 @@ public class SalesBudgetQueryDTO {
     @JsonFormat(pattern = "yyyy-MM-dd", timezone = "GMT+8")
     private Date budgetDtmEnd;
 
-    /** 一级组织(模糊) */
-    private String department1;
+    /** 一级地区(模糊) */
+    private String regionLevel1;
 
-    /** 业务类型(模糊) */
-    private String professionType;
+    /** 渠道定义(模糊) */
+    private String channelDef;
 }

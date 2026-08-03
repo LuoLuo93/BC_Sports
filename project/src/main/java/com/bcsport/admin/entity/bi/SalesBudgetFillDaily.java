@@ -19,17 +19,17 @@ public class SalesBudgetFillDaily implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    /** 一级组织 */
-    private String department1;
+    /** 一级地区 */
+    private String regionLevel1;
 
-    /** 二级组织 */
-    private String department2;
+    /** 二级地区 */
+    private String regionLevel2;
 
     /** 渠道类型 */
     private String channelProperty;
 
-    /** 业务类型 */
-    private String professionType;
+    /** 渠道定义 */
+    private String channelDef;
 
     /** 店铺名称 */
     private String storeName;

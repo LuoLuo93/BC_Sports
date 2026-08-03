@@ -47,14 +47,20 @@ public class SalesBudgetFillDailyServiceImpl
     /** 表头别名 → 字段标识 */
     private static final Map<String, String> HEADER_ALIAS = new HashMap<>();
     static {
-        HEADER_ALIAS.put("一级组织", "department1");
-        HEADER_ALIAS.put("department_1", "department1");
-        HEADER_ALIAS.put("二级组织", "department2");
-        HEADER_ALIAS.put("department_2", "department2");
+        HEADER_ALIAS.put("一级地区", "regionLevel1");
+        HEADER_ALIAS.put("一级组织", "regionLevel1");   // 兼容旧模板
+        HEADER_ALIAS.put("region_level1", "regionLevel1");
+        HEADER_ALIAS.put("department_1", "regionLevel1"); // 兼容旧列名
+        HEADER_ALIAS.put("二级地区", "regionLevel2");
+        HEADER_ALIAS.put("二级组织", "regionLevel2");   // 兼容旧模板
+        HEADER_ALIAS.put("region_level2", "regionLevel2");
+        HEADER_ALIAS.put("department_2", "regionLevel2"); // 兼容旧列名
         HEADER_ALIAS.put("渠道类型", "channelProperty");
         HEADER_ALIAS.put("channel_property", "channelProperty");
-        HEADER_ALIAS.put("业务类型", "professionType");
-        HEADER_ALIAS.put("profession_type", "professionType");
+        HEADER_ALIAS.put("渠道定义", "channelDef");
+        HEADER_ALIAS.put("业务类型", "channelDef");      // 兼容旧模板
+        HEADER_ALIAS.put("channel_def", "channelDef");
+        HEADER_ALIAS.put("profession_type", "channelDef"); // 兼容旧列名
         HEADER_ALIAS.put("店铺名称", "storeName");
         HEADER_ALIAS.put("store_name", "storeName");
         HEADER_ALIAS.put("品牌名称", "brandName");
@@ -95,11 +101,11 @@ public class SalesBudgetFillDailyServiceImpl
             if (StringUtils.hasText(queryDTO.getBrandName())) {
                 wrapper.like(SalesBudgetFillDaily::getBrandName, queryDTO.getBrandName());
             }
-            if (StringUtils.hasText(queryDTO.getDepartment1())) {
-                wrapper.like(SalesBudgetFillDaily::getDepartment1, queryDTO.getDepartment1());
+            if (StringUtils.hasText(queryDTO.getRegionLevel1())) {
+                wrapper.like(SalesBudgetFillDaily::getRegionLevel1, queryDTO.getRegionLevel1());
             }
-            if (StringUtils.hasText(queryDTO.getProfessionType())) {
-                wrapper.like(SalesBudgetFillDaily::getProfessionType, queryDTO.getProfessionType());
+            if (StringUtils.hasText(queryDTO.getChannelDef())) {
+                wrapper.like(SalesBudgetFillDaily::getChannelDef, queryDTO.getChannelDef());
             }
             if (queryDTO.getBudgetDtmStart() != null) {
                 wrapper.ge(SalesBudgetFillDaily::getBudgetDtm, queryDTO.getBudgetDtmStart());
@@ -250,10 +256,10 @@ public class SalesBudgetFillDailyServiceImpl
     private SalesBudgetFillDaily mapRow(List<Object> cells, Map<String, Integer> columnIndex) {
         SalesBudgetFillDaily e = new SalesBudgetFillDaily();
         boolean useHeader = !columnIndex.isEmpty();
-        e.setDepartment1(cellStr(cells, useHeader ? columnIndex.get("department1") : null));
-        e.setDepartment2(cellStr(cells, useHeader ? columnIndex.get("department2") : null));
+        e.setRegionLevel1(cellStr(cells, useHeader ? columnIndex.get("regionLevel1") : null));
+        e.setRegionLevel2(cellStr(cells, useHeader ? columnIndex.get("regionLevel2") : null));
         e.setChannelProperty(cellStr(cells, useHeader ? columnIndex.get("channelProperty") : null));
-        e.setProfessionType(cellStr(cells, useHeader ? columnIndex.get("professionType") : null));
+        e.setChannelDef(cellStr(cells, useHeader ? columnIndex.get("channelDef") : null));
         e.setStoreName(cellStr(cells, useHeader ? columnIndex.get("storeName") : null));
         e.setBrandName(cellStr(cells, useHeader ? columnIndex.get("brandName") : null));
         e.setMonthlyName(cellStr(cells, useHeader ? columnIndex.get("monthlyName") : null));

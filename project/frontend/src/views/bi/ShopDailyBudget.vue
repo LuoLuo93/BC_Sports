@@ -11,8 +11,8 @@
             <el-form-item label="品牌">
               <el-input v-model="query.brandName" placeholder="请输入品牌" clearable @keyup.enter="handleSearch" />
             </el-form-item>
-            <el-form-item label="一级组织">
-              <el-input v-model="query.department1" placeholder="请输入一级组织" clearable @keyup.enter="handleSearch" />
+            <el-form-item label="一级地区">
+              <el-input v-model="query.regionLevel1" placeholder="请输入一级地区" clearable @keyup.enter="handleSearch" />
             </el-form-item>
             <el-form-item label="预算日期">
               <el-date-picker v-model="budgetDateRange" type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" value-format="YYYY-MM-DD" style="width:240px" />
@@ -37,10 +37,26 @@
               <el-table-column label="#" width="55" align="center" fixed>
                 <template #default="{ $index }">{{ (query.pageNum - 1) * query.pageSize + $index + 1 }}</template>
               </el-table-column>
-              <el-table-column prop="department1" label="一级组织" min-width="120" show-overflow-tooltip />
-              <el-table-column prop="department2" label="二级组织" min-width="120" show-overflow-tooltip />
-              <el-table-column prop="channelProperty" label="渠道类型" min-width="100" show-overflow-tooltip />
-              <el-table-column prop="professionType" label="业务类型" min-width="100" show-overflow-tooltip />
+              <el-table-column label="一二级地区" min-width="200">
+                <template #default="{ row }">
+                  <template v-if="row.regionLevel1">
+                    <span>{{ row.regionLevel1 }}</span>
+                    <span v-if="row.regionLevel2" class="region-sep">/</span>
+                    <span v-if="row.regionLevel2">{{ row.regionLevel2 }}</span>
+                  </template>
+                  <span v-else>-</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="渠道类型/定义" min-width="140">
+                <template #default="{ row }">
+                  <template v-if="row.channelProperty">
+                    <span>{{ row.channelProperty }}</span>
+                    <span v-if="row.channelDef" class="region-sep">/</span>
+                    <span v-if="row.channelDef">{{ row.channelDef }}</span>
+                  </template>
+                  <span v-else>-</span>
+                </template>
+              </el-table-column>
               <el-table-column prop="storeName" label="店铺名称" min-width="140" show-overflow-tooltip />
               <el-table-column prop="brandName" label="品牌名称" min-width="120" show-overflow-tooltip />
               <el-table-column prop="monthlyName" label="月份" width="100" />
@@ -50,8 +66,16 @@
               <el-table-column label="预算金额" width="130" align="right">
                 <template #default="{ row }">{{ formatAmount(row.budgetAmount) }}</template>
               </el-table-column>
-              <el-table-column prop="businessType" label="渠道性质" min-width="100" show-overflow-tooltip />
-              <el-table-column prop="businessProperty" label="经营类型" min-width="100" show-overflow-tooltip />
+              <el-table-column label="渠道性质/经营类型" min-width="140">
+                <template #default="{ row }">
+                  <template v-if="row.businessType">
+                    <span>{{ row.businessType }}</span>
+                    <span v-if="row.businessProperty" class="region-sep">/</span>
+                    <span v-if="row.businessProperty">{{ row.businessProperty }}</span>
+                  </template>
+                  <span v-else>-</span>
+                </template>
+              </el-table-column>
               <el-table-column prop="salesType" label="销售类型" min-width="100" show-overflow-tooltip />
             </el-table>
           </div>
@@ -195,7 +219,7 @@ function onTabChange(tab) {
 const loading = ref(false)
 const tableData = ref([])
 const total = ref(0)
-const query = reactive({ pageNum: 1, pageSize: defaultPageSize.value, storeName: '', brandName: '', department1: '', professionType: '', budgetDtmStart: '', budgetDtmEnd: '' })
+const query = reactive({ pageNum: 1, pageSize: defaultPageSize.value, storeName: '', brandName: '', regionLevel1: '', channelDef: '', budgetDtmStart: '', budgetDtmEnd: '' })
 const budgetDateRange = ref(null)
 
 async function loadData() {
@@ -218,7 +242,7 @@ async function loadData() {
 }
 function handleSearch() { query.pageNum = 1; loadData() }
 function resetQuery() {
-  query.storeName = ''; query.brandName = ''; query.department1 = ''; query.professionType = ''
+  query.storeName = ''; query.brandName = ''; query.regionLevel1 = ''; query.channelDef = ''
   budgetDateRange.value = null
   handleSearch()
 }
@@ -368,6 +392,10 @@ onActivated(() => loadData())
 .card-header-title {
   font-size: 16px;
   font-weight: 600;
+}
+.region-sep {
+  color: var(--el-text-color-placeholder);
+  margin: 0 2px;
 }
 .upload-hint {
   font-size: 12px;

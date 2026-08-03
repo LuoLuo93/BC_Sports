@@ -15,4 +15,18 @@ public interface BjerpStoreMapper {
                                            @Param("offset") long offset, @Param("pageSize") long pageSize);
 
     List<Map<String, Object>> listAllStores();
+
+    /** 店仓主品牌下拉（C_STOREATTRIBVALUE DIM5） */
+    List<Map<String, Object>> listBrands();
+
+    /** 店仓零售督导下拉（C_STOREATTRIBVALUE DIM6） */
+    List<Map<String, Object>> listSupervisors();
+
+    /**
+     * 编辑店仓品牌/督导归属，写回 ERP C_STORE。
+     * @return 受影响行数（0=店仓ID不存在）
+     */
+    int updateStoreAttrib(@Param("storeId") String storeId,
+                          @Param("brandId") String brandId,
+                          @Param("supervisorId") String supervisorId);
 }

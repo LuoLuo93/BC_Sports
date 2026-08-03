@@ -2,29 +2,48 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.bcsport.admin.erpmapper.BjerpStoreMapper">
 
+    <!-- 列表查询字段：店仓基础信息 + 主品牌(DIM5) + 零售督导(DIM6) -->
+    <sql id="storeColumns">
+        STORE.ID            AS STORE_ID,
+        STORE.CODE          AS STORE_CODE,
+        STORE.NAME          AS STORE_NAME,
+        BRAND.NAME          AS STORE_BRAND,
+        SUPERVISOR.NAME     AS STORE_SUPERVISOR,
+        STORE.C_STOREATTRIB5_ID AS BRAND_ID,
+        STORE.C_STOREATTRIB6_ID AS SUPERVISOR_ID
+    </sql>
+
+    <!-- JOIN：C_STOREATTRIB5_ID→品牌, C_STOREATTRIB6_ID→零售督导 -->
+    <sql id="storeJoins">
+        FROM C_STORE STORE
+            LEFT JOIN C_STOREATTRIBVALUE BRAND ON STORE.C_STOREATTRIB5_ID = BRAND.ID
+            LEFT JOIN C_STOREATTRIBVALUE SUPERVISOR ON STORE.C_STOREATTRIB6_ID = SUPERVISOR.ID
+    </sql>
+
     <sql id="searchStoresWhere">
         <where>
             <if test="code != null and code != ''">
-                AND CODE LIKE '%' || #{code} || '%' ESCAPE '\'
+                AND STORE.CODE LIKE '%' || #{code} || '%' ESCAPE '\'
             </if>
             <if test="name != null and name != ''">
                 <choose>
-                    <when test="code != null and code != ''">OR NAME LIKE '%' || #{name} || '%' ESCAPE '\'</when>
-                    <otherwise>AND NAME LIKE '%' || #{name} || '%' ESCAPE '\'</otherwise>
+                    <when test="code != null and code != ''">OR STORE.NAME LIKE '%' || #{name} || '%' ESCAPE '\'</when>
+                    <otherwise>AND STORE.NAME LIKE '%' || #{name} || '%' ESCAPE '\'</otherwise>
                 </choose>
             </if>
         </where>
     </sql>
 
     <select id="countStores" resultType="long">
-        SELECT COUNT(*) FROM C_STORE
+        SELECT COUNT(*) FROM C_STORE STORE
         <include refid="searchStoresWhere"/>
     </select>
 
     <select id="searchStores" resultType="java.util.Map">
         SELECT * FROM (
-            SELECT CODE, NAME, ROW_NUMBER() OVER (ORDER BY CODE) AS RN
-            FROM C_STORE
+            SELECT <include refid="storeColumns"/>,
+                   ROW_NUMBER() OVER (ORDER BY STORE.CODE) AS RN
+            <include refid="storeJoins"/>
             <include refid="searchStoresWhere"/>
         ) WHERE RN &gt; #{offset} AND RN &lt;= #{offset} + #{pageSize}
     </select>
@@ -32,5 +51,23 @@
     <select id="listAllStores" resultType="java.util.Map">
         SELECT CODE, NAME FROM C_STORE ORDER BY CODE
     </select>
+
+    <!-- 品牌下拉：C_STOREATTRIBVALUE DIM5 -->
+    <select id="listBrands" resultType="java.util.Map">
+        SELECT ID, NAME FROM C_STOREATTRIBVALUE WHERE DIMFLAG = 'DIM5' ORDER BY NAME
+    </select>
+
+    <!-- 零售督导下拉：C_STOREATTRIBVALUE DIM6 -->
+    <select id="listSupervisors" resultType="java.util.Map">
+        SELECT ID, NAME FROM C_STOREATTRIBVALUE WHERE DIMFLAG = 'DIM6' ORDER BY NAME
+    </select>
+
+    <!-- 编辑店仓品牌/督导归属：写回 ERP C_STORE；空串转 NULL 避免残留 -->
+    <update id="updateStoreAttrib">
+        UPDATE C_STORE
+        SET C_STOREATTRIB5_ID = NULLIF(TRIM(#{brandId}), ''),
+            C_STOREATTRIB6_ID = NULLIF(TRIM(#{supervisorId}), '')
+        WHERE ID = #{storeId}
+    </update>
 
 </mapper>

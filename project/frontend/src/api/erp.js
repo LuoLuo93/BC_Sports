@@ -9,6 +9,21 @@ export function getErpStoreListAll() {
   return request.get('/api/erp-store/list-all')
 }
 
+// 店仓品牌下拉（C_STOREATTRIBVALUE DIM5）
+export function getErpStoreBrands() {
+  return request.get('/api/erp-store/brands')
+}
+
+// 店仓零售督导下拉（C_STOREATTRIBVALUE DIM6）
+export function getErpStoreSupervisors() {
+  return request.get('/api/erp-store/supervisors')
+}
+
+// 编辑店仓品牌/督导归属，写回 ERP C_STORE
+export function updateErpStoreAttrib(data) {
+  return request.put('/api/erp-store/attrib', data)
+}
+
 // ERP Shop
 export function getErpShopPage(params) {
   return request.get('/api/erp-shop/page', { params })

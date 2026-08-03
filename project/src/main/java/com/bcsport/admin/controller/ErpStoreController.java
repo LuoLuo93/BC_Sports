@@ -61,4 +61,45 @@ public class ErpStoreController {
     public Result<List<Map<String, Object>>> listAll() {
         return Result.success(bjerpStoreMapper.listAllStores());
     }
+
+    /**
+     * 店仓主品牌下拉（C_STOREATTRIBVALUE DIM5）
+     */
+    @GetMapping("/brands")
+    @ApiOperation("店仓品牌列表")
+    @RequiresPermissions("bi:erpStore:query")
+    public Result<List<Map<String, Object>>> brands() {
+        return Result.success(bjerpStoreMapper.listBrands());
+    }
+
+    /**
+     * 店仓零售督导下拉（C_STOREATTRIBVALUE DIM6）
+     */
+    @GetMapping("/supervisors")
+    @ApiOperation("店仓零售督导列表")
+    @RequiresPermissions("bi:erpStore:query")
+    public Result<List<Map<String, Object>>> supervisors() {
+        return Result.success(bjerpStoreMapper.listSupervisors());
+    }
+
+    /**
+     * 编辑店仓品牌/督导归属，写回 ERP C_STORE 的 C_STOREATTRIB5_ID/C_STOREATTRIB6_ID。
+     * body: { storeId, brandId, supervisorId }
+     */
+    @PutMapping("/attrib")
+    @ApiOperation("编辑店仓品牌/督导归属")
+    @RequiresPermissions("bi:erpStore:edit")
+    public Result<?> updateAttrib(@RequestBody Map<String, Object> body) {
+        String storeId = body.get("storeId") == null ? null : body.get("storeId").toString();
+        String brandId = body.get("brandId") == null ? null : body.get("brandId").toString();
+        String supervisorId = body.get("supervisorId") == null ? null : body.get("supervisorId").toString();
+        if (storeId == null || storeId.isBlank()) {
+            return Result.paramError("店仓ID不能为空");
+        }
+        int rows = bjerpStoreMapper.updateStoreAttrib(storeId, brandId, supervisorId);
+        if (rows == 0) {
+            return Result.error("店仓不存在，更新失败");
+        }
+        return Result.success("保存成功");
+    }
 }

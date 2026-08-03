@@ -25,6 +25,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -104,9 +106,6 @@ public class SalesBudgetFillDailyServiceImpl
             if (StringUtils.hasText(queryDTO.getBrandName())) {
                 wrapper.like(SalesBudgetFillDaily::getBrandName, queryDTO.getBrandName());
             }
-            if (StringUtils.hasText(queryDTO.getRegionLevel1())) {
-                wrapper.like(SalesBudgetFillDaily::getRegionLevel1, queryDTO.getRegionLevel1());
-            }
             if (StringUtils.hasText(queryDTO.getChannelDef())) {
                 wrapper.like(SalesBudgetFillDaily::getChannelDef, queryDTO.getChannelDef());
             }
@@ -116,6 +115,14 @@ public class SalesBudgetFillDailyServiceImpl
             if (queryDTO.getBudgetDtmEnd() != null) {
                 wrapper.le(SalesBudgetFillDaily::getBudgetDtm, queryDTO.getBudgetDtmEnd());
             }
+        }
+        // 默认查询最近6个月的预算（当用户没有指定日期范围时）
+        if (queryDTO == null || (queryDTO.getBudgetDtmStart() == null && queryDTO.getBudgetDtmEnd() == null)) {
+            Calendar cal = Calendar.getInstance();
+            cal.add(Calendar.MONTH, -6);
+            cal.set(Calendar.DAY_OF_MONTH, 1);
+            Date sixMonthsAgo = cal.getTime();
+            wrapper.ge(SalesBudgetFillDaily::getBudgetDtm, sixMonthsAgo);
         }
         wrapper.orderByDesc(SalesBudgetFillDaily::getBudgetDtm);
         Page<SalesBudgetFillDaily> result = budgetMapper.selectPage(page, wrapper);

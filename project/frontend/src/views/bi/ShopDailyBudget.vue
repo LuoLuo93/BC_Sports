@@ -31,7 +31,7 @@
 
           <div class="table-responsive">
             <el-table v-loading="loading" :data="tableData" border stripe empty-text="暂无数据">
-              <el-table-column label="#" width="55" align="center" fixed>
+              <el-table-column label="#" width="70" align="center" fixed>
                 <template #default="{ $index }">{{ (query.pageNum - 1) * query.pageSize + $index + 1 }}</template>
               </el-table-column>
               <el-table-column prop="storeName" label="店仓名称" min-width="140" show-overflow-tooltip />

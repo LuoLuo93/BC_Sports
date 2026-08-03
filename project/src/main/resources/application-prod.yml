@@ -6,9 +6,10 @@ server:
 
 spring:
   datasource:
-    url: jdbc:oracle:thin:@192.168.5.174:1521:BCSports
-    username: bc
-    password: abc123
+    # 主库切换: 174 BCSports -> 177 ORCL(bc_sports)
+    url: jdbc:oracle:thin:@192.168.5.177:1521:orcl
+    username: bc_sports
+    password: 123456
     druid:
       initial-size: 10
       min-idle: 10

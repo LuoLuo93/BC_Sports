@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bcsport.admin.bidwmapper.SalesBudgetFillDailyMapper">
+
+    <!-- Oracle MERGE upsert：store_name + brand_name + budget_dtm 组合去重 -->
+    <insert id="mergeBatch" parameterType="java.util.List">
+        MERGE INTO ODS_SALES_BUDGET_FILL_DAILY target
+        USING (
+            <foreach collection="list" item="item" separator=" UNION ALL ">
+                SELECT
+                    #{item.department1}      AS department_1,
+                    #{item.department2}      AS department_2,
+                    #{item.channelProperty}  AS channel_property,
+                    #{item.professionType}   AS profession_type,
+                    #{item.storeName}        AS store_name,
+                    #{item.brandName}        AS brand_name,
+                    #{item.monthlyName}      AS monthly_name,
+                    #{item.budgetDtm}        AS budget_dtm,
+                    #{item.budgetAmount}     AS budget_amount,
+                    #{item.businessType}     AS business_type,
+                    #{item.businessProperty} AS business_property,
+                    #{item.salesType}        AS sales_type
+                FROM dual
+            </foreach>
+        ) source
+        ON (target.store_name = source.store_name
+            AND target.brand_name = source.brand_name
+            AND target.budget_dtm = source.budget_dtm)
+        WHEN MATCHED THEN
+            UPDATE SET
+                target.department_1      = source.department_1,
+                target.department_2      = source.department_2,
+                target.channel_property  = source.channel_property,
+                target.profession_type   = source.profession_type,
+                target.monthly_name      = source.monthly_name,
+                target.budget_amount     = source.budget_amount,
+                target.business_type     = source.business_type,
+                target.business_property = source.business_property,
+                target.sales_type        = source.sales_type
+        WHEN NOT MATCHED THEN
+            INSERT (department_1, department_2, channel_property, profession_type,
+                    store_name, brand_name, monthly_name, budget_dtm, budget_amount,
+                    business_type, business_property, sales_type)
+            VALUES (source.department_1, source.department_2, source.channel_property, source.profession_type,
+                    source.store_name, source.brand_name, source.monthly_name, source.budget_dtm, source.budget_amount,
+                    source.business_type, source.business_property, source.sales_type)
+    </insert>
+
+</mapper>

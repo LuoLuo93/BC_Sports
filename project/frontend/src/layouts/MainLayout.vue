@@ -182,6 +182,8 @@ const pathToName = {
   '/bi/erp-shop': 'ErpShop',
   '/bi/erp-warehouse': 'ErpWarehouse',
   '/bi/erp-customer': 'ErpCustomer',
+  '/bi/goods-data': 'GoodsDataImport',
+  '/bi/shop-daily-budget': 'ShopDailyBudget',
   '/ihr/employee-management': 'IhrEmployee',
   '/ihr/onboarding-management': 'IhrOnboarding',
   '/ihr/adjustment-management': 'IhrAdjustment',

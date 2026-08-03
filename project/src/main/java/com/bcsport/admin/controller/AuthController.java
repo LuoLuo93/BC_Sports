@@ -38,7 +38,10 @@ public class AuthController {
 
     @Autowired
     private UserService userService;
-    
+
+    @Autowired
+    private SessionCheckController sessionCheckController;
+
     /**
      * 登录页面 - 返回 Vue SPA 入口
      */
@@ -126,7 +129,9 @@ public class AuthController {
             }
 
             log.info("用户登录成功: {}", username);
-            return Result.success("登录成功", null);
+            // 登录成功直接在响应体返回用户信息，前端无需再发 /api/session/info
+            // （避免 JSESSIONID Cookie 未及时落地导致那次请求 401，从而首次登录不跳转）
+            return Result.success("登录成功", sessionCheckController.buildSessionInfo());
         } catch (Exception e) {
             // 登录失败，记录失败次数
             long failCount = authCacheService.recordLoginFailure(username);

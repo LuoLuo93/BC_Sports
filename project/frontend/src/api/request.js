@@ -10,9 +10,15 @@ const request = axios.create({
 })
 
 let isLoggingOut = false
+// 登录流程中标志：避免 /doLogin 后的请求（如拉用户信息）偶发 401 时，拦截器抢着把用户打回 /login
+let isLoggingIn = false
 
 export function setLoggingOut(value) {
   isLoggingOut = value
+}
+
+export function setLoggingIn(value) {
+  isLoggingIn = value
 }
 
 // CSRF Token 缓存（仅存储在内存中，不使用 localStorage）
@@ -61,6 +67,10 @@ request.interceptors.response.use(
       return res
     }
     if (res.code === 401) {
+      // 登录流程中的 401 不抢跳转（交给 auth store 的重试/异常处理），避免首次登录被踢回登录页
+      if (isLoggingIn) {
+        return Promise.reject(new Error(res.message || '未登录'))
+      }
       const authStore = useAuthStore()
       authStore.clearAuth()
       clearCsrfToken() // 清除 CSRF Token
@@ -77,13 +87,17 @@ request.interceptors.response.use(
     if (error.response) {
       const status = error.response.status
       if (status === 401) {
-        const authStore = useAuthStore()
-        authStore.clearAuth()
-        clearCsrfToken() // 清除 CSRF Token
-        if (!isLoggingOut && router.currentRoute.value.path !== '/login') {
-          ElMessage.error('登录已过期，请重新登录')
+        if (isLoggingIn) {
+          // 登录流程中的 401 不抢跳转
+        } else {
+          const authStore = useAuthStore()
+          authStore.clearAuth()
+          clearCsrfToken() // 清除 CSRF Token
+          if (!isLoggingOut && router.currentRoute.value.path !== '/login') {
+            ElMessage.error('登录已过期，请重新登录')
+          }
+          router.push('/login')
         }
-        router.push('/login')
       } else if (status === 403) {
         // 检查是否是 CSRF Token 错误
         const errorMsg = error.response.data?.message || ''

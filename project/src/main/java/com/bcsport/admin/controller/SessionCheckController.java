@@ -71,11 +71,21 @@ public class SessionCheckController {
         if (!subject.isAuthenticated()) {
             return Result.unauthorized("未登录");
         }
+        return Result.success(buildSessionInfo());
+    }
 
+    /**
+     * 构建当前登录用户的会话信息（username/nickname/userId/deptName/permissions）。
+     * 供 /api/session/info 与 /doLogin 登录成功后复用，避免前端登录后再发一次请求拉用户信息
+     * （那次请求可能因 JSESSIONID Cookie 未及时落地而 401，导致首次登录看似不跳转）。
+     * 调用方需保证当前 Subject 已认证。
+     */
+    public Map<String, Object> buildSessionInfo() {
+        Subject subject = SecurityUtils.getSubject();
         String username = (String) subject.getPrincipal();
         User user = userService.getByUsername(username);
         if (user == null) {
-            return Result.error("用户不存在");
+            return java.util.Collections.emptyMap();
         }
 
         List<String> permissions;
@@ -106,6 +116,6 @@ public class SessionCheckController {
         }
         info.put("deptName", deptName);
         info.put("permissions", permissions);
-        return Result.success(info);
+        return info;
     }
 }

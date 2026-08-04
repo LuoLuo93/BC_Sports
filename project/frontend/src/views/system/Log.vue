@@ -60,7 +60,7 @@
           </template>
         </el-table-column>
         <el-table-column prop="method" label="方法" min-width="180" show-overflow-tooltip />
-        <el-table-column label="操作时间" width="170" align="center">
+        <el-table-column label="操作时间" width="180" align="center">
           <template #default="{ row }">
             {{ formatTime(row.operationTime) }}
           </template>

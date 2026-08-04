@@ -55,6 +55,10 @@ public class MaintenanceController {
     @Qualifier("hkerpDataSource")
     private DruidDataSource hkerpDataSource;
 
+    @Autowired
+    @Qualifier("bidwDataSource")
+    private DruidDataSource bidwDataSource;
+
     /**
      * 清除系统缓存（Redis + 内存配置缓存）
      */
@@ -154,6 +158,7 @@ public class MaintenanceController {
     public Result<List<Map<String, Object>>> dbMonitor() {
         List<Map<String, Object>> list = new ArrayList<>();
         list.add(buildPoolStats("主库 (Oracle)", mainDataSource, "main"));
+        list.add(buildPoolStats("BI数仓 (Oracle)", bidwDataSource, "bidw"));
         list.add(buildPoolStats("伯俊ERP (Oracle)", bjerpDataSource, "bjerp"));
         list.add(buildPoolStats("IHR (SQL Server)", ihrDataSource, "ihr"));
         list.add(buildPoolStats("企业微信 (SQL Server)", qywxDataSource, "qywx"));
@@ -197,6 +202,7 @@ public class MaintenanceController {
     private DruidDataSource resolveDataSource(String name) {
         return switch (name) {
             case "main" -> mainDataSource;
+            case "bidw" -> bidwDataSource;
             case "bjerp" -> bjerpDataSource;
             case "ihr" -> ihrDataSource;
             case "qywx" -> qywxDataSource;

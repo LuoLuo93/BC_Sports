@@ -173,21 +173,19 @@ public class SalesBudgetFillDailyServiceImpl
 
             try {
                 SalesBudgetFillDaily entity = mapRow(rowCells, columnIndex);
-                // 校验必填字段（表定义中 store_name/brand_name/budget_dtm/budget_amount 为 NOT NULL）
-                if (!StringUtils.hasText(entity.getStoreName())) {
-                    if (errors.size() < MAX_ERRORS) errors.add("第" + rowNum + "行：店铺名称不能为空");
-                    return;
-                }
-                if (!StringUtils.hasText(entity.getBrandName())) {
-                    if (errors.size() < MAX_ERRORS) errors.add("第" + rowNum + "行：品牌名称不能为空");
-                    return;
-                }
-                if (entity.getBudgetDtm() == null) {
-                    if (errors.size() < MAX_ERRORS) errors.add("第" + rowNum + "行：预算日期不能为空");
-                    return;
-                }
-                if (entity.getBudgetAmount() == null) {
-                    if (errors.size() < MAX_ERRORS) errors.add("第" + rowNum + "行：预算金额不能为空");
+                // 校验所有 NOT NULL 字段（表有9个NOT NULL列，全部必填）
+                String missing = null;
+                if (!StringUtils.hasText(entity.getRegionLevel1())) missing = "一级地区";
+                else if (!StringUtils.hasText(entity.getRegionLevel2())) missing = "二级地区";
+                else if (!StringUtils.hasText(entity.getChannelProperty())) missing = "渠道类型";
+                else if (!StringUtils.hasText(entity.getChannelDef())) missing = "渠道定义";
+                else if (!StringUtils.hasText(entity.getStoreName())) missing = "店仓名称";
+                else if (!StringUtils.hasText(entity.getBrandName())) missing = "店仓品牌";
+                else if (!StringUtils.hasText(entity.getMonthlyName())) missing = "预算月份";
+                else if (entity.getBudgetDtm() == null) missing = "预算日期";
+                else if (entity.getBudgetAmount() == null) missing = "预算金额";
+                if (missing != null) {
+                    if (errors.size() < MAX_ERRORS) errors.add("第" + rowNum + "行：" + missing + "不能为空");
                     return;
                 }
 
@@ -211,8 +209,8 @@ public class SalesBudgetFillDailyServiceImpl
 
         // 表头缺失校验（必填列）
         List<String> missingHeaders = new ArrayList<>();
-        if (!columnIndex.containsKey("storeName")) missingHeaders.add("店铺名称");
-        if (!columnIndex.containsKey("brandName")) missingHeaders.add("品牌名称");
+        if (!columnIndex.containsKey("storeName")) missingHeaders.add("店仓名称");
+        if (!columnIndex.containsKey("brandName")) missingHeaders.add("店仓品牌");
         if (!columnIndex.containsKey("budgetDtm")) missingHeaders.add("预算日期");
         if (!columnIndex.containsKey("budgetAmount")) missingHeaders.add("预算金额");
         if (!missingHeaders.isEmpty()) {
@@ -259,7 +257,16 @@ public class SalesBudgetFillDailyServiceImpl
             success.addAndGet(toWrite.size());
         } catch (Exception e) {
             log.error("店铺日预算 批量入库失败", e);
-            if (errors.size() < MAX_ERRORS) errors.add("批量入库失败: " + e.getMessage());
+            if (errors.size() < MAX_ERRORS) {
+                String reason = e.getMessage() == null ? "未知错误" : e.getMessage();
+                for (SalesBudgetFillDaily item : toWrite) {
+                    if (errors.size() >= MAX_ERRORS) break;
+                    errors.add("入库失败 [店仓=" + item.getStoreName()
+                            + ", 品牌=" + item.getBrandName()
+                            + ", 日期=" + item.getBudgetDtm()
+                            + "]: " + reason);
+                }
+            }
         }
     }
 

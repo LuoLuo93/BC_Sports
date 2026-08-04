@@ -30,7 +30,10 @@ public class BidwDataSourceConfig {
     @Bean("bidwDataSource")
     @ConfigurationProperties(prefix = "spring.datasource.bidw")
     public DataSource bidwDataSource() {
-        return new DruidDataSource();
+        DruidDataSource ds = new DruidDataSource();
+        // 显式设置 name, 确保 Druid 监控页能识别此数据源
+        ds.setName("bidwDataSource");
+        return ds;
     }
 
     @Bean("bidwSqlSessionFactory")

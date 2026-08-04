@@ -176,8 +176,8 @@ spring:
       username: ${BIDW_DB_USERNAME:bi_dw}
       password: ${BIDW_DB_PASSWORD:123456}
       druid:
-        initial-size: 3
-        min-idle: 3
+        initial-size: 1
+        min-idle: 1
         max-active: 15
         max-wait: 60000
         time-between-eviction-runs-millis: 60000
@@ -195,7 +195,8 @@ spring:
         break-after-acquire-failure: false
         connection-error-retry-attempts: 3
         time-between-connect-error-millis: 30000
-        filters: stat,wall,slf4j
+        # 数仓查询复杂(多层子查询/分析函数), wall 默认规则易误拦, 只保留 stat+slf4j
+        filters: stat,slf4j
         connection-properties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=5000
     # BC_SPORTS 业务表 Oracle 数据源 (192.168.5.177 / schema: BC_SPORTS)
     bcsp:
@@ -206,8 +207,8 @@ spring:
       username: ${BCSP_DB_USERNAME:bc_sports}
       password: ${BCSP_DB_PASSWORD:123456}
       druid:
-        initial-size: 3
-        min-idle: 3
+        initial-size: 0
+        min-idle: 0
         max-active: 15
         max-wait: 60000
         time-between-eviction-runs-millis: 60000

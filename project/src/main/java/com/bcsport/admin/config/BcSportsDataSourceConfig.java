@@ -30,7 +30,9 @@ public class BcSportsDataSourceConfig {
     @Bean("bcspDataSource")
     @ConfigurationProperties(prefix = "spring.datasource.bcsp")
     public DataSource bcspDataSource() {
-        return new DruidDataSource();
+        DruidDataSource ds = new DruidDataSource();
+        ds.setName("bcspDataSource");
+        return ds;
     }
 
     @Bean("bcspSqlSessionFactory")

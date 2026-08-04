@@ -46,7 +46,7 @@ jobs:
       # 4. 构建后端
       - name: Build Backend
         run: |
-          mvn clean package -DskipTests -q -U
+          mvnd clean package -DskipTests -q -U
           if (-not (Test-Path "target/bc-sports-admin-1.0.0.jar")) {
             Write-Host "ERROR: JAR file not found!"
             exit 1

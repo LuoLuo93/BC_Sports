@@ -6,7 +6,9 @@ import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.common.Result;
 import com.bcsport.admin.entity.bi.EstimatedCostImportLog;
+import com.bcsport.admin.mapper.EstimatedCostImportLogMapper;
 import com.bcsport.admin.service.EstimatedCostService;
+import com.bcsport.admin.util.ShiroSecurityUtils;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +21,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.util.*;
 
 /**
@@ -32,6 +35,9 @@ public class EstimatedCostController {
 
     @Autowired
     private EstimatedCostService estimatedCostService;
+
+    @Autowired
+    private EstimatedCostImportLogMapper importLogMapper;
 
     @GetMapping("/page")
     @ApiOperation("分页查询预估成本")
@@ -77,10 +83,32 @@ public class EstimatedCostController {
         } catch (cn.hutool.poi.exceptions.POIException | org.apache.poi.ooxml.POIXMLException
                  | org.apache.poi.util.RecordFormatException e) {
             log.error("预估成本 Excel解析失败: {}", e.getMessage());
-            return Result.error("Excel解析失败，请确认文件是标准的 .xlsx/.xls 格式");
+            String errorMsg = "Excel解析失败，请确认文件是标准的 .xlsx/.xls 格式: " + e.getMessage();
+            saveFailedLog(file, errorMsg);
+            return Result.error(errorMsg);
         } catch (Exception e) {
             log.error("预估成本导入失败: {}", e.getMessage(), e);
-            return Result.error("导入失败：" + e.getMessage());
+            String errorMsg = "导入失败：" + e.getMessage();
+            saveFailedLog(file, errorMsg);
+            return Result.error(errorMsg);
+        }
+    }
+
+    private void saveFailedLog(MultipartFile file, String errorMsg) {
+        try {
+            EstimatedCostImportLog logEntity = new EstimatedCostImportLog();
+            logEntity.setFileName(file.getOriginalFilename());
+            logEntity.setFileSize(file.getSize());
+            logEntity.setTotalCount(0);
+            logEntity.setSuccessCount(0);
+            logEntity.setFailCount(0);
+            logEntity.setStatus("FAILED");
+            logEntity.setErrorMsg(errorMsg.length() > 4000 ? errorMsg.substring(0, 4000) : errorMsg);
+            logEntity.setCreateBy(ShiroSecurityUtils.getCurrentUsername());
+            logEntity.setCreateTime(LocalDateTime.now());
+            importLogMapper.insert(logEntity);
+        } catch (Exception ex) {
+            log.warn("保存失败导入日志失败: {}", ex.getMessage());
         }
     }
 

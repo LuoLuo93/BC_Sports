@@ -209,6 +209,10 @@ public class EstimatedCostServiceImpl implements EstimatedCostService {
         log.info("预估成本导入完成: total={}, success={}, fail={}", total[0], success[0], fail);
 
         String status = (total[0] == 0) ? "FAILED" : (fail == 0 ? "SUCCESS" : "PARTIAL");
+        // 兜底：有失败但 errors 为空，补一条说明
+        if (fail > 0 && errors.isEmpty()) {
+            errors.add("共 " + fail + " 条数据未导入（可能因必填字段为空、数据类型不匹配或数据库约束冲突），请检查源数据");
+        }
         saveImportLog(file, total[0], success[0], fail, status, errors);
 
         return buildResult(total[0], success[0], fail, errors);

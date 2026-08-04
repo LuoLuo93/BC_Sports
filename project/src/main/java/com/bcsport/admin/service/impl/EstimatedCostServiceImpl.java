@@ -87,20 +87,23 @@ public class EstimatedCostServiceImpl implements EstimatedCostService {
             throw new BusinessException("货号不能为空");
         }
         validatePrecost(precost);
-        int rows = bjerpProductMapper.updatePrecost(materialNumber, precost);
+        // 清洗后的值写入数据库(去千分位逗号/货币符号)
+        String cleaned = StringUtils.hasText(precost) ? cleanNumber(precost) : precost;
+        int rows = bjerpProductMapper.updatePrecost(materialNumber, cleaned);
         if (rows == 0) {
             throw new BusinessException("货号不存在: " + materialNumber);
         }
-        log.info("预估成本已更新: materialNumber={}, precost={}, rows={}", materialNumber, precost, rows);
+        log.info("预估成本已更新: materialNumber={}, precost={}, rows={}", materialNumber, cleaned, rows);
     }
 
     /**
-     * 校验预估成本：允许空（清空值），非空则必须是合法数字（整数或小数，可为负）。
+     * 校验预估成本：允许空（清空值），非空则清洗后必须是合法数字（整数或小数，可为负）。
+     * 支持千分位逗号、货币符号。
      */
     private void validatePrecost(String precost) {
         if (!StringUtils.hasText(precost)) return;
-        String trimmed = precost.trim();
-        if (!trimmed.matches("-?\\d+(\\.\\d+)?")) {
+        String cleaned = cleanNumber(precost);
+        if (cleaned == null) {
             throw new BusinessException("预估成本必须是数字: " + precost);
         }
     }
@@ -115,10 +118,12 @@ public class EstimatedCostServiceImpl implements EstimatedCostService {
                     "文件不是标准的 Excel 格式（检测为 " + realFormat + "），请用 Excel 打开后另存为 .xlsx 再上传"));
         }
 
-        // 1. SAX 流式读取全部行到内存（仅货号+预估成本两列，占用极小），同时做行级校验
+        // 1. SAX 流式读取全部行，同时做行级校验
         Map<String, Integer> columnIndex = new HashMap<>();
         // 有效数据（货号 -> 预估成本），同一货号后行覆盖前行
         LinkedHashMap<String, String> validRows = new LinkedHashMap<>();
+        // 重复行统计：货号 -> 出现次数
+        Map<String, Integer> duplicateCount = new LinkedHashMap<>();
         List<String> errors = Collections.synchronizedList(new ArrayList<>());
         int[] total = {0};
 
@@ -153,17 +158,22 @@ public class EstimatedCostServiceImpl implements EstimatedCostService {
                 if (errors.size() < MAX_ERRORS) errors.add("第" + rowNum + "行：货号不能为空");
                 return;
             }
+            // 货号去空格
+            materialNumber = materialNumber.trim();
             // 预估成本为空：跳过该行（不写 NULL，避免误清空主数据）
             if (!StringUtils.hasText(precost)) {
                 if (errors.size() < MAX_ERRORS) errors.add("第" + rowNum + "行：预估成本为空，已跳过");
                 return;
             }
-            // 校验：预估成本必须是数字
-            if (!precost.trim().matches("-?\\d+(\\.\\d+)?")) {
+            // 数字清洗：去货币符号/千分位逗号/空格
+            String cleanedPrecost = cleanNumber(precost);
+            if (cleanedPrecost == null) {
                 if (errors.size() < MAX_ERRORS) errors.add("第" + rowNum + "行：预估成本必须是数字（当前值：" + precost + "）");
                 return;
             }
-            validRows.put(materialNumber, precost);
+            // 重复行统计（后行覆盖前行，记录覆盖次数）
+            duplicateCount.merge(materialNumber, 1, Integer::sum);
+            validRows.put(materialNumber, cleanedPrecost);
         };
 
         readAllSheets(file, realFormat, handler);
@@ -177,16 +187,38 @@ public class EstimatedCostServiceImpl implements EstimatedCostService {
                     "Excel缺少必需列：" + String.join("、", missingHeaders) + "，请检查表头或下载导入模板"));
         }
 
-        // 3. 在伯俊数据源事务内批量更新：任意异常整体回滚，保护货品主数据
+        // 2.5 重复行提示（后行覆盖，告知用户哪些货号被覆盖了）
+        for (Map.Entry<String, Integer> e : duplicateCount.entrySet()) {
+            if (e.getValue() > 1 && errors.size() < MAX_ERRORS) {
+                errors.add("货号 [" + e.getKey() + "] 重复 " + e.getValue() + " 次，已用最后一次的值");
+            }
+        }
+
+        // 3. 货号存在性校验：批量查询 ERP 里存在的货号，不存在的提前过滤
+        int notExistCount = 0;
+        if (!validRows.isEmpty()) {
+            List<String> existNumbers = bjerpProductMapper.selectExistMaterialNumbers(new ArrayList<>(validRows.keySet()));
+            java.util.Set<String> existSet = new java.util.HashSet<>(existNumbers);
+            // 移除不存在的货号
+            java.util.Iterator<String> it = validRows.keySet().iterator();
+            while (it.hasNext()) {
+                String num = it.next();
+                if (!existSet.contains(num)) {
+                    if (errors.size() < MAX_ERRORS) errors.add("货号 [" + num + "] 在ERP中未找到，已跳过");
+                    it.remove();
+                    notExistCount++;
+                }
+            }
+        }
+
+        // 4. 在伯俊数据源事务内批量更新：任意异常整体回滚，保护货品主数据
         int[] success = {0};
         if (!validRows.isEmpty()) {
             try {
                 new TransactionTemplate(bjerpTransactionManager).execute(status -> {
                     for (Map.Entry<String, String> e : validRows.entrySet()) {
                         int rows = bjerpProductMapper.updatePrecost(e.getKey(), e.getValue());
-                        if (rows == 0) {
-                            if (errors.size() < MAX_ERRORS) errors.add("货号 [" + e.getKey() + "] 不存在");
-                        } else {
+                        if (rows > 0) {
                             success[0]++;
                         }
                     }
@@ -206,7 +238,7 @@ public class EstimatedCostServiceImpl implements EstimatedCostService {
         if (fail > MAX_ERRORS && !errors.isEmpty()) {
             errors.add("...共 " + fail + " 条未导入，仅显示前 " + MAX_ERRORS + " 条");
         }
-        log.info("预估成本导入完成: total={}, success={}, fail={}", total[0], success[0], fail);
+        log.info("预估成本导入完成: total={}, success={}, fail={}, notExist={}", total[0], success[0], fail, notExistCount);
 
         String status = (total[0] == 0) ? "FAILED" : (fail == 0 ? "SUCCESS" : "PARTIAL");
         // 兜底：有失败但 errors 为空，补一条说明
@@ -226,6 +258,23 @@ public class EstimatedCostServiceImpl implements EstimatedCostService {
     }
 
     // ==================== 工具方法 ====================
+
+    /**
+     * 数字清洗：去货币符号(¥/$/€/£)、千分位逗号、空格，返回纯数字字符串。
+     * 清洗后若不是合法数字返回 null。
+     * 例: "¥ 1,234.56" -> "1234.56", "$-1,234" -> "-1234", "abc" -> null
+     */
+    private String cleanNumber(String raw) {
+        if (raw == null) return null;
+        // 去货币符号 + 空格 + 千分位逗号
+        String cleaned = raw.trim()
+                .replaceAll("[¥$€£￥]", "")
+                .replaceAll("[\\s,，]", "");
+        if (cleaned.isEmpty()) return null;
+        // 校验：可选负号 + 数字 + 可选小数
+        if (!cleaned.matches("-?\\d+(\\.\\d+)?")) return null;
+        return cleaned;
+    }
 
     private String escapeLike(String value) {
         if (value == null || value.isEmpty()) return value;

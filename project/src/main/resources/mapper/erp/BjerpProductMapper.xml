@@ -196,4 +196,13 @@
         WHERE name = #{materialNumber}
     </update>
 
+    <!-- 批量查询存在的货号(导入前校验用) -->
+    <select id="selectExistMaterialNumbers" resultType="java.lang.String">
+        SELECT DISTINCT name FROM M_PRODUCT
+        WHERE name IN
+        <foreach collection="list" item="item" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+    </select>
+
 </mapper>

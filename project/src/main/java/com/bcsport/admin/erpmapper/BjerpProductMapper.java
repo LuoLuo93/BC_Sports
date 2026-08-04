@@ -59,4 +59,11 @@ public interface BjerpProductMapper {
      */
     int updatePrecost(@Param("materialNumber") String materialNumber,
                       @Param("precost") String precost);
+
+    /**
+     * 批量查询存在的货号(导入前校验用)
+     * @param materialNumbers 货号列表
+     * @return 数据库中存在的货号集合(name)
+     */
+    List<String> selectExistMaterialNumbers(@Param("list") List<String> materialNumbers);
 }

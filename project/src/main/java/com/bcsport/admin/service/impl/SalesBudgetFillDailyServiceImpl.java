@@ -124,7 +124,9 @@ public class SalesBudgetFillDailyServiceImpl
             Date sixMonthsAgo = cal.getTime();
             wrapper.ge(SalesBudgetFillDaily::getBudgetDtm, sixMonthsAgo);
         }
-        wrapper.orderByDesc(SalesBudgetFillDaily::getBudgetDtm);
+        wrapper.orderByAsc(SalesBudgetFillDaily::getStoreName)
+               .orderByAsc(SalesBudgetFillDaily::getBrandName)
+               .orderByDesc(SalesBudgetFillDaily::getBudgetDtm);
         Page<SalesBudgetFillDaily> result = budgetMapper.selectPage(page, wrapper);
         return PageResult.of(result);
     }
@@ -229,6 +231,10 @@ public class SalesBudgetFillDailyServiceImpl
         log.info("店铺日预算 导入完成: total={}, success={}, fail={}", total.get(), success.get(), fail);
 
         String status = (total.get() == 0) ? "FAILED" : (fail == 0 ? "SUCCESS" : "PARTIAL");
+        // 兜底：如果有失败但 errors 为空，补一条说明
+        if (fail > 0 && errors.isEmpty()) {
+            errors.add("共 " + fail + " 条数据未导入（可能因必填字段为空、数据类型不匹配或数据库约束冲突），请检查源数据");
+        }
         saveImportLog(file, total.get(), success.get(), fail, status, errors);
 
         return buildResult(total.get(), success.get(), fail, errors);

@@ -5,8 +5,10 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.common.exception.BusinessException;
+import com.bcsport.admin.entity.sticker.SizeGroupImportLog;
 import com.bcsport.admin.entity.sticker.StickerSize;
 import com.bcsport.admin.entity.sticker.StickerSizeGroup;
+import com.bcsport.admin.mapper.sticker.SizeGroupImportLogMapper;
 import com.bcsport.admin.mapper.sticker.StickerSizeGroupMapper;
 import com.bcsport.admin.mapper.sticker.StickerSizeMapper;
 import com.bcsport.admin.erpmapper.BjerpProductMapper;
@@ -36,6 +38,9 @@ public class StickerSizeGroupService {
 
     @Autowired
     private BjerpProductMapper bjerpProductMapper;
+
+    @Autowired
+    private SizeGroupImportLogMapper importLogMapper;
 
     /**
      * 分页查询(支持 brandId/kindId/status/groupCode/groupName 筛选)
@@ -493,11 +498,48 @@ public class StickerSizeGroupService {
             errors.add("...共 " + fail + " 条错误，仅显示前 100 条");
         }
 
+        // 写导入日志
+        String status = (total == 0) ? "FAILED" : (fail == 0 ? "SUCCESS" : "PARTIAL");
+        if (fail > 0 && errors.isEmpty()) {
+            errors.add("共 " + fail + " 条数据未导入，请检查源数据");
+        }
+        saveImportLog(file, total, success, fail, status, errors);
+
         result.put("total", total);
         result.put("success", success);
         result.put("fail", fail);
         result.put("errors", errors);
         return result;
+    }
+
+    /**
+     * 导入日志分页查询
+     */
+    public PageResult<SizeGroupImportLog> logPage(PageQuery pageQuery) {
+        Page<SizeGroupImportLog> page = importLogMapper.selectPage(pageQuery.toPage(),
+                new LambdaQueryWrapper<SizeGroupImportLog>().orderByDesc(SizeGroupImportLog::getId));
+        return PageResult.of(page);
+    }
+
+    private void saveImportLog(MultipartFile file, int total, int success, int fail, String status, List<String> errors) {
+        try {
+            SizeGroupImportLog logEntity = new SizeGroupImportLog();
+            logEntity.setFileName(file.getOriginalFilename());
+            logEntity.setFileSize(file.getSize());
+            logEntity.setTotalCount(total);
+            logEntity.setSuccessCount(success);
+            logEntity.setFailCount(fail);
+            logEntity.setStatus(status);
+            if (!errors.isEmpty()) {
+                String msg = String.join("\n", errors);
+                logEntity.setErrorMsg(msg.length() > 4000 ? msg.substring(0, 4000) : msg);
+            }
+            logEntity.setCreateBy(ShiroSecurityUtils.getCurrentUsername());
+            logEntity.setCreateTime(LocalDateTime.now());
+            importLogMapper.insert(logEntity);
+        } catch (Exception e) {
+            System.out.println("保存导入日志失败: " + e.getMessage());
+        }
     }
 
     /** 解析过程中的临时数据结构 */

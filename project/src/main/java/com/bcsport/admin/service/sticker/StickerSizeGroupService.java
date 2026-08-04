@@ -442,7 +442,17 @@ public class StickerSizeGroupService {
                     existing.setUpdateBy(currentUser);
                     existing.setUpdateTime(now);
                     groupMapper.updateById(existing);
-                    // 差量更新尺码明细
+                    // 差量更新尺码明细(导入场景: 按sizeCode匹配已有尺码, 无id也能正确更新)
+                    List<StickerSize> dbSizes = listSizesByGroupId(existing.getId());
+                    java.util.Map<String, String> codeToIdMap = new java.util.HashMap<>();
+                    for (StickerSize ds : dbSizes) {
+                        if (ds.getSizeCode() != null) codeToIdMap.put(ds.getSizeCode(), ds.getId());
+                    }
+                    for (StickerSize s : pg.sizes) {
+                        if (s.getSizeCode() != null && codeToIdMap.containsKey(s.getSizeCode())) {
+                            s.setId(codeToIdMap.get(s.getSizeCode()));
+                        }
+                    }
                     diffUpdateSizes(existing.getId(), pg.sizes, now);
                 } else {
                     // 新增

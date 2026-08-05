@@ -84,15 +84,23 @@
         <span style="color:#78716c;font-size:0.875rem">
           角色：<strong>{{ permRoleName }}</strong>
         </span>
-        <el-tooltip
-          content="开启时勾选父节点会自动勾选全部子节点；关闭后可只勾菜单而不带按钮权限，适合配置只读角色"
-          placement="top"
-        >
-          <span class="cascade-switch">
-            父子联动
-            <el-switch v-model="cascade" inline-prompt size="small" @change="onCascadeChange" />
-          </span>
-        </el-tooltip>
+        <div class="perm-actions">
+          <el-tooltip
+            content="自动选中全部目录与菜单(含查询权限)，清空所有新增/编辑/删除等按钮权限，一键生成只读角色"
+            placement="top"
+          >
+            <el-button size="small" plain @click="applyReadonly">仅查看权限</el-button>
+          </el-tooltip>
+          <el-tooltip
+            content="默认关闭(独立模式)，可只勾菜单而不带按钮权限，便于配置只读角色；开启后勾父节点会自动带全部子节点"
+            placement="top"
+          >
+            <span class="cascade-switch">
+              父子联动
+              <el-switch v-model="cascade" inline-prompt size="small" @change="onCascadeChange" />
+            </span>
+          </el-tooltip>
+        </div>
       </div>
       <el-tree
         ref="menuTreeRef"
@@ -152,8 +160,8 @@ const permRoleName = ref('')
 const menuTree = ref([])
 const checkedKeys = ref([])
 const menuTreeRef = ref(null)
-// 父子联动开关：true=级联勾选(默认)，false=可单独勾菜单不带子按钮(适合配置只读角色)
-const cascade = ref(true)
+// 父子联动开关：true=级联勾选，false=可单独勾菜单不带子按钮(默认，便于配置只读角色)
+const cascade = ref(false)
 
 function handleAdd() {
   isEdit.value = false
@@ -201,7 +209,7 @@ async function handlePermission(row) {
   permRoleId.value = row.id
   permRoleName.value = row.roleName
   checkedKeys.value = []
-  cascade.value = true   // 每次打开默认恢复父子联动
+  cascade.value = false   // 默认独立模式，可直接单独勾选菜单不带按钮
   permDialogVisible.value = true
 
   const refStore = useRefStore()
@@ -239,6 +247,31 @@ function onCascadeChange(val) {
     checkedKeys.value = leafOnly
     tree.setCheckedKeys(leafOnly)
   }
+}
+
+/**
+ * 一键只读：勾选全部目录(menuType=0)与菜单(menuType=1，本身即 xxx:query 查询权限)，
+ * 清空所有按钮(menuType=2，新增/编辑/删除等操作)。菜单节点自带查询权限，
+ * 所以只保留 0/1 即可让角色"能看不能改"。切换到独立模式以避免级联把按钮又带上。
+ */
+function applyReadonly() {
+  const keep = []
+  function walk(nodes) {
+    for (const n of nodes) {
+      // menuType: 0=目录 1=菜单 2=按钮；保留目录和菜单，清掉按钮
+      if (n.menuType !== 2) keep.push(n.id)
+      if (n.children?.length) walk(n.children)
+    }
+  }
+  walk(menuTree.value)
+  // 切到独立模式(check-strictly)，确保父勾选不会反向把子按钮带上
+  cascade.value = false
+  checkedKeys.value = keep
+  nextTick(() => {
+    const tree = menuTreeRef.value
+    if (tree) tree.setCheckedKeys(keep)
+  })
+  ElMessage.success('已切换为只读权限：保留目录与菜单(查询)，已清空全部操作按钮')
 }
 
 function getAllLeafIds(tree, permSet) {
@@ -281,6 +314,11 @@ onMounted(() => loadData())
   align-items: center;
   justify-content: space-between;
   margin-bottom: 12px;
+}
+.perm-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 .cascade-switch {
   display: inline-flex;

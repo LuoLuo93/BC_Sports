@@ -80,8 +80,19 @@
 
     <!-- 权限分配弹窗 -->
     <el-dialog v-model="permDialogVisible" title="分配权限" width="480px" destroy-on-close>
-      <div style="margin-bottom:12px;color:#78716c;font-size:0.875rem">
-        角色：<strong>{{ permRoleName }}</strong>
+      <div class="perm-header">
+        <span style="color:#78716c;font-size:0.875rem">
+          角色：<strong>{{ permRoleName }}</strong>
+        </span>
+        <el-tooltip
+          content="开启时勾选父节点会自动勾选全部子节点；关闭后可只勾菜单而不带按钮权限，适合配置只读角色"
+          placement="top"
+        >
+          <span class="cascade-switch">
+            父子联动
+            <el-switch v-model="cascade" inline-prompt size="small" @change="onCascadeChange" />
+          </span>
+        </el-tooltip>
       </div>
       <el-tree
         ref="menuTreeRef"
@@ -89,6 +100,7 @@
         :props="{ label: 'menuName', children: 'children' }"
         show-checkbox
         node-key="id"
+        :check-strictly="!cascade"
         :default-checked-keys="checkedKeys"
         :default-expand-all="true"
       />
@@ -140,6 +152,8 @@ const permRoleName = ref('')
 const menuTree = ref([])
 const checkedKeys = ref([])
 const menuTreeRef = ref(null)
+// 父子联动开关：true=级联勾选(默认)，false=可单独勾菜单不带子按钮(适合配置只读角色)
+const cascade = ref(true)
 
 function handleAdd() {
   isEdit.value = false
@@ -187,6 +201,7 @@ async function handlePermission(row) {
   permRoleId.value = row.id
   permRoleName.value = row.roleName
   checkedKeys.value = []
+  cascade.value = true   // 每次打开默认恢复父子联动
   permDialogVisible.value = true
 
   const refStore = useRefStore()
@@ -200,6 +215,30 @@ async function handlePermission(row) {
   const leafKeys = getAllLeafIds(menuTree.value, new Set(permRes.data || []))
   await nextTick()
   checkedKeys.value = leafKeys
+}
+
+/**
+ * 切换父子联动时，需要按当前选中状态重新应用勾选：
+ * 关闭联动(独立模式)时，把已选(含半选)的节点都显式勾上，避免丢失；
+ * 重新开启联动(级联模式)时，从已选叶子重新计算，恢复自动推导父节点的行为。
+ */
+function onCascadeChange(val) {
+  const tree = menuTreeRef.value
+  if (!tree) return
+  const currentKeys = [...tree.getCheckedKeys(), ...tree.getHalfCheckedKeys()]
+  if (!val) {
+    // 独立模式：显式勾选所有原来选中/半选的节点
+    checkedKeys.value = currentKeys
+    tree.setCheckedKeys(currentKeys)
+  } else {
+    // 级联模式：仅保留叶子，父节点由 el-tree 自动推导
+    const leafOnly = currentKeys.filter(id => {
+      const node = tree.getNode(id)
+      return node && node.isLeaf
+    })
+    checkedKeys.value = leafOnly
+    tree.setCheckedKeys(leafOnly)
+  }
 }
 
 function getAllLeafIds(tree, permSet) {
@@ -235,3 +274,20 @@ async function handlePermSubmit() {
 
 onMounted(() => loadData())
 </script>
+
+<style scoped>
+.perm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.cascade-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #78716c;
+  font-size: 0.875rem;
+  cursor: help;
+}
+</style>

@@ -297,8 +297,7 @@ public class StickerSizeGroupService {
             return result;
         }
 
-        int total = rawRows.size();
-        if (total == 0) {
+        if (rawRows.isEmpty()) {
             result.put("total", 0);
             result.put("success", 0);
             result.put("fail", 0);
@@ -491,6 +490,8 @@ public class StickerSizeGroupService {
             }
         }
 
+        // total/success/fail 统一按"尺码组"维度统计(每行仅一个尺码,同组多行会合并)
+        int total = groupMap.size();
         int fail = total - success;
         // 限制错误列表长度
         if (errors.size() > 100) {
@@ -500,9 +501,6 @@ public class StickerSizeGroupService {
 
         // 写导入日志
         String status = (total == 0) ? "FAILED" : (fail == 0 ? "SUCCESS" : "PARTIAL");
-        if (fail > 0 && errors.isEmpty()) {
-            errors.add("共 " + fail + " 条数据未导入，请检查源数据");
-        }
         saveImportLog(file, total, success, fail, status, errors);
 
         result.put("total", total);

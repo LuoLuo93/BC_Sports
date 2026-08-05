@@ -141,10 +141,12 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, nextTick } from 'vue'
+import { ref, reactive, onMounted, onActivated, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, RefreshRight, Plus, Upload } from '@element-plus/icons-vue'
 import request from '@/api/request'
+
+defineOptions({ name: 'BrandTemplateMatch' })
 import { getCommonBrands, getCommonKinds } from '@/api/common'
 import { usePageQuery } from '@/composables/usePageQuery'
 import { usePermission } from '@/composables/usePermission'
@@ -367,6 +369,11 @@ onMounted(() => {
   loadKinds()
   loadPrinterOptions()
   loadTemplateOptions()
+})
+
+// keep-alive 缓存后，从详情等页面返回时保留查询条件/分页，刷新一下数据
+onActivated(() => {
+  loadData()
 })
 </script>
 

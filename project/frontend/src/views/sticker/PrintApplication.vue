@@ -386,7 +386,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { ref, reactive, computed, watch, onMounted, onActivated, onBeforeUnmount } from 'vue'
 import { useRouter, onBeforeRouteLeave } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Loading, Search, RefreshRight } from '@element-plus/icons-vue'
@@ -399,11 +399,14 @@ import { useAuthStore } from '@/stores/auth'
 import { PAGE_SIZES } from '@/utils/appConfig'
 import { formatTime } from '@/utils/format'
 
+defineOptions({ name: 'StickerPrintList' })
+
 const { hasPermission } = usePermission()
 const authStore = useAuthStore()
 const viewAll = computed(() => hasPermission('sticker:print:all'))
 
 const router = useRouter()
+
 const { loading, tableData, total, query, loadData, handleSearch, resetQuery } = usePageQuery(
   (params) => getPrintOrderPage({ ...params, viewAll: viewAll.value }),
   { status: null, orderNo: '', applicant: '', startDate: '', endDate: '' }
@@ -1032,6 +1035,12 @@ onBeforeRouteLeave((to, from, next) => {
 onMounted(() => {
   loadData()
   window.addEventListener('beforeunload', beforeunloadHandler)
+})
+
+// keep-alive 缓存后，从详情等页面返回时保留查询条件/分页，刷新一下数据
+// （离开页面若有未保存数据会被 onBeforeRouteLeave 拦截，能回到此页说明表单已收起）
+onActivated(() => {
+  loadData()
 })
 
 onBeforeUnmount(() => {

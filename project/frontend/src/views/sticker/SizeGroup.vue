@@ -259,7 +259,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, nextTick } from 'vue'
+import { ref, reactive, onMounted, onActivated, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, RefreshRight, Plus, Upload } from '@element-plus/icons-vue'
 import request from '@/api/request'
@@ -269,6 +269,8 @@ import { usePageQuery } from '@/composables/usePageQuery'
 import { usePermission } from '@/composables/usePermission'
 import { PAGE_SIZES } from '@/utils/appConfig'
 import { formatTime } from '@/utils/format'
+
+defineOptions({ name: 'StickerSizeGroup' })
 
 const { hasPermission } = usePermission()
 
@@ -551,6 +553,11 @@ onMounted(() => {
   loadData()
   loadBrands()
   loadKinds()
+})
+
+// keep-alive 缓存后，从详情等页面返回时保留查询条件/分页，刷新一下数据
+onActivated(() => {
+  loadData()
 })
 </script>
 

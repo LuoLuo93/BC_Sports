@@ -45,8 +45,8 @@
       </template>
       <div class="table-responsive">
         <el-table v-loading="loading" :data="tableData" border stripe>
-          <el-table-column prop="groupCode" label="组编码" width="140" />
-          <el-table-column prop="groupName" label="组名称" min-width="160" show-overflow-tooltip />
+          <el-table-column prop="groupCode" label="组编码" width="150" />
+          <el-table-column prop="groupName" label="组名称" min-width="105" show-overflow-tooltip />
           <el-table-column prop="brandName" label="品牌" width="140" />
           <el-table-column prop="kindName" label="类别" width="140" />
           <el-table-column prop="sort" label="排序" width="70" align="center" />
@@ -58,7 +58,7 @@
             </template>
           </el-table-column>
           <el-table-column prop="remark" label="备注" width="200" show-overflow-tooltip />
-          <el-table-column prop="createTime" label="创建时间" width="170">
+          <el-table-column prop="createTime" label="创建时间" width="180">
             <template #default="{ row }">{{ formatTime(row.createTime) }}</template>
           </el-table-column>
           <el-table-column label="操作" width="150" align="center" fixed="right">

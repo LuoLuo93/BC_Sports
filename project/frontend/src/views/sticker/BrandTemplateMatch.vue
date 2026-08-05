@@ -362,6 +362,8 @@ async function handleDownloadTemplate() {
 }
 
 onMounted(() => {
+  // 无 query 权限时不发任何需权限的请求，避免进页面就弹"没有操作权限"
+  if (!hasPermission('sticker:brand-template:query')) return
   loadData()
   loadBrands()
   loadKinds()

@@ -312,6 +312,8 @@ async function loadBrands() {
 
 async function loadKinds() {
   if (kindList.value.length) return
+  // 该接口借用了品牌模板模块，无其 query 权限时不请求，避免弹“没有操作权限”
+  if (!hasPermission('sticker:brand-template:query')) return
   try {
     const { data } = await request.get('/api/sticker/brand-template/kinds')
     kindList.value = (data || []).map(k => ({ ...k, ID: String(k.ID) }))

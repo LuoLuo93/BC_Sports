@@ -263,7 +263,7 @@ import { ref, reactive, onMounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, RefreshRight, Plus, Upload } from '@element-plus/icons-vue'
 import request from '@/api/request'
-import { getProductBrands, getSizeGroupPage, getSizeGroup, createSizeGroup, updateSizeGroup, deleteSizeGroup } from '@/api/sticker'
+import { getProductBrands, getStickerKinds, getSizeGroupPage, getSizeGroup, createSizeGroup, updateSizeGroup, deleteSizeGroup } from '@/api/sticker'
 import { usePageQuery } from '@/composables/usePageQuery'
 import { usePermission } from '@/composables/usePermission'
 import { PAGE_SIZES } from '@/utils/appConfig'
@@ -312,10 +312,10 @@ async function loadBrands() {
 
 async function loadKinds() {
   if (kindList.value.length) return
-  // 该接口借用了品牌模板模块，无其 query 权限时不请求，避免弹“没有操作权限”
-  if (!hasPermission('sticker:brand-template:query')) return
   try {
-    const { data } = await request.get('/api/sticker/brand-template/kinds')
+    // 用 sticker/data/kinds（sticker:data:query），而非 brand-template/kinds（sticker:brand-template:query），
+    // 前者与尺码组页面同属资料维护权限域，数据来源相同（均为 ERP getKinds），避免无 brand-template 权限的用户 403
+    const { data } = await getStickerKinds()
     kindList.value = (data || []).map(k => ({ ...k, ID: String(k.ID) }))
   } catch {}
 }

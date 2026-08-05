@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { getDictDataList } from '@/api/dict'
+import { getCommonDict } from '@/api/common'
 
 const CACHE_KEY = 'bc_dict_cache_v2'
 const TTL_MS = 60 * 60 * 1000 // 1 小时
@@ -51,7 +51,7 @@ export const useDictStore = defineStore('dict', {
       const staleData = entry?.data || []
 
       try {
-        const res = await getDictDataList({ dictType })
+        const res = await getCommonDict(dictType)
         const data = res.data || []
         this.dictMap[dictType] = { data, _ts: Date.now() }
         saveCache(this.dictMap)

@@ -100,7 +100,8 @@ import { useRouter } from 'vue-router'
 import { Search, RefreshRight } from '@element-plus/icons-vue'
 import { usePageQuery } from '@/composables/usePageQuery'
 import { PAGE_SIZES } from '@/utils/appConfig'
-import { getStickerDataPage, getStickerBrands, getStickerKinds } from '@/api/sticker'
+import { getStickerDataPage } from '@/api/sticker'
+import { getCommonBrands, getCommonKinds } from '@/api/common'
 
 defineOptions({ name: 'StickerData' })
 
@@ -164,14 +165,14 @@ function handleEdit(row) {
 
 async function loadBrands() {
   try {
-    const { data } = await getStickerBrands()
+    const { data } = await getCommonBrands()
     brandList.value = data || []
   } catch {}
 }
 
 async function loadKinds() {
   try {
-    const { data } = await getStickerKinds()
+    const { data } = await getCommonKinds()
     kindList.value = data || []
   } catch {}
 }

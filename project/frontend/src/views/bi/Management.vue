@@ -254,8 +254,9 @@ defineOptions({ name: 'BiManagement' })
 import { ref, reactive, computed, onMounted, nextTick, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getBrandPage, getBrand, createBrand, updateBrand, deleteBrand } from '@/api/brand'
-import { getRegionTree, getRegion, createRegion, updateRegion, deleteRegion } from '@/api/region'
-import { getChannelTypeTree, getChannelType, createChannelType, updateChannelType, deleteChannelType, getChannelNatureTree, getChannelNature, createChannelNature, updateChannelNature, deleteChannelNature } from '@/api/channel'
+import { getRegion, createRegion, updateRegion, deleteRegion } from '@/api/region'
+import { getChannelType, createChannelType, updateChannelType, deleteChannelType, getChannelNature, createChannelNature, updateChannelNature, deleteChannelNature } from '@/api/channel'
+import { getCommonRegionTree, getCommonChannelTypeTree, getCommonChannelNatureTree } from '@/api/common'
 import { Plus, Folder, Document, PriceTag } from '@element-plus/icons-vue'
 import { usePermission } from '@/composables/usePermission'
 import { usePageQuery } from '@/composables/usePageQuery'
@@ -313,7 +314,7 @@ const regionForm = reactive(regionFormDef())
 const regionRules = { regionName: [{ required: true, message: '请输入地区名称', trigger: 'blur' }] }
 const regionTreeOpts = computed(() => [{ id: '0', regionName: '顶级地区', children: regionList.value }])
 
-async function loadRegions() { regionLoading.value = true; try { const res = await getRegionTree(); regionList.value = res.data || [] } finally { regionLoading.value = false } }
+async function loadRegions() { regionLoading.value = true; try { const res = await getCommonRegionTree(); regionList.value = res.data || [] } finally { regionLoading.value = false } }
 function handleRegionAdd(parent) { regionIsEdit.value = false; regionEditId.value = null; Object.assign(regionForm, regionFormDef()); if (parent) regionForm.parentId = parent.id; regionDialogVisible.value = true }
 async function handleRegionEdit(row) { const res = await getRegion(row.id); regionIsEdit.value = true; regionEditId.value = row.id; Object.assign(regionForm, res.data); regionDialogVisible.value = true }
 async function handleRegionDelete(row) { if (row.children?.length) { ElMessage.warning('该地区下有子地区，无法删除'); return }; await ElMessageBox.confirm(`确定删除地区「${row.regionName}」？`, '提示', { type: 'warning' }); await deleteRegion(row.id); ElMessage.success('删除成功'); loadRegions() }
@@ -356,7 +357,7 @@ const ctForm = reactive(ctFormDef())
 const ctRules = { typeName: [{ required: true, message: '请输入类型名称', trigger: 'blur' }] }
 const ctTreeOpts = computed(() => [{ id: '0', typeName: '顶级类型', children: ctList.value }])
 
-async function loadCt() { ctLoading.value = true; try { const res = await getChannelTypeTree(); ctList.value = res.data || [] } finally { ctLoading.value = false } }
+async function loadCt() { ctLoading.value = true; try { const res = await getCommonChannelTypeTree(); ctList.value = res.data || [] } finally { ctLoading.value = false } }
 function handleCtAdd(parent) { ctIsEdit.value = false; ctEditId.value = null; Object.assign(ctForm, ctFormDef()); if (parent) ctForm.parentId = parent.id; ctDialogVisible.value = true }
 async function handleCtEdit(row) { const res = await getChannelType(row.id); ctIsEdit.value = true; ctEditId.value = row.id; Object.assign(ctForm, res.data); ctDialogVisible.value = true }
 async function handleCtDelete(row) { if (row.children?.length) { ElMessage.warning('该类型下有子类型，无法删除'); return }; await ElMessageBox.confirm(`确定删除渠道类型「${row.typeName}」？`, '提示', { type: 'warning' }); await deleteChannelType(row.id); ElMessage.success('删除成功'); loadCt() }
@@ -380,7 +381,7 @@ const cnForm = reactive(cnFormDef())
 const cnRules = { natureName: [{ required: true, message: '请输入性质名称', trigger: 'blur' }] }
 const cnTreeOpts = computed(() => [{ id: '0', natureName: '顶级性质', children: cnList.value }])
 
-async function loadCn() { cnLoading.value = true; try { const res = await getChannelNatureTree(); cnList.value = res.data || [] } finally { cnLoading.value = false } }
+async function loadCn() { cnLoading.value = true; try { const res = await getCommonChannelNatureTree(); cnList.value = res.data || [] } finally { cnLoading.value = false } }
 function handleCnAdd(parent) { cnIsEdit.value = false; cnEditId.value = null; Object.assign(cnForm, cnFormDef()); if (parent) cnForm.parentId = parent.id; cnDialogVisible.value = true }
 async function handleCnEdit(row) { const res = await getChannelNature(row.id); cnIsEdit.value = true; cnEditId.value = row.id; Object.assign(cnForm, res.data); cnDialogVisible.value = true }
 async function handleCnDelete(row) { if (row.children?.length) { ElMessage.warning('该性质下有子性质，无法删除'); return }; await ElMessageBox.confirm(`确定删除渠道性质「${row.natureName}」？`, '提示', { type: 'warning' }); await deleteChannelNature(row.id); ElMessage.success('删除成功'); loadCn() }

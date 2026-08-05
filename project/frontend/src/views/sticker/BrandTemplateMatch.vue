@@ -145,7 +145,7 @@ import { ref, reactive, onMounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, RefreshRight, Plus, Upload } from '@element-plus/icons-vue'
 import request from '@/api/request'
-import { getProductBrands } from '@/api/sticker'
+import { getCommonBrands, getCommonKinds } from '@/api/common'
 import { usePageQuery } from '@/composables/usePageQuery'
 import { usePermission } from '@/composables/usePermission'
 import { useDictStore } from '@/stores/dict'
@@ -187,7 +187,7 @@ const rules = {
 async function loadBrands() {
   if (brandList.value.length) return
   try {
-    const { data } = await getProductBrands()
+    const { data } = await getCommonBrands()
     brandList.value = (data || []).map(b => ({ ...b, ID: String(b.ID) }))
   } catch {}
 }
@@ -195,7 +195,7 @@ async function loadBrands() {
 async function loadKinds() {
   if (kindList.value.length) return
   try {
-    const { data } = await request.get('/api/sticker/brand-template/kinds')
+    const { data } = await getCommonKinds()
     kindList.value = (data || []).map(k => ({ ...k, ID: String(k.ID) }))
   } catch {}
 }
@@ -362,8 +362,6 @@ async function handleDownloadTemplate() {
 }
 
 onMounted(() => {
-  // 无 query 权限时不发任何需权限的请求，避免进页面就弹"没有操作权限"
-  if (!hasPermission('sticker:brand-template:query')) return
   loadData()
   loadBrands()
   loadKinds()

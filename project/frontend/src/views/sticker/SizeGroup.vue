@@ -263,7 +263,8 @@ import { ref, reactive, onMounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, RefreshRight, Plus, Upload } from '@element-plus/icons-vue'
 import request from '@/api/request'
-import { getProductBrands, getStickerKinds, getSizeGroupPage, getSizeGroup, createSizeGroup, updateSizeGroup, deleteSizeGroup } from '@/api/sticker'
+import { getSizeGroupPage, getSizeGroup, createSizeGroup, updateSizeGroup, deleteSizeGroup } from '@/api/sticker'
+import { getCommonBrands, getCommonKinds } from '@/api/common'
 import { usePageQuery } from '@/composables/usePageQuery'
 import { usePermission } from '@/composables/usePermission'
 import { PAGE_SIZES } from '@/utils/appConfig'
@@ -305,7 +306,7 @@ const rules = {
 async function loadBrands() {
   if (brandList.value.length) return
   try {
-    const { data } = await getProductBrands()
+    const { data } = await getCommonBrands()
     brandList.value = (data || []).map(b => ({ ...b, ID: String(b.ID) }))
   } catch {}
 }
@@ -313,9 +314,7 @@ async function loadBrands() {
 async function loadKinds() {
   if (kindList.value.length) return
   try {
-    // 用 sticker/data/kinds（sticker:data:query），而非 brand-template/kinds（sticker:brand-template:query），
-    // 前者与尺码组页面同属资料维护权限域，数据来源相同（均为 ERP getKinds），避免无 brand-template 权限的用户 403
-    const { data } = await getStickerKinds()
+    const { data } = await getCommonKinds()
     kindList.value = (data || []).map(k => ({ ...k, ID: String(k.ID) }))
   } catch {}
 }

@@ -104,9 +104,7 @@ import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getEntityChannel, getEntityChannelListByEntity, batchSaveEntityChannel, createEntityChannel } from '@/api/channel'
-import { getChannelTypeTree, getChannelNatureTree } from '@/api/channel'
-import { getBrandList } from '@/api/brand'
-import { getRegionTree } from '@/api/region'
+import { getCommonBrandList, getCommonChannelTypeTree, getCommonChannelNatureTree, getCommonRegionTree } from '@/api/common'
 import { getErpStorePage } from '@/api/erp'
 import { PAGE_SIZES } from '@/utils/appConfig'
 
@@ -358,7 +356,7 @@ async function handleSubmit() {
 // 加载下拉数据（4 个并行，与明细加载互不阻塞）
 async function loadDropdowns() {
   const [brands, ctTree, cnTree, regions] = await Promise.all([
-    getBrandList(), getChannelTypeTree(), getChannelNatureTree(), getRegionTree()
+    getCommonBrandList(), getCommonChannelTypeTree(), getCommonChannelNatureTree(), getCommonRegionTree()
   ])
   brandList.value = brands.data || []
   channelTypeTree.value = ctTree.data || []

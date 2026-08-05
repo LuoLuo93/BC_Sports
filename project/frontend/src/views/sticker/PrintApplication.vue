@@ -935,6 +935,8 @@ const sizeLoadingKeys = new Set()
 /** 按 groupId 预加载该组尺码列表到缓存(自动匹配矫正尺码用) */
 async function ensureLocalSizeCache(groupId) {
   if (!groupId) return
+  // 矫正尺码组尺码列表借用 sticker:size-group:query，无该权限时跳过自动匹配，避免弹“没有操作权限”
+  if (!hasPermission('sticker:size-group:query')) return
   const key = groupId
   if (localSizeCache[key] || sizeLoadingKeys.has(key)) return
   sizeLoadingKeys.add(key)
@@ -950,6 +952,8 @@ async function ensureLocalSizeCache(groupId) {
 
 // 编辑模式：遍历已有明细，预加载矫正组的尺码列表缓存（自动匹配矫正尺码用）
 async function preloadLocalCaches() {
+  // 同 ensureLocalSizeCache：无 sticker:size-group:query 权限时不请求，避免弹“没有操作权限”
+  if (!hasPermission('sticker:size-group:query')) return
   const details = form.details
   if (!details?.length) return
   const sizeKeys = new Set()

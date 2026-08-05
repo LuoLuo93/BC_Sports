@@ -219,10 +219,19 @@ async function handlePermission(row) {
   ])
   menuTree.value = treeData
 
-  // el-tree 的 checkedKeys 只设置叶子节点，父节点会自动计算
-  const leafKeys = getAllLeafIds(menuTree.value, new Set(permRes.data || []))
+  // 权限回显：必须按当前 cascade 模式区分
+  // 独立模式(check-strictly)：父节点不会自动推导，所有已授权节点(目录/菜单/按钮)都要显式勾选
+  // 级联模式：只勾叶子，父节点由 el-tree 自动半选
+  const permSet = new Set(permRes.data || [])
+  const keys = cascade.value
+    ? getAllLeafIds(menuTree.value, permSet)
+    : Array.from(permSet)
   await nextTick()
-  checkedKeys.value = leafKeys
+  checkedKeys.value = keys
+  // 独立模式下 default-checked-keys 可能因时序不生效，用 setCheckedKeys 兜底
+  if (!cascade.value) {
+    nextTick(() => menuTreeRef.value?.setCheckedKeys(keys))
+  }
 }
 
 /**

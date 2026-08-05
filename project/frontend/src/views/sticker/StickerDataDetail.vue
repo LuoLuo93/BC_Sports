@@ -9,7 +9,7 @@
         贴纸资料详情
         <el-tag v-if="dirty" size="small" type="warning" effect="dark" style="margin-left:8px">未保存</el-tag>
       </span>
-      <el-button type="primary" size="small" :loading="saving" @click="handleSave">保存</el-button>
+      <el-button v-if="hasPermission('sticker:data:edit')" type="primary" size="small" :loading="saving" @click="handleSave">保存</el-button>
     </div>
 
     <div class="detail-content">
@@ -220,8 +220,11 @@ import { useRouter, useRoute, onBeforeRouteLeave } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowLeft, Document, Stamp, Files, Search } from '@element-plus/icons-vue'
 import { updateStickerDataMaterial, getSizeGroupList, getSizeGroupSizes, getStickerDataDetail } from '@/api/sticker'
+import { usePermission } from '@/composables/usePermission'
 
 defineOptions({ name: 'StickerDataDetail' })
+
+const { hasPermission } = usePermission()
 
 const router = useRouter()
 const route = useRoute()

@@ -74,7 +74,7 @@
           <el-table-column prop="SIZES" label="尺码组" width="160" show-overflow-tooltip />
           <el-table-column label="操作" width="70" align="center" fixed="right">
             <template #default="{ row }">
-              <el-button type="primary" plain size="small" @click="handleEdit(row)">编辑</el-button>
+              <el-button v-if="hasPermission('sticker:data:edit')" type="primary" plain size="small" @click="handleEdit(row)">编辑</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -99,6 +99,7 @@ import { ref, onMounted, onActivated } from 'vue'
 import { useRouter } from 'vue-router'
 import { Search, RefreshRight } from '@element-plus/icons-vue'
 import { usePageQuery } from '@/composables/usePageQuery'
+import { usePermission } from '@/composables/usePermission'
 import { PAGE_SIZES } from '@/utils/appConfig'
 import { getStickerDataPage } from '@/api/sticker'
 import { getCommonBrands, getCommonKinds } from '@/api/common'
@@ -106,6 +107,7 @@ import { getCommonBrands, getCommonKinds } from '@/api/common'
 defineOptions({ name: 'StickerData' })
 
 const router = useRouter()
+const { hasPermission } = usePermission()
 
 const { loading, tableData, total, query, loadData, handleSearch } = usePageQuery(getStickerDataPage, {
   materialNumber: '', materialName: '', brandId: '', kindId: ''

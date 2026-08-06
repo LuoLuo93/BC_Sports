@@ -8,11 +8,22 @@ SELECT 'BI_ERP_STORE', 'BI_DIR', 'ERP 店仓管理', 'bi-shop', 1, '/bi/erp-stor
 FROM DUAL
 WHERE NOT EXISTS (SELECT 1 FROM bc_sports_sys_menu WHERE id = 'BI_ERP_STORE');
 
+-- 编辑按钮权限
+INSERT INTO bc_sports_sys_menu (id, parent_id, menu_name, icon, menu_type, path, permission, sort, status, visible, create_time, update_time, deleted)
+SELECT 'BI_ERP_STORE_EDIT', 'BI_ERP_STORE', '店仓编辑', NULL, 2, NULL, 'bi:erpStore:edit', 0, 1, 0, SYSTIMESTAMP, SYSTIMESTAMP, 0
+FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM bc_sports_sys_menu WHERE id = 'BI_ERP_STORE_EDIT');
+
 -- 为超级管理员角色分配 ERP 店仓管理菜单权限
 INSERT INTO bc_sports_sys_role_menu (id, role_id, menu_id, create_time, create_by)
 SELECT SYS_GUID(), '1', 'BI_ERP_STORE', SYSTIMESTAMP, 'admin'
 FROM DUAL
 WHERE NOT EXISTS (SELECT 1 FROM bc_sports_sys_role_menu WHERE role_id = '1' AND menu_id = 'BI_ERP_STORE');
+
+INSERT INTO bc_sports_sys_role_menu (id, role_id, menu_id, create_time, create_by)
+SELECT SYS_GUID(), '1', 'BI_ERP_STORE_EDIT', SYSTIMESTAMP, 'admin'
+FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM bc_sports_sys_role_menu WHERE role_id = '1' AND menu_id = 'BI_ERP_STORE_EDIT');
 
 -- 禁用原 ERP 店铺管理 和 ERP 仓库管理 菜单（软删除）
 UPDATE bc_sports_sys_menu SET deleted = 1, update_time = SYSTIMESTAMP WHERE id = 'BI_ERP_SHOP';

@@ -75,14 +75,14 @@
             <div class="info-card editable span-2" :class="ean13InputClass">
               <span class="info-card-label">
                 EAN13
-                <span v-if="ean13Check === 'error'" class="field-msg field-msg-error">需为 13 位纯数字</span>
+                <span v-if="ean13Check === 'error'" class="field-msg field-msg-error">需为 12 位纯数字</span>
                 <span v-else-if="ean13Check === 'warning'" class="field-msg field-msg-warn">校验位不匹配，请核对</span>
               </span>
               <el-input
                 v-model="row.EAN13"
-                placeholder="请输入 EAN13（13 位数字）"
+                placeholder="请输入 EAN13（12 位数字）"
                 size="small"
-                maxlength="13"
+                maxlength="12"
                 @input="onEan13Input"
                 @blur="onEan13Blur"
               />
@@ -362,36 +362,36 @@ function parseSizes(s) {
 // 两级反馈：error=格式错(红,阻止保存)；warning=校验位不符(黄,仅提醒不阻止)
 const ean13Check = ref('ok') // 'ok' | 'error' | 'warning'
 
-/** EAN-13 标准校验位算法(GS1)：偶数位×1 + 奇数位×3，合计取模 10 取补 */
+/** EAN-13 校验位算法(GS1)：前11位加权求和，第12位为校验位 */
 function ean13ChecksumMatches(code) {
-  if (!/^\d{13}$/.test(code)) return false
+  if (!/^\d{12}$/.test(code)) return false
   let sum = 0
-  for (let i = 0; i < 12; i++) {
+  for (let i = 0; i < 11; i++) {
     sum += Number(code[i]) * (i % 2 === 0 ? 1 : 3)
   }
   const checkBit = (10 - (sum % 10)) % 10
-  return checkBit === Number(code[12])
+  return checkBit === Number(code[11])
 }
 
-/** 实时校验：空=ok；非13位数字=error；13位但校验位不符=warning */
+/** 实时校验：空=ok；非12位数字=error；12位但校验位不符=warning */
 function validateEan13(val) {
   const v = (val || '').trim()
   if (!v) return 'ok'
-  if (!/^\d{13}$/.test(v)) return 'error'
+  if (!/^\d{12}$/.test(v)) return 'error'
   return ean13ChecksumMatches(v) ? 'ok' : 'warning'
 }
 
 /** 输入时：剥离空格、仅保留数字，同步校验状态 */
 function onEan13Input(val) {
-  row.value.EAN13 = (val || '').replace(/\D/g, '').slice(0, 13)
+  row.value.EAN13 = (val || '').replace(/\D/g, '').slice(0, 12)
   ean13Check.value = validateEan13(row.value.EAN13)
 }
 
 /** 失焦：再校验一次(兜底)，错误状态弹个提示 */
 function onEan13Blur() {
   const v = (row.value.EAN13 || '').trim()
-  if (v && !/^\d{13}$/.test(v)) {
-    ElMessage.warning('EAN13 需为 13 位纯数字')
+  if (v && !/^\d{12}$/.test(v)) {
+    ElMessage.warning('EAN13 需为 12 位纯数字')
   }
 }
 
@@ -406,10 +406,10 @@ async function handleSave() {
     ElMessage.warning('缺少货号，无法保存')
     return
   }
-  // EAN13 格式硬校验：非空时必须 13 位纯数字才允许保存
+  // EAN13 格式硬校验：非空时必须 12 位纯数字才允许保存
   ean13Check.value = validateEan13(row.value.EAN13)
   if (ean13Check.value === 'error') {
-    ElMessage.warning('EAN13 格式错误：需为 13 位纯数字')
+    ElMessage.warning('EAN13 格式错误：需为 12 位纯数字')
     return
   }
   if (ean13Check.value === 'warning') {

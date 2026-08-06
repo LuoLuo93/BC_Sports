@@ -73,45 +73,49 @@
     </el-card>
 
     <!-- 编辑品牌/督导及扩展属性弹窗 -->
-    <el-dialog v-model="dialogVisible" title="编辑店仓信息" width="560px" destroy-on-close>
-      <el-form :model="form" label-width="100px">
-        <el-form-item label="店仓编码">
-          <el-input :model-value="form.storeCode" disabled />
-        </el-form-item>
-        <el-form-item label="店仓名称">
-          <el-input :model-value="form.storeName" disabled />
-        </el-form-item>
-        <el-form-item label="店仓主品牌">
-          <el-select v-model="form.brandId" placeholder="选择品牌" filterable clearable style="width:100%">
-            <el-option v-for="b in brandList" :key="b.ID" :label="b.NAME" :value="b.ID" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="零售督导">
-          <el-select v-model="form.supervisorId" placeholder="选择零售督导" filterable clearable style="width:100%">
-            <el-option v-for="s in supervisorList" :key="s.ID" :label="s.NAME" :value="s.ID" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="关店标志">
-          <el-select v-model="form.isStop" placeholder="选择关店标志" clearable style="width:100%">
-            <el-option label="否(N)" value="N" />
-            <el-option label="是(Y)" value="Y" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="合同面积">
-          <el-input v-model="form.htArea" placeholder="请输入合同面积" />
-        </el-form-item>
-        <el-form-item label="道具类型">
-          <el-input v-model="form.propType" placeholder="请输入道具类型" />
-        </el-form-item>
-        <el-form-item label="集团名称">
-          <el-input v-model="form.groupName" placeholder="请输入集团名称" />
-        </el-form-item>
-        <el-form-item label="渠道业态">
-          <el-input v-model="form.channelFormat" placeholder="请输入渠道业态" />
-        </el-form-item>
-        <el-form-item label="商场名称">
-          <el-input v-model="form.mallName" placeholder="请输入商场名称" />
-        </el-form-item>
+    <el-dialog v-model="dialogVisible" title="编辑店仓信息" width="780px" destroy-on-close class="store-edit-dialog">
+      <el-form :model="form" label-width="90px" class="store-edit-form">
+        <div class="form-col">
+          <el-form-item label="店仓编码">
+            <el-input :model-value="form.storeCode" disabled />
+          </el-form-item>
+          <el-form-item label="店仓名称">
+            <el-input :model-value="form.storeName" disabled />
+          </el-form-item>
+          <el-form-item label="主品牌">
+            <el-select v-model="form.brandId" placeholder="选择品牌" filterable clearable style="width:100%">
+              <el-option v-for="b in brandList" :key="b.ID" :label="b.NAME" :value="b.ID" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="零售督导">
+            <el-select v-model="form.supervisorId" placeholder="选择零售督导" filterable clearable style="width:100%">
+              <el-option v-for="s in supervisorList" :key="s.ID" :label="s.NAME" :value="s.ID" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="关店标志">
+            <el-select v-model="form.isStop" placeholder="选择关店标志" clearable style="width:100%">
+              <el-option label="否(N)" value="N" />
+              <el-option label="是(Y)" value="Y" />
+            </el-select>
+          </el-form-item>
+        </div>
+        <div class="form-col">
+          <el-form-item label="合同面积">
+            <el-input v-model="form.htArea" placeholder="请输入合同面积" />
+          </el-form-item>
+          <el-form-item label="道具类型">
+            <el-input v-model="form.propType" placeholder="请输入道具类型" />
+          </el-form-item>
+          <el-form-item label="集团名称">
+            <el-input v-model="form.groupName" placeholder="请输入集团名称" />
+          </el-form-item>
+          <el-form-item label="渠道业态">
+            <el-input v-model="form.channelFormat" placeholder="请输入渠道业态" />
+          </el-form-item>
+          <el-form-item label="商场名称">
+            <el-input v-model="form.mallName" placeholder="请输入商场名称" />
+          </el-form-item>
+        </div>
       </el-form>
       <template #footer>
         <div class="dialog-footer">
@@ -209,3 +213,14 @@ async function handleSave() {
 
 onMounted(() => loadData())
 </script>
+
+<style scoped>
+.store-edit-form {
+  display: flex;
+  gap: 24px;
+}
+.store-edit-form .form-col {
+  flex: 1;
+  min-width: 0;
+}
+</style>

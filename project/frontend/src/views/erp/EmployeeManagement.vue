@@ -39,10 +39,13 @@
               <el-table-column label="#" width="50" align="center">
                 <template #default="{ $index }">{{ (onboardQuery.pageNum - 1) * onboardQuery.pageSize + $index + 1 }}</template>
               </el-table-column>
-              <el-table-column prop="staffName" label="员工姓名" min-width="100" />
-              <el-table-column prop="staffNo" label="员工编号" min-width="110" />
+              <el-table-column prop="staffName" label="员工姓名" min-width="80" />
+              <el-table-column prop="staffNo" label="员工编号" min-width="90" />
               <el-table-column prop="mobileNo" label="手机号" width="130" />
               <el-table-column prop="departmentName" label="部门" min-width="140" />
+              <el-table-column prop="positionName" label="职位" min-width="90">
+                <template #default="{ row }">{{ row.positionName || '-' }}</template>
+              </el-table-column>
               <el-table-column label="入职日期" width="110" align="center">
                 <template #default="{ row }">{{ row.dateLabel || '-' }}</template>
               </el-table-column>
@@ -116,10 +119,13 @@
               <el-table-column label="#" width="50" align="center">
                 <template #default="{ $index }">{{ (adjQuery.pageNum - 1) * adjQuery.pageSize + $index + 1 }}</template>
               </el-table-column>
-              <el-table-column prop="staffName" label="员工姓名" min-width="100" />
-              <el-table-column prop="staffNo" label="员工编号" min-width="110" />
+              <el-table-column prop="staffName" label="员工姓名" min-width="80" />
+              <el-table-column prop="staffNo" label="员工编号" min-width="90" />
               <el-table-column prop="mobileNo" label="手机号" width="130" />
               <el-table-column prop="departmentName" label="部门" min-width="140" />
+              <el-table-column prop="positionName" label="职位" min-width="90">
+                <template #default="{ row }">{{ row.positionName || '-' }}</template>
+              </el-table-column>
               <el-table-column label="变动日期" width="110" align="center">
                 <template #default="{ row }">{{ row.dateLabel || '-' }}</template>
               </el-table-column>
@@ -193,10 +199,13 @@
               <el-table-column label="#" width="50" align="center">
                 <template #default="{ $index }">{{ (leaveQuery.pageNum - 1) * leaveQuery.pageSize + $index + 1 }}</template>
               </el-table-column>
-              <el-table-column prop="staffName" label="员工姓名" min-width="100" />
-              <el-table-column prop="staffNo" label="员工编号" min-width="110" />
+              <el-table-column prop="staffName" label="员工姓名" min-width="80" />
+              <el-table-column prop="staffNo" label="员工编号" min-width="90" />
               <el-table-column prop="mobileNo" label="手机号" width="130" />
               <el-table-column prop="departmentName" label="部门" min-width="140" />
+              <el-table-column prop="positionName" label="职位" min-width="90">
+                <template #default="{ row }">{{ row.positionName || '-' }}</template>
+              </el-table-column>
               <el-table-column label="离职日期" width="110" align="center">
                 <template #default="{ row }">{{ row.dateLabel || '-' }}</template>
               </el-table-column>

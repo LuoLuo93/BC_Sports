@@ -26,6 +26,9 @@ public class ErpEmployeeVO {
     @ApiModelProperty("部门")
     private String departmentName;
 
+    @ApiModelProperty("职位")
+    private String positionName;
+
     @ApiModelProperty("日期(入职日期/修改日期/离职日期)")
     private String dateLabel;
 

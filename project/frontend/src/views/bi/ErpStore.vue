@@ -24,9 +24,9 @@
 
       <div class="table-responsive">
         <el-table v-loading="loading" :data="tableData" border stripe empty-text="暂无数据">
-          <el-table-column type="index" label="#" width="50" align="center" />
-          <el-table-column prop="STORE_CODE" label="店仓编码" min-width="150" />
-          <el-table-column prop="STORE_NAME" label="店仓名称" min-width="200" />
+          <el-table-column type="index" label="#" width="50" align="center" fixed="left" />
+          <el-table-column prop="STORE_CODE" label="店仓编码" min-width="150" fixed="left" />
+          <el-table-column prop="STORE_NAME" label="店仓名称" min-width="200" fixed="left" />
           <el-table-column prop="STORE_BRAND" label="店仓主品牌" min-width="150">
             <template #default="{ row }">{{ row.STORE_BRAND || '-' }}</template>
           </el-table-column>
@@ -50,6 +50,12 @@
           </el-table-column>
           <el-table-column prop="STORE_MALL_NAME" label="商场名称" min-width="150">
             <template #default="{ row }">{{ row.STORE_MALL_NAME || '-' }}</template>
+          </el-table-column>
+          <el-table-column prop="STORE_RENTBEGIN" label="开店日期" min-width="120" align="center">
+            <template #default="{ row }">{{ row.STORE_RENTBEGIN || '-' }}</template>
+          </el-table-column>
+          <el-table-column prop="STORE_RENTEND" label="闭店日期" min-width="120" align="center">
+            <template #default="{ row }">{{ row.STORE_RENTEND || '-' }}</template>
           </el-table-column>
           <el-table-column label="操作" width="90" align="center" fixed="right">
             <template #default="{ row }">

@@ -127,11 +127,13 @@ public class ErpStoreController {
         String groupName = body.get("groupName") == null ? null : body.get("groupName").toString();
         String channelFormat = body.get("channelFormat") == null ? null : body.get("channelFormat").toString();
         String mallName = body.get("mallName") == null ? null : body.get("mallName").toString();
+        String rentBegin = body.get("rentBegin") == null ? null : body.get("rentBegin").toString();
+        String rentEnd = body.get("rentEnd") == null ? null : body.get("rentEnd").toString();
         if (storeId == null || storeId.isBlank()) {
             return Result.paramError("店仓ID不能为空");
         }
         int rows = bjerpStoreMapper.updateStoreAttrib(storeId, brandId, supervisorId,
-                isStop, htArea, propType, groupName, channelFormat, mallName);
+                isStop, htArea, propType, groupName, channelFormat, mallName, rentBegin, rentEnd);
         if (rows == 0) {
             return Result.error("店仓不存在，更新失败");
         }

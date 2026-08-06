@@ -121,6 +121,12 @@
           <el-form-item label="商场名称">
             <el-input v-model="form.mallName" placeholder="请输入商场名称" />
           </el-form-item>
+          <el-form-item label="开店日期">
+            <el-input v-model="form.rentBegin" placeholder="请输入开店日期" />
+          </el-form-item>
+          <el-form-item label="闭店日期">
+            <el-input v-model="form.rentEnd" placeholder="请输入闭店日期" />
+          </el-form-item>
         </div>
       </el-form>
       <template #footer>
@@ -170,7 +176,8 @@ const dialogVisible = ref(false)
 const saving = ref(false)
 const form = reactive({
   storeId: '', storeCode: '', storeName: '', brandId: '', supervisorId: '',
-  isStop: '', htArea: '', propType: '', groupName: '', channelFormat: '', mallName: ''
+  isStop: '', htArea: '', propType: '', groupName: '', channelFormat: '', mallName: '',
+  rentBegin: '', rentEnd: ''
 })
 
 function handleEdit(row) {
@@ -185,6 +192,8 @@ function handleEdit(row) {
   form.groupName = row.STORE_GROUP_NAME || ''
   form.channelFormat = row.STORE_CHANNEL_FORMAT || ''
   form.mallName = row.STORE_MALL_NAME || ''
+  form.rentBegin = row.STORE_RENTBEGIN || ''
+  form.rentEnd = row.STORE_RENTEND || ''
   if (!brandList.value.length && !supervisorList.value.length) {
     loadOptions()
   }
@@ -207,7 +216,9 @@ async function handleSave() {
       propType: form.propType || '',
       groupName: form.groupName || '',
       channelFormat: form.channelFormat || '',
-      mallName: form.mallName || ''
+      mallName: form.mallName || '',
+      rentBegin: form.rentBegin || '',
+      rentEnd: form.rentEnd || ''
     })
     ElMessage.success('保存成功')
     dialogVisible.value = false

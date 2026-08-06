@@ -91,7 +91,9 @@
             PROP_TYPE     = NULLIF(TRIM(#{propType}), ''),
             GROUP_NAME    = NULLIF(TRIM(#{groupName}), ''),
             CHANNEL_FORMAT = NULLIF(TRIM(#{channelFormat}), ''),
-            MALL_NAME     = NULLIF(TRIM(#{mallName}), '')
+            MALL_NAME     = NULLIF(TRIM(#{mallName}), ''),
+            RENTBEGIN     = NULLIF(TRIM(#{rentBegin}), ''),
+            RENTEND       = NULLIF(TRIM(#{rentEnd}), '')
         WHERE ID = #{storeId}
     </update>
 

@@ -38,5 +38,7 @@ public interface BjerpStoreMapper {
                           @Param("propType") String propType,
                           @Param("groupName") String groupName,
                           @Param("channelFormat") String channelFormat,
-                          @Param("mallName") String mallName);
+                          @Param("mallName") String mallName,
+                          @Param("rentBegin") String rentBegin,
+                          @Param("rentEnd") String rentEnd);
 }

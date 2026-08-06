@@ -432,6 +432,7 @@ public class PrintTaskService {
             printData.put("KindName", detail.getKindName());
             printData.put("SizeName", resolveSizeName(detail));
             printData.put("EAN13", detail.getEan13());
+            printData.put("Barcode", detail.getBarcode());
             printData.put("Price", detail.getPrice() != null ? detail.getPrice().toString() : "");
             return printData;
         }
@@ -481,6 +482,7 @@ public class PrintTaskService {
             case "SIZE_NAME", "SIZENAME" -> resolveSizeName(detail);
             case "SIZE_GROUP", "SIZEGROUP" -> detail.getSizeGroup();
             case "EAN13" -> detail.getEan13();
+            case "BARCODE" -> detail.getBarcode();
             case "PRICE" -> detail.getPrice() != null ? detail.getPrice().toString() : null;
             case "EXECUTION_STANDARD", "EXECUTIONSTANDARD" -> detail.getExecutionStandard();
             case "ORIGIN" -> detail.getOrigin();

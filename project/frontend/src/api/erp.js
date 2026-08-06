@@ -5,6 +5,11 @@ export function getErpStorePage(params) {
   return request.get('/api/erp-store/page', { params })
 }
 
+// 渠道配置表单专用：精简分页查询店仓，返回 CODE/NAME
+export function getErpStoreSimplePage(params) {
+  return request.get('/api/erp-store/simple-page', { params })
+}
+
 export function getErpStoreListAll() {
   return request.get('/api/erp-store/list-all')
 }

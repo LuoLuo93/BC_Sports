@@ -105,7 +105,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getEntityChannel, getEntityChannelListByEntity, batchSaveEntityChannel, createEntityChannel } from '@/api/channel'
 import { getCommonBrandList, getCommonChannelTypeTree, getCommonChannelNatureTree, getCommonRegionTree } from '@/api/common'
-import { getErpStorePage } from '@/api/erp'
+import { getErpStoreSimplePage } from '@/api/erp'
 import { PAGE_SIZES } from '@/utils/appConfig'
 
 const router = useRouter()
@@ -223,7 +223,7 @@ async function searchEntities() {
       params.name = searchKeyword.value
     }
     // 业务已无客户概念，只搜店仓
-    const res = await getErpStorePage(params)
+    const res = await getErpStoreSimplePage(params)
     entityList.value = res.data?.records || []
   } finally { entitySearching.value = false }
 }

@@ -48,6 +48,17 @@
         ) WHERE RN &gt; #{offset} AND RN &lt;= #{offset} + #{pageSize}
     </select>
 
+    <!-- 渠道配置表单专用精简查询：只返回 CODE/NAME，字段名与前端 EntityChannelForm 绑定一致 -->
+    <select id="searchStoresSimple" resultType="java.util.Map">
+        SELECT * FROM (
+            SELECT STORE.CODE AS CODE,
+                   STORE.NAME AS NAME,
+                   ROW_NUMBER() OVER (ORDER BY STORE.CODE) AS RN
+            FROM C_STORE STORE
+            <include refid="searchStoresWhere"/>
+        ) WHERE RN &gt; #{offset} AND RN &lt;= #{offset} + #{pageSize}
+    </select>
+
     <select id="listAllStores" resultType="java.util.Map">
         SELECT CODE, NAME FROM C_STORE ORDER BY CODE
     </select>

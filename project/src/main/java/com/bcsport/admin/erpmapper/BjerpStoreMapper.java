@@ -14,6 +14,10 @@ public interface BjerpStoreMapper {
     List<Map<String, Object>> searchStores(@Param("code") String code, @Param("name") String name,
                                            @Param("offset") long offset, @Param("pageSize") long pageSize);
 
+    /** 渠道配置表单专用精简查询，只返回 CODE/NAME（字段名与前端 EntityChannelForm 绑定一致） */
+    List<Map<String, Object>> searchStoresSimple(@Param("code") String code, @Param("name") String name,
+                                                  @Param("offset") long offset, @Param("pageSize") long pageSize);
+
     List<Map<String, Object>> listAllStores();
 
     /** 店仓主品牌下拉（C_STOREATTRIBVALUE DIM5） */

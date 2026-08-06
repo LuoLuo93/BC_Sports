@@ -53,6 +53,34 @@ public class ErpStoreController {
     }
 
     /**
+     * 精简分页查询店仓（渠道配置表单专用）：只返回 CODE/NAME，
+     * 字段名与前端 EntityChannelForm 表格绑定一致。
+     */
+    @GetMapping("/simple-page")
+    @ApiOperation("分页查询店仓(精简,渠道配置表单用)")
+    public Result<PageResult<Map<String, Object>>> simplePage(PageQuery pageQuery,
+                                                               @RequestParam(required = false) String code,
+                                                               @RequestParam(required = false) String name) {
+        int safePageSize = Math.min(pageQuery.getPageSize() != null ? pageQuery.getPageSize() : 10, 500);
+        int safePageNum = Math.max(pageQuery.getPageNum() != null ? pageQuery.getPageNum() : 1, 1);
+        long offset = (long) (safePageNum - 1) * safePageSize;
+
+        long total = bjerpStoreMapper.countStores(code, name);
+        List<Map<String, Object>> list = bjerpStoreMapper.searchStoresSimple(code, name, offset, safePageSize);
+
+        PageResult<Map<String, Object>> pageResult = new PageResult<>();
+        pageResult.setPageNum((long) safePageNum);
+        pageResult.setPageSize((long) safePageSize);
+        pageResult.setTotal(total);
+        pageResult.setPages((total + safePageSize - 1) / safePageSize);
+        pageResult.setRecords(list);
+        pageResult.setHasPrevious(safePageNum > 1);
+        pageResult.setHasNext(safePageNum < pageResult.getPages());
+
+        return Result.success(pageResult);
+    }
+
+    /**
      * 查询所有店仓（下拉选择用）
      */
     @GetMapping("/list-all")

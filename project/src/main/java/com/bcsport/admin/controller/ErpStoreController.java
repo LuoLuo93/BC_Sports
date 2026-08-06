@@ -111,20 +111,27 @@ public class ErpStoreController {
     }
 
     /**
-     * 编辑店仓品牌/督导归属，写回 ERP C_STORE 的 C_STOREATTRIB5_ID/C_STOREATTRIB6_ID。
-     * body: { storeId, brandId, supervisorId }
+     * 编辑店仓品牌/督导及扩展属性，写回 ERP C_STORE。
+     * body: { storeId, brandId, supervisorId, isStop, htArea, propType, groupName, channelFormat, mallName }
      */
     @PutMapping("/attrib")
-    @ApiOperation("编辑店仓品牌/督导归属")
+    @ApiOperation("编辑店仓品牌/督导及扩展属性")
     @RequiresPermissions("bi:erpStore:edit")
     public Result<?> updateAttrib(@RequestBody Map<String, Object> body) {
         String storeId = body.get("storeId") == null ? null : body.get("storeId").toString();
         String brandId = body.get("brandId") == null ? null : body.get("brandId").toString();
         String supervisorId = body.get("supervisorId") == null ? null : body.get("supervisorId").toString();
+        String isStop = body.get("isStop") == null ? null : body.get("isStop").toString();
+        String htArea = body.get("htArea") == null ? null : body.get("htArea").toString();
+        String propType = body.get("propType") == null ? null : body.get("propType").toString();
+        String groupName = body.get("groupName") == null ? null : body.get("groupName").toString();
+        String channelFormat = body.get("channelFormat") == null ? null : body.get("channelFormat").toString();
+        String mallName = body.get("mallName") == null ? null : body.get("mallName").toString();
         if (storeId == null || storeId.isBlank()) {
             return Result.paramError("店仓ID不能为空");
         }
-        int rows = bjerpStoreMapper.updateStoreAttrib(storeId, brandId, supervisorId);
+        int rows = bjerpStoreMapper.updateStoreAttrib(storeId, brandId, supervisorId,
+                isStop, htArea, propType, groupName, channelFormat, mallName);
         if (rows == 0) {
             return Result.error("店仓不存在，更新失败");
         }

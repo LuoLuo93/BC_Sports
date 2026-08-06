@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.bcsport.admin.erpmapper.BjerpStoreMapper">
 
-    <!-- 列表查询字段：店仓基础信息 + 主品牌(DIM5) + 零售督导(DIM6) -->
+    <!-- 列表查询字段：店仓基础信息 + 主品牌(DIM5) + 零售督导(DIM6) + 扩展属性 -->
     <sql id="storeColumns">
         STORE.ID            AS STORE_ID,
         STORE.CODE          AS STORE_CODE,
@@ -10,7 +10,13 @@
         BRAND.NAME          AS STORE_BRAND,
         SUPERVISOR.NAME     AS STORE_SUPERVISOR,
         STORE.C_STOREATTRIB5_ID AS BRAND_ID,
-        STORE.C_STOREATTRIB6_ID AS SUPERVISOR_ID
+        STORE.C_STOREATTRIB6_ID AS SUPERVISOR_ID,
+        STORE.ISSTOP        AS STORE_IS_STOP,
+        STORE.HT_AREA       AS STORE_HT_AREA,
+        STORE.PROP_TYPE     AS STORE_PROP_TYPE,
+        STORE.GROUP_NAME    AS STORE_GROUP_NAME,
+        STORE.CHANNEL_FORMAT AS STORE_CHANNEL_FORMAT,
+        STORE.MALL_NAME     AS STORE_MALL_NAME
     </sql>
 
     <!-- JOIN：C_STOREATTRIB5_ID→品牌, C_STOREATTRIB6_ID→零售督导 -->
@@ -73,11 +79,17 @@
         SELECT ID, NAME FROM C_STOREATTRIBVALUE WHERE DIMFLAG = 'DIM6' ORDER BY NAME
     </select>
 
-    <!-- 编辑店仓品牌/督导归属：写回 ERP C_STORE；空串转 NULL 避免残留 -->
+    <!-- 编辑店仓品牌/督导及扩展属性：写回 ERP C_STORE；空串转 NULL 避免残留 -->
     <update id="updateStoreAttrib">
         UPDATE C_STORE
         SET C_STOREATTRIB5_ID = NULLIF(TRIM(#{brandId}), ''),
-            C_STOREATTRIB6_ID = NULLIF(TRIM(#{supervisorId}), '')
+            C_STOREATTRIB6_ID = NULLIF(TRIM(#{supervisorId}), ''),
+            ISSTOP        = NULLIF(TRIM(#{isStop}), ''),
+            HT_AREA       = NULLIF(TRIM(#{htArea}), ''),
+            PROP_TYPE     = NULLIF(TRIM(#{propType}), ''),
+            GROUP_NAME    = NULLIF(TRIM(#{groupName}), ''),
+            CHANNEL_FORMAT = NULLIF(TRIM(#{channelFormat}), ''),
+            MALL_NAME     = NULLIF(TRIM(#{mallName}), '')
         WHERE ID = #{storeId}
     </update>
 

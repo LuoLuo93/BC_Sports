@@ -27,10 +27,16 @@ public interface BjerpStoreMapper {
     List<Map<String, Object>> listSupervisors();
 
     /**
-     * 编辑店仓品牌/督导归属，写回 ERP C_STORE。
+     * 编辑店仓品牌/督导及扩展属性，写回 ERP C_STORE。
      * @return 受影响行数（0=店仓ID不存在）
      */
     int updateStoreAttrib(@Param("storeId") String storeId,
                           @Param("brandId") String brandId,
-                          @Param("supervisorId") String supervisorId);
+                          @Param("supervisorId") String supervisorId,
+                          @Param("isStop") String isStop,
+                          @Param("htArea") String htArea,
+                          @Param("propType") String propType,
+                          @Param("groupName") String groupName,
+                          @Param("channelFormat") String channelFormat,
+                          @Param("mallName") String mallName);
 }

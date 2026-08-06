@@ -33,6 +33,24 @@
           <el-table-column prop="STORE_SUPERVISOR" label="店仓零售督导" min-width="150">
             <template #default="{ row }">{{ row.STORE_SUPERVISOR || '-' }}</template>
           </el-table-column>
+          <el-table-column prop="STORE_IS_STOP" label="关店标志" min-width="100" align="center">
+            <template #default="{ row }">{{ row.STORE_IS_STOP || '-' }}</template>
+          </el-table-column>
+          <el-table-column prop="STORE_HT_AREA" label="合同面积" min-width="100" align="right">
+            <template #default="{ row }">{{ row.STORE_HT_AREA || '-' }}</template>
+          </el-table-column>
+          <el-table-column prop="STORE_PROP_TYPE" label="道具类型" min-width="120">
+            <template #default="{ row }">{{ row.STORE_PROP_TYPE || '-' }}</template>
+          </el-table-column>
+          <el-table-column prop="STORE_GROUP_NAME" label="集团名称" min-width="150">
+            <template #default="{ row }">{{ row.STORE_GROUP_NAME || '-' }}</template>
+          </el-table-column>
+          <el-table-column prop="STORE_CHANNEL_FORMAT" label="渠道业态" min-width="120">
+            <template #default="{ row }">{{ row.STORE_CHANNEL_FORMAT || '-' }}</template>
+          </el-table-column>
+          <el-table-column prop="STORE_MALL_NAME" label="商场名称" min-width="150">
+            <template #default="{ row }">{{ row.STORE_MALL_NAME || '-' }}</template>
+          </el-table-column>
           <el-table-column label="操作" width="90" align="center" fixed="right">
             <template #default="{ row }">
               <el-button v-if="hasPermission('bi:erpStore:edit')" type="primary" plain size="small" @click="handleEdit(row)">编辑</el-button>
@@ -54,8 +72,8 @@
       </div>
     </el-card>
 
-    <!-- 编辑品牌/督导归属弹窗 -->
-    <el-dialog v-model="dialogVisible" title="编辑店仓品牌/督导归属" width="460px" destroy-on-close>
+    <!-- 编辑品牌/督导及扩展属性弹窗 -->
+    <el-dialog v-model="dialogVisible" title="编辑店仓信息" width="560px" destroy-on-close>
       <el-form :model="form" label-width="100px">
         <el-form-item label="店仓编码">
           <el-input :model-value="form.storeCode" disabled />
@@ -72,6 +90,27 @@
           <el-select v-model="form.supervisorId" placeholder="选择零售督导" filterable clearable style="width:100%">
             <el-option v-for="s in supervisorList" :key="s.ID" :label="s.NAME" :value="s.ID" />
           </el-select>
+        </el-form-item>
+        <el-form-item label="关店标志">
+          <el-select v-model="form.isStop" placeholder="选择关店标志" clearable style="width:100%">
+            <el-option label="否(N)" value="N" />
+            <el-option label="是(Y)" value="Y" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="合同面积">
+          <el-input v-model="form.htArea" placeholder="请输入合同面积" />
+        </el-form-item>
+        <el-form-item label="道具类型">
+          <el-input v-model="form.propType" placeholder="请输入道具类型" />
+        </el-form-item>
+        <el-form-item label="集团名称">
+          <el-input v-model="form.groupName" placeholder="请输入集团名称" />
+        </el-form-item>
+        <el-form-item label="渠道业态">
+          <el-input v-model="form.channelFormat" placeholder="请输入渠道业态" />
+        </el-form-item>
+        <el-form-item label="商场名称">
+          <el-input v-model="form.mallName" placeholder="请输入商场名称" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -119,7 +158,10 @@ async function loadOptions() {
 // 编辑弹窗
 const dialogVisible = ref(false)
 const saving = ref(false)
-const form = reactive({ storeId: '', storeCode: '', storeName: '', brandId: '', supervisorId: '' })
+const form = reactive({
+  storeId: '', storeCode: '', storeName: '', brandId: '', supervisorId: '',
+  isStop: '', htArea: '', propType: '', groupName: '', channelFormat: '', mallName: ''
+})
 
 function handleEdit(row) {
   form.storeId = row.STORE_ID || ''
@@ -127,6 +169,12 @@ function handleEdit(row) {
   form.storeName = row.STORE_NAME || ''
   form.brandId = row.BRAND_ID || ''
   form.supervisorId = row.SUPERVISOR_ID || ''
+  form.isStop = row.STORE_IS_STOP || ''
+  form.htArea = row.STORE_HT_AREA != null ? String(row.STORE_HT_AREA) : ''
+  form.propType = row.STORE_PROP_TYPE || ''
+  form.groupName = row.STORE_GROUP_NAME || ''
+  form.channelFormat = row.STORE_CHANNEL_FORMAT || ''
+  form.mallName = row.STORE_MALL_NAME || ''
   if (!brandList.value.length && !supervisorList.value.length) {
     loadOptions()
   }
@@ -143,7 +191,13 @@ async function handleSave() {
     await updateErpStoreAttrib({
       storeId: form.storeId,
       brandId: form.brandId || '',
-      supervisorId: form.supervisorId || ''
+      supervisorId: form.supervisorId || '',
+      isStop: form.isStop || '',
+      htArea: form.htArea || '',
+      propType: form.propType || '',
+      groupName: form.groupName || '',
+      channelFormat: form.channelFormat || '',
+      mallName: form.mallName || ''
     })
     ElMessage.success('保存成功')
     dialogVisible.value = false

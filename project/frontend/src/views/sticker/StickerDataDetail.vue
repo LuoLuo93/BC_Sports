@@ -76,7 +76,6 @@
               <span class="info-card-label">
                 EAN13
                 <span v-if="ean13Check === 'error'" class="field-msg field-msg-error">需为 12 位纯数字</span>
-                <span v-else-if="ean13Check === 'warning'" class="field-msg field-msg-warn">校验位不匹配，请核对</span>
               </span>
               <el-input
                 v-model="row.EAN13"
@@ -359,26 +358,15 @@ function parseSizes(s) {
 }
 
 // ─── EAN13 校验 ─────────────────────────────────
-// 两级反馈：error=格式错(红,阻止保存)；warning=校验位不符(黄,仅提醒不阻止)
-const ean13Check = ref('ok') // 'ok' | 'error' | 'warning'
+// 12 位纯数字编码（无校验位），只做格式校验
+const ean13Check = ref('ok') // 'ok' | 'error'
 
-/** EAN-13 校验位算法(GS1)：前11位加权求和，第12位为校验位 */
-function ean13ChecksumMatches(code) {
-  if (!/^\d{12}$/.test(code)) return false
-  let sum = 0
-  for (let i = 0; i < 11; i++) {
-    sum += Number(code[i]) * (i % 2 === 0 ? 1 : 3)
-  }
-  const checkBit = (10 - (sum % 10)) % 10
-  return checkBit === Number(code[11])
-}
-
-/** 实时校验：空=ok；非12位数字=error；12位但校验位不符=warning */
+/** 实时校验：空=ok；非12位数字=error */
 function validateEan13(val) {
   const v = (val || '').trim()
   if (!v) return 'ok'
   if (!/^\d{12}$/.test(v)) return 'error'
-  return ean13ChecksumMatches(v) ? 'ok' : 'warning'
+  return 'ok'
 }
 
 /** 输入时：剥离空格、仅保留数字，同步校验状态 */
@@ -395,10 +383,9 @@ function onEan13Blur() {
   }
 }
 
-/** 输入框动态 class：错误红框、警告黄框 */
+/** 输入框动态 class：错误红框 */
 const ean13InputClass = computed(() => ({
-  'field-error': ean13Check.value === 'error',
-  'field-warning': ean13Check.value === 'warning'
+  'field-error': ean13Check.value === 'error'
 }))
 
 async function handleSave() {
@@ -411,17 +398,6 @@ async function handleSave() {
   if (ean13Check.value === 'error') {
     ElMessage.warning('EAN13 格式错误：需为 12 位纯数字')
     return
-  }
-  if (ean13Check.value === 'warning') {
-    try {
-      await ElMessageBox.confirm(
-        'EAN13 校验位不匹配，确认仍要保存吗？',
-        '校验位提醒',
-        { confirmButtonText: '仍保存', cancelButtonText: '返回修改', type: 'warning' }
-      )
-    } catch {
-      return // 用户选择返回修改
-    }
   }
   saving.value = true
   try {

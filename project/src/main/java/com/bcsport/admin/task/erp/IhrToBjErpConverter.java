@@ -33,6 +33,8 @@ public class IhrToBjErpConverter {
         data.set("INCUMBENCY_STS", mapStaffStatus(detail.getStaffStatus()));
         // ISSALER - 是否营业员（Y=营业员）。同步的终端店铺员工均为营业员
         data.set("ISSALER", "Y");
+        // ISSTOREMAN - 是否店长（Y=店长）。职位精确匹配"店长"时为Y，否则留空
+        data.set("ISSTOREMAN", "店长".equals(detail.getPositionName()) ? "Y" : "");
 
         // BEGIN_DATE - 入职日期
         putIfNotNull(data, "BEGIN_DATE", formatDate(detail.getEnrollInDate()));
@@ -62,6 +64,7 @@ public class IhrToBjErpConverter {
         data.set("C_STORE_ID__NAME", detail.getDepartmentName());          // 【必填】店仓（IHR员工部门）
         data.set("INCUMBENCY_STS", mapStaffStatus(detail.getStaffStatus())); // 【必填】在职状况
         data.set("ISSALER", "Y");                                          // 营业员标识（与入职一致）
+        data.set("ISSTOREMAN", "店长".equals(detail.getPositionName()) ? "Y" : ""); // 店长标识（与入职一致）
 
         // 只更新手机号，其他不动（不传部门字段 C_DEPARTMENT_ID__NAME，
         // 伯俊 C_DEPARTMENT 表为空，传部门会导致"部门不存在"报错）

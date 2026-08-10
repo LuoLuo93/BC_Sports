@@ -66,4 +66,12 @@ public interface BjerpProductMapper {
      * @return 数据库中存在的货号集合(name)
      */
     List<String> selectExistMaterialNumbers(@Param("list") List<String> materialNumbers);
+
+    /**
+     * 批量更新预估成本(导入用),基于 Oracle MERGE INTO 单 SQL 更新多行。
+     * 调用方需自行分批(每批建议 ≤500 条,避免 SQL 过长/绑定变量超限)。
+     * @param rows 每行包含 materialNumber / precost 两个键
+     * @return 受影响行数(MERGE 的 UPDATE 行数)
+     */
+    int batchUpdatePrecost(@Param("list") List<Map<String, String>> rows);
 }

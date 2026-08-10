@@ -35,6 +35,10 @@ public class EstimatedCostServiceImpl implements EstimatedCostService {
 
     private static final int MAX_ERRORS = 100;
     private static final int MAX_ROWS = 500_000;
+    /** Oracle IN 列表上限 1000，留余量取 900 */
+    private static final int EXIST_BATCH_SIZE = 900;
+    /** MERGE INTO 单批行数，兼顾 SQL 长度与绑定变量上限 */
+    private static final int UPDATE_BATCH_SIZE = 500;
 
     /** 表头别名 → 字段标识 */
     private static final Map<String, String> HEADER_ALIAS = new HashMap<>();
@@ -194,11 +198,16 @@ public class EstimatedCostServiceImpl implements EstimatedCostService {
             }
         }
 
-        // 3. 货号存在性校验：批量查询 ERP 里存在的货号，不存在的提前过滤
+        // 3. 货号存在性校验：分批查询 ERP 里存在的货号，不存在的提前过滤
+        //    Oracle IN 列表上限 1000，按 EXIST_BATCH_SIZE 分批避免 ORA-01795
         int notExistCount = 0;
         if (!validRows.isEmpty()) {
-            List<String> existNumbers = bjerpProductMapper.selectExistMaterialNumbers(new ArrayList<>(validRows.keySet()));
-            java.util.Set<String> existSet = new java.util.HashSet<>(existNumbers);
+            java.util.Set<String> existSet = new java.util.HashSet<>();
+            List<String> allNumbers = new ArrayList<>(validRows.keySet());
+            for (int i = 0; i < allNumbers.size(); i += EXIST_BATCH_SIZE) {
+                int end = Math.min(i + EXIST_BATCH_SIZE, allNumbers.size());
+                existSet.addAll(bjerpProductMapper.selectExistMaterialNumbers(allNumbers.subList(i, end)));
+            }
             // 移除不存在的货号
             java.util.Iterator<String> it = validRows.keySet().iterator();
             while (it.hasNext()) {
@@ -211,16 +220,24 @@ public class EstimatedCostServiceImpl implements EstimatedCostService {
             }
         }
 
-        // 4. 在伯俊数据源事务内批量更新：任意异常整体回滚，保护货品主数据
+        // 4. 在伯俊数据源事务内批量更新：MERGE INTO 分批，任意异常整体回滚，保护货品主数据
         int[] success = {0};
         if (!validRows.isEmpty()) {
             try {
                 new TransactionTemplate(bjerpTransactionManager).execute(status -> {
+                    List<Map<String, String>> batch = new ArrayList<>();
                     for (Map.Entry<String, String> e : validRows.entrySet()) {
-                        int rows = bjerpProductMapper.updatePrecost(e.getKey(), e.getValue());
-                        if (rows > 0) {
-                            success[0]++;
+                        Map<String, String> row = new HashMap<>();
+                        row.put("materialNumber", e.getKey());
+                        row.put("precost", e.getValue());
+                        batch.add(row);
+                        if (batch.size() >= UPDATE_BATCH_SIZE) {
+                            success[0] += bjerpProductMapper.batchUpdatePrecost(batch);
+                            batch.clear();
                         }
+                    }
+                    if (!batch.isEmpty()) {
+                        success[0] += bjerpProductMapper.batchUpdatePrecost(batch);
                     }
                     return null;
                 });

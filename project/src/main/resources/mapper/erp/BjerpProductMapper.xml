@@ -196,7 +196,7 @@
         WHERE name = #{materialNumber}
     </update>
 
-    <!-- 批量查询存在的货号(导入前校验用) -->
+    <!-- 批量查询存在的货号(导入前校验用)。调用方须分批 ≤900/次，避免 ORA-01795(IN 列表上限1000) -->
     <select id="selectExistMaterialNumbers" resultType="java.lang.String">
         SELECT DISTINCT name FROM M_PRODUCT
         WHERE name IN
@@ -204,5 +204,17 @@
             #{item}
         </foreach>
     </select>
+
+    <!-- 批量更新预估成本(导入用):MERGE INTO 单 SQL 更新多行，替代 N 次单条 UPDATE -->
+    <update id="batchUpdatePrecost">
+        MERGE INTO M_PRODUCT t
+        USING (
+            <foreach collection="list" item="row" separator="UNION ALL">
+                SELECT #{row.materialNumber} AS name, NULLIF(TRIM(#{row.precost}), '') AS precost FROM dual
+            </foreach>
+        ) src
+        ON (t.name = src.name)
+        WHEN MATCHED THEN UPDATE SET t.PRECOST = src.precost
+    </update>
 
 </mapper>

@@ -145,6 +145,17 @@ public class EstimatedCostServiceImpl implements EstimatedCostService {
             }
             if (rowCells == null || rowCells.isEmpty()) return;
 
+            // 整行所有单元格值均为空 → 视为空行(Excel 常把格式刷到 1048576 行，POI 会回放大量"空单元格"行)
+            // 静默跳过：不计入 total、不算失败，否则会被误报成上百万条失败
+            boolean allBlank = true;
+            for (Object c : rowCells) {
+                if (c != null && !String.valueOf(c).trim().isEmpty()) {
+                    allBlank = false;
+                    break;
+                }
+            }
+            if (allBlank) return;
+
             int rowNum = (int) rowIndex + 1;
             int cnt = ++total[0];
             if (cnt > MAX_ROWS) {

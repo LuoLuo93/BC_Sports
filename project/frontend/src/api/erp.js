@@ -29,6 +29,16 @@ export function updateErpStoreAttrib(data) {
   return request.put('/api/erp-store/attrib', data)
 }
 
+// 零售主管继承-预览：某零售主管名下有多少店铺
+export function previewSupervisorInherit(fromSupervisorId) {
+  return request.get('/api/erp-store/supervisor-inherit/preview', { params: { fromSupervisorId } })
+}
+
+// 零售主管继承-执行：把原零售主管名下店铺全部改为目标零售主管
+export function executeSupervisorInherit(fromSupervisorId, toSupervisorId) {
+  return request.put('/api/erp-store/supervisor-inherit', { fromSupervisorId, toSupervisorId })
+}
+
 // ERP Shop
 export function getErpShopPage(params) {
   return request.get('/api/erp-shop/page', { params })

@@ -30,14 +30,20 @@
 
     <sql id="searchStoresWhere">
         <where>
-            <if test="code != null and code != ''">
-                AND STORE.CODE LIKE '%' || #{code} || '%' ESCAPE '\'
+            <if test="supervisorId != null and supervisorId != ''">
+                AND STORE.C_STOREATTRIB6_ID = #{supervisorId}
             </if>
-            <if test="name != null and name != ''">
-                <choose>
-                    <when test="code != null and code != ''">OR STORE.NAME LIKE '%' || #{name} || '%' ESCAPE '\'</when>
-                    <otherwise>AND STORE.NAME LIKE '%' || #{name} || '%' ESCAPE '\'</otherwise>
-                </choose>
+            <if test="(code != null and code != '') or (name != null and name != '')">
+                AND (
+                <trim prefixOverrides="OR">
+                    <if test="code != null and code != ''">
+                        STORE.CODE LIKE '%' || #{code} || '%' ESCAPE '\'
+                    </if>
+                    <if test="name != null and name != ''">
+                        OR STORE.NAME LIKE '%' || #{name} || '%' ESCAPE '\'
+                    </if>
+                </trim>
+                )
             </if>
         </where>
     </sql>
@@ -95,6 +101,13 @@
             RENTBEGIN     = NULLIF(TRIM(#{rentBegin}), ''),
             RENTEND       = NULLIF(TRIM(#{rentEnd}), '')
         WHERE ID = #{storeId}
+    </update>
+
+    <!-- 零售主管继承：把原零售主管名下的店铺全部改为目标零售主管 -->
+    <update id="updateSupervisorBatch">
+        UPDATE C_STORE
+        SET C_STOREATTRIB6_ID = #{toSupervisorId}
+        WHERE C_STOREATTRIB6_ID = #{fromSupervisorId}
     </update>
 
 </mapper>

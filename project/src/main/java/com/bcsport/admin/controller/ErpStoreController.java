@@ -32,13 +32,14 @@ public class ErpStoreController {
     @RequiresPermissions("bi:erpStore:query")
     public Result<PageResult<Map<String, Object>>> page(PageQuery pageQuery,
                                                          @RequestParam(required = false) String code,
-                                                         @RequestParam(required = false) String name) {
+                                                         @RequestParam(required = false) String name,
+                                                         @RequestParam(required = false) String supervisorId) {
         int safePageSize = Math.min(pageQuery.getPageSize() != null ? pageQuery.getPageSize() : 10, 500);
         int safePageNum = Math.max(pageQuery.getPageNum() != null ? pageQuery.getPageNum() : 1, 1);
         long offset = (long) (safePageNum - 1) * safePageSize;
 
-        long total = bjerpStoreMapper.countStores(code, name);
-        List<Map<String, Object>> list = bjerpStoreMapper.searchStores(code, name, offset, safePageSize);
+        long total = bjerpStoreMapper.countStores(code, name, supervisorId);
+        List<Map<String, Object>> list = bjerpStoreMapper.searchStores(code, name, supervisorId, offset, safePageSize);
 
         PageResult<Map<String, Object>> pageResult = new PageResult<>();
         pageResult.setPageNum((long) safePageNum);
@@ -65,8 +66,8 @@ public class ErpStoreController {
         int safePageNum = Math.max(pageQuery.getPageNum() != null ? pageQuery.getPageNum() : 1, 1);
         long offset = (long) (safePageNum - 1) * safePageSize;
 
-        long total = bjerpStoreMapper.countStores(code, name);
-        List<Map<String, Object>> list = bjerpStoreMapper.searchStoresSimple(code, name, offset, safePageSize);
+        long total = bjerpStoreMapper.countStores(code, name, null);
+        List<Map<String, Object>> list = bjerpStoreMapper.searchStoresSimple(code, name, null, offset, safePageSize);
 
         PageResult<Map<String, Object>> pageResult = new PageResult<>();
         pageResult.setPageNum((long) safePageNum);
@@ -138,5 +139,43 @@ public class ErpStoreController {
             return Result.error("店仓不存在，更新失败");
         }
         return Result.success("保存成功");
+    }
+
+    /**
+     * 零售主管继承-预览：查询某零售主管名下有多少店铺（复用列表 count）。
+     * param: fromSupervisorId 原零售主管 ID
+     */
+    @GetMapping("/supervisor-inherit/preview")
+    @ApiOperation("零售主管继承-预览受影响店铺数")
+    @RequiresPermissions("bi:erpStore:query")
+    public Result<Map<String, Object>> previewSupervisorInherit(@RequestParam String fromSupervisorId) {
+        if (fromSupervisorId == null || fromSupervisorId.isBlank()) {
+            return Result.paramError("原零售主管不能为空");
+        }
+        long count = bjerpStoreMapper.countStores(null, null, fromSupervisorId);
+        return Result.success(Map.of("count", count));
+    }
+
+    /**
+     * 零售主管继承-执行：把原零售主管名下的店铺全部改为目标零售主管。
+     * body: { fromSupervisorId, toSupervisorId }
+     */
+    @PutMapping("/supervisor-inherit")
+    @ApiOperation("零售主管继承-批量修改")
+    @RequiresPermissions("bi:erpStore:edit")
+    public Result<?> executeSupervisorInherit(@RequestBody Map<String, Object> body) {
+        String fromSupervisorId = body.get("fromSupervisorId") == null ? null : body.get("fromSupervisorId").toString();
+        String toSupervisorId = body.get("toSupervisorId") == null ? null : body.get("toSupervisorId").toString();
+        if (fromSupervisorId == null || fromSupervisorId.isBlank()) {
+            return Result.paramError("原零售主管不能为空");
+        }
+        if (toSupervisorId == null || toSupervisorId.isBlank()) {
+            return Result.paramError("目标零售主管不能为空");
+        }
+        if (fromSupervisorId.equals(toSupervisorId)) {
+            return Result.paramError("原零售主管与目标零售主管不能相同");
+        }
+        int rows = bjerpStoreMapper.updateSupervisorBatch(fromSupervisorId, toSupervisorId);
+        return Result.success("继承成功，共更新 " + rows + " 家店铺");
     }
 }

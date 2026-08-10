@@ -8,6 +8,11 @@
         <el-form-item label="名称">
           <el-input v-model="query.name" placeholder="请输入店仓名称" clearable @keyup.enter="handleSearch" />
         </el-form-item>
+        <el-form-item label="零售主管">
+          <el-select v-model="query.supervisorId" placeholder="请选择零售主管" filterable clearable style="width:200px">
+            <el-option v-for="s in supervisorList" :key="s.ID" :label="s.NAME" :value="s.ID" />
+          </el-select>
+        </el-form-item>
         <el-form-item>
           <el-button type="primary" :icon="Search" @click="handleSearch">搜索</el-button>
           <el-button :icon="RefreshRight" @click="resetQuery">重置</el-button>
@@ -19,6 +24,8 @@
       <template #header>
         <div class="card-header-row">
           <span class="card-header-title">店仓列表</span>
+          <el-button v-if="hasPermission('bi:erpStore:edit')" type="warning" plain :icon="Switch"
+                     @click="openInheritDialog">零售主管继承</el-button>
         </div>
       </template>
 
@@ -136,24 +143,54 @@
         </div>
       </template>
     </el-dialog>
+
+    <!-- 零售主管继承弹窗 -->
+    <el-dialog v-model="inheritVisible" title="零售主管继承" width="520px" destroy-on-close>
+      <el-alert type="info" :closable="false" show-icon
+                title="将「原零售主管」名下的所有店铺，批量变更为「目标零售主管」" />
+      <el-form label-width="110px" style="margin-top:16px">
+        <el-form-item label="原零售主管" required>
+          <el-select v-model="inheritForm.fromId" filterable clearable placeholder="请选择原零售主管"
+                     style="width:100%" @change="onInheritChange">
+            <el-option v-for="s in supervisorList" :key="s.ID" :label="s.NAME" :value="s.ID" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="目标零售主管" required>
+          <el-select v-model="inheritForm.toId" filterable clearable placeholder="请选择目标零售主管"
+                     style="width:100%" @change="onInheritChange">
+            <el-option v-for="s in supervisorList" :key="s.ID" :label="s.NAME" :value="s.ID" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <el-alert v-if="inheritPreview.text" :type="inheritPreview.valid ? 'warning' : 'error'"
+                :title="inheritPreview.text" show-icon :closable="false" style="margin-top:8px" />
+      <template #footer>
+        <el-button @click="inheritVisible = false">取消</el-button>
+        <el-button type="primary" :loading="inheriting" :disabled="!canConfirmInherit"
+                   @click="confirmInherit">确认继承</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
 defineOptions({ name: 'ErpStore' })
-import { ref, reactive, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
-import { Search, RefreshRight } from '@element-plus/icons-vue'
+import { ref, reactive, computed, onMounted } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Search, RefreshRight, Switch } from '@element-plus/icons-vue'
 import { usePageQuery } from '@/composables/usePageQuery'
 import { usePermission } from '@/composables/usePermission'
 import { PAGE_SIZES } from '@/utils/appConfig'
-import { getErpStorePage, getErpStoreBrands, getErpStoreSupervisors, updateErpStoreAttrib } from '@/api/erp'
+import {
+  getErpStorePage, getErpStoreBrands, getErpStoreSupervisors, updateErpStoreAttrib,
+  previewSupervisorInherit, executeSupervisorInherit
+} from '@/api/erp'
 
 const { hasPermission } = usePermission()
 
 const { loading, tableData, total, query, loadData, handleSearch, resetQuery } = usePageQuery(
   getErpStorePage,
-  { code: '', name: '' }
+  { code: '', name: '', supervisorId: '' }
 )
 
 // 品牌/督导下拉
@@ -228,7 +265,91 @@ async function handleSave() {
   }
 }
 
-onMounted(() => loadData())
+// ===== 零售主管继承 =====
+const inheritVisible = ref(false)
+const inheriting = ref(false)
+const inheritForm = reactive({ fromId: '', toId: '' })
+const inheritPreview = reactive({ text: '', valid: false, count: 0 })
+
+// 名称查表辅助
+function supervisorName(id) {
+  const s = supervisorList.value.find(x => String(x.ID) === String(id))
+  return s ? s.NAME : ''
+}
+
+const canConfirmInherit = computed(() => inheritPreview.valid && inheritPreview.count > 0)
+
+// 打开继承弹窗
+function openInheritDialog() {
+  inheritForm.fromId = ''
+  inheritForm.toId = ''
+  inheritPreview.text = ''
+  inheritPreview.valid = false
+  inheritPreview.count = 0
+  if (!supervisorList.value.length) {
+    loadOptions()
+  }
+  inheritVisible.value = true
+}
+
+// 任一改变时校验并预览
+async function onInheritChange() {
+  const { fromId, toId } = inheritForm
+  if (!fromId || !toId) {
+    inheritPreview.text = ''
+    inheritPreview.valid = false
+    inheritPreview.count = 0
+    return
+  }
+  if (fromId === toId) {
+    inheritPreview.text = '原零售主管与目标零售主管不能相同'
+    inheritPreview.valid = false
+    inheritPreview.count = 0
+    return
+  }
+  try {
+    const res = await previewSupervisorInherit(fromId)
+    const count = res.data?.count ?? 0
+    inheritPreview.count = count
+    inheritPreview.valid = count > 0
+    inheritPreview.text = count > 0
+      ? `将把【${supervisorName(fromId)}】名下的 ${count} 家店铺全部改为【${supervisorName(toId)}】`
+      : `【${supervisorName(fromId)}】名下暂无店铺，无可继承的数据`
+  } catch {
+    inheritPreview.text = '预览失败，请重试'
+    inheritPreview.valid = false
+    inheritPreview.count = 0
+  }
+}
+
+// 二次确认并执行继承
+async function confirmInherit() {
+  if (!canConfirmInherit.value) return
+  const { fromId, toId } = inheritForm
+  try {
+    await ElMessageBox.confirm(
+      `确认将【${supervisorName(fromId)}】名下的 ${inheritPreview.count} 家店铺的零售主管全部改为【${supervisorName(toId)}】？此操作不可撤销。`,
+      '二次确认',
+      { type: 'warning', confirmButtonText: '确认继承', cancelButtonText: '取消' }
+    )
+  } catch {
+    return // 用户取消
+  }
+  inheriting.value = true
+  try {
+    const res = await executeSupervisorInherit(fromId, toId)
+    ElMessage.success(res.data || '继承成功')
+    inheritVisible.value = false
+    loadData()
+  } finally {
+    inheriting.value = false
+  }
+}
+
+onMounted(() => {
+  loadData()
+  loadOptions()
+})
 </script>
 
 <style scoped>

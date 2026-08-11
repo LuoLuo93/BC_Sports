@@ -86,3 +86,8 @@ export function getEntityChannelTemplate() {
 export function importEntityChannel(data) {
   return request.post('/api/entity-channel/import', data, { timeout: 300000 })
 }
+
+// 同步店仓名称：从伯俊ERP C_STORE 刷新本地 entity_name
+export function syncEntityChannelStoreNames() {
+  return request.post('/api/entity-channel/sync-store-names', {}, { timeout: 300000 })
+}

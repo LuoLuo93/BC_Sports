@@ -76,6 +76,7 @@ public class ScheduleTaskRegistry {
 
         // === BJERP 伯俊ERP模块 ===
         register("bjerp.employee.sync", "伯俊ERP-人员同步", "erpEmployeeSyncTask", "syncAll", "将待同步人员(入职/变更/离职)同步到伯俊ERP", MODULE_BJERP, 1);
+        register("bjerp.store.name.sync", "伯俊ERP-同步店仓名称", "entityChannelStoreNameSyncTask", "syncStoreNames", "把本地实体渠道配置中的店仓名称刷新为伯俊ERP C_STORE最新名称(仅更新ERP中存在的编码，查不到的保留原名)", MODULE_BJERP, 2);
 
         // === HKERP 旧版ERP直写模块（移植自 interfaceForHK） ===
         register("hkerp.employee.lifecycle", "HKERP-员工生命周期同步", "hkPersonnelSyncTask", "syncAll", "顺序执行：新员工入职→员工变更→员工离职（含满30天收尾），一站式同步到HKERP Bas_Personnel", MODULE_HKERP, 1);

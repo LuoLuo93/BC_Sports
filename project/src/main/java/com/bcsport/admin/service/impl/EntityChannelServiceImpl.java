@@ -61,6 +61,13 @@ public class EntityChannelServiceImpl implements EntityChannelService {
     @Autowired
     private BrandMapper brandMapper;
 
+    /**
+     * 伯俊 ERP 店仓数据源：用于把本地 entity_name 同步成 ERP C_STORE 的最新名称。
+     * （独立数据源，由 BjerpDataSourceConfig 扫描 erpmapper 包注入）
+     */
+    @Autowired
+    private com.bcsport.admin.erpmapper.BjerpStoreMapper bjerpStoreMapper;
+
     @Override
     public PageResult<EntityChannelVO> pageEntityChannels(PageQuery pageQuery, EntityChannelQueryDTO queryDTO) {
         Page<EntityChannel> page = new Page<>(pageQuery.getPageNum(), pageQuery.getPageSize());
@@ -738,6 +745,120 @@ public class EntityChannelServiceImpl implements EntityChannelService {
         } finally {
             reader.close();
         }
+    }
+
+    /**
+     * 同步本地实体渠道配置中的店仓名称(entity_name) 为伯俊 ERP C_STORE 的最新名称。
+     * <p>
+     * 背景：entity_name 在新增/导入时一次性从 ERP 拷贝到本地冗余存储，之后 ERP 改名不会同步过来，
+     * 导致列表展示的名称滞后。本方法用于手动/定时触发刷新。
+     * <p>
+     * 策略：
+     * <ul>
+     *   <li>查本地所有 entity_type='store' 且未删除的记录，收集去重后的 external_id(店仓编码)</li>
+     *   <li>一次性从 ERP C_STORE 拉取 CODE→NAME 映射(仅限本地存在的编码，查不到的保留原名，避免 ERP 删店导致本地名被清空)</li>
+     *   <li>逐条比对：名称确实变化或本地名为空时，按 external_id 批量 UPDATE entity_name</li>
+     * </ul>
+     *
+     * @return 同步结果统计：total=本地store记录数, synced=实际更新条数, unchanged=未变化条数, notInErp=ERP查不到的条数
+     */
+    @Override
+    public Map<String, Object> syncStoreNames() {
+        // 1. 查本地所有 store 记录(含 external_id + 当前 entity_name)
+        QueryWrapper<EntityChannel> wrapper = new QueryWrapper<>();
+        wrapper.eq("deleted", 0).eq("entity_type", "store")
+               .select("id", "external_id", "entity_name");
+        List<EntityChannel> localStores = entityChannelMapper.selectList(wrapper);
+
+        Map<String, Object> result = new HashMap<>();
+        if (localStores.isEmpty()) {
+            result.put("total", 0);
+            result.put("synced", 0);
+            result.put("unchanged", 0);
+            result.put("notInErp", 0);
+            return result;
+        }
+
+        // 2. 收集去重的店仓编码
+        Set<String> codeSet = new HashSet<>();
+        for (EntityChannel ec : localStores) {
+            if (ec.getExternalId() != null && !ec.getExternalId().trim().isEmpty()) {
+                codeSet.add(ec.getExternalId().trim());
+            }
+        }
+
+        // 3. 一次性从 ERP 取 CODE→NAME 映射(全量查再过滤，避免 Oracle IN 超过 1000 个的限制)
+        List<Map<String, Object>> allErpStores = bjerpStoreMapper.listAllStores();
+        Map<String, String> erpNameMap = new HashMap<>();
+        if (allErpStores != null) {
+            for (Map<String, Object> row : allErpStores) {
+                String code = strVal(row.get("CODE"));
+                if (code == null) {
+                    code = strVal(row.get("code"));   // 兼容某些 JDBC 返回小写列名
+                }
+                String name = strVal(row.get("NAME"));
+                if (name == null) {
+                    name = strVal(row.get("name"));
+                }
+                if (code != null && codeSet.contains(code)) {
+                    erpNameMap.put(code, name != null ? name : "");
+                }
+            }
+        }
+
+        // 4. 逐条比对并按 external_id 批量更新(仅名称变化或本地名为空时才更新)
+        int synced = 0;
+        int unchanged = 0;
+        int notInErp = 0;
+        java.util.Date now = new java.util.Date();
+        // 按"新名称"分组聚合更新，减少 UPDATE 次数(同名变更通常集中在个别店铺)
+        Map<String, List<String>> newNameToCodes = new HashMap<>();
+        for (EntityChannel ec : localStores) {
+            String code = ec.getExternalId();
+            if (code == null || code.trim().isEmpty()) {
+                continue;
+            }
+            code = code.trim();
+            String erpName = erpNameMap.get(code);
+            if (erpName == null) {
+                // ERP 查不到该编码：保留本地原名，跳过(防止 ERP 删店导致本地名被清空)
+                notInErp++;
+                continue;
+            }
+            String localName = ec.getEntityName();
+            boolean nameChanged = (localName == null || localName.trim().isEmpty())
+                    ? !erpName.isEmpty()
+                    : !localName.trim().equals(erpName);
+            if (!nameChanged) {
+                unchanged++;
+                continue;
+            }
+            newNameToCodes.computeIfAbsent(erpName, k -> new ArrayList<>()).add(code);
+        }
+
+        // 执行批量更新：UPDATE ... SET entity_name=?, update_time=? WHERE external_id IN (...)
+        for (Map.Entry<String, List<String>> entry : newNameToCodes.entrySet()) {
+            String newName = entry.getKey();
+            List<String> codes = entry.getValue();
+            // Oracle IN 上限 1000，这里按 500 分批保险
+            for (int i = 0; i < codes.size(); i += 500) {
+                List<String> batch = codes.subList(i, Math.min(i + 500, codes.size()));
+                LambdaUpdateWrapper<EntityChannel> upd = new LambdaUpdateWrapper<>();
+                upd.in(EntityChannel::getExternalId, batch)
+                   .eq(EntityChannel::getEntityType, "store")
+                   .eq(EntityChannel::getDeleted, 0)
+                   .set(EntityChannel::getEntityName, newName)
+                   .set(EntityChannel::getUpdateTime, now);
+                int affected = entityChannelMapper.update(null, upd);
+                synced += affected;
+            }
+        }
+
+        result.put("total", localStores.size());
+        result.put("synced", synced);
+        result.put("unchanged", unchanged);
+        result.put("notInErp", notInErp);
+        return result;
     }
 
     /**

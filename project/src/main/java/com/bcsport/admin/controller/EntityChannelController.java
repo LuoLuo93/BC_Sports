@@ -202,4 +202,21 @@ public class EntityChannelController {
             return Result.error("导入失败：" + e.getMessage());
         }
     }
+
+    /**
+     * 同步店仓名称：把本地实体渠道配置中的 entity_name 刷新为伯俊 ERP C_STORE 的最新名称。
+     * 解决 ERP 改名后本地名称滞后的业务痛点。仅更新 ERP 中能查到的编码，查不到的保留原名。
+     */
+    @PostMapping("/sync-store-names")
+    @ApiOperation("同步店仓名称(从伯俊ERP)")
+    @RequiresPermissions("bi:entity:edit")
+    @OperLog(module = "实体渠道", operation = "同步店仓名称")
+    public Result<Map<String, Object>> syncStoreNames() {
+        try {
+            Map<String, Object> result = entityChannelService.syncStoreNames();
+            return Result.success(result);
+        } catch (Exception e) {
+            return Result.error("同步失败：" + e.getMessage());
+        }
+    }
 }

@@ -50,4 +50,11 @@ public interface EntityChannelService {
      * 从Excel导入实体渠道配置（名称自动解析为ID）
      */
     java.util.Map<String, Object> importFromExcel(org.springframework.web.multipart.MultipartFile file) throws Exception;
+
+    /**
+     * 同步本地店仓名称(entity_name)为伯俊 ERP C_STORE 的最新名称。
+     * 仅更新 ERP 中能查到的编码对应记录，ERP 查不到的保留原名。
+     * @return 统计结果：total/synced/unchanged/notInErp
+     */
+    java.util.Map<String, Object> syncStoreNames();
 }

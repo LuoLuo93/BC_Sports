@@ -31,6 +31,7 @@
         <div class="card-header-row">
           <span class="card-header-title">实体渠道配置</span>
           <div style="display:flex;gap:8px">
+            <el-button v-if="hasPermission('bi:entity:edit')" type="success" size="small" :icon="Refresh" :loading="syncNameLoading" @click="handleSyncStoreNames">同步店仓名称</el-button>
             <el-button v-if="hasPermission('bi:entity:add')" type="warning" size="small" :icon="Upload" @click="showImportDialog = true">批量导入</el-button>
             <el-button v-if="hasPermission('bi:entity:add')" type="primary" size="small" :icon="Plus" @click="router.push('/bi/entity-channel/form')">新增配置</el-button>
           </div>
@@ -169,8 +170,8 @@ defineOptions({ name: 'EntityChannel' })
 import { ref, reactive, onMounted, onActivated } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getEntityChannelPage, deleteEntityChannel, getEntityChannelTemplate, importEntityChannel } from '@/api/channel'
-import { Plus, Search, RefreshRight, OfficeBuilding, User, PriceTag, Upload } from '@element-plus/icons-vue'
+import { getEntityChannelPage, deleteEntityChannel, getEntityChannelTemplate, importEntityChannel, syncEntityChannelStoreNames } from '@/api/channel'
+import { Plus, Search, RefreshRight, Refresh, OfficeBuilding, User, PriceTag, Upload } from '@element-plus/icons-vue'
 import { usePermission } from '@/composables/usePermission'
 import { usePageQuery } from '@/composables/usePageQuery'
 import { PAGE_SIZES } from '@/utils/appConfig'
@@ -214,6 +215,37 @@ async function handleDelete(row) {
   await deleteEntityChannel(row.id)
   ElMessage.success('删除成功')
   loadData()
+}
+
+// === 同步店仓名称（从伯俊ERP）===
+const syncNameLoading = ref(false)
+async function handleSyncStoreNames() {
+  try {
+    await ElMessageBox.confirm(
+      '将从伯俊ERP读取店仓最新名称，刷新本地列表中显示的店仓名称（仅更新ERP中存在的店铺，不影响渠道等其他配置）。\n是否继续？',
+      '同步店仓名称',
+      { type: 'info', confirmButtonText: '开始同步', cancelButtonText: '取消' }
+    )
+  } catch {
+    return
+  }
+  syncNameLoading.value = true
+  try {
+    const res = await syncEntityChannelStoreNames()
+    const data = res.data || {}
+    const total = data.total ?? 0
+    const synced = data.synced ?? 0
+    const unchanged = data.unchanged ?? 0
+    const notInErp = data.notInErp ?? 0
+    ElMessage.success(`同步完成：共 ${total} 条，更新 ${synced} 条，未变化 ${unchanged} 条，ERP中不存在 ${notInErp} 条`)
+    if (synced > 0) {
+      loadData()
+    }
+  } catch (e) {
+    ElMessage.error('同步失败：' + (e.message || '服务器错误'))
+  } finally {
+    syncNameLoading.value = false
+  }
 }
 
 // === 批量导入 ===

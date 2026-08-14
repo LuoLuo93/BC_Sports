@@ -34,7 +34,7 @@
               <el-table-column prop="brand" label="品牌" min-width="120" show-overflow-tooltip />
               <el-table-column prop="articleNo" label="货号" min-width="140" show-overflow-tooltip />
               <el-table-column prop="season" label="产品季" min-width="120" show-overflow-tooltip />
-              <el-table-column prop="category" label="货品分类" min-width="160" show-overflow-tooltip />
+              <el-table-column prop="category" label="新旧货" min-width="160" show-overflow-tooltip />
             </el-table>
           </div>
 
@@ -117,7 +117,7 @@
           <el-icon :size="40" style="color:var(--el-text-color-placeholder)"><Upload /></el-icon>
           <div style="margin-top:8px">将 Excel 文件拖到此处，或 <em>点击上传</em></div>
           <template #tip>
-            <div class="upload-hint">仅支持 .xlsx / .xls 格式，文件大小不超过 100MB，品牌+货号+产品季重复时自动更新</div>
+            <div class="upload-hint">仅支持 .xlsx / .xls 格式，文件大小不超过 100MB，货号+产品季重复时自动更新（一个货号一个产品季只保留一行）</div>
           </template>
         </el-upload>
         <div style="margin-top:12px;text-align:center">

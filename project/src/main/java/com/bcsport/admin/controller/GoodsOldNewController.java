@@ -90,13 +90,13 @@ public class GoodsOldNewController {
             writer.addHeaderAlias("品牌", "品牌");
             writer.addHeaderAlias("货号", "货号");
             writer.addHeaderAlias("产品季", "产品季");
-            writer.addHeaderAlias("货品分类", "货品分类");
+            writer.addHeaderAlias("新旧货", "新旧货");
 
             Map<String, Object> sample = new LinkedHashMap<>();
             sample.put("品牌", "NORTHLAND");
             sample.put("货号", "AA12345");
             sample.put("产品季", "26SS");
-            sample.put("货品分类", "当季新品");
+            sample.put("新旧货", "当季新品");
             writer.write(Collections.singletonList(sample), true);
             writer.flush(response.getOutputStream());
         } finally {

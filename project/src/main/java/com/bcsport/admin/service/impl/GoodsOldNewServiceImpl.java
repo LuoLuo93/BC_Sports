@@ -49,6 +49,7 @@ public class GoodsOldNewServiceImpl implements GoodsOldNewService {
         HEADER_ALIAS.put("season", "season");
         HEADER_ALIAS.put("Season", "season");
         HEADER_ALIAS.put("货品分类", "category");
+        HEADER_ALIAS.put("新旧货", "category");
         HEADER_ALIAS.put("category", "category");
         HEADER_ALIAS.put("Category", "category");
     }
@@ -92,7 +93,7 @@ public class GoodsOldNewServiceImpl implements GoodsOldNewService {
         List<String> errors = Collections.synchronizedList(new ArrayList<>());
 
         Map<String, Integer> columnIndex = new HashMap<>();
-        // 文件内去重：brand+articleNo+season 组合键
+        // 文件内去重：articleNo+season 组合键(一个货号一个产品季只一行, 后行覆盖前行)
         Set<String> batchKeys = new HashSet<>();
         List<GoodsOldNew> buffer = new ArrayList<>(BATCH_SIZE);
 
@@ -135,9 +136,9 @@ public class GoodsOldNewServiceImpl implements GoodsOldNewService {
                     return;
                 }
 
-                String key = entity.getBrand() + "|" + entity.getArticleNo() + "|" + entity.getSeason();
+                String key = entity.getArticleNo() + "|" + entity.getSeason();
                 if (batchKeys.contains(key)) {
-                    buffer.removeIf(e -> key.equals(e.getBrand() + "|" + e.getArticleNo() + "|" + e.getSeason()));
+                    buffer.removeIf(e -> key.equals(e.getArticleNo() + "|" + e.getSeason()));
                 } else {
                     batchKeys.add(key);
                 }
@@ -158,7 +159,7 @@ public class GoodsOldNewServiceImpl implements GoodsOldNewService {
         if (!columnIndex.containsKey("brand")) missingHeaders.add("品牌");
         if (!columnIndex.containsKey("articleNo")) missingHeaders.add("货号");
         if (!columnIndex.containsKey("season")) missingHeaders.add("产品季");
-        if (!columnIndex.containsKey("category")) missingHeaders.add("货品分类");
+        if (!columnIndex.containsKey("category")) missingHeaders.add("新旧货");
         if (!missingHeaders.isEmpty()) {
             return buildResult(0, 0, 0, Collections.singletonList(
                     "Excel缺少必需列：" + String.join("、", missingHeaders) + "，请检查表头"));

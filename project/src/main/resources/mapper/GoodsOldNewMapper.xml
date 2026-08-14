@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.bcsport.admin.mapper.GoodsOldNewMapper">
 
-    <!-- Oracle MERGE upsert：品牌+货号+产品季 组合去重 -->
+    <!-- Oracle MERGE upsert：货号+产品季 唯一(存在即更新, 一个货号一个产品季只一行) -->
     <insert id="mergeBatch" parameterType="java.util.List">
         MERGE INTO BC_SPORTS_BI_GOODS_OLDNEW target
         USING (
@@ -17,12 +17,12 @@
                 FROM dual
             </foreach>
         ) source
-        ON (target.brand = source.brand
-            AND target.article_no = source.article_no
+        ON (target.article_no = source.article_no
             AND target.season = source.season
             AND target.deleted = 0)
         WHEN MATCHED THEN
             UPDATE SET
+                target.brand = source.brand,
                 target.category = source.category,
                 target.update_time = SYSTIMESTAMP,
                 target.update_by = source.update_by

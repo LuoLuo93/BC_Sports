@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bcsport.admin.bidwmapper.EntityChannelBrandSyncMapper">
+
+    <!-- 数仓 distinct 店铺+品牌：销售 UNION 库存，按 (店铺编码, 品牌) 去重，取任一店铺名 -->
+    <select id="listDistinctStoreBrand" resultType="java.util.Map">
+        SELECT STORE_CODE AS "storeCode",
+               MAX(STORE_NAME) AS "storeName",
+               BRAND_NAME AS "brandName"
+        FROM (
+            -- 销售：PRODUCT_CODE = ODS_M_PRODUCT.NAME
+            SELECT DISTINCT s.STORE_CODE AS STORE_CODE,
+                            s.STORE_NAME AS STORE_NAME,
+                            p.CARD_NAME  AS BRAND_NAME
+              FROM ODS_SALES_MAIN s
+              LEFT JOIN ODS_M_PRODUCT p ON p.NAME = s.PRODUCT_CODE
+             WHERE s.STORE_CODE IS NOT NULL
+               AND p.CARD_NAME IS NOT NULL
+            UNION
+            -- 库存：C_STORE_ID → ODS_C_STORE.CODE，M_PRODUCT_ID = ODS_M_PRODUCT.ID
+            SELECT DISTINCT st.CODE     AS STORE_CODE,
+                            st.NAME     AS STORE_NAME,
+                            p.CARD_NAME AS BRAND_NAME
+              FROM DWD_STOCK_DAILY d
+              LEFT JOIN ODS_C_STORE   st ON st.ID = d.C_STORE_ID
+              LEFT JOIN ODS_M_PRODUCT p  ON p.ID  = d.M_PRODUCT_ID
+             WHERE st.CODE IS NOT NULL
+               AND p.CARD_NAME IS NOT NULL
+        )
+        GROUP BY STORE_CODE, BRAND_NAME
+    </select>
+
+</mapper>

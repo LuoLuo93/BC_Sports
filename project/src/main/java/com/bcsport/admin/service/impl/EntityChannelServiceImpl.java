@@ -33,6 +33,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.Date;
+import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -67,6 +69,13 @@ public class EntityChannelServiceImpl implements EntityChannelService {
      */
     @Autowired
     private com.bcsport.admin.erpmapper.BjerpStoreMapper bjerpStoreMapper;
+
+    /**
+     * 数仓 BI_DW 数据源：从销售+库存提取 店铺+品牌 组合，同步到实体渠道配置。
+     * （独立数据源，由 BidwDataSourceConfig 扫描 bidwmapper 包注入）
+     */
+    @Autowired
+    private com.bcsport.admin.bidwmapper.EntityChannelBrandSyncMapper entityChannelBrandSyncMapper;
 
     @Override
     public PageResult<EntityChannelVO> pageEntityChannels(PageQuery pageQuery, EntityChannelQueryDTO queryDTO) {
@@ -858,6 +867,94 @@ public class EntityChannelServiceImpl implements EntityChannelService {
         result.put("synced", synced);
         result.put("unchanged", unchanged);
         result.put("notInErp", notInErp);
+        return result;
+    }
+
+    /**
+     * 从数仓(销售+库存)同步店铺+品牌到实体渠道配置。
+     * 数据流：数仓 distinct(店铺编码, 品牌名) → 品牌名匹配本地 bc_sports_sys_brand.id(匹配不到跳过)
+     *         → 对比 bc_sports_sys_entity_channel(external_id, brand_id) → 缺失的新增 / 软删复活。
+     */
+    @Override
+    public Map<String, Object> syncStoreBrands() {
+        Map<String, Object> result = new HashMap<>();
+
+        // 1. 数仓查 distinct 店铺+品牌（销售 UNION 库存）
+        List<Map<String, Object>> rows = entityChannelBrandSyncMapper.listDistinctStoreBrand();
+
+        // 2. 本地品牌 brand_name → id
+        Map<String, String> brandNameToId = buildNameToIdMap(
+                brandMapper.selectList(new QueryWrapper<Brand>().eq("deleted", 0)),
+                Brand::getBrandName, Brand::getId);
+
+        // 3. 已有 entity_channel(entity_type=store)建 upsert key → EntityChannel
+        List<EntityChannel> existing = entityChannelMapper.selectList(
+                new QueryWrapper<EntityChannel>().eq("entity_type", "store"));
+        Map<String, EntityChannel> existingMap = new HashMap<>();
+        for (EntityChannel ec : existing) {
+            existingMap.put(buildUpsertKey(ec.getExternalId(), ec.getBrandId()), ec);
+        }
+
+        // 4. 遍历数仓结果：品牌匹配不到跳过；缺失的新增；软删的复活；已有的跳过
+        int inserted = 0, revived = 0, existingCnt = 0, brandUnmatched = 0;
+        Set<String> unmatchedBrands = new TreeSet<>();
+        Date now = new Date();
+        for (Map<String, Object> row : rows) {
+            String storeCode = strVal(row.get("storeCode"));
+            String storeName = strVal(row.get("storeName"));
+            String brandName = strVal(row.get("brandName"));
+            if (storeCode == null || brandName == null) {
+                continue;
+            }
+            String brandId = brandNameToId.get(brandName);
+            if (brandId == null) {
+                brandUnmatched++;
+                unmatchedBrands.add(brandName);
+                continue;
+            }
+            String key = buildUpsertKey(storeCode, brandId);
+            EntityChannel existed = existingMap.get(key);
+            if (existed != null) {
+                if (existed.getDeleted() != null && existed.getDeleted() == 1) {
+                    // 复活软删记录，复用原 id，避免唯一键 uk_external_brand 冲突
+                    existed.setDeleted(0);
+                    existed.setEntityName(storeName != null ? storeName : storeCode);
+                    existed.setUpdateTime(now);
+                    entityChannelMapper.updateById(existed);
+                    revived++;
+                } else {
+                    existingCnt++;
+                }
+                continue;
+            }
+            // 新增
+            EntityChannel entity = new EntityChannel();
+            entity.setEntityType("store");
+            entity.setExternalId(storeCode);
+            entity.setEntityName(storeName != null ? storeName : storeCode);
+            entity.setBrandId(brandId);
+            entity.setStatus(1);
+            entity.setSort(0);
+            entity.setDeleted(0);
+            entity.setCreateTime(now);
+            entity.setUpdateTime(now);
+            entity.setId(generateId());
+            try {
+                entityChannelMapper.insert(entity);
+                existingMap.put(key, entity); // 防批次内重复
+                inserted++;
+            } catch (org.springframework.dao.DuplicateKeyException dke) {
+                // 并发或兜底冲突，按已存在处理
+                existingCnt++;
+            }
+        }
+
+        result.put("total", rows.size());
+        result.put("inserted", inserted);
+        result.put("revived", revived);
+        result.put("existing", existingCnt);
+        result.put("brandUnmatched", brandUnmatched);
+        result.put("unmatchedBrands", unmatchedBrands);
         return result;
     }
 

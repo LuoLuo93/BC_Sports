@@ -219,4 +219,21 @@ public class EntityChannelController {
             return Result.error("同步失败：" + e.getMessage());
         }
     }
+
+    /**
+     * 同步店铺品牌：从数仓(销售+库存)提取 店铺+品牌，缺失的自动新增到实体渠道配置。
+     * 品牌名匹配不到本地品牌字典的跳过。可用于任务模块定时触发，也支持此处手动触发。
+     */
+    @PostMapping("/sync-store-brands")
+    @ApiOperation("同步店铺品牌(从数仓)")
+    @RequiresPermissions("bi:entity:edit")
+    @OperLog(module = "实体渠道", operation = "同步店铺品牌")
+    public Result<Map<String, Object>> syncStoreBrands() {
+        try {
+            Map<String, Object> result = entityChannelService.syncStoreBrands();
+            return Result.success(result);
+        } catch (Exception e) {
+            return Result.error("同步失败：" + e.getMessage());
+        }
+    }
 }

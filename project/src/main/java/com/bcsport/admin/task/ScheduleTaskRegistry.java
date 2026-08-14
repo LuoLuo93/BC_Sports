@@ -99,6 +99,7 @@ public class ScheduleTaskRegistry {
 
         // === 系统维护 ===
         register("system.log.clean", "系统-清理执行日志", "scheduleLogCleanTask", "clean", "自动清理7天前的定时任务执行日志", MODULE_SYS, 1);
+        register("bidw.entitychannel.brand.sync", "数仓-同步店铺品牌到实体渠道", "entityChannelBrandSyncTask", "syncStoreBrands", "从数仓销售+库存提取店铺+品牌, 缺失的自动新增到实体渠道配置(品牌匹配不到本地品牌的跳过)", MODULE_SYS, 2);
 
         // === 示例任务 ===
         register("demoTask.noParams", "示例任务-无参数", "demoTask", "noParams", "演示定时任务基本功能", MODULE_DEMO, 1);

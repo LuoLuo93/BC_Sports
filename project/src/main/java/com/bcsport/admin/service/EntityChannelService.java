@@ -57,4 +57,11 @@ public interface EntityChannelService {
      * @return 统计结果：total/synced/unchanged/notInErp
      */
     java.util.Map<String, Object> syncStoreNames();
+
+    /**
+     * 从数仓(销售+库存)同步店铺+品牌到实体渠道配置。
+     * 数仓出现但本地缺失的 (external_id, brand_id) 自动新增；品牌名匹配不到本地品牌的跳过。
+     * @return 统计结果：total/inserted/revived/existing/brandUnmatched/unmatchedBrands
+     */
+    java.util.Map<String, Object> syncStoreBrands();
 }

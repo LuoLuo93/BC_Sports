@@ -28,6 +28,10 @@ public class Brand implements Serializable {
     @TableField("brand_name")
     private String brandName;
 
+    @ApiModelProperty("品牌编码")
+    @TableField("brand_code")
+    private String brandCode;
+
     @ApiModelProperty("品牌LOGO")
     @TableField("brand_logo")
     private String brandLogo;

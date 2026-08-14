@@ -14,6 +14,8 @@ public class BrandVO {
     private String id;
     
     private String brandName;
+
+    private String brandCode;
     
     private String brandLogo;
     

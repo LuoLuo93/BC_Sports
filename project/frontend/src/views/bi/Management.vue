@@ -176,7 +176,7 @@
         <el-form-item label="状态">
           <el-radio-group v-model="brandForm.status"><el-radio :value="1">正常</el-radio><el-radio :value="0">停用</el-radio></el-radio-group>
         </el-form-item>
-        <el-form-item label="备注"><el-input v-model="brandForm.remark" type="textarea" :rows="3" placeholder="请输入备注" /></el-form-item>
+        <el-form-item label="备注"><el-input v-model="brandForm.description" type="textarea" :rows="3" placeholder="请输入备注" /></el-form-item>
       </el-form>
       <template #footer>
         <div class="dialog-footer">
@@ -287,12 +287,12 @@ const brandIsEdit = ref(false)
 const brandEditId = ref(null)
 const brandFormRef = ref(null)
 
-const brandFormDef = () => ({ brandName: '', brandCode: '', status: 1, remark: '' })
+const brandFormDef = () => ({ brandName: '', brandCode: '', status: 1, description: '' })
 const brandForm = reactive(brandFormDef())
 const brandRules = { brandName: [{ required: true, message: '请输入品牌名称', trigger: 'blur' }], brandCode: [{ required: true, message: '请输入品牌编码', trigger: 'blur' }] }
 
 function handleBrandAdd() { brandIsEdit.value = false; brandEditId.value = null; Object.assign(brandForm, brandFormDef()); brandDialogVisible.value = true }
-async function handleBrandEdit(row) { const res = await getBrand(row.id); brandIsEdit.value = true; brandEditId.value = row.id; Object.assign(brandForm, res.data); brandDialogVisible.value = true }
+async function handleBrandEdit(row) { const res = await getBrand(row.id); brandIsEdit.value = true; brandEditId.value = row.id; Object.assign(brandForm, brandFormDef(), res.data); brandDialogVisible.value = true }
 async function handleBrandDelete(row) { await ElMessageBox.confirm(`确定删除品牌「${row.brandName}」？`, '提示', { type: 'warning' }); await deleteBrand(row.id); ElMessage.success('删除成功'); loadBrands() }
 async function handleBrandSubmit() {
   const valid = await brandFormRef.value?.validate().catch(() => false); if (!valid) return

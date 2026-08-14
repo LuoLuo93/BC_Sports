@@ -13,6 +13,8 @@ public class BrandDTO {
     
     @NotBlank(message = "品牌名称不能为空")
     private String brandName;
+
+    private String brandCode;
     
     private String brandLogo;
     

@@ -30,6 +30,9 @@ import java.util.UUID;
 @Controller
 public class AuthController {
 
+    /** 登录踢旧会话的新会话保护期：刚创建的会话在此时间内不被新登录踢出（防并发重复提交误杀） */
+    private static final long SESSION_KICK_GRACE_MILLIS = 10_000L;
+
     @Autowired
     private AuthCacheService authCacheService;
 
@@ -104,8 +107,20 @@ public class AuthController {
                     SessionManager sessionManager =
                             ((DefaultWebSecurityManager) SecurityUtils.getSecurityManager()).getSessionManager();
                     Session existingSession = sessionManager.getSession(new DefaultSessionKey(oldSessionId));
-                    existingSession.stop();
-                    log.info("踢掉用户 {} 的旧会话: {}", username, oldSessionId);
+                    if (existingSession != null) {
+                        // 新会话保护期：旧会话刚创建不久时（浏览器回车/连点的并发重复提交，
+                        // 第二次请求尚未携带第一次下发的 JSESSIONID），停止旧会话会把刚登录
+                        // 成功的会话踢成 401，表现为"首次登录不跳转、需再点一次"。
+                        // 宽限期内不踢，真正的异端登录（旧会话已存在一段时间）仍然立即踢出。
+                        long ageMillis = System.currentTimeMillis()
+                                - existingSession.getStartTimestamp().getTime();
+                        if (ageMillis > SESSION_KICK_GRACE_MILLIS) {
+                            existingSession.stop();
+                            log.info("踢掉用户 {} 的旧会话: {}", username, oldSessionId);
+                        } else {
+                            log.info("旧会话仍在保护期({}ms),跳过踢出: username={}", ageMillis, username);
+                        }
+                    }
                 } catch (Exception e) {
                     log.warn("踢掉旧会话失败, username={}, oldSessionId={}: {}", username, oldSessionId, e.getMessage());
                 }

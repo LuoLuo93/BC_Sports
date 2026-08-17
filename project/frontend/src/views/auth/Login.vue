@@ -118,7 +118,6 @@
               size="large"
               show-password
               autocomplete="current-password"
-              @keyup.enter="handleLogin"
               @keyup="checkCapsLock"
             />
             <transition name="alert-fade">
@@ -135,13 +134,12 @@
               CAPTCHA / 验证码
             </label>
             <div class="captcha-row">
-              <el-input
-                id="captcha"
-                v-model="form.captchaCode"
-                placeholder="请输入验证码"
-                size="large"
-                @keyup.enter="handleLogin"
-              />
+            <el-input
+              id="captcha"
+              v-model="form.captchaCode"
+              placeholder="请输入验证码"
+              size="large"
+            />
               <div class="captcha-img-wrapper" @click="loadCaptcha" title="点击刷新验证码">
                 <img v-if="captchaImage" :src="captchaImage" alt="验证码" class="captcha-img" />
                 <el-icon v-else :size="20" class="captcha-refresh"><Refresh /></el-icon>
@@ -321,28 +319,31 @@ async function loadCaptcha() {
 }
 
 async function handleLogin() {
-  if (loading.value) return // 防重复提交
-  errorMsg.value = ''
-  const valid = await formRef.value?.validate().catch(() => false)
-  if (!valid) return
-
-  // 验证码开启时，确保 captchaKey 已加载完成
-  if (captchaEnabled.value && !captchaKey.value) {
-    await loadCaptcha()
-    if (!captchaKey.value) {
-      errorMsg.value = '验证码加载失败，请刷新页面重试'
-      return
-    }
-  }
-
-  const loginData = {
-    ...form.value,
-    captchaKey: captchaEnabled.value ? captchaKey.value : undefined,
-    captchaCode: captchaEnabled.value ? form.value.captchaCode : undefined
-  }
-
+  // 防重复提交：同步置位，拦住同一事件循环内的二次触发
+  // （回车会同时触发 keyup 与原生表单 submit，异步置位拦不住同刻的第二次调用；
+  //   两次并发 doLogin 会导致后端把先登录成功的会话当"其它设备"踢掉，表现为首次登录被弹回）
+  if (loading.value) return
   loading.value = true
+  errorMsg.value = ''
   try {
+    const valid = await formRef.value?.validate().catch(() => false)
+    if (!valid) return
+
+    // 验证码开启时，确保 captchaKey 已加载完成
+    if (captchaEnabled.value && !captchaKey.value) {
+      await loadCaptcha()
+      if (!captchaKey.value) {
+        errorMsg.value = '验证码加载失败，请刷新页面重试'
+        return
+      }
+    }
+
+    const loginData = {
+      ...form.value,
+      captchaKey: captchaEnabled.value ? captchaKey.value : undefined,
+      captchaCode: captchaEnabled.value ? form.value.captchaCode : undefined
+    }
+
     await authStore.login(loginData)
     tabStore.clearAll()
     tabStore.initDashboard()

@@ -389,8 +389,6 @@ async function handleLogin() {
   height: 100%;
   object-fit: cover;
   filter: contrast(1.12) brightness(0.55) saturate(1.3);
-  animation: ken-burns 35s ease-in-out infinite alternate;
-  transform-origin: 30% 35%;
 }
 
 .brand-image-fallback {
@@ -401,13 +399,6 @@ async function handleLogin() {
     radial-gradient(ellipse at 70% 20%, #0c2d4a 0%, transparent 50%),
     radial-gradient(ellipse at 50% 80%, #1a0a2e 0%, transparent 50%),
     linear-gradient(135deg, #050a07 0%, #0a1f15 30%, #0d1b2a 60%, #0a0a1a 100%);
-  animation: ken-burns 35s ease-in-out infinite alternate;
-  transform-origin: 30% 35%;
-}
-
-@keyframes ken-burns {
-  0% { transform: scale(1) translate(0, 0); }
-  100% { transform: scale(1.12) translate(-1.5%, -1%); }
 }
 
 .brand-overlay {

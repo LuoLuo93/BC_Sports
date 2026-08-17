@@ -7,37 +7,19 @@ server:
 spring:
   datasource:
     # 主库切换: 174 BCSports -> 177 ORCL(bc_sports)
-    url: jdbc:oracle:thin:@192.168.5.177:1521:orcl
+    # 池参数统一在 application.yml 平铺配置(本文件只覆盖连接信息)
+    url: 'jdbc:oracle:thin:@192.168.5.177:1521:orcl?oracle.net.CONNECT_TIMEOUT=10000&oracle.jdbc.ReadTimeout=600000'
     username: bc_sports
     password: 123456
-    druid:
-      initial-size: 10
-      min-idle: 10
-      max-active: 50
-      max-wait: 60000
-      time-between-eviction-runs-millis: 60000
-      min-evictable-idle-time-millis: 300000
-      phy-timeout-millis: 1800000
-      validation-query: SELECT 1 FROM DUAL
-      validation-query-timeout: 5
-      test-while-idle: true
-      test-on-borrow: false
-      test-on-return: false
-      keep-alive: true
-      pool-prepared-statements: true
-      max-pool-prepared-statement-per-connection-size: 20
-      filters: stat,wall,slf4j
-      connection-properties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=5000
-      use-global-data-source-stat: true
     # 伯俊ERP Oracle 数据源（生产环境 - SID方式连接）
     # 注意：orcl 是 SID 不是服务名，URL用冒号格式 jdbc:oracle:thin:@host:port:sid
     bjerp:
-      url: jdbc:oracle:thin:@10.0.1.22:1521:orcl
+      url: 'jdbc:oracle:thin:@10.0.1.22:1521:orcl?oracle.net.CONNECT_TIMEOUT=10000&oracle.jdbc.ReadTimeout=600000'
       username: bosnds3
       password: abc123
     # BI 数仓 Oracle 数据源（生产环境，SID 方式连接）
     bidw:
-      url: jdbc:oracle:thin:@192.168.5.177:1521:orcl
+      url: 'jdbc:oracle:thin:@192.168.5.177:1521:orcl?oracle.net.CONNECT_TIMEOUT=10000&oracle.jdbc.ReadTimeout=600000'
       username: ${BIDW_DB_USERNAME:bi_dw}
       password: ${BIDW_DB_PASSWORD:123456}
 

@@ -29,17 +29,127 @@ spring:
     restart:
       enabled: false
   # 数据源配置
+  # 注意: 池参数必须平铺在各数据源节点下(与 url 同级)才能绑定到 DruidDataSource;
+  #       旧的 druid: 子树写法对自建 DataSource Bean 无效(2026-08-17 修正,
+  #       当时线上 6 个池实际全部运行在 Druid 默认值 maxActive=8/maxWait=-1)。
   datasource:
     type: com.alibaba.druid.pool.DruidDataSource
     driver-class-name: oracle.jdbc.OracleDriver
-    url: jdbc:oracle:thin:@//192.168.104.167:1521/freepdb1
+    # URL 尾参: 连接建立超时 10s / 读超时 10min(防慢查询永久占用连接和请求线程,
+    # 上限需大于最长合法查询耗时, 数仓/同步类 SQL 可能跑到分钟级)
+    url: 'jdbc:oracle:thin:@//192.168.104.167:1521/freepdb1?oracle.net.CONNECT_TIMEOUT=10000&oracle.jdbc.ReadTimeout=600000'
     username: ${DB_USERNAME:BC_ERP_MANAGE}
     password: ${DB_PASSWORD:123456}
-    druid:
-      initial-size: 10
-      min-idle: 10
-      max-active: 50
-      max-wait: 60000
+    initial-size: 5
+    min-idle: 5
+    max-active: 30
+    max-wait: 10000
+    time-between-eviction-runs-millis: 60000
+    min-evictable-idle-time-millis: 300000
+    phy-timeout-millis: 1800000
+    validation-query: SELECT 1 FROM DUAL
+    validation-query-timeout: 5
+    test-while-idle: true
+    test-on-borrow: false
+    test-on-return: false
+    keep-alive: true
+    pool-prepared-statements: false
+    filters: stat,slf4j
+    connection-properties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=5000
+    # 防止数据库重启后连接池自动关闭
+    break-after-acquire-failure: false
+    connection-error-retry-attempts: 3
+    time-between-connect-error-millis: 30000
+    # IHR模块 SQL Server 数据源 (独立库 BC_SPORTS_IHR)
+    ihr:
+      type: com.alibaba.druid.pool.DruidDataSource
+      driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+      url: 'jdbc:sqlserver://192.168.5.152:1433;DatabaseName=BC_SPORTS_IHR;encrypt=false;trustServerCertificate=true;socketTimeout=300000;queryTimeout=300000;loginTimeout=60'
+      username: ${IHR_DB_USERNAME:sa}
+      password: ${IHR_DB_PASSWORD:northland2047.}
+      initial-size: 2
+      min-idle: 2
+      max-active: 15
+      max-wait: 10000
+      time-between-eviction-runs-millis: 60000
+      min-evictable-idle-time-millis: 300000
+      phy-timeout-millis: 1800000
+      validation-query: SELECT 1
+      validation-query-timeout: 5
+      test-while-idle: true
+      test-on-borrow: false
+      test-on-return: false
+      keep-alive: true
+      pool-prepared-statements: false
+      filters: stat,slf4j
+      connection-properties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=5000
+      break-after-acquire-failure: false
+      connection-error-retry-attempts: 3
+      time-between-connect-error-millis: 30000
+    # 企业微信 SQL Server 数据源 (独立库 BC_SPORTS_QYWX)
+    qywx:
+      type: com.alibaba.druid.pool.DruidDataSource
+      driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+      url: 'jdbc:sqlserver://192.168.5.152:1433;DatabaseName=BC_SPORTS_QYWX;encrypt=false;trustServerCertificate=true;socketTimeout=300000;queryTimeout=300000;loginTimeout=60'
+      username: ${QYWX_DB_USERNAME:sa}
+      password: ${QYWX_DB_PASSWORD:northland2047.}
+      initial-size: 2
+      min-idle: 2
+      max-active: 15
+      max-wait: 10000
+      time-between-eviction-runs-millis: 60000
+      min-evictable-idle-time-millis: 300000
+      phy-timeout-millis: 1800000
+      validation-query: SELECT 1
+      validation-query-timeout: 5
+      test-while-idle: true
+      test-on-borrow: false
+      test-on-return: false
+      keep-alive: true
+      pool-prepared-statements: false
+      filters: stat,slf4j
+      connection-properties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=5000
+      break-after-acquire-failure: false
+      connection-error-retry-attempts: 3
+      time-between-connect-error-millis: 30000
+    # 旧版HK ERP SQL Server 数据源 (独立库 HKERP)
+    # 源项目 interfaceForHK 直写 Bas_Personnel 等表的链路，与伯俊ERP链路并存
+    hkerp:
+      type: com.alibaba.druid.pool.DruidDataSource
+      driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+      url: 'jdbc:sqlserver://${HKERP_DB_HOST:10.10.0.25}:${HKERP_DB_PORT:1433};DatabaseName=${HKERP_DB_NAME:HKERP};encrypt=false;trustServerCertificate=true;socketTimeout=300000;queryTimeout=300000;loginTimeout=60'
+      username: ${HKERP_DB_USERNAME:sa}
+      password: ${HKERP_DB_PASSWORD:BCsport)(*&.}
+      initial-size: 2
+      min-idle: 2
+      max-active: 10
+      max-wait: 10000
+      time-between-eviction-runs-millis: 60000
+      min-evictable-idle-time-millis: 300000
+      phy-timeout-millis: 1800000
+      validation-query: SELECT 1
+      validation-query-timeout: 5
+      test-while-idle: true
+      test-on-borrow: false
+      test-on-return: false
+      keep-alive: true
+      pool-prepared-statements: false
+      filters: stat,slf4j
+      connection-properties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=5000
+      break-after-acquire-failure: false
+      connection-error-retry-attempts: 3
+      time-between-connect-error-millis: 30000
+    # 伯俊ERP Oracle 数据源
+    bjerp:
+      type: com.alibaba.druid.pool.DruidDataSource
+      driver-class-name: oracle.jdbc.OracleDriver
+      url: 'jdbc:oracle:thin:@//${BJERP_DB_HOST:192.168.5.174}:${BJERP_DB_PORT:1521}/${BJERP_DB_SERVICE:orcl}?oracle.net.CONNECT_TIMEOUT=10000&oracle.jdbc.ReadTimeout=600000'
+      username: ${BJERP_DB_USERNAME:bosnds3}
+      password: ${BJERP_DB_PASSWORD:abc123}
+      initial-size: 2
+      min-idle: 2
+      max-active: 10
+      max-wait: 10000
       time-between-eviction-runs-millis: 60000
       min-evictable-idle-time-millis: 300000
       phy-timeout-millis: 1800000
@@ -49,155 +159,40 @@ spring:
       test-on-borrow: false
       test-on-return: false
       keep-alive: true
-      pool-prepared-statements: true
-      max-pool-prepared-statement-per-connection-size: 20
-      filters: stat,wall,slf4j
+      pool-prepared-statements: false
+      filters: stat,slf4j
       connection-properties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=5000
-      use-global-data-source-stat: true
-    # IHR模块 SQL Server 数据源 (独立库 BC_SPORTS_IHR)
-    ihr:
-      type: com.alibaba.druid.pool.DruidDataSource
-      driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
-      url: jdbc:sqlserver://192.168.5.152:1433;DatabaseName=BC_SPORTS_IHR;encrypt=false;trustServerCertificate=true;socketTimeout=300000;queryTimeout=300000;loginTimeout=60
-      username: ${IHR_DB_USERNAME:sa}
-      password: ${IHR_DB_PASSWORD:northland2047.}
-      druid:
-        initial-size: 10
-        min-idle: 10
-        max-active: 50
-        max-wait: 60000
-        time-between-eviction-runs-millis: 60000
-        min-evictable-idle-time-millis: 300000
-        phy-timeout-millis: 1800000
-        validation-query: SELECT 1
-        validation-query-timeout: 5
-        test-while-idle: true
-        test-on-borrow: false
-        test-on-return: false
-        keep-alive: true
-        pool-prepared-statements: true
-        max-pool-prepared-statement-per-connection-size: 20
-        filters: stat,wall,slf4j
-        connection-properties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=5000
-        # 防止数据库重启后连接池自动关闭
-        break-after-acquire-failure: false
-        connection-error-retry-attempts: 3
-        time-between-connect-error-millis: 30000
-    # 企业微信 SQL Server 数据源 (独立库 BC_SPORTS_QYWX)
-    qywx:
-      type: com.alibaba.druid.pool.DruidDataSource
-      driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
-      url: jdbc:sqlserver://192.168.5.152:1433;DatabaseName=BC_SPORTS_QYWX;encrypt=false;trustServerCertificate=true;socketTimeout=300000;queryTimeout=300000;loginTimeout=60
-      username: ${QYWX_DB_USERNAME:sa}
-      password: ${QYWX_DB_PASSWORD:northland2047.}
-      druid:
-        initial-size: 10
-        min-idle: 10
-        max-active: 50
-        max-wait: 60000
-        time-between-eviction-runs-millis: 60000
-        min-evictable-idle-time-millis: 300000
-        phy-timeout-millis: 1800000
-        validation-query: SELECT 1
-        validation-query-timeout: 5
-        test-while-idle: true
-        test-on-borrow: false
-        test-on-return: false
-        keep-alive: true
-        pool-prepared-statements: true
-        max-pool-prepared-statement-per-connection-size: 20
-        filters: stat,wall,slf4j
-        connection-properties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=5000
-        # 防止数据库重启后连接池自动关闭
-        break-after-acquire-failure: false
-        connection-error-retry-attempts: 3
-        time-between-connect-error-millis: 30000
-    # 旧版HK ERP SQL Server 数据源 (独立库 HKERP)
-    # 源项目 interfaceForHK 直写 Bas_Personnel 等表的链路，与伯俊ERP链路并存
-    hkerp:
-      type: com.alibaba.druid.pool.DruidDataSource
-      driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
-      url: jdbc:sqlserver://${HKERP_DB_HOST:10.10.0.25}:${HKERP_DB_PORT:1433};DatabaseName=${HKERP_DB_NAME:HKERP};encrypt=false;trustServerCertificate=true;socketTimeout=300000;queryTimeout=300000;loginTimeout=60
-      username: ${HKERP_DB_USERNAME:sa}
-      password: ${HKERP_DB_PASSWORD:BCsport)(*&.}
-      druid:
-        initial-size: 5
-        min-idle: 5
-        max-active: 30
-        max-wait: 60000
-        time-between-eviction-runs-millis: 60000
-        min-evictable-idle-time-millis: 300000
-        phy-timeout-millis: 1800000
-        validation-query: SELECT 1
-        validation-query-timeout: 5
-        test-while-idle: true
-        test-on-borrow: false
-        test-on-return: false
-        keep-alive: true
-        pool-prepared-statements: true
-        max-pool-prepared-statement-per-connection-size: 20
-        filters: stat,wall,slf4j
-        connection-properties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=5000
-        # 防止数据库重启后连接池自动关闭
-        break-after-acquire-failure: false
-        connection-error-retry-attempts: 3
-        time-between-connect-error-millis: 30000
-    # 伯俊ERP Oracle 数据源
-    bjerp:
-      type: com.alibaba.druid.pool.DruidDataSource
-      driver-class-name: oracle.jdbc.OracleDriver
-      url: jdbc:oracle:thin:@//${BJERP_DB_HOST:192.168.5.174}:${BJERP_DB_PORT:1521}/${BJERP_DB_SERVICE:orcl}
-      username: ${BJERP_DB_USERNAME:bosnds3}
-      password: ${BJERP_DB_PASSWORD:abc123}
-      druid:
-        initial-size: 3
-        min-idle: 3
-        max-active: 15
-        max-wait: 60000
-        time-between-eviction-runs-millis: 60000
-        min-evictable-idle-time-millis: 300000
-        phy-timeout-millis: 1800000
-        validation-query: SELECT 1 FROM DUAL
-        validation-query-timeout: 5
-        test-while-idle: true
-        test-on-borrow: false
-        test-on-return: false
-        keep-alive: true
-        pool-prepared-statements: true
-        max-pool-prepared-statement-per-connection-size: 20
-        filters: stat,wall,slf4j
-        connection-properties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=5000
+      break-after-acquire-failure: false
+      connection-error-retry-attempts: 3
+      time-between-connect-error-millis: 30000
     # BI 数仓 Oracle 数据源 (192.168.5.177 / schema: BI_DW)
     bidw:
       type: com.alibaba.druid.pool.DruidDataSource
       driver-class-name: oracle.jdbc.OracleDriver
       # SID 方式连接(:orcl), 与生产主库 BCSports 写法一致
-      url: jdbc:oracle:thin:@${BIDW_DB_HOST:192.168.5.177}:${BIDW_DB_PORT:1521}:${BIDW_DB_SID:orcl}
+      url: 'jdbc:oracle:thin:@${BIDW_DB_HOST:192.168.5.177}:${BIDW_DB_PORT:1521}:${BIDW_DB_SID:orcl}?oracle.net.CONNECT_TIMEOUT=10000&oracle.jdbc.ReadTimeout=600000'
       username: ${BIDW_DB_USERNAME:bi_dw}
       password: ${BIDW_DB_PASSWORD:123456}
-      druid:
-        initial-size: 1
-        min-idle: 1
-        max-active: 15
-        max-wait: 60000
-        time-between-eviction-runs-millis: 60000
-        min-evictable-idle-time-millis: 300000
-        phy-timeout-millis: 1800000
-        validation-query: SELECT 1 FROM DUAL
-        validation-query-timeout: 5
-        test-while-idle: true
-        test-on-borrow: false
-        test-on-return: false
-        keep-alive: true
-        pool-prepared-statements: true
-        max-pool-prepared-statements-per-connection-size: 20
-        # 防止数据库重启后连接池自动关闭
-        break-after-acquire-failure: false
-        connection-error-retry-attempts: 3
-        time-between-connect-error-millis: 30000
-        # 数仓查询复杂(多层子查询/分析函数), wall 默认规则易误拦, 只保留 stat+slf4j
-        filters: stat,slf4j
-        connection-properties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=5000
+      initial-size: 1
+      min-idle: 1
+      max-active: 10
+      max-wait: 10000
+      time-between-eviction-runs-millis: 60000
+      min-evictable-idle-time-millis: 300000
+      phy-timeout-millis: 1800000
+      validation-query: SELECT 1 FROM DUAL
+      validation-query-timeout: 5
+      test-while-idle: true
+      test-on-borrow: false
+      test-on-return: false
+      keep-alive: true
+      pool-prepared-statements: false
+      # 数仓查询复杂(多层子查询/分析函数), wall 默认规则易误拦, 只保留 stat+slf4j
+      filters: stat,slf4j
+      connection-properties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=5000
+      break-after-acquire-failure: false
+      connection-error-retry-attempts: 3
+      time-between-connect-error-millis: 30000
   # Redis 配置（Spring Boot 3.x 使用 spring.data.redis 前缀）
   data:
     redis:

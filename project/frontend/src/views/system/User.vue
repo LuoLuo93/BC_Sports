@@ -246,10 +246,10 @@ const resetPwdRules = {
 
 const refStore = useRefStore()
 
-async function loadOptions() {
+async function loadOptions(force = false) {
   const [roles, depts] = await Promise.all([
-    refStore.loadRoleList(),
-    refStore.loadDeptTree()
+    refStore.loadRoleList(force),
+    refStore.loadDeptTree(force)
   ])
   roleList.value = roles
   deptOptions.value = depts
@@ -260,6 +260,8 @@ function handleAdd() {
   editId.value = null
   Object.assign(form, defaultForm())
   dialogVisible.value = true
+  // 强刷下拉选项，避免部门/角色刚在别的页面维护过而读到旧缓存
+  loadOptions(true)
 }
 
 async function handleEdit(row) {
@@ -271,6 +273,7 @@ async function handleEdit(row) {
     roleIds: roleRes.data || []
   })
   dialogVisible.value = true
+  loadOptions(true)
 }
 
 async function handleDelete(row) {

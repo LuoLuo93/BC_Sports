@@ -264,8 +264,9 @@ public class StickerPrintService {
         if (order == null || order.getStatus() != 0) {
             throw new BusinessException("只有草稿状态才能删除");
         }
-        order.setDeleted(1);
-        orderMapper.updateById(order);
+        // deleted 是全局逻辑删除字段，updateById 会把它从 SET 中过滤掉，
+        // 必须走 deleteById 才能生成 UPDATE ... SET deleted=1
+        orderMapper.deleteById(orderId);
     }
 
     private void saveDetails(String orderId, List<StickerPrintOrderDetail> details) {

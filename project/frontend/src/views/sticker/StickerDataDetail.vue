@@ -98,7 +98,7 @@
             <el-tag size="small" type="warning" effect="plain" style="margin-left:8px">可编辑</el-tag>
           </div>
           <div class="size-group-row">
-            <div class="info-card editable" style="margin:0;flex:0 0 auto;min-width:160px;">
+            <div class="info-card editable" style="margin:0;flex:1;min-width:160px;">
               <span class="info-card-label">贴纸尺码组</span>
               <el-button
                 :type="selectedSizeGroupId ? 'primary' : 'default'"
@@ -111,7 +111,7 @@
                 {{ selectedSizeGroupId ? selectedGroupName : '点击选择尺码组' }}
               </el-button>
             </div>
-            <div v-if="selectedGroupSizes.length" class="info-card" style="margin:0;flex:1;">
+            <div v-if="selectedGroupSizes.length" class="info-card" style="margin:0;flex:2.5;">
               <span class="info-card-label">组内尺码</span>
               <div class="size-tags-row">
                 <el-tag v-for="s in selectedGroupSizes" :key="s.id || s.sizeName" size="small" effect="plain" class="size-tag">

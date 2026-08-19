@@ -576,7 +576,7 @@ onBeforeRouteLeave(async (_to, _from) => {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 16px 14px;
+  padding: 12px 14px;
   background: #f8fafc;
   border-radius: 8px;
   border: 1px solid #f1f5f9;

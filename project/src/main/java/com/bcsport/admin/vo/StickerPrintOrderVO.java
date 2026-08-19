@@ -139,6 +139,9 @@ public class StickerPrintOrderVO {
         @ApiModelProperty("辅料成分")
         private String accElement;
 
+        @ApiModelProperty("安全类别")
+        private String safetyCategory;
+
         @ApiModelProperty("本地尺码组ID")
         private String localGroupId;
 

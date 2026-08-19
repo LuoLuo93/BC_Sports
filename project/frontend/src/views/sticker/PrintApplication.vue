@@ -155,6 +155,9 @@
               <el-table-column prop="EXECUTION_STANDARD" label="执行标准" width="160">
                 <template #default="{ row }">{{ row.EXECUTION_STANDARD || '-' }}</template>
               </el-table-column>
+              <el-table-column prop="SAFETY_CATEGORY" label="安全类别" width="140" show-overflow-tooltip>
+                <template #default="{ row }">{{ row.SAFETY_CATEGORY || '-' }}</template>
+              </el-table-column>
               <el-table-column label="面料/辅料成分" width="240" show-overflow-tooltip>
                 <template #default="{ row }">
                   <span v-if="row.FAB_CODE || row.FAB_ELEMENT || row.AC_CODE || row.ACC_ELEMENT">
@@ -210,6 +213,9 @@
               </el-table-column>
               <el-table-column prop="executionStandard" label="执行标准" width="160">
                 <template #default="{ row }">{{ row.executionStandard || '-' }}</template>
+              </el-table-column>
+              <el-table-column prop="safetyCategory" label="安全类别" width="140" show-overflow-tooltip>
+                <template #default="{ row }">{{ row.safetyCategory || '-' }}</template>
               </el-table-column>
               <el-table-column prop="ean13" label="EAN13" width="150">
                 <template #default="{ row }">{{ row.ean13 || '-' }}</template>
@@ -784,6 +790,7 @@ function confirmProductSelect() {
       fabElement: p.FAB_ELEMENT || '',
       acCode: p.AC_CODE || '',
       accElement: p.ACC_ELEMENT || '',
+      safetyCategory: p.SAFETY_CATEGORY || '',
       sizeCode: '',
       sizeName: '',
       barcode: '',
@@ -915,6 +922,7 @@ async function confirmSizeAssign() {
       fabElement: orig.fabElement || '',
       acCode: orig.acCode || '',
       accElement: orig.accElement || '',
+      safetyCategory: orig.safetyCategory || '',
       sizeCode: checked[i].sizeCode || '',
       sizeName: checked[i].size,
       barcode: checked[i].barcode || '',

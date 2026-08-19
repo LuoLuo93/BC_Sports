@@ -52,6 +52,7 @@
                 product.FABELEMENT AS FAB_ELEMENT,
                 product.ACCODE AS AC_CODE,
                 product.ACCELEMENT AS ACC_ELEMENT,
+                product.SAFETY_CATEGORY AS SAFETY_CATEGORY,
                 product.M_SIZEGROUP_ID AS SIZEGROUP_ID,
                 product.BOX_QTY_NEW AS SIZE_GROUP_ID,
                 (SELECT LISTAGG(c.VALUE2_CODE, ',') WITHIN GROUP (ORDER BY c.VALUE2_CODE)
@@ -104,6 +105,7 @@
                product.FABELEMENT AS FAB_ELEMENT,
                product.ACCODE AS AC_CODE,
                product.ACCELEMENT AS ACC_ELEMENT,
+               product.SAFETY_CATEGORY AS SAFETY_CATEGORY,
                product.M_SIZEGROUP_ID AS SIZEGROUP_ID,
                product.BOX_QTY_NEW AS SIZE_GROUP_ID,
                (SELECT LISTAGG(c.VALUE2_CODE, ',') WITHIN GROUP (ORDER BY c.VALUE2_CODE)
@@ -140,7 +142,7 @@
           AND barcode.NO IS NOT NULL
     </select>
 
-    <!-- 按货号(name)更新可编辑字段(执行标准/EAN13/4材质/矫正尺码组); 空串转NULL避免ERP残留空白; 基本信息不更新 -->
+    <!-- 按货号(name)更新可编辑字段(执行标准/EAN13/4材质/矫正尺码组/安全类别); 空串转NULL避免ERP残留空白; 基本信息不更新 -->
     <update id="updateEditableFields">
         UPDATE M_PRODUCT
         SET THEME_NAME = NULLIF(TRIM(#{executionStandard}), ''),
@@ -149,7 +151,8 @@
             FABELEMENT = NULLIF(TRIM(#{fabElement}), ''),
             ACCODE     = NULLIF(TRIM(#{acCode}), ''),
             ACCELEMENT = NULLIF(TRIM(#{accElement}), ''),
-            BOX_QTY_NEW = NULLIF(TRIM(#{sizeGroupId}), '')
+            BOX_QTY_NEW = NULLIF(TRIM(#{sizeGroupId}), ''),
+            SAFETY_CATEGORY = NULLIF(TRIM(#{safetyCategory}), '')
         WHERE name = #{materialNumber}
     </update>
 

@@ -115,6 +115,10 @@ public class StickerPrintOrderDetail {
     @TableField("acc_element")
     private String accElement;
 
+    @FieldLabel("安全类别")
+    @TableField("safety_category")
+    private String safetyCategory;
+
     @TableField("create_time")
     private LocalDateTime createTime;
 

@@ -434,6 +434,7 @@ public class PrintTaskService {
             printData.put("EAN13", detail.getEan13());
             printData.put("Barcode", detail.getBarcode());
             printData.put("Price", detail.getPrice() != null ? detail.getPrice().toString() : "");
+            printData.put("SafetyCategory", detail.getSafetyCategory() != null ? detail.getSafetyCategory() : "");
             return printData;
         }
 
@@ -493,6 +494,7 @@ public class PrintTaskService {
             case "FAB_ELEMENT", "FABELEMENT" -> detail.getFabElement();
             case "AC_CODE", "ACCODE" -> detail.getAcCode();
             case "ACC_ELEMENT", "ACCELEMENT" -> detail.getAccElement();
+            case "SAFETY_CATEGORY", "SAFETYCATEGORY" -> detail.getSafetyCategory();
             default -> null;
         };
     }

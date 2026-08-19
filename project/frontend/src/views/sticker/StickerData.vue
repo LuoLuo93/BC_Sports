@@ -48,6 +48,9 @@
           <el-table-column prop="EXECUTION_STANDARD" label="执行标准" width="160">
             <template #default="{ row }">{{ row.EXECUTION_STANDARD || '-' }}</template>
           </el-table-column>
+          <el-table-column prop="SAFETY_CATEGORY" label="安全类别" width="140" show-overflow-tooltip>
+            <template #default="{ row }">{{ row.SAFETY_CATEGORY || '-' }}</template>
+          </el-table-column>
           <el-table-column label="面料/辅料成分" width="240" show-overflow-tooltip>
             <template #default="{ row }">
               <span v-if="row.FAB_CODE || row.FAB_ELEMENT || row.AC_CODE || row.ACC_ELEMENT">

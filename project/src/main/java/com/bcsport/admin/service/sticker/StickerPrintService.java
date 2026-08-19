@@ -128,17 +128,17 @@ public class StickerPrintService {
     }
 
     /**
-     * 按货号更新 ERP M_PRODUCT 的可编辑字段（执行标准/EAN13/4个材质字段/矫正尺码组ID）。
+     * 按货号更新 ERP M_PRODUCT 的可编辑字段（执行标准/EAN13/4个材质字段/矫正尺码组ID/安全类别）。
      * 基本信息不更新，避免侵入 ERP 主数据。
      */
     public int updateEditableFields(String materialNumber, String executionStandard, String ean13,
                                     String fabCode, String fabElement, String acCode, String accElement,
-                                    String sizeGroupId) {
+                                    String sizeGroupId, String safetyCategory) {
         if (materialNumber == null || materialNumber.isBlank()) {
             throw new BusinessException("货号不能为空");
         }
         int rows = bjerpProductMapper.updateEditableFields(materialNumber, executionStandard, ean13,
-                fabCode, fabElement, acCode, accElement, sizeGroupId);
+                fabCode, fabElement, acCode, accElement, sizeGroupId, safetyCategory);
         if (rows == 0) {
             throw new BusinessException("货号不存在，更新失败: " + materialNumber);
         }

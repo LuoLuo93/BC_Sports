@@ -66,6 +66,9 @@
           <el-table-column prop="executionStandard" label="执行标准" width="160">
             <template #default="{ row }">{{ row.executionStandard || '-' }}</template>
           </el-table-column>
+          <el-table-column prop="safetyCategory" label="安全类别" width="140" show-overflow-tooltip>
+            <template #default="{ row }">{{ row.safetyCategory || '-' }}</template>
+          </el-table-column>
           <el-table-column label="面料/辅料成分" width="240" show-overflow-tooltip>
             <template #default="{ row }">
               <span v-if="row.fabCode || row.fabElement || row.acCode || row.accElement">

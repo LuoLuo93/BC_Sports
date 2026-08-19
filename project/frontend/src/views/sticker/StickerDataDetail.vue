@@ -86,6 +86,10 @@
                 @blur="onEan13Blur"
               />
             </div>
+            <div class="info-card editable span-2">
+              <span class="info-card-label">安全类别</span>
+              <el-input v-model="row.SAFETY_CATEGORY" placeholder="请输入安全类别" size="small" />
+            </div>
           </div>
         </div>
         <div class="info-section" style="flex:1;">
@@ -409,7 +413,8 @@ async function handleSave() {
       fabElement: row.value.FAB_ELEMENT || '',
       acCode: row.value.AC_CODE || '',
       accElement: row.value.ACC_ELEMENT || '',
-      sizeGroupId: selectedSizeGroupId.value || ''
+      sizeGroupId: selectedSizeGroupId.value || '',
+      safetyCategory: row.value.SAFETY_CATEGORY || ''
     })
     ElMessage.success('保存成功')
     // 保存成功：重置脏检查基线，标记为干净
@@ -432,7 +437,7 @@ function syncOriginal() {
 function computeDirty() {
   const o = originalRow.value
   const r = row.value
-  const fields = ['EXECUTION_STANDARD', 'EAN13', 'FAB_CODE', 'FAB_ELEMENT', 'AC_CODE', 'ACC_ELEMENT']
+  const fields = ['EXECUTION_STANDARD', 'EAN13', 'SAFETY_CATEGORY', 'FAB_CODE', 'FAB_ELEMENT', 'AC_CODE', 'ACC_ELEMENT']
   for (const f of fields) {
     if ((o[f] || '') !== (r[f] || '')) return true
   }
@@ -443,7 +448,7 @@ function computeDirty() {
 // 监听可编辑字段变化，自动同步 dirty 状态（供保存按钮/离开判断用）
 watch(
   () => [
-    row.value.EXECUTION_STANDARD, row.value.EAN13,
+    row.value.EXECUTION_STANDARD, row.value.EAN13, row.value.SAFETY_CATEGORY,
     row.value.FAB_CODE, row.value.FAB_ELEMENT, row.value.AC_CODE, row.value.ACC_ELEMENT,
     selectedSizeGroupId.value
   ],

@@ -25,7 +25,7 @@ public interface BjerpProductMapper {
     List<Map<String, Object>> getProductSizes(@Param("productId") String productId);
 
     /**
-     * 按货号(name)更新 M_PRODUCT 的可编辑字段（执行标准/EAN13/4个材质字段/矫正尺码组ID）。
+     * 按货号(name)更新 M_PRODUCT 的可编辑字段（执行标准/EAN13/4个材质字段/矫正尺码组ID/安全类别）。
      * 用于「贴纸资料维护」详情页保存。基本信息（货号/品名/品牌/价格等）不在此更新，避免侵入 ERP 主数据。
      * 矫正尺码组ID 复用 BOX_QTY_NEW 列存储。
      * @return 受影响行数（0=货号不存在）
@@ -37,7 +37,8 @@ public interface BjerpProductMapper {
                              @Param("fabElement") String fabElement,
                              @Param("acCode") String acCode,
                              @Param("accElement") String accElement,
-                             @Param("sizeGroupId") String sizeGroupId);
+                             @Param("sizeGroupId") String sizeGroupId,
+                             @Param("safetyCategory") String safetyCategory);
 
     // ==================== 预估成本管理 ====================
 

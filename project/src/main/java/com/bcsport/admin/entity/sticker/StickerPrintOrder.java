@@ -25,6 +25,12 @@ public class StickerPrintOrder {
     private String reviewRemark;
     @TableField("remark")
     private String remark;
+    @TableField("contact_person")
+    private String contactPerson;
+    @TableField("contact_phone")
+    private String contactPhone;
+    @TableField("delivery_address")
+    private String deliveryAddress;
     @TableField("create_time")
     private LocalDateTime createTime;
     @TableField("update_time")

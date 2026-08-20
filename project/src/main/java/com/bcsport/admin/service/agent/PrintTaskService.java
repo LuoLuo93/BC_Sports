@@ -12,6 +12,8 @@ import com.bcsport.admin.mapper.agent.PrintTaskMapper;
 import com.bcsport.admin.mapper.sticker.StickerPrintOrderDetailMapper;
 import com.bcsport.admin.mapper.sticker.StickerPrintOrderMapper;
 import com.bcsport.admin.common.exception.BusinessException;
+import com.bcsport.admin.entity.DictData;
+import com.bcsport.admin.service.DictDataService;
 import com.bcsport.admin.service.sticker.BrandTemplateMatchService;
 import com.bcsport.admin.service.sticker.PrintFieldMappingService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -44,6 +46,9 @@ public class PrintTaskService {
 
     @Autowired
     private PrintFieldMappingService fieldMappingService;
+
+    @Autowired
+    private DictDataService dictDataService;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -282,6 +287,52 @@ public class PrintTaskService {
             mappings = Collections.emptyList();
         }
 
+        // ── 首张任务：联系人/联系电话/收货地址打在第一张，之后才是贴纸明细 ──
+        // 模板取字典 sticker_first_template 第一条启用项；打印机沿用第一张明细的品牌匹配，
+        // 保证首张与贴纸在同一台机器先后出纸。三者全空则不生成。
+        // 先于明细插入(createTime 更早)，Agent 按 createTime 升序拉取，首张最先打印。
+        boolean hasContactInfo = hasText(order.getContactPerson())
+                || hasText(order.getContactPhone())
+                || hasText(order.getDeliveryAddress());
+        if (hasContactInfo) {
+            List<DictData> firstTemplates = dictDataService.listByDictType("sticker_first_template");
+            String firstTemplate = firstTemplates.isEmpty() ? null : firstTemplates.get(0).getDictValue();
+            if (!hasText(firstTemplate)) {
+                throw new BusinessException("首张模板未配置：请在「字典管理」中维护 sticker_first_template（如 print_head.btw）");
+            }
+            String firstPrinter = matches.get(0).getPrinterName() != null ? matches.get(0).getPrinterName() : "";
+
+            Map<String, String> coverData = new LinkedHashMap<>();
+            coverData.put("ContactPerson", orEmpty(order.getContactPerson()));
+            coverData.put("ContactPhone", orEmpty(order.getContactPhone()));
+            coverData.put("DeliveryAddress", orEmpty(order.getDeliveryAddress()));
+            coverData.put("OrderNo", orEmpty(order.getOrderNo()));
+            coverData.put("Applicant", orEmpty(order.getApplicant()));
+            coverData.put("Remark", orEmpty(order.getRemark()));
+
+            PrintTask cover = new PrintTask();
+            cover.setTaskId(UUID.randomUUID().toString().replace("-", ""));
+            cover.setOrderNo(order.getOrderNo());
+            cover.setOrderId(orderId);
+            cover.setMaterialNumber("首张");
+            cover.setMaterialName("首张·收货信息(联系人/电话/地址)");
+            cover.setPrintQty(1);
+            cover.setTemplateFile(firstTemplate.trim());
+            cover.setPrinterName(firstPrinter);
+            try {
+                cover.setPrintData(objectMapper.writeValueAsString(coverData));
+            } catch (Exception e) {
+                cover.setPrintData("{}");
+            }
+            cover.setAgentId(agentId);
+            cover.setStatus(0);
+            cover.setCreateTime(LocalDateTime.now());
+            cover.setRetryCount(0);
+            cover.setBatchId(batchId);
+            taskMapper.insert(cover);
+            taskIds.add(cover.getTaskId());
+        }
+
         for (int i = 0; i < details.size(); i++) {
             StickerPrintOrderDetail detail = details.get(i);
             BrandTemplateMatch match = matches.get(i);
@@ -464,6 +515,14 @@ public class PrintTaskService {
         }
 
         return printData;
+    }
+
+    private boolean hasText(String s) {
+        return s != null && !s.isBlank();
+    }
+
+    private String orEmpty(String s) {
+        return s != null ? s : "";
     }
 
     /**

@@ -37,6 +37,15 @@ public class StickerPrintOrderVO {
     @ApiModelProperty("备注")
     private String remark;
 
+    @ApiModelProperty("联系人(首张打印)")
+    private String contactPerson;
+
+    @ApiModelProperty("联系电话(首张打印)")
+    private String contactPhone;
+
+    @ApiModelProperty("收货地址(首张打印)")
+    private String deliveryAddress;
+
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private LocalDateTime createTime;
 

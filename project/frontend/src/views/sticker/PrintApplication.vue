@@ -107,6 +107,22 @@
             <span class="info-label">申请时间</span>
             <span class="info-value">{{ formatTime(form.createTime) }}</span>
           </div>
+        </div>
+
+        <!-- 收货信息行:三字段打印在首张标签上 -->
+        <div class="form-info-row">
+          <div class="info-item">
+            <span class="info-label">联系人</span>
+            <el-input v-model="form.contactPerson" placeholder="首张打印·联系人" size="small" maxlength="50" />
+          </div>
+          <div class="info-item">
+            <span class="info-label">联系电话</span>
+            <el-input v-model="form.contactPhone" placeholder="首张打印·联系电话" size="small" maxlength="30" />
+          </div>
+          <div class="info-item" style="flex:1.5">
+            <span class="info-label">收货地址</span>
+            <el-input v-model="form.deliveryAddress" placeholder="首张打印·收货地址" size="small" maxlength="200" />
+          </div>
           <div class="info-item" style="flex:1.5">
             <span class="info-label">备注</span>
             <el-input v-model="form.remark" placeholder="请输入备注信息" size="small" />
@@ -422,7 +438,7 @@ const { loading, tableData, total, query, loadData, handleSearch, resetQuery } =
 const formVisible = ref(false)
 const isEdit = ref(false)
 const editOrderId = ref('')
-const form = reactive({ orderNo: '', applicant: '', deptName: '', createTime: '', remark: '', details: [] })
+const form = reactive({ orderNo: '', applicant: '', deptName: '', createTime: '', remark: '', contactPerson: '', contactPhone: '', deliveryAddress: '', details: [] })
 
 // Detail table selection
 const selectedRows = ref([])
@@ -510,6 +526,9 @@ function handleCreate() {
   form.deptName = authStore.deptName || ''
   form.createTime = formatTime(new Date())
   form.remark = ''
+  form.contactPerson = ''
+  form.contactPhone = ''
+  form.deliveryAddress = ''
   form.details = []
   selectedRows.value = []
   searchMaterialNumber.value = ''
@@ -531,6 +550,9 @@ async function handleEdit(row) {
   form.deptName = ''
   form.createTime = data.createTime || ''
   form.remark = data.remark || ''
+  form.contactPerson = data.contactPerson || ''
+  form.contactPhone = data.contactPhone || ''
+  form.deliveryAddress = data.deliveryAddress || ''
   form.details = (data.details || []).map(d => ({
     ...d,
     brandId: d.brandId ? String(d.brandId) : '',
@@ -679,9 +701,9 @@ async function handleSave() {
     return
   }
   if (isEdit.value) {
-    await updatePrintOrder(editOrderId.value, { remark: form.remark, details: form.details })
+    await updatePrintOrder(editOrderId.value, { remark: form.remark, contactPerson: form.contactPerson, contactPhone: form.contactPhone, deliveryAddress: form.deliveryAddress, details: form.details })
   } else {
-    await createPrintOrder({ remark: form.remark, details: form.details })
+    await createPrintOrder({ remark: form.remark, contactPerson: form.contactPerson, contactPhone: form.contactPhone, deliveryAddress: form.deliveryAddress, details: form.details })
   }
   ElMessage.success('保存成功')
   formVisible.value = false

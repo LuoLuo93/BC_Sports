@@ -31,6 +31,18 @@
           <span class="info-label">备注</span>
           <span class="info-value">{{ order.remark || '-' }}</span>
         </div>
+        <div v-if="order.contactPerson" class="info-item">
+          <span class="info-label">联系人</span>
+          <span class="info-value">{{ order.contactPerson }}</span>
+        </div>
+        <div v-if="order.contactPhone" class="info-item">
+          <span class="info-label">联系电话</span>
+          <span class="info-value">{{ order.contactPhone }}</span>
+        </div>
+        <div v-if="order.deliveryAddress" class="info-item" style="flex:1.5">
+          <span class="info-label">收货地址</span>
+          <span class="info-value">{{ order.deliveryAddress }}</span>
+        </div>
         <div v-if="order.reviewer" class="info-item">
           <span class="info-label">审核人</span>
           <span class="info-value">{{ order.reviewer }}</span>

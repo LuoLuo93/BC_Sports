@@ -9,7 +9,7 @@
         <span v-else></span>
       </div>
 
-      <!-- 信息行 -->
+      <!-- 单据信息 -->
       <div class="form-info-row">
         <div class="info-item">
           <span class="info-label">申请单号</span>
@@ -27,31 +27,39 @@
           <span class="info-label">状态</span>
           <span :class="['status-badge', 'status-' + order.status]">{{ statusLabel(order.status) }}</span>
         </div>
+      </div>
+
+      <!-- 收货信息(首张打印) -->
+      <div class="form-info-row">
+        <div class="info-item">
+          <span class="info-label">联系人</span>
+          <span class="info-value">{{ order.contactPerson || '-' }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">联系电话</span>
+          <span class="info-value">{{ order.contactPhone || '-' }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">收货地址</span>
+          <span class="info-value">{{ order.deliveryAddress || '-' }}</span>
+        </div>
         <div class="info-item">
           <span class="info-label">备注</span>
           <span class="info-value">{{ order.remark || '-' }}</span>
         </div>
-        <div v-if="order.contactPerson" class="info-item">
-          <span class="info-label">联系人</span>
-          <span class="info-value">{{ order.contactPerson }}</span>
-        </div>
-        <div v-if="order.contactPhone" class="info-item">
-          <span class="info-label">联系电话</span>
-          <span class="info-value">{{ order.contactPhone }}</span>
-        </div>
-        <div v-if="order.deliveryAddress" class="info-item" style="flex:1.5">
-          <span class="info-label">收货地址</span>
-          <span class="info-value">{{ order.deliveryAddress }}</span>
-        </div>
-        <div v-if="order.reviewer" class="info-item">
+      </div>
+
+      <!-- 审核信息(未审核时不显示) -->
+      <div v-if="order.reviewer || order.reviewTime || order.reviewRemark" class="form-info-row">
+        <div class="info-item">
           <span class="info-label">审核人</span>
           <span class="info-value">{{ order.reviewer }}</span>
         </div>
-        <div v-if="order.reviewTime" class="info-item">
+        <div class="info-item">
           <span class="info-label">审核时间</span>
           <span class="info-value">{{ order.reviewTime }}</span>
         </div>
-        <div v-if="order.reviewRemark" class="info-item" style="flex:1.5">
+        <div class="info-item" style="flex:2">
           <span class="info-label">审核意见</span>
           <span class="info-value">{{ order.reviewRemark }}</span>
         </div>

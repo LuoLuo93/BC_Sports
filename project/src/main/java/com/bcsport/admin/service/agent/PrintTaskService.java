@@ -13,6 +13,8 @@ import com.bcsport.admin.mapper.sticker.StickerPrintOrderDetailMapper;
 import com.bcsport.admin.mapper.sticker.StickerPrintOrderMapper;
 import com.bcsport.admin.common.exception.BusinessException;
 import com.bcsport.admin.entity.DictData;
+import com.bcsport.admin.entity.agent.PrintAgent;
+import com.bcsport.admin.mapper.agent.PrintAgentMapper;
 import com.bcsport.admin.service.DictDataService;
 import com.bcsport.admin.service.sticker.BrandTemplateMatchService;
 import com.bcsport.admin.service.sticker.PrintFieldMappingService;
@@ -51,6 +53,9 @@ public class PrintTaskService {
     private DictDataService dictDataService;
 
     @Autowired
+    private PrintAgentMapper agentMapper;
+
+    @Autowired
     private ObjectMapper objectMapper;
 
     /** 卡住判定动态阈值基础分钟数：阈值 = stuckBaseMinutes + printQty × stuckMinutesPerQty。
@@ -65,6 +70,14 @@ public class PrintTaskService {
     /** 单个任务最多重新派发次数，超过则标记失败，避免无限重发导致重复打印。 */
     @Value("${agent.task.max-redispatch:3}")
     private int maxRedispatch;
+
+    /** 在途任务上限：该 Agent 未回报(status=1)的任务数达到此值后不再派发新任务。
+     *  Agent 是串行打印且边打边拉，若不限在途数量，大批量任务会在本地队列排队，
+     *  排队时间计入卡住阈值(3+qty×0.02分)导致误判卡住→自动重派→重复打印。
+     *  限为 1 时派发节奏与串行打印严格对齐，dispatchTime≈实际开始打印时刻。
+     *  status=4 换纸续打同样占用派发名额，但其 createTime 更早，FIFO 下优先获得空出的名额。 */
+    @Value("${agent.task.max-inflight:1}")
+    private int maxInflight;
 
     /** status=0 任务超过该分钟数仍未被拉取，巡检任务告警（agentId 配错 / Agent 长时间离线）。 */
     private static final int PENDING_WARN_MINUTES = 15;
@@ -85,50 +98,70 @@ public class PrintTaskService {
     }
 
     public List<PrintTask> pullTasks(String agentId) {
-        // status=0(待打印) / status=4(已暂停) 直接拉取；
-        // status=1(打印中) 先用基础阈值(base，所有任务的最小阈值)在 SQL 预筛——比 base 还新的绝对没卡住，不捞出来挤占名额；
-        //                捞出的候选再在 Java 侧按 printQty 动态阈值精确判断是否真卡住。
         LocalDateTime baseStuckBefore = LocalDateTime.now().minusMinutes(stuckBaseMinutes);
-        List<PrintTask> tasks = taskMapper.selectList(
+        List<PrintTask> dispatched = new ArrayList<>();
+
+        // ── 1) 卡住救援：status=1 且派发早于基础阈值的候选(比 base 还新的绝对没卡住)，
+        //       Java 侧再按 printQty 动态阈值精确判断，避免误重派。此路径不受在途上限限制——
+        //       它本身就是故障恢复通道(Agent 崩溃/回报丢失时靠它救回)。 ──
+        List<PrintTask> stuckCandidates = taskMapper.selectList(
             new LambdaQueryWrapper<PrintTask>()
                 .eq(PrintTask::getAgentId, agentId)
-                .and(w -> w
-                    .in(PrintTask::getStatus, 0, 4)
-                    .or(n -> n.eq(PrintTask::getStatus, 1).lt(PrintTask::getDispatchTime, baseStuckBefore))
-                )
+                .eq(PrintTask::getStatus, 1)
+                .lt(PrintTask::getDispatchTime, baseStuckBefore)
                 .orderByAsc(PrintTask::getCreateTime)
                 .last("FETCH FIRST 10 ROWS ONLY")
         );
-
-        List<PrintTask> dispatched = new ArrayList<>();
-        for (PrintTask task : tasks) {
-            Integer st = task.getStatus();
-            // 打印中(status=1)：按 printQty 动态阈值判断，未超时说明还在正常打印，跳过避免误重派
-            if (st != null && st == 1) {
-                if (!isStuck(task)) {
-                    continue; // 还在正常打印中，不重派
-                }
-                int retry = (task.getRetryCount() == null ? 0 : task.getRetryCount()) + 1;
-                if (retry > maxRedispatch) {
-                    task.setStatus(3);
-                    task.setErrorMsg("多次派发未收到回报，判定为丢失");
-                    task.setPrintTime(LocalDateTime.now());
-                    taskMapper.updateById(task);
-                    log.warn("任务 {} 已达最大重派次数 {}，标记为失败", task.getTaskId(), maxRedispatch);
-                    continue;
-                }
-                task.setRetryCount(retry);
-                log.info("重新派发超时未回报的任务 {}，第 {} 次", task.getTaskId(), retry);
+        for (PrintTask task : stuckCandidates) {
+            if (!isStuck(task)) {
+                continue; // 还在正常打印中，不重派
             }
-            // 暂停态(status=4)续打：换纸后的正常恢复，不消耗 retryCount 配额
-            // （retryCount 本意是防 Agent 崩溃无限重派，断纸换纸是正常操作不该被计入）
-            if (st != null && st == 4) {
-                log.info("暂停任务 {} 换纸后续打", task.getTaskId());
+            int retry = (task.getRetryCount() == null ? 0 : task.getRetryCount()) + 1;
+            if (retry > maxRedispatch) {
+                task.setStatus(3);
+                task.setErrorMsg("多次派发未收到回报，判定为丢失");
+                task.setPrintTime(LocalDateTime.now());
+                taskMapper.updateById(task);
+                log.warn("任务 {} 已达最大重派次数 {}，标记为失败", task.getTaskId(), maxRedispatch);
+                continue;
             }
+            task.setRetryCount(retry);
+            log.info("重新派发超时未回报的任务 {}，第 {} 次", task.getTaskId(), retry);
             task.setStatus(1);
-            task.setDispatchTime(LocalDateTime.now());  // 记录真实派发时刻，用于精确判断卡住重派
+            task.setDispatchTime(LocalDateTime.now());
             taskMapper.updateById(task);
             dispatched.add(task);
+        }
+
+        // ── 2) 新任务派发：受在途上限约束。Agent 串行打印且边打边拉，不限量时大批量
+        //       任务在本地队列排队、排队时间计入卡住阈值，会造成误重派→重复打印。
+        //       在途(未回报 status=1)达上限后停止派新，派发节奏自然对齐打印节奏。 ──
+        int cap = Math.max(1, maxInflight); // 配置误填 0/负数时按 1 兜底，避免新任务静默停发
+        long inFlight = taskMapper.selectCount(
+            new LambdaQueryWrapper<PrintTask>()
+                .eq(PrintTask::getAgentId, agentId)
+                .eq(PrintTask::getStatus, 1)
+        );
+        if (inFlight < cap) {
+            int budget = (int) (cap - inFlight);
+            List<PrintTask> newTasks = taskMapper.selectList(
+                new LambdaQueryWrapper<PrintTask>()
+                    .eq(PrintTask::getAgentId, agentId)
+                    .in(PrintTask::getStatus, 0, 4)
+                    .orderByAsc(PrintTask::getCreateTime)
+                    .last("FETCH FIRST " + budget + " ROWS ONLY")
+            );
+            for (PrintTask task : newTasks) {
+                // 暂停态(status=4)续打：换纸后的正常恢复，不消耗 retryCount 配额
+                // （retryCount 本意是防 Agent 崩溃无限重派，断纸换纸是正常操作不该被计入）
+                if (task.getStatus() != null && task.getStatus() == 4) {
+                    log.info("暂停任务 {} 换纸后续打", task.getTaskId());
+                }
+                task.setStatus(1);
+                task.setDispatchTime(LocalDateTime.now());
+                taskMapper.updateById(task);
+                dispatched.add(task);
+            }
         }
         return dispatched;
     }
@@ -149,9 +182,25 @@ public class PrintTaskService {
                 .last("FETCH FIRST 20 ROWS ONLY")
         );
         if (!pending.isEmpty()) {
-            log.warn("巡检: {} 个任务已 {} 分钟未被拉取(status=0)，请检查 agentId 是否正确 / 目标 Agent 是否在线: {}",
-                pending.size(), PENDING_WARN_MINUTES,
-                pending.stream().map(t -> t.getTaskId() + "@(" + t.getAgentId() + ")").limit(5).collect(Collectors.joining(", ")));
+            // 在途上限启用后，大批量任务正常排队时 status=0 积压是预期行为——
+            // 只对「Agent 无法确认在线(心跳超5分钟或 print_agent 无此行,如 agentId 配错)」的积压告警。
+            // 注意必须用"确认在线才免报"的反向判断：agentId 配错时表里查无此行，正向找"离线Agent"会漏掉它。
+            Set<String> agentIds = pending.stream()
+                    .map(PrintTask::getAgentId).filter(Objects::nonNull).collect(Collectors.toSet());
+            LocalDateTime onlineAfter = now.minusMinutes(5);
+            Set<String> onlineAgents = agentIds.isEmpty() ? Collections.emptySet()
+                    : agentMapper.selectList(new LambdaQueryWrapper<PrintAgent>().in(PrintAgent::getAgentId, agentIds)).stream()
+                        .filter(a -> a.getLastHeartbeat() != null && a.getLastHeartbeat().isAfter(onlineAfter))
+                        .map(PrintAgent::getAgentId)
+                        .collect(Collectors.toSet());
+            List<PrintTask> realPending = pending.stream()
+                    .filter(t -> !onlineAgents.contains(t.getAgentId()))
+                    .collect(Collectors.toList());
+            if (!realPending.isEmpty()) {
+                log.warn("巡检: {} 个任务已 {} 分钟未被拉取(status=0)且目标 Agent 无法确认在线(离线或 agentId 有误): {}",
+                    realPending.size(), PENDING_WARN_MINUTES,
+                    realPending.stream().map(t -> t.getTaskId() + "@(" + t.getAgentId() + ")").limit(5).collect(Collectors.joining(", ")));
+            }
         }
 
         // status=1/4 告警阈值：取 base×(maxRedispatch+1) 与保底值 60 分钟的较大者，
@@ -291,6 +340,8 @@ public class PrintTaskService {
         // 模板取字典 sticker_first_template 第一条启用项；打印机沿用第一张明细的品牌匹配，
         // 保证首张与贴纸在同一台机器先后出纸。三者全空则不生成。
         // 先于明细插入(createTime 更早)，Agent 按 createTime 升序拉取，首张最先打印。
+        // printData 键名与 print_head.btw 模板具名数据源一致：
+        // Receiver/ReceiverPhone/ReceiverAddress/BillNo(申请单号)/Qty(打印总数量=明细数量求和)
         boolean hasContactInfo = hasText(order.getContactPerson())
                 || hasText(order.getContactPhone())
                 || hasText(order.getDeliveryAddress());
@@ -302,13 +353,16 @@ public class PrintTaskService {
             }
             String firstPrinter = matches.get(0).getPrinterName() != null ? matches.get(0).getPrinterName() : "";
 
+            int totalQty = details.stream()
+                    .mapToInt(d -> d.getPrintQty() != null ? d.getPrintQty() : 0)
+                    .sum();
+
             Map<String, String> coverData = new LinkedHashMap<>();
-            coverData.put("ContactPerson", orEmpty(order.getContactPerson()));
-            coverData.put("ContactPhone", orEmpty(order.getContactPhone()));
-            coverData.put("DeliveryAddress", orEmpty(order.getDeliveryAddress()));
-            coverData.put("OrderNo", orEmpty(order.getOrderNo()));
-            coverData.put("Applicant", orEmpty(order.getApplicant()));
-            coverData.put("Remark", orEmpty(order.getRemark()));
+            coverData.put("Receiver", orEmpty(order.getContactPerson()));
+            coverData.put("ReceiverPhone", orEmpty(order.getContactPhone()));
+            coverData.put("ReceiverAddress", orEmpty(order.getDeliveryAddress()));
+            coverData.put("BillNo", orEmpty(order.getOrderNo()));
+            coverData.put("Qty", String.valueOf(totalQty));
 
             PrintTask cover = new PrintTask();
             cover.setTaskId(UUID.randomUUID().toString().replace("-", ""));

@@ -19,6 +19,11 @@ agent:
     stuck-minutes-per-qty: ${AGENT_TASK_STUCK_MINUTES_PER_QTY:0.02}
     # 单个任务最大重派次数，超过则标记失败不再下发
     max-redispatch: ${AGENT_TASK_MAX_REDISPATCH:3}
+    # 在途任务上限：该 Agent 未回报(status=1)任务数达到此值后不再派发新任务。
+    # Agent 串行打印边打边拉，不限量时大批量任务在本地队列排队、排队时间计入卡住阈值，
+    # 会被误判卡住而自动重派导致重复打印。=1 时派发节奏严格对齐串行打印(推荐)；
+    # 调大可减少任务间交接空隙，但小任务排在大任务后仍可能触发误重派(Agent 端去重兜底)。
+    max-inflight: ${AGENT_TASK_MAX_INFLIGHT:1}
 
 spring:
   application:

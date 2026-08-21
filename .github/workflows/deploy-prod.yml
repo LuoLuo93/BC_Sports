@@ -35,28 +35,31 @@ jobs:
         run: |
           cd frontend
           Write-Host "node: $(node -v)  npm: $(npm -v)"
-          # 清理前端缓存
+          # NOTE: keep this step ASCII-only. Windows PowerShell may parse
+          # non-ASCII .ps1 without BOM in ANSI codepage and break quotes.
+          # Clean frontend cache
           Remove-Item -Recurse -Force node_modules\.vite -ErrorAction SilentlyContinue
           Remove-Item -Recurse -Force ..\src\main\resources\static\assets -ErrorAction SilentlyContinue
           Remove-Item -Force ..\src\main\resources\static\index.html -ErrorAction SilentlyContinue
-          # 安装依赖并构建
           npm install
-          if ($LASTEXITCODE -ne 0) { Write-Host "ERROR: npm install 失败"; exit 1 }
+          if ($LASTEXITCODE -ne 0) { Write-Host "ERROR: npm install failed"; exit 1 }
           npm run build
-          if ($LASTEXITCODE -ne 0) { Write-Host "ERROR: npm run build 失败"; exit 1 }
-          # ── 产物质检：确认构建产物是新的（防止旧产物被重复打进 jar 静默上线）──
-          # setLoggingIn 是 2026-08-03 登录修复引入的代码特征，产物中必须存在
+          if ($LASTEXITCODE -ne 0) { Write-Host "ERROR: npm run build failed"; exit 1 }
+          # Artifact gate: the entry bundle MUST contain 'setLoggingIn'
+          # (marker of the 2026-08-03 login fix). Blocks stale frontend
+          # from being packaged into the jar and silently deployed.
           $html = Get-Content ..\src\main\resources\static\index.html -Raw
           if (-not ($html -match '(index-[A-Za-z0-9_-]+\.js)')) {
-            Write-Host "ERROR: index.html 中找不到入口 bundle，构建产物异常"; exit 1
+            Write-Host "ERROR: entry bundle not found in index.html"
+            exit 1
           }
           $entry = $Matches[1]
-          Write-Host "构建产物入口: $entry"
+          Write-Host "Built entry bundle: $entry"
           $bundle = Get-Content "..\src\main\resources\static\assets\$entry" -Raw
           $hit = ([regex]::Matches($bundle, 'setLoggingIn')).Count
-          Write-Host "登录修复特征(setLoggingIn)出现次数: $hit"
+          Write-Host "Login-fix marker 'setLoggingIn' occurrences: $hit"
           if ($hit -lt 1) {
-            Write-Host "ERROR: 构建产物不含 2026-08-03 之后的登录修复代码，疑似旧产物/构建异常，中止部署！"
+            Write-Host "ERROR: built bundle lacks post-2026-08-03 login fix code. Abort deploy."
             exit 1
           }
           Write-Host "Frontend build completed"

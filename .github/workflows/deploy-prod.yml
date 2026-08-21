@@ -34,13 +34,31 @@ jobs:
       - name: Build Frontend
         run: |
           cd frontend
+          Write-Host "node: $(node -v)  npm: $(npm -v)"
           # 清理前端缓存
           Remove-Item -Recurse -Force node_modules\.vite -ErrorAction SilentlyContinue
           Remove-Item -Recurse -Force ..\src\main\resources\static\assets -ErrorAction SilentlyContinue
           Remove-Item -Force ..\src\main\resources\static\index.html -ErrorAction SilentlyContinue
           # 安装依赖并构建
           npm install
+          if ($LASTEXITCODE -ne 0) { Write-Host "ERROR: npm install 失败"; exit 1 }
           npm run build
+          if ($LASTEXITCODE -ne 0) { Write-Host "ERROR: npm run build 失败"; exit 1 }
+          # ── 产物质检：确认构建产物是新的（防止旧产物被重复打进 jar 静默上线）──
+          # setLoggingIn 是 2026-08-03 登录修复引入的代码特征，产物中必须存在
+          $html = Get-Content ..\src\main\resources\static\index.html -Raw
+          if (-not ($html -match '(index-[A-Za-z0-9_-]+\.js)')) {
+            Write-Host "ERROR: index.html 中找不到入口 bundle，构建产物异常"; exit 1
+          }
+          $entry = $Matches[1]
+          Write-Host "构建产物入口: $entry"
+          $bundle = Get-Content "..\src\main\resources\static\assets\$entry" -Raw
+          $hit = ([regex]::Matches($bundle, 'setLoggingIn')).Count
+          Write-Host "登录修复特征(setLoggingIn)出现次数: $hit"
+          if ($hit -lt 1) {
+            Write-Host "ERROR: 构建产物不含 2026-08-03 之后的登录修复代码，疑似旧产物/构建异常，中止部署！"
+            exit 1
+          }
           Write-Host "Frontend build completed"
 
       # 4. 构建后端

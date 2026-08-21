@@ -10,10 +10,11 @@ import org.apache.ibatis.annotations.Select;
 public interface BrandTemplateMatchMapper extends BaseMapper<BrandTemplateMatch> {
 
     /**
-     * 按品牌名称+类别名称精确查一条（不限启用状态，导入时允许覆盖停用记录）
+     * 按品牌+类别+模板名精确查一条(导入 upsert 用)。同一品牌+类别可配多个模板,
+     * 业务键从「品牌+类别」升级为「品牌+类别+模板」,避免双模板导入时互相覆盖。
      */
     @Select("SELECT * FROM sticker_brand_template_match " +
-            "WHERE brand_name = #{brandName} AND kind_name = #{kindName} " +
+            "WHERE brand_name = #{brandName} AND kind_name = #{kindName} AND template_name = #{templateName} " +
             "FETCH FIRST 1 ROWS ONLY")
-    BrandTemplateMatch selectByNames(@Param("brandName") String brandName, @Param("kindName") String kindName);
+    BrandTemplateMatch selectByNamesAndTemplate(@Param("brandName") String brandName, @Param("kindName") String kindName, @Param("templateName") String templateName);
 }

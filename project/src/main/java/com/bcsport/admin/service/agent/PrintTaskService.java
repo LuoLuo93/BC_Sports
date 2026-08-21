@@ -308,16 +308,17 @@ public class PrintTaskService {
             throw new BusinessException("申请单无明细");
         }
 
-        // 先校验并缓存每条明细的模板匹配；任一未配置即整体抛错回滚，不产生半成品任务
-        // （避免回退 default.btw 导致 Agent 端必然"模板不存在"打印失败）
-        List<BrandTemplateMatch> matches = new ArrayList<>();
+        // 先校验并缓存每条明细的模板匹配；任一品牌+类别无启用配置即整体抛错回滚，不产生半成品任务
+        // （避免回退 default.btw 导致 Agent 端必然"模板不存在"打印失败）。
+        // 同一品牌+类别可配多个模板(每模板各打一张,按配置先后打印),此处取全部启用行。
+        List<List<BrandTemplateMatch>> matchesPerDetail = new ArrayList<>();
         List<String> unmatched = new ArrayList<>();
         for (StickerPrintOrderDetail detail : details) {
-            BrandTemplateMatch match = brandTemplateMatchService.matchByName(
+            List<BrandTemplateMatch> ms = brandTemplateMatchService.matchAllByName(
                 detail.getBrandName(), detail.getKindName()
             );
-            matches.add(match);
-            if (match == null) {
+            matchesPerDetail.add(ms);
+            if (ms.isEmpty()) {
                 unmatched.add(detail.getBrandName() + "/" + detail.getKindName());
             }
         }
@@ -351,7 +352,8 @@ public class PrintTaskService {
             if (!hasText(firstTemplate)) {
                 throw new BusinessException("首张模板未配置：请在「字典管理」中维护 sticker_first_template（如 print_head.btw）");
             }
-            String firstPrinter = matches.get(0).getPrinterName() != null ? matches.get(0).getPrinterName() : "";
+            String firstPrinter = matchesPerDetail.get(0).get(0).getPrinterName() != null
+                    ? matchesPerDetail.get(0).get(0).getPrinterName() : "";
 
             int totalQty = details.stream()
                     .mapToInt(d -> d.getPrintQty() != null ? d.getPrintQty() : 0)
@@ -389,44 +391,47 @@ public class PrintTaskService {
 
         for (int i = 0; i < details.size(); i++) {
             StickerPrintOrderDetail detail = details.get(i);
-            BrandTemplateMatch match = matches.get(i);
 
-            String templateFile = match.getTemplateName();
-            String printerName = match.getPrinterName() != null ? match.getPrinterName() : "";
+            // 同一明细的多个模板依次生成任务(按配置先后),createTime 递增,
+            // Agent 按 createTime 升序拉取,同一货品的两个模板标签先后紧挨着出纸
+            for (BrandTemplateMatch match : matchesPerDetail.get(i)) {
+                String templateFile = match.getTemplateName();
+                String printerName = match.getPrinterName() != null ? match.getPrinterName() : "";
 
-            // 根据映射构建 printData
-            Map<String, String> printData = buildPrintData(detail, mappings);
+                // 根据映射构建 printData
+                Map<String, String> printData = buildPrintData(detail, mappings);
 
-            String taskId = UUID.randomUUID().toString().replace("-", "");
+                String taskId = UUID.randomUUID().toString().replace("-", "");
 
-            PrintTask task = new PrintTask();
-            task.setTaskId(taskId);
-            task.setOrderNo(order.getOrderNo());
-            task.setOrderId(orderId);
-            task.setMaterialNumber(detail.getMaterialNumber());
-            task.setMaterialName(detail.getMaterialName());
-            task.setStyleNumber(detail.getStyleNumber());
-            task.setColor(detail.getColor());
-            task.setBrandName(detail.getBrandName());
-            task.setKindName(detail.getKindName());
-            task.setSizeName(detail.getSizeName());
-            task.setLocalSizeName(detail.getLocalSizeName());
-            task.setPrintQty(detail.getPrintQty());
-            task.setTemplateFile(templateFile);
-            task.setPrinterName(printerName);
-            try {
-                task.setPrintData(objectMapper.writeValueAsString(printData));
-            } catch (Exception e) {
-                task.setPrintData("{}");
+                PrintTask task = new PrintTask();
+                task.setTaskId(taskId);
+                task.setOrderNo(order.getOrderNo());
+                task.setOrderId(orderId);
+                task.setMaterialNumber(detail.getMaterialNumber());
+                task.setMaterialName(detail.getMaterialName());
+                task.setStyleNumber(detail.getStyleNumber());
+                task.setColor(detail.getColor());
+                task.setBrandName(detail.getBrandName());
+                task.setKindName(detail.getKindName());
+                task.setSizeName(detail.getSizeName());
+                task.setLocalSizeName(detail.getLocalSizeName());
+                task.setPrintQty(detail.getPrintQty());
+                task.setTemplateFile(templateFile);
+                task.setPrinterName(printerName);
+                try {
+                    task.setPrintData(objectMapper.writeValueAsString(printData));
+                } catch (Exception e) {
+                    task.setPrintData("{}");
+                }
+                task.setAgentId(agentId);
+                task.setStatus(0);
+                task.setCreateTime(LocalDateTime.now());
+                task.setRetryCount(0);
+                task.setBatchId(batchId);
+
+                taskMapper.insert(task);
+                taskIds.add(taskId);
             }
-            task.setAgentId(agentId);
-            task.setStatus(0);
-            task.setCreateTime(LocalDateTime.now());
-            task.setRetryCount(0);
-            task.setBatchId(batchId);
-
-            taskMapper.insert(task);
-            taskIds.add(taskId);
         }
 
         return String.join(",", taskIds);

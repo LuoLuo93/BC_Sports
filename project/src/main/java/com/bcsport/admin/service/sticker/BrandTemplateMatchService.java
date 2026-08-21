@@ -83,13 +83,18 @@ public class BrandTemplateMatchService {
         return list.isEmpty() ? null : list.get(0);
     }
 
-    public BrandTemplateMatch matchByName(String brandName, String kindName) {
-        List<BrandTemplateMatch> list = mapper.selectList(new LambdaQueryWrapper<BrandTemplateMatch>()
+    /**
+     * 按品牌+类别查全部启用的模板匹配。同一品牌+类别可配多个模板(每模板各打一张标签),
+     * 排序=配置先后即打印先后:创建时间升序,模板名作第二排序键——同一批 Excel 导入的
+     * 多行 create_time 相同(整批共用一个时间戳),仅按时间排序会并列导致打印先后不确定。
+     */
+    public List<BrandTemplateMatch> matchAllByName(String brandName, String kindName) {
+        return mapper.selectList(new LambdaQueryWrapper<BrandTemplateMatch>()
                 .eq(BrandTemplateMatch::getBrandName, brandName)
                 .eq(BrandTemplateMatch::getKindName, kindName)
                 .eq(BrandTemplateMatch::getIsActive, 1)
-                .last("FETCH FIRST 1 ROWS ONLY"));
-        return list.isEmpty() ? null : list.get(0);
+                .orderByAsc(BrandTemplateMatch::getCreateTime)
+                .orderByAsc(BrandTemplateMatch::getTemplateName));
     }
 
     public void create(BrandTemplateMatch entity) {
@@ -114,9 +119,11 @@ public class BrandTemplateMatchService {
     }
 
     /**
-     * 批量导入（upsert）：以「品牌名称+类别名称」为业务键。
+     * 批量导入（upsert）：以「品牌名称+类别名称+模板名」为业务键。
+     * 同一品牌+类别可配多个模板（每模板各打一张），故模板名参与业务键，
+     * 同品牌+类别+模板重复导入才更新，不同模板名视为新增第二条。
      * Excel 行只含名称，这里反查 ERP 的 M_DIM 表填充 brand_id/kind_id。
-     * 命中已有记录则更新（覆盖模板/打印机/备注/状态），否则新增。
+     * 命中已有记录则更新（覆盖打印机/备注/状态），否则新增。
      *
      * @param list   待导入的记录（brandName/kindName/templateName/printerName/remark/isActive 已填）
      * @param errors 失败原因收集（行号从1开始计数对应入参顺序）
@@ -157,7 +164,8 @@ public class BrandTemplateMatchService {
                     continue;
                 }
 
-                BrandTemplateMatch existing = mapper.selectByNames(row.getBrandName(), row.getKindName());
+                BrandTemplateMatch existing = mapper.selectByNamesAndTemplate(
+                        row.getBrandName(), row.getKindName(), row.getTemplateName());
                 if (existing != null) {
                     // 更新：保留原 id，覆盖业务字段
                     existing.setBrandId(brandId);

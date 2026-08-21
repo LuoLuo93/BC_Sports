@@ -114,7 +114,7 @@
           <el-icon :size="40" style="color:var(--el-text-color-placeholder)"><Upload /></el-icon>
           <div style="margin-top:8px">将 Excel 文件拖到此处，或 <em>点击上传</em></div>
           <template #tip>
-            <div class="upload-hint">仅支持 .xlsx / .xls 格式，品牌+类别重复时自动更新</div>
+            <div class="upload-hint">仅支持 .xlsx / .xls 格式，品牌+类别+模板重复时自动更新；同一品牌+类别可配多个模板（每模板各打一张）</div>
           </template>
         </el-upload>
         <div style="margin-top:12px;text-align:center">

@@ -14,9 +14,12 @@ agent:
   api-key: ${AGENT_API_KEY:local-dev-key}
   task:
     # 卡住判定动态阈值 = stuck-base-minutes + printQty × stuck-minutes-per-qty
-    # 例如 base=3 + per-qty=0.02：1张≈3分，100张≈5分，1000张≈23分，按实际打印速度调参
+    # per-qty=0.05(3秒/张)：1张≈3分，100张≈8分，1000张≈53分。
+    # 注意：该阈值只在 auto-redispatch=true 时参与"卡住重派"判定(当前已关闭，阈值休眠)；
+    # 若恢复自动重派，按实际打印速度调参——per-qty 必须大于单张实际耗时，否则大数量任务
+    # 会在正常打印中途被误判卡住而重派，耗材恢复后同一任务打两遍。
     stuck-base-minutes: ${AGENT_TASK_STUCK_BASE_MINUTES:3}
-    stuck-minutes-per-qty: ${AGENT_TASK_STUCK_MINUTES_PER_QTY:0.02}
+    stuck-minutes-per-qty: ${AGENT_TASK_STUCK_MINUTES_PER_QTY:0.05}
     # 单个任务最大重派次数，超过则标记失败不再下发
     max-redispatch: ${AGENT_TASK_MAX_REDISPATCH:3}
     # 在途任务上限：该 Agent 未回报(status=1)任务数达到此值后不再派发新任务。
@@ -24,6 +27,11 @@ agent:
     # 会被误判卡住而自动重派导致重复打印。=1 时派发节奏严格对齐串行打印(推荐)；
     # 调大可减少任务间交接空隙，但小任务排在大任务后仍可能触发误重派(Agent 端去重兜底)。
     max-inflight: ${AGENT_TASK_MAX_INFLIGHT:1}
+    # 超时自动重派(卡住救援)开关。false=转人工模式：疑似卡住的任务不自动重派也不标失败，
+    # 由人工在 Agent 监控里取消/补打/强制重发恢复。
+    # 换纸/换碳带时打印队列挂起属正常等待，自动重派会在耗材恢复后把同一任务打两遍；
+    # 低并发+有人值守的场景建议关闭(false)，无人值守场景可改回 true。
+    auto-redispatch: ${AGENT_TASK_AUTO_REDISPATCH:false}
 
 spring:
   application:

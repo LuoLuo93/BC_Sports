@@ -63,8 +63,19 @@ export function updateStickerDataMaterial(data) {
 }
 
 // ─── Agent 打印 ──────────────────────
-export function createAgentPrintTasks(orderId, agentId) {
-  return request.post(`/api/print/create-tasks/${orderId}?agentId=${encodeURIComponent(agentId)}`)
+// force=true: 该单已有未完成任务时先批量取消再重新生成(强制重新下发)
+export function createAgentPrintTasks(orderId, agentId, force = false) {
+  return request.post(`/api/print/create-tasks/${orderId}?agentId=${encodeURIComponent(agentId)}${force ? '&force=true' : ''}`)
+}
+
+// 统计申请单未完成任务数(待打印/打印中/已暂停)——下发前轻量预检查,不拉任务实体(大单含CLOB会很重)
+export function getOrderPrintPendingSummary(orderId) {
+  return request.get(`/api/print/tasks/${orderId}/pending-summary`)
+}
+
+// 手动取消单个任务(仅待打印/打印中/已暂停)
+export function cancelPrintTask(data) {
+  return request.post('/api/print/cancel', data)
 }
 
 // 补打单个任务

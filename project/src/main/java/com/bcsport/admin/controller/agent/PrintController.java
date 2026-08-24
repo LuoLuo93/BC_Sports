@@ -52,11 +52,12 @@ public class PrintController {
 
     @PostMapping("/create-tasks/{orderId}")
     @ApiOperation("根据申请单创建打印任务")
-    public Result<?> createTasks(@PathVariable String orderId, @RequestParam String agentId) {
+    public Result<?> createTasks(@PathVariable String orderId, @RequestParam String agentId,
+                                 @RequestParam(value = "force", required = false, defaultValue = "false") boolean force) {
         if (agentId == null || agentId.isBlank()) {
             return Result.paramError("agentId 不能为空");
         }
-        String taskIds = printTaskService.createTasksFromOrder(orderId, agentId);
+        String taskIds = printTaskService.createTasksFromOrder(orderId, agentId, force);
         return Result.success(taskIds);
     }
 
@@ -64,6 +65,24 @@ public class PrintController {
     @ApiOperation("查询申请单的打印任务")
     public Result<List<PrintTask>> getTasks(@PathVariable String orderId) {
         return Result.success(printTaskService.getTasksByOrderId(orderId));
+    }
+
+    @GetMapping("/tasks/{orderId}/pending-summary")
+    @ApiOperation("统计申请单未完成任务数(待打印/打印中/已暂停)——下发前轻量预检查用")
+    public Result<Map<String, Long>> pendingSummary(@PathVariable String orderId) {
+        return Result.success(printTaskService.countUnfinishedByOrderId(orderId));
+    }
+
+    @PostMapping("/cancel")
+    @ApiOperation("手动取消单个打印任务(仅待打印/打印中/已暂停)")
+    public Result<?> cancelTask(@RequestBody Map<String, Object> body) {
+        String taskId = (String) body.get("taskId");
+        String reason = body.get("reason") != null ? String.valueOf(body.get("reason")) : null;
+        if (taskId == null || taskId.isBlank()) {
+            return Result.paramError("taskId 不能为空");
+        }
+        printTaskService.cancelTask(taskId, reason);
+        return Result.success("任务已取消");
     }
 
     @PostMapping("/reprint")

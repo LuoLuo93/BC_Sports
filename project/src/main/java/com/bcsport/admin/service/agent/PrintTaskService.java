@@ -79,6 +79,15 @@ public class PrintTaskService {
     @Value("${agent.task.max-inflight:1}")
     private int maxInflight;
 
+    /** 是否启用超时自动重派(卡住救援)。false=转人工模式：
+     *  疑似卡住的任务不自动重派也不自动标失败，由人工在 Agent 监控里
+     *  取消(死任务)或补打/强制重发(需恢复)处理。
+     *  推荐低并发+有人守着打印机的场景关闭：换纸/换碳带时打印队列挂起、
+     *  任务停在打印中，自动重派会在耗材恢复后把同一任务打两遍；
+     *  关闭后换好耗材原任务继续打完正常回报，零重复。 */
+    @Value("${agent.task.auto-redispatch:true}")
+    private boolean autoRedispatch;
+
     /** status=0 任务超过该分钟数仍未被拉取，巡检任务告警（agentId 配错 / Agent 长时间离线）。 */
     private static final int PENDING_WARN_MINUTES = 15;
 
@@ -103,34 +112,39 @@ public class PrintTaskService {
 
         // ── 1) 卡住救援：status=1 且派发早于基础阈值的候选(比 base 还新的绝对没卡住)，
         //       Java 侧再按 printQty 动态阈值精确判断，避免误重派。此路径不受在途上限限制——
-        //       它本身就是故障恢复通道(Agent 崩溃/回报丢失时靠它救回)。 ──
-        List<PrintTask> stuckCandidates = taskMapper.selectList(
-            new LambdaQueryWrapper<PrintTask>()
-                .eq(PrintTask::getAgentId, agentId)
-                .eq(PrintTask::getStatus, 1)
-                .lt(PrintTask::getDispatchTime, baseStuckBefore)
-                .orderByAsc(PrintTask::getCreateTime)
-                .last("FETCH FIRST 10 ROWS ONLY")
-        );
-        for (PrintTask task : stuckCandidates) {
-            if (!isStuck(task)) {
-                continue; // 还在正常打印中，不重派
-            }
-            int retry = (task.getRetryCount() == null ? 0 : task.getRetryCount()) + 1;
-            if (retry > maxRedispatch) {
-                task.setStatus(3);
-                task.setErrorMsg("多次派发未收到回报，判定为丢失");
-                task.setPrintTime(LocalDateTime.now());
+        //       它本身就是故障恢复通道(Agent 崩溃/回报丢失时靠它救回)。
+        //       auto-redispatch=false 时整体跳过(转人工模式)：换纸/换碳带等耗材场景
+        //       打印队列挂起属正常等待，自动重派会在耗材恢复后重复打印；
+        //       真死掉的任务由人工取消/补打/强制重发恢复。巡检告警仍会提示疑似卡住。 ──
+        if (autoRedispatch) {
+            List<PrintTask> stuckCandidates = taskMapper.selectList(
+                new LambdaQueryWrapper<PrintTask>()
+                    .eq(PrintTask::getAgentId, agentId)
+                    .eq(PrintTask::getStatus, 1)
+                    .lt(PrintTask::getDispatchTime, baseStuckBefore)
+                    .orderByAsc(PrintTask::getCreateTime)
+                    .last("FETCH FIRST 10 ROWS ONLY")
+            );
+            for (PrintTask task : stuckCandidates) {
+                if (!isStuck(task)) {
+                    continue; // 还在正常打印中，不重派
+                }
+                int retry = (task.getRetryCount() == null ? 0 : task.getRetryCount()) + 1;
+                if (retry > maxRedispatch) {
+                    task.setStatus(3);
+                    task.setErrorMsg("多次派发未收到回报，判定为丢失");
+                    task.setPrintTime(LocalDateTime.now());
+                    taskMapper.updateById(task);
+                    log.warn("任务 {} 已达最大重派次数 {}，标记为失败", task.getTaskId(), maxRedispatch);
+                    continue;
+                }
+                task.setRetryCount(retry);
+                log.info("重新派发超时未回报的任务 {}，第 {} 次", task.getTaskId(), retry);
+                task.setStatus(1);
+                task.setDispatchTime(LocalDateTime.now());
                 taskMapper.updateById(task);
-                log.warn("任务 {} 已达最大重派次数 {}，标记为失败", task.getTaskId(), maxRedispatch);
-                continue;
+                dispatched.add(task);
             }
-            task.setRetryCount(retry);
-            log.info("重新派发超时未回报的任务 {}，第 {} 次", task.getTaskId(), retry);
-            task.setStatus(1);
-            task.setDispatchTime(LocalDateTime.now());
-            taskMapper.updateById(task);
-            dispatched.add(task);
         }
 
         // ── 2) 新任务派发：受在途上限约束。Agent 串行打印且边打边拉，不限量时大批量
@@ -257,6 +271,30 @@ public class PrintTaskService {
         }
         status = status.trim().toLowerCase();
 
+        // ── 终态回报处理 ──
+        // 已成功(2)：重复回报幂等忽略。
+        // 已失败(3)/已取消(5)收到迟到的 completed：物理上确实打完了(此前的失败/取消判定过于悲观，
+        // 或取消时打印机已在出纸)。修正为成功，防止人工看到失败/取消去补打造成重复打印；
+        // 原判定信息保留在 errorMsg 里供审计。注意：只接受 completed——
+        // 迟到的 paused/failed 一律忽略，尤其防止把已取消任务翻回暂停态被 pull 续打复活。
+        Integer curStatus = task.getStatus();
+        if (curStatus != null && (curStatus == 2 || curStatus == 3 || curStatus == 5)) {
+            if (curStatus != 2 && "completed".equals(status)) {
+                String note = "Agent迟到回报已完成(原判定:" + statusName(curStatus) + ")";
+                String old = task.getErrorMsg();
+                String merged = (old != null && !old.isBlank()) ? note + "；" + old : note;
+                task.setStatus(2);
+                task.setErrorMsg(truncateUtf8Bytes(merged, 500));
+                task.setPrintTime(LocalDateTime.now());
+                taskMapper.updateById(task);
+                log.info("任务 {} 迟到完成回报：{} → 成功(修正记录，防止人工补打重复)", taskId, statusName(curStatus));
+            } else {
+                log.info("忽略任务 {} 的迟到回报(状态已为终态:{})，agent上报 resultStatus={} success={}",
+                        taskId, statusName(curStatus), resultStatus, success);
+            }
+            return;
+        }
+
         switch (status) {
             case "completed":
                 task.setStatus(2);
@@ -266,20 +304,45 @@ public class PrintTaskService {
             case "paused":
                 // 暂停：断纸等异常，换纸后由 pullTasks 自动续打。不记 printTime、不累 retryCount。
                 task.setStatus(4);
-                task.setErrorMsg(message != null && !message.isBlank() ? message : "打印暂停（断纸/缺纸）");
+                task.setErrorMsg(truncateUtf8Bytes(
+                        message != null && !message.isBlank() ? message : "打印暂停（断纸/缺纸）", 500));
                 break;
             case "failed":
             default:
                 task.setStatus(3);
-                task.setErrorMsg(message);
+                task.setErrorMsg(truncateUtf8Bytes(message, 500));
                 task.setPrintTime(LocalDateTime.now());
                 break;
         }
         taskMapper.updateById(task);
     }
 
+    /** 按 UTF-8 字节数截断：ERROR_MSG 列 VARCHAR2(500) 按字节计长(中文3字节/字)，
+     *  按字符数截断中文内容会超出列长导致 ORA-12899。 */
+    private String truncateUtf8Bytes(String s, int maxBytes) {
+        if (s == null) return null;
+        StringBuilder sb = new StringBuilder();
+        int total = 0;
+        int i = 0;
+        while (i < s.length()) {
+            int cp = s.codePointAt(i);
+            int bytes = new String(Character.toChars(cp))
+                    .getBytes(java.nio.charset.StandardCharsets.UTF_8).length;
+            if (total + bytes > maxBytes) break;
+            sb.appendCodePoint(cp);
+            total += bytes;
+            i += Character.charCount(cp);
+        }
+        return sb.toString();
+    }
+
+    /**
+     * 根据申请单创建打印任务。
+     * @param force true=该单已有未完成任务(0/1/4)时先批量取消(置为已取消status=5)再重新生成，
+     *              用于卡死任务(Agent掉线/断纸未续)阻塞整单下发的场景；false=存在未完成任务即抛错
+     */
     @Transactional(rollbackFor = Exception.class)
-    public String createTasksFromOrder(String orderId, String agentId) {
+    public String createTasksFromOrder(String orderId, String agentId, boolean force) {
         StickerPrintOrder order = orderMapper.selectById(orderId);
         if (order == null) {
             throw new BusinessException("申请单不存在");
@@ -296,7 +359,10 @@ public class PrintTaskService {
                 .in(PrintTask::getStatus, 0, 1, 4)
         );
         if (pending != null && pending > 0) {
-            throw new BusinessException("该申请单已有未完成的打印任务（含暂停中），请勿重复下发");
+            if (!force) {
+                throw new BusinessException("该申请单已有未完成的打印任务（含暂停中），请勿重复下发");
+            }
+            cancelUnfinishedByOrderId(orderId, "强制重新下发，自动取消");
         }
 
         List<StickerPrintOrderDetail> details = detailMapper.selectList(
@@ -446,9 +512,30 @@ public class PrintTaskService {
     }
 
     /**
+     * 统计申请单未完成任务数(待打印0/打印中1/已暂停4)，供下发前的轻量预检查。
+     * 不拉任务实体——大单(数千任务)若带 printData CLOB 全量返回会到十几 MB。
+     */
+    public Map<String, Long> countUnfinishedByOrderId(String orderId) {
+        Map<String, Long> result = new LinkedHashMap<>();
+        result.put("pending", countByOrderIdAndStatus(orderId, 0));
+        result.put("printing", countByOrderIdAndStatus(orderId, 1));
+        result.put("paused", countByOrderIdAndStatus(orderId, 4));
+        return result;
+    }
+
+    private Long countByOrderIdAndStatus(String orderId, int status) {
+        Long c = taskMapper.selectCount(
+            new LambdaQueryWrapper<PrintTask>()
+                .eq(PrintTask::getOrderId, orderId)
+                .eq(PrintTask::getStatus, status)
+        );
+        return c == null ? 0L : c;
+    }
+
+    /**
      * 补打单个任务：克隆原任务的打印数据生成新的待打印任务(status=0)，原任务保持不动（保留审计）。
      * 约束：
-     *  - 原任务必须处于终态（2成功 / 3失败），进行中(0/1)不允许补打，避免与正在打印的冲突导致重复；
+     *  - 原任务必须处于终态（2成功 / 3失败 / 5已取消），进行中(0/1/4)不允许补打，避免与正在打印的冲突导致重复；
      *  - 原任务当前已有未完成的补打任务时拒绝，防止重复补打。
      */
     @Transactional(rollbackFor = Exception.class)
@@ -459,8 +546,9 @@ public class PrintTaskService {
         if (source == null) {
             throw new BusinessException("原任务不存在");
         }
-        if (source.getStatus() == null || (source.getStatus() != 2 && source.getStatus() != 3)) {
-            throw new BusinessException("只有已成功或失败的任务才能补打");
+        if (source.getStatus() == null
+                || (source.getStatus() != 2 && source.getStatus() != 3 && source.getStatus() != 5)) {
+            throw new BusinessException("只有已成功、失败或已取消的任务才能补打");
         }
         Long pending = taskMapper.selectCount(
             new LambdaQueryWrapper<PrintTask>()
@@ -498,6 +586,63 @@ public class PrintTaskService {
         taskMapper.insert(reprint);
         log.info("补打任务已创建: 原 {} → 新 {}，agent={}", sourceTaskId, reprint.getTaskId(), agentId);
         return reprint.getTaskId();
+    }
+
+    /**
+     * 手动取消单个任务：仅允许未完成态(0待打印/1打印中/4已暂停)，置为已取消(status=5)终态。
+     * 取消后 pullTasks 的派发查询(只查0/1/4)不会再捞到，Agent 无法再打——无需 Agent 端配合。
+     * 注意：若任务实际仍在打印(Agent 在线打着手上的活)，服务端取消只能阻止后续重派，
+     * 已出纸的部分物理上无法撤回。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void cancelTask(String taskId, String reason) {
+        PrintTask task = taskMapper.selectOne(
+            new LambdaQueryWrapper<PrintTask>().eq(PrintTask::getTaskId, taskId)
+        );
+        if (task == null) {
+            throw new BusinessException("任务不存在");
+        }
+        int oldStatus = task.getStatus() == null ? -1 : task.getStatus();
+        if (oldStatus != 0 && oldStatus != 1 && oldStatus != 4) {
+            throw new BusinessException("只有待打印/打印中/已暂停的任务才能取消");
+        }
+        task.setStatus(5);
+        task.setErrorMsg(("手动取消" + (reason != null && !reason.isBlank() ? "：" + reason.trim() : ""))
+                + "（原状态：" + statusName(oldStatus) + "）");
+        task.setPrintTime(LocalDateTime.now());
+        taskMapper.updateById(task);
+        log.info("任务 {} 已手动取消(原状态 {})，orderNo={}", taskId, statusName(oldStatus), task.getOrderNo());
+    }
+
+    /** 批量取消申请单下所有未完成任务(0/1/4→5)，供强制重新下发前清理 */
+    private void cancelUnfinishedByOrderId(String orderId, String reason) {
+        List<PrintTask> blockers = taskMapper.selectList(
+            new LambdaQueryWrapper<PrintTask>()
+                .eq(PrintTask::getOrderId, orderId)
+                .in(PrintTask::getStatus, 0, 1, 4)
+        );
+        for (PrintTask task : blockers) {
+            int oldStatus = task.getStatus() == null ? -1 : task.getStatus();
+            task.setStatus(5);
+            task.setErrorMsg(reason + "（原状态：" + statusName(oldStatus) + "）");
+            task.setPrintTime(LocalDateTime.now());
+            taskMapper.updateById(task);
+        }
+        if (!blockers.isEmpty()) {
+            log.info("强制重新下发：申请单 {} 已取消 {} 个未完成任务", orderId, blockers.size());
+        }
+    }
+
+    private String statusName(int status) {
+        switch (status) {
+            case 0: return "待打印";
+            case 1: return "打印中";
+            case 2: return "成功";
+            case 3: return "失败";
+            case 4: return "已暂停";
+            case 5: return "已取消";
+            default: return "未知(" + status + ")";
+        }
     }
 
     public List<PrintTask> getTasksByAgentId(String agentId) {

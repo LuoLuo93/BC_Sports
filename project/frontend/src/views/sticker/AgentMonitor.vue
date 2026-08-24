@@ -117,20 +117,26 @@
           </template>
         </el-table-column>
         <el-table-column prop="printQty" label="数量" width="70" align="center" />
-        <el-table-column prop="status" label="状态" width="100" align="center">
+        <el-table-column prop="status" label="状态" width="170" align="center">
           <template #default="{ row }">
-            <el-tooltip v-if="(row.status === 3 || row.status === 4) && row.errorMsg" :content="row.errorMsg" placement="top">
+            <el-tooltip v-if="(row.status === 3 || row.status === 4 || row.status === 5) && row.errorMsg" :content="row.errorMsg" placement="top">
               <el-tag :type="statusTagType(row.status)" size="small">{{ statusLabel(row.status) }}</el-tag>
             </el-tooltip>
             <el-tag v-else :type="statusTagType(row.status)" size="small">{{ statusLabel(row.status) }}</el-tag>
+            <el-tooltip v-if="isStuckHint(row)"
+              content="派发超过60分钟无回报：若在换纸/换碳带属正常等待，换好耗材会继续；确认死掉可取消后补打" placement="top">
+              <el-tag type="danger" size="small" effect="plain" style="margin-left:4px">久无回报</el-tag>
+            </el-tooltip>
           </template>
         </el-table-column>
         <el-table-column label="打印时间" width="160" show-overflow-tooltip>
           <template #default="{ row }">{{ formatTime(row.printTime) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="80" align="center" fixed="right">
+        <el-table-column label="操作" width="140" align="center" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" plain size="small" @click="viewTaskDetail(row)">查看</el-button>
+            <el-button v-if="row.status === 0 || row.status === 1 || row.status === 4"
+              type="danger" plain size="small" @click="confirmCancelTask(row)">取消</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -157,7 +163,7 @@
             <el-tag :type="statusTagType(currentTask.status)" size="small" effect="dark" class="detail-status-tag">{{ statusLabel(currentTask.status) }}</el-tag>
             <el-tag v-if="currentTask.isReprint === 1" type="warning" size="small" effect="plain">补打</el-tag>
           </div>
-          <el-button v-if="currentTask.status === 2 || currentTask.status === 3"
+          <el-button v-if="currentTask.status === 2 || currentTask.status === 3 || currentTask.status === 5"
             type="warning" size="small" @click="openReprint">补打任务</el-button>
         </div>
 
@@ -352,9 +358,9 @@
 <script setup>
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { Search, RefreshRight, ArrowDown } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { usePageQuery } from '@/composables/usePageQuery'
-import { getAgentPage, getAgentList, getAgentTasksPage, reprintTask } from '@/api/sticker'
+import { getAgentPage, getAgentList, getAgentTasksPage, reprintTask, cancelPrintTask } from '@/api/sticker'
 import { PAGE_SIZES } from '@/utils/appConfig'
 import { formatTime } from '@/utils/format'
 
@@ -402,10 +408,19 @@ function handleReset() {
   refreshAll()
 }
 
-const STATUS_MAP = { 0: '待打印', 1: '打印中', 2: '成功', 3: '失败', 4: '已暂停' }
-const STATUS_TAG = { 0: 'info', 1: 'warning', 2: 'success', 3: 'danger', 4: 'warning' }
+const STATUS_MAP = { 0: '待打印', 1: '打印中', 2: '成功', 3: '失败', 4: '已暂停', 5: '已取消' }
+const STATUS_TAG = { 0: 'info', 1: 'warning', 2: 'success', 3: 'danger', 4: 'warning', 5: 'info' }
 const statusLabel = (s) => STATUS_MAP[s] || '未知'
 const statusTagType = (s) => STATUS_TAG[s] || 'info'
+
+// "久无回报"提示：打印中超60分钟(与后端巡检告警阈值一致)无回报，人工模式下提示人工介入判断。
+// 不用动态阈值(printQty 相关)——前端不知道配置值，60分钟足够保守不会误报正常打印。
+// 日期串是 "yyyy-MM-dd HH:mm:ss"(空格分隔)，换成 T 后按 ISO 本地时间解析，兼容性最好。
+function isStuckHint(row) {
+  if (row.status !== 1 || !row.dispatchTime) return false
+  const t = new Date(String(row.dispatchTime).replace(' ', 'T')).getTime()
+  return !isNaN(t) && t < Date.now() - 60 * 60 * 1000
+}
 
 // ========== 任务记录 ==========
 const taskDialogVisible = ref(false)
@@ -478,6 +493,42 @@ function viewTaskDetail(row) {
   currentTask.value = row
   jsonExpanded.value = false
   taskDetailVisible.value = true
+}
+
+// ========== 取消任务 ==========
+// 服务端把任务置为已取消(终态)，Agent 拉取查询只查未完成态，取消后不会再打出
+
+// ERP 数据(货品名等)拼进 HTML 弹窗前先转义，防内容含 <>& 破坏渲染
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
+}
+
+async function confirmCancelTask(row) {
+  let msg = `确认取消该任务？<br/><span style="color:#909399">${escapeHtml(row.orderNo)} ${escapeHtml(row.materialName)}${row.sizeName ? ' / ' + escapeHtml(row.sizeName) : ''} × ${row.printQty ?? '-'}</span>`
+  if (row.status === 1) {
+    msg += `<br/><span style="color:#e6a23c">注意：该任务显示"打印中"，若打印机实际还在出纸，已打部分无法撤回，取消只能阻止后续重派</span>`
+  }
+  try {
+    await ElMessageBox.confirm(msg, '取消打印任务', {
+      confirmButtonText: '确认取消',
+      cancelButtonText: '返回',
+      type: 'warning',
+      dangerouslyUseHTMLString: true
+    })
+  } catch {
+    return
+  }
+  try {
+    await cancelPrintTask({ taskId: row.taskId, reason: 'Agent监控页手动取消' })
+    ElMessage.success('任务已取消')
+    row.status = 5
+    if (currentTask.value?.taskId === row.taskId) {
+      currentTask.value = { ...currentTask.value, status: 5, errorMsg: '手动取消（Agent监控页）' }
+    }
+    loadTasks()
+  } catch {
+    /* 拦截器已提示错误 */
+  }
 }
 
 // ========== 补打 ==========

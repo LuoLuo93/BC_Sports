@@ -426,7 +426,7 @@ import { useRouter, onBeforeRouteLeave } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Loading, Search, RefreshRight, CaretTop, CaretBottom } from '@element-plus/icons-vue'
 import request from '@/api/request'
-import { getPrintOrderPage, getPrintOrder, createPrintOrder, updatePrintOrder, submitPrintOrder, reviewPrintOrder, deletePrintOrder, searchProducts, getProductSizes, createAgentPrintTasks, getSizeGroupSizes } from '@/api/sticker'
+import { getPrintOrderPage, getPrintOrder, createPrintOrder, updatePrintOrder, submitPrintOrder, reviewPrintOrder, deletePrintOrder, searchProducts, getProductSizes, createAgentPrintTasks, getOrderPrintPendingSummary, getSizeGroupSizes } from '@/api/sticker'
 import { getCommonBrands } from '@/api/common'
 import { usePageQuery } from '@/composables/usePageQuery'
 import { usePermission } from '@/composables/usePermission'
@@ -687,7 +687,36 @@ async function confirmAgentPrint() {
 
   agentPrinting.value = true
   try {
-    const res = await createAgentPrintTasks(agentOrder.value.id, selectedAgent.value.agentId)
+    // 下发前检查该单有无未完成任务(0待打印/1打印中/4已暂停)，有则让用户确认后强制重发
+    let force = false
+    try {
+      const { data: summary } = await getOrderPrintPendingSummary(agentOrder.value.id)
+      const cnt = { 0: summary?.pending || 0, 1: summary?.printing || 0, 4: summary?.paused || 0 }
+      if (cnt[0] + cnt[1] + cnt[4] > 0) {
+        const parts = []
+        if (cnt[0]) parts.push(`待打印 ${cnt[0]} 条`)
+        if (cnt[1]) parts.push(`打印中 ${cnt[1]} 条`)
+        if (cnt[4]) parts.push(`已暂停 ${cnt[4]} 条`)
+        let msg = `该申请单还有未完成任务：${parts.join('、')}。<br/>取消这些任务并重新下发？`
+        if (cnt[1] > 0) {
+          msg += `<br/><span style="color:#e6a23c">注意：打印中的任务若实际仍在出纸，已打部分无法撤回</span>`
+        }
+        await ElMessageBox.confirm(msg, '存在未完成任务', {
+          confirmButtonText: '取消并重新下发',
+          cancelButtonText: '返回',
+          type: 'warning',
+          dangerouslyUseHTMLString: true
+        })
+        force = true
+      }
+    } catch (e) {
+      if (e !== 'cancel' && e?.message !== 'cancel' && e !== 'close' && e?.message !== 'close') {
+        throw e // 查询任务失败等真实错误中断下发；用户点取消/关闭也中断
+      }
+      return
+    }
+
+    const res = await createAgentPrintTasks(agentOrder.value.id, selectedAgent.value.agentId, force)
     if (res.code === 200) {
       const taskCount = typeof res.data === 'string' ? res.data.split(',').length : agentOrderDetailCount.value
       ElMessage.success(`已下发 ${taskCount} 个打印任务到 ${selectedAgent.value.agentName || selectedAgent.value.agentId}`)

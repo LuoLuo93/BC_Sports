@@ -86,11 +86,24 @@
         <div class="form-header">
           <el-button type="warning" size="small" @click="handleBack">返回列表</el-button>
           <span class="form-header-title">{{ isEdit ? '编辑打印申请单' : '新建打印申请单' }}</span>
-          <el-button type="primary" size="small" @click="handleSave">保存</el-button>
+          <div class="header-actions">
+            <el-button size="small" text :icon="infoCollapsed ? CaretBottom : CaretTop" @click="toggleInfoCollapsed">
+              {{ infoCollapsed ? '展开信息' : '收起信息' }}
+            </el-button>
+            <el-button type="primary" size="small" @click="handleSave">保存</el-button>
+          </div>
+        </div>
+
+        <!-- 折叠态：单行摘要 -->
+        <div v-if="infoCollapsed" class="form-info-compact">
+          <span class="compact-item"><span class="compact-label">申请单号</span>{{ form.orderNo || '保存后自动生成' }}</span>
+          <span class="compact-item"><span class="compact-label">申请人</span>{{ form.applicant || '-' }}</span>
+          <span class="compact-item"><span class="compact-label">联系人</span>{{ form.contactPerson || '-' }}</span>
+          <span class="compact-item compact-item--grow"><span class="compact-label">联系电话</span>{{ form.contactPhone || '-' }}</span>
         </div>
 
         <!-- 自动填充信息行 -->
-        <div class="form-info-row">
+        <div v-show="!infoCollapsed" class="form-info-row">
           <div class="info-item">
             <span class="info-label">申请单号</span>
             <span class="info-value">{{ form.orderNo || '保存后自动生成' }}</span>
@@ -110,7 +123,7 @@
         </div>
 
         <!-- 收货信息行:三字段打印在首张标签上(与上行同为4等分,上下列对齐) -->
-        <div class="form-info-row">
+        <div v-show="!infoCollapsed" class="form-info-row">
           <div class="info-item">
             <span class="info-label">联系人</span>
             <el-input v-model="form.contactPerson" placeholder="首张打印·联系人" size="small" maxlength="50" />
@@ -408,10 +421,10 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch, onMounted, onActivated, onBeforeUnmount } from 'vue'
+import { ref, reactive, computed, watch, nextTick, onMounted, onActivated, onBeforeUnmount } from 'vue'
 import { useRouter, onBeforeRouteLeave } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Loading, Search, RefreshRight } from '@element-plus/icons-vue'
+import { Loading, Search, RefreshRight, CaretTop, CaretBottom } from '@element-plus/icons-vue'
 import request from '@/api/request'
 import { getPrintOrderPage, getPrintOrder, createPrintOrder, updatePrintOrder, submitPrintOrder, reviewPrintOrder, deletePrintOrder, searchProducts, getProductSizes, createAgentPrintTasks, getSizeGroupSizes } from '@/api/sticker'
 import { getCommonBrands } from '@/api/common'
@@ -439,6 +452,19 @@ const formVisible = ref(false)
 const isEdit = ref(false)
 const editOrderId = ref('')
 const form = reactive({ orderNo: '', applicant: '', deptName: '', createTime: '', remark: '', contactPerson: '', contactPhone: '', deliveryAddress: '', details: [] })
+
+// 信息区折叠：展开=2行4列,折叠=单行摘要;localStorage 记住用户偏好
+const INFO_COLLAPSE_KEY = 'sticker.print.infoCollapsed'
+const infoCollapsed = ref(localStorage.getItem(INFO_COLLAPSE_KEY) === '1')
+function toggleInfoCollapsed() {
+  infoCollapsed.value = !infoCollapsed.value
+  localStorage.setItem(INFO_COLLAPSE_KEY, infoCollapsed.value ? '1' : '0')
+  // 折叠改变容器高度,el-table 内部布局需手动重算
+  nextTick(() => {
+    productTableRef.value?.doLayout()
+    detailTableRef.value?.doLayout()
+  })
+}
 
 // Detail table selection
 const selectedRows = ref([])
@@ -1091,6 +1117,38 @@ onBeforeUnmount(() => {
   font-size: 16px;
   font-weight: 600;
   color: #111827;
+}
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 折叠态单行摘要 */
+.form-info-compact {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 7px 16px;
+  background: #f5f7fa;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.compact-item {
+  font-size: 13px;
+  color: #111827;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.compact-item--grow {
+  flex: 1;
+}
+.compact-label {
+  color: #909399;
+  margin-right: 6px;
 }
 
 .form-info-row {

@@ -5,12 +5,25 @@
       <div class="form-header">
         <el-button type="warning" size="small" @click="$router.push('/sticker/print')">返回列表</el-button>
         <span class="form-header-title">查看打印申请单</span>
-        <span v-if="order.status === 2" style="color:#f97316;font-size:12px;font-weight:600">已审核</span>
-        <span v-else></span>
+        <div class="header-print-group">
+          <span v-if="order.status === 2" style="color:#f97316;font-size:12px;font-weight:600">已审核</span>
+          <el-button size="small" text :icon="infoCollapsed ? CaretBottom : CaretTop" @click="toggleInfoCollapsed">
+            {{ infoCollapsed ? '展开信息' : '收起信息' }}
+          </el-button>
+        </div>
+      </div>
+
+      <!-- 折叠态：单行摘要 -->
+      <div v-if="infoCollapsed" class="form-info-compact">
+        <span class="compact-item"><span class="compact-label">申请单号</span>{{ order.orderNo || '-' }}</span>
+        <span class="compact-item"><span class="compact-label">申请人</span>{{ order.applicant || '-' }}</span>
+        <span class="compact-item"><span :class="['status-badge', 'status-' + order.status]">{{ statusLabel(order.status) }}</span></span>
+        <span class="compact-item"><span class="compact-label">联系人</span>{{ order.contactPerson || '-' }}</span>
+        <span class="compact-item compact-item--grow"><span class="compact-label">联系电话</span>{{ order.contactPhone || '-' }}</span>
       </div>
 
       <!-- 单据信息 -->
-      <div class="form-info-row">
+      <div v-show="!infoCollapsed" class="form-info-row">
         <div class="info-item">
           <span class="info-label">申请单号</span>
           <span class="info-value">{{ order.orderNo || '-' }}</span>
@@ -30,7 +43,7 @@
       </div>
 
       <!-- 收货信息(首张打印) -->
-      <div class="form-info-row">
+      <div v-show="!infoCollapsed" class="form-info-row">
         <div class="info-item">
           <span class="info-label">联系人</span>
           <span class="info-value">{{ order.contactPerson || '-' }}</span>
@@ -50,7 +63,7 @@
       </div>
 
       <!-- 审核信息(未审核时不显示) -->
-      <div v-if="order.reviewer || order.reviewTime || order.reviewRemark" class="form-info-row">
+      <div v-if="order.reviewer || order.reviewTime || order.reviewRemark" v-show="!infoCollapsed" class="form-info-row">
         <div class="info-item">
           <span class="info-label">审核人</span>
           <span class="info-value">{{ order.reviewer }}</span>
@@ -70,7 +83,7 @@
         <div class="panel-bar">
           <span class="panel-bar-title">申请明细 <span class="detail-summary">共 {{ order.details.length }} 条，合计 <em class="total-qty">{{ totalPrintQty }}</em> 张</span></span>
         </div>
-        <el-table :data="pagedDetails" border size="small" height="100%">
+        <el-table ref="detailTableRef" :data="pagedDetails" border size="small" height="100%">
           <el-table-column label="#" width="45" fixed="left">
             <template #default="{ $index }">{{ (detailPage - 1) * detailSize + $index + 1 }}</template>
           </el-table-column>
@@ -150,14 +163,29 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, nextTick, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { CaretTop, CaretBottom } from '@element-plus/icons-vue'
 import { getPrintOrder } from '@/api/sticker'
 import { PAGE_SIZES } from '@/utils/appConfig'
 import { formatTime } from '@/utils/format'
 
 const route = useRoute()
 const order = ref({ details: [] })
+
+const detailTableRef = ref()
+
+// 信息区折叠：展开=多行信息卡,折叠=单行摘要;与申请单编辑页共用偏好
+const INFO_COLLAPSE_KEY = 'sticker.print.infoCollapsed'
+const infoCollapsed = ref(localStorage.getItem(INFO_COLLAPSE_KEY) === '1')
+function toggleInfoCollapsed() {
+  infoCollapsed.value = !infoCollapsed.value
+  localStorage.setItem(INFO_COLLAPSE_KEY, infoCollapsed.value ? '1' : '0')
+  // 折叠改变容器高度,el-table 内部布局需手动重算
+  nextTick(() => {
+    detailTableRef.value?.doLayout()
+  })
+}
 
 const detailPage = ref(1)
 const detailSize = ref(50)
@@ -248,6 +276,33 @@ onMounted(() => {
   font-weight: 600;
   line-height: 1.4;
   word-break: break-all;
+}
+
+/* 折叠态单行摘要 */
+.form-info-compact {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 7px 16px;
+  background: #f5f7fa;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.compact-item {
+  font-size: 13px;
+  color: #111827;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.compact-item--grow {
+  flex: 1;
+}
+.compact-label {
+  color: #909399;
+  margin-right: 6px;
 }
 
 .detail-panel {

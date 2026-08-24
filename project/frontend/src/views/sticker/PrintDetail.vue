@@ -175,9 +175,9 @@ const order = ref({ details: [] })
 
 const detailTableRef = ref()
 
-// 信息区折叠：展开=多行信息卡,折叠=单行摘要;与申请单编辑页共用偏好
+// 信息区折叠：默认折叠,展开=多行信息卡,折叠=单行摘要;与申请单编辑页共用偏好
 const INFO_COLLAPSE_KEY = 'sticker.print.infoCollapsed'
-const infoCollapsed = ref(localStorage.getItem(INFO_COLLAPSE_KEY) === '1')
+const infoCollapsed = ref(localStorage.getItem(INFO_COLLAPSE_KEY) !== '0')
 function toggleInfoCollapsed() {
   infoCollapsed.value = !infoCollapsed.value
   localStorage.setItem(INFO_COLLAPSE_KEY, infoCollapsed.value ? '1' : '0')

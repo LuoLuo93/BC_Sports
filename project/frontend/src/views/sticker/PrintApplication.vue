@@ -453,9 +453,9 @@ const isEdit = ref(false)
 const editOrderId = ref('')
 const form = reactive({ orderNo: '', applicant: '', deptName: '', createTime: '', remark: '', contactPerson: '', contactPhone: '', deliveryAddress: '', details: [] })
 
-// 信息区折叠：展开=2行4列,折叠=单行摘要;localStorage 记住用户偏好
+// 信息区折叠：默认折叠,展开=2行4列,折叠=单行摘要;localStorage 记住用户偏好
 const INFO_COLLAPSE_KEY = 'sticker.print.infoCollapsed'
-const infoCollapsed = ref(localStorage.getItem(INFO_COLLAPSE_KEY) === '1')
+const infoCollapsed = ref(localStorage.getItem(INFO_COLLAPSE_KEY) !== '0')
 function toggleInfoCollapsed() {
   infoCollapsed.value = !infoCollapsed.value
   localStorage.setItem(INFO_COLLAPSE_KEY, infoCollapsed.value ? '1' : '0')

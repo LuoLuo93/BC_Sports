@@ -681,6 +681,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 8px;
   margin-bottom: 12px;
+  flex-wrap: wrap; /* 弹窗被 max-width 压窄时筛选栏换行,不横向溢出 */
 }
 .task-filter-label {
   font-size: 13px;
@@ -751,6 +752,10 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   max-height: calc(100vh - 40px);
+  /* 弹窗宽度写死1500px时,窄屏/浏览器缩放会整体超出视口且遮罩层不产生横向滚动,
+     右侧(含固定操作列)被裁掉。限制最大宽度贴住视口,弹窗变窄后
+     el-table 列宽总和超出容器会自动出现表格自身的横向滚动条。 */
+  max-width: calc(100vw - 24px);
   margin: 20px auto;
 }
 :deep(.el-dialog__body) {

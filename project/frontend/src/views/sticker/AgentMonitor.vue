@@ -163,8 +163,13 @@
             <el-tag :type="statusTagType(currentTask.status)" size="small" effect="dark" class="detail-status-tag">{{ statusLabel(currentTask.status) }}</el-tag>
             <el-tag v-if="currentTask.isReprint === 1" type="warning" size="small" effect="plain">补打</el-tag>
           </div>
-          <el-button v-if="currentTask.status === 2 || currentTask.status === 3 || currentTask.status === 5"
-            type="warning" size="small" @click="openReprint">补打任务</el-button>
+          <div style="display:flex;gap:8px;align-items:center">
+            <el-button v-if="currentTask.status === 0 || currentTask.status === 1 || currentTask.status === 4"
+              type="danger" plain size="small" @click="confirmCancelTask(currentTask)">取消任务</el-button>
+            <el-button v-if="currentTask.status === 2 || currentTask.status === 3 || currentTask.status === 5"
+              type="warning" size="small" @click="openReprint">补打任务</el-button>
+            <el-button v-if="currentTask.orderId" type="primary" plain size="small" @click="openResendOrder">重发整单</el-button>
+          </div>
         </div>
 
         <!-- 信息区域：左右两列 -->
@@ -352,6 +357,39 @@
         </div>
       </template>
     </el-dialog>
+
+    <!-- 重发整单 · 选择 Agent -->
+    <el-dialog v-model="resendDialogVisible" title="重发整单 · 选择 Agent" width="720px" :close-on-click-modal="false">
+      <p style="margin-bottom:6px;color:#606266;font-size:13px">
+        申请单 <b>{{ currentTask?.orderNo || '-' }}</b> 未完成的任务(含打印中/暂停中)将被取消，并按申请单明细重新生成全部任务
+      </p>
+      <p style="margin-bottom:12px;color:#e6a23c;font-size:12px">
+        注意：打印中的任务若实际仍在出纸，已打部分无法撤回
+      </p>
+      <el-table :data="resendAgentList" border size="small">
+        <el-table-column label="选择" width="55" align="center">
+          <template #default="{ row }">
+            <el-radio v-model="resendAgentId" :value="row.agentId" :disabled="row.status !== 1">&nbsp;</el-radio>
+          </template>
+        </el-table-column>
+        <el-table-column prop="agentId" label="Agent ID" width="140" />
+        <el-table-column prop="agentName" label="名称" min-width="150" show-overflow-tooltip />
+        <el-table-column prop="ipAddress" label="IP 地址" width="140" />
+        <el-table-column prop="status" label="状态" width="90" align="center">
+          <template #default="{ row }">
+            <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
+              {{ row.status === 1 ? '在线' : '离线' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+      </el-table>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button class="btn-cancel" @click="resendDialogVisible = false">取消</el-button>
+          <el-button class="btn-confirm" type="primary" :loading="resendLoading" :disabled="!resendAgentId" @click="confirmResendOrder">取消旧任务并重发</el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -360,7 +398,7 @@ import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { Search, RefreshRight, ArrowDown } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { usePageQuery } from '@/composables/usePageQuery'
-import { getAgentPage, getAgentList, getAgentTasksPage, reprintTask, cancelPrintTask } from '@/api/sticker'
+import { getAgentPage, getAgentList, getAgentTasksPage, reprintTask, cancelPrintTask, createAgentPrintTasks } from '@/api/sticker'
 import { PAGE_SIZES } from '@/utils/appConfig'
 import { formatTime } from '@/utils/format'
 
@@ -528,6 +566,46 @@ async function confirmCancelTask(row) {
     loadTasks()
   } catch {
     /* 拦截器已提示错误 */
+  }
+}
+
+// ========== 重发整单 ==========
+// 从任务详情一键整单重发：取消该单全部未完成任务并按明细重新生成(force=true)
+const resendDialogVisible = ref(false)
+const resendAgentList = ref([])
+const resendAgentId = ref('')
+const resendLoading = ref(false)
+
+async function openResendOrder() {
+  if (!currentTask.value?.orderId) return
+  resendAgentId.value = ''
+  resendDialogVisible.value = true
+  try {
+    const { data } = await getAgentList()
+    resendAgentList.value = data || []
+    // 默认选中当前 Agent（若在线），也可切到别的在线 Agent 恢复打印
+    const current = resendAgentList.value.find(a => a.agentId === currentAgentId.value && a.status === 1)
+    if (current) resendAgentId.value = current.agentId
+  } catch {
+    resendAgentList.value = []
+  }
+}
+
+async function confirmResendOrder() {
+  if (!resendAgentId.value || !currentTask.value?.orderId) return
+  const agent = resendAgentList.value.find(a => a.agentId === resendAgentId.value)
+  resendLoading.value = true
+  try {
+    const res = await createAgentPrintTasks(currentTask.value.orderId, resendAgentId.value, true)
+    const taskCount = typeof res.data === 'string' ? res.data.split(',').length : 0
+    ElMessage.success(`整单已重新下发 ${taskCount} 个任务到 ${agent?.agentName || resendAgentId.value}`)
+    resendDialogVisible.value = false
+    taskDetailVisible.value = false
+    loadTasks()
+  } catch {
+    /* 拦截器已提示错误 */
+  } finally {
+    resendLoading.value = false
   }
 }
 

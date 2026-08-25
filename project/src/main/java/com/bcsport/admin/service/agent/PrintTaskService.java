@@ -91,6 +91,26 @@ public class PrintTaskService {
     /** status=0 任务超过该分钟数仍未被拉取，巡检任务告警（agentId 配错 / Agent 长时间离线）。 */
     private static final int PENDING_WARN_MINUTES = 15;
 
+    /** 耗材类错误关键词：Agent 端关键词表只认纸类错误(paper/缺纸/断纸/卡纸...)，
+     *  斑马(Zebra)等打印机的 "RIBBON OUT"(碳带用尽)、"MEDIA OUT"(纸尽) 不在其中，
+     *  会以 failed+原始错误文本回报。服务端据此把这类失败改判为暂停(4)，
+     *  换耗材后由 pullTasks 自动续打，与缺纸行为一致。
+     *  注意用完整词组，避免子串误伤(如 "ink" 会命中 "link"/"shrink")。 */
+    private static final String[] CONSUMABLE_ERROR_KEYWORDS = {
+            "ribbon", "碳带", "色带",
+            "media out", "out of media", "out of labels", "out of paper",
+            "ink out", "ink empty", "墨尽"
+    };
+
+    private boolean isConsumableError(String message) {
+        if (message == null || message.isBlank()) return false;
+        String lower = message.toLowerCase();
+        for (String kw : CONSUMABLE_ERROR_KEYWORDS) {
+            if (lower.contains(kw)) return true;
+        }
+        return false;
+    }
+
     /** 计算任务卡住超时阈值（分钟）：基础 + 每张追加，按 printQty 自适应。 */
     private double stuckThresholdMinutes(PrintTask task) {
         int qty = task.getPrintQty() != null ? task.getPrintQty() : 1;
@@ -309,6 +329,15 @@ public class PrintTaskService {
                 break;
             case "failed":
             default:
+                if (isConsumableError(message)) {
+                    // 碳带/介质用尽等耗材错误：改判为暂停，换耗材后自动续打(与缺纸一致)。
+                    // 不记 printTime(非终态)，原始错误文本保留在 errorMsg 供现场核对。
+                    task.setStatus(4);
+                    task.setErrorMsg(truncateUtf8Bytes(
+                            "耗材用尽(碳带/纸)，更换后自动续打（原始回报:" + orEmpty(message) + "）", 500));
+                    log.info("任务 {} 失败回报命中耗材关键词，改判暂停待续打: {}", taskId, message);
+                    break;
+                }
                 task.setStatus(3);
                 task.setErrorMsg(truncateUtf8Bytes(message, 500));
                 task.setPrintTime(LocalDateTime.now());

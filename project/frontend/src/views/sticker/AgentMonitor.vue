@@ -704,14 +704,17 @@ onUnmounted(() => {
 /* 任务记录弹窗表格横向滚动条常显：el-scrollbar 的轨道条(bar)和滑块(thumb)都被
    v-show 控制(交互时才短暂出现)，现场根本发现不了可以横滑。
    两层都要强制 display(只改滑块不改轨道时，隐藏轨道里滑块渲染宽度为 0 仍不可见)；
-   仅作用于任务记录弹窗(.dialog-fixed-layout)，轨道加高到 10px 方便鼠标拖动。 */
+   滑块用深灰全不透明+轨道浅底，确保在斑马纹表格背景上一眼可见。 */
 :deep(.dialog-fixed-layout .el-table .el-scrollbar__bar.is-horizontal) {
   display: block !important;
-  height: 10px;
+  height: 12px;
+  background: #f0f2f5;
+  border-radius: 6px;
 }
 :deep(.dialog-fixed-layout .el-table .el-scrollbar__bar.is-horizontal .el-scrollbar__thumb) {
   display: block !important;
-  opacity: 0.5;
+  opacity: 1;
+  background-color: #606266;
 }
 .batch-tag.clickable {
   cursor: pointer;

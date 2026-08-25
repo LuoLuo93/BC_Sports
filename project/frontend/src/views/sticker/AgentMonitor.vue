@@ -94,7 +94,7 @@
         <el-button type="primary" size="small" @click="onBatchSearch">查询</el-button>
         <el-button v-if="taskQuery.batchId || taskQuery.orderNo" size="small" link type="primary" @click="clearBatch">清除</el-button>
       </div>
-      <el-table :data="taskList" border size="small" :max-height="taskTableMaxHeight">
+      <el-table ref="taskTableRef" :data="taskList" border size="small" :max-height="taskTableMaxHeight">
         <el-table-column label="任务ID" width="350" show-overflow-tooltip>
           <template #default="{ row }">
             <span>{{ row.taskId }}</span>
@@ -394,7 +394,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, computed, nextTick, onMounted, onUnmounted } from 'vue'
 import { Search, RefreshRight, ArrowDown } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { usePageQuery } from '@/composables/usePageQuery'
@@ -467,6 +467,7 @@ const taskTotal = ref(0)
 const currentAgent = ref('')
 const currentAgentId = ref('')
 const taskTableMaxHeight = ref(400)
+const taskTableRef = ref()
 const taskQuery = reactive({ pageNum: 1, pageSize: 50, batchId: '', orderNo: '' })
 
 // 任务详情
@@ -525,6 +526,9 @@ async function loadTasks() {
     taskList.value = []
     taskTotal.value = 0
   }
+  // 强制表格重排：弹窗内表格初次渲染时不重算布局，el-scrollbar 量不到横向溢出，
+  // 横向滚动条要等下一次数据刷新才出现——doLayout 后立即可见
+  nextTick(() => taskTableRef.value?.doLayout())
 }
 
 function viewTaskDetail(row) {
@@ -701,20 +705,16 @@ onUnmounted(() => {
   letter-spacing: 0.04em;
 }
 
-/* 任务记录弹窗表格横向滚动条常显：el-scrollbar 的轨道条(bar)和滑块(thumb)都被
-   v-show 控制(交互时才短暂出现)，现场根本发现不了可以横滑。
-   两层都要强制 display(只改滑块不改轨道时，隐藏轨道里滑块渲染宽度为 0 仍不可见)；
-   滑块用深灰全不透明+轨道浅底，确保在斑马纹表格背景上一眼可见。 */
-:deep(.dialog-fixed-layout .el-table .el-scrollbar__bar.is-horizontal) {
+/* 任务记录弹窗表格滚动条常显：el-scrollbar 的轨道条(bar)和滑块(thumb)都被
+   v-show 控制(交互时才短暂出现)，现场发现不了可以横滑。
+   两层都要强制 display(只改滑块不改轨道时，隐藏轨道里滑块渲染宽度为 0 仍不可见)。
+   横向+纵向一起常显，样式保持 Element Plus 默认(与右侧纵向滚动条观感一致)：
+   6px 细条、默认灰、悬停加深，不加轨道底色不改粗。 */
+:deep(.dialog-fixed-layout .el-table .el-scrollbar__bar) {
   display: block !important;
-  height: 12px;
-  background: #f0f2f5;
-  border-radius: 6px;
 }
-:deep(.dialog-fixed-layout .el-table .el-scrollbar__bar.is-horizontal .el-scrollbar__thumb) {
+:deep(.dialog-fixed-layout .el-table .el-scrollbar__bar .el-scrollbar__thumb) {
   display: block !important;
-  opacity: 1;
-  background-color: #606266;
 }
 .batch-tag.clickable {
   cursor: pointer;

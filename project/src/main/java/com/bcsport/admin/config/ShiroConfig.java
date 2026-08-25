@@ -88,8 +88,10 @@ public class ShiroConfig {
         cookie.setHttpOnly(true);
         cookie.setSecure(configService.getBoolean("security.cookie.secure", false));
         cookie.setMaxAge(-1); // 浏览器关闭即失效
-        // SameSite 从配置读取，开发环境默认 LAX，生产环境设为 STRICT
-        String sameSite = configService.getString("security.cookie.sameSite", "LAX");
+        // SameSite 从配置读取，默认 STRICT：跨站请求(含跨站导航)一律不携带会话 Cookie，
+        // CSRF 无攻击面，替代已移除的 CsrfFilter(其 URL 模式带 context-path 前缀从未生效)。
+        // 副作用：从外部链接首次点入系统会显示未登录，站内刷新即可，内部系统可接受。
+        String sameSite = configService.getString("security.cookie.sameSite", "STRICT");
         cookie.setSameSite(Cookie.SameSiteOptions.valueOf(sameSite.toUpperCase()));
         return cookie;
     }

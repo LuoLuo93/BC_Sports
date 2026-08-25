@@ -21,38 +21,12 @@ export function setLoggingIn(value) {
   isLoggingIn = value
 }
 
-// CSRF Token 缓存（仅存储在内存中，不使用 localStorage）
-let csrfToken = null
-
-/**
- * 刷新 CSRF Token
- */
-export async function refreshCsrfToken() {
-  try {
-    const res = await request.get('/api/csrf')
-    if (res.code === 200 && res.data) {
-      csrfToken = res.data
-    }
-  } catch (e) {
-    console.warn('获取 CSRF Token 失败:', e)
-  }
-  return csrfToken
-}
-
-/**
- * 清除 CSRF Token（登出时调用）
- */
-export function clearCsrfToken() {
-  csrfToken = null
-}
+// CSRF 防护由会话 Cookie 的 SameSite=STRICT 承担（后端 ShiroConfig 配置），
+// 已移除前端 token 机制与后端 CsrfFilter（该过滤器 URL 模式带 context-path 前缀，从未生效）
 
 request.interceptors.request.use(config => {
   if (!(config.data instanceof FormData)) {
     config.headers['Content-Type'] = 'application/json'
-  }
-  // 注入 CSRF Token
-  if (csrfToken) {
-    config.headers['X-CSRF-Token'] = csrfToken
   }
   return config
 })
@@ -73,7 +47,6 @@ request.interceptors.response.use(
       }
       const authStore = useAuthStore()
       authStore.clearAuth()
-      clearCsrfToken() // 清除 CSRF Token
       if (!isLoggingOut && router.currentRoute.value.path !== '/login') {
         ElMessage.error(res.message || '登录已过期，请重新登录')
       }
@@ -92,22 +65,13 @@ request.interceptors.response.use(
         } else {
           const authStore = useAuthStore()
           authStore.clearAuth()
-          clearCsrfToken() // 清除 CSRF Token
           if (!isLoggingOut && router.currentRoute.value.path !== '/login') {
             ElMessage.error('登录已过期，请重新登录')
           }
           router.push('/login')
         }
       } else if (status === 403) {
-        // 检查是否是 CSRF Token 错误
-        const errorMsg = error.response.data?.message || ''
-        if (errorMsg.includes('CSRF')) {
-          // 刷新 CSRF Token 并提示用户重试
-          await refreshCsrfToken()
-          ElMessage.warning('CSRF Token 已刷新，请重试操作')
-        } else {
-          ElMessage.error('没有操作权限')
-        }
+        ElMessage.error('没有操作权限')
       } else {
         const msg = error.response.data?.message || error.response.data?.msg || '网络请求失败'
         ElMessage.error(msg)

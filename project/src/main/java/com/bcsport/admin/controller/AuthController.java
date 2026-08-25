@@ -1,7 +1,6 @@
 package com.bcsport.admin.controller;
 
 import com.bcsport.admin.common.Result;
-import com.bcsport.admin.config.csrf.CsrfFilter;
 import com.bcsport.admin.dto.LoginDTO;
 import com.bcsport.admin.entity.User;
 import com.bcsport.admin.annotation.OperLog;
@@ -20,8 +19,6 @@ import org.apache.shiro.web.mgt.DefaultWebSecurityManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.UUID;
 
 /**
  * 认证控制器
@@ -219,27 +216,6 @@ public class AuthController {
     })
     public String vuePage() {
         return "forward:/index.html";
-    }
-
-    /**
-     * 获取 CSRF Token
-     *
-     * 生成并返回 CSRF Token，存储到 Shiro Session 中
-     * 注意：必须使用 Shiro Session 而非 Servlet Session，避免 Servlet 容器覆盖 JSESSIONID Cookie
-     */
-    @GetMapping("/api/csrf")
-    @ResponseBody
-    public Result<String> getCsrfToken() {
-        try {
-            Session session = SecurityUtils.getSubject().getSession();
-            String token = UUID.randomUUID().toString();
-            session.setAttribute(CsrfFilter.CSRF_TOKEN_ATTR, token);
-            return Result.success(token);
-        } catch (Exception e) {
-            log.warn("获取 CSRF Token 失败: {}", e.getMessage());
-            // 返回一个新 Token，不存储到 Session
-            return Result.success(UUID.randomUUID().toString());
-        }
     }
 
 }

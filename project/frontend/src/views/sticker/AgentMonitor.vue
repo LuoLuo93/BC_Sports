@@ -701,10 +701,12 @@ onUnmounted(() => {
   letter-spacing: 0.04em;
 }
 
-/* 任务记录弹窗表格横向滚动条常显：el-scrollbar 的滑块默认 v-show 交互时才短暂出现，
-   现场根本发现不了可以横滑。覆盖 display/opacity 让横向滑块一直可见(不可滚动时宽度自然为0)。
-   仅作用于任务记录弹窗(.dialog-fixed-layout)，加高到 10px 方便鼠标拖动。 */
+/* 任务记录弹窗表格横向滚动条常显：el-scrollbar 的轨道条(bar)和滑块(thumb)都被
+   v-show 控制(交互时才短暂出现)，现场根本发现不了可以横滑。
+   两层都要强制 display(只改滑块不改轨道时，隐藏轨道里滑块渲染宽度为 0 仍不可见)；
+   仅作用于任务记录弹窗(.dialog-fixed-layout)，轨道加高到 10px 方便鼠标拖动。 */
 :deep(.dialog-fixed-layout .el-table .el-scrollbar__bar.is-horizontal) {
+  display: block !important;
   height: 10px;
 }
 :deep(.dialog-fixed-layout .el-table .el-scrollbar__bar.is-horizontal .el-scrollbar__thumb) {

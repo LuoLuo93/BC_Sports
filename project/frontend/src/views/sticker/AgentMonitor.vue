@@ -713,27 +713,6 @@ onUnmounted(() => {
   letter-spacing: 0.04em;
 }
 
-/* 任务记录表用浏览器原生滚动条：占位、不盖最后一行。
-   有溢出才出现，没有就不画。覆盖层假滑块(min-width 灰疙瘩)已去掉。 */
-:deep(.dialog-fixed-layout .task-record-table .el-scrollbar__wrap) {
-  scrollbar-width: auto;
-  scrollbar-color: #909399 #ebeef5;
-}
-:deep(.dialog-fixed-layout .task-record-table .el-scrollbar__wrap::-webkit-scrollbar) {
-  width: 12px;
-  height: 12px;
-}
-:deep(.dialog-fixed-layout .task-record-table .el-scrollbar__wrap::-webkit-scrollbar-track) {
-  background: #ebeef5;
-}
-:deep(.dialog-fixed-layout .task-record-table .el-scrollbar__wrap::-webkit-scrollbar-thumb) {
-  background: #909399;
-  border-radius: 6px;
-  border: 2px solid #ebeef5;
-}
-:deep(.dialog-fixed-layout .task-record-table .el-scrollbar__wrap::-webkit-scrollbar-thumb:hover) {
-  background: #606266;
-}
 .batch-tag.clickable {
   cursor: pointer;
   transition: all 0.15s;
@@ -942,5 +921,30 @@ onUnmounted(() => {
   border-radius: 6px;
   border: 1px solid #ebeef5;
   line-height: 1.6;
+}
+</style>
+
+<!-- 弹窗 teleport 到 body，必须非 scoped 才能命中。
+     原生滚动条占位、不盖最后一行；有溢出才出现，没有就不画。
+     选择器盖过全局 ::-webkit-scrollbar 的 6px。 -->
+<style>
+.el-overlay-dialog .dialog-fixed-layout .task-record-table .el-scrollbar__wrap {
+  scrollbar-width: auto;
+  scrollbar-color: #909399 #ebeef5;
+}
+.el-overlay-dialog .dialog-fixed-layout .task-record-table .el-scrollbar__wrap::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+.el-overlay-dialog .dialog-fixed-layout .task-record-table .el-scrollbar__wrap::-webkit-scrollbar-track {
+  background: #ebeef5;
+}
+.el-overlay-dialog .dialog-fixed-layout .task-record-table .el-scrollbar__wrap::-webkit-scrollbar-thumb {
+  background: #909399;
+  border-radius: 6px;
+  border: 2px solid #ebeef5;
+}
+.el-overlay-dialog .dialog-fixed-layout .task-record-table .el-scrollbar__wrap::-webkit-scrollbar-thumb:hover {
+  background: #606266;
 }
 </style>

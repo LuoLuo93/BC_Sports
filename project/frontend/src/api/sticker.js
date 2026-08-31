@@ -62,6 +62,25 @@ export function updateStickerDataMaterial(data) {
   return request.put('/api/sticker/data/material', data)
 }
 
+// ─── 贴纸资料批量导入 ──────────────────────
+// 按货号更新执行标准/EAN13/安全类别/材质；FormData 上传，大批量导入超时放宽到 10 分钟
+export function importStickerData(formData) {
+  return request.post('/api/sticker/data/import', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 600000
+  })
+}
+
+// 下载导入模板（blob，拦截器已直接返回 blob 数据）
+export function downloadStickerDataTemplate() {
+  return request.get('/api/sticker/data/template', { responseType: 'blob' })
+}
+
+// 导入日志分页
+export function getStickerDataImportLogPage(params) {
+  return request.get('/api/sticker/data/import-log/page', { params })
+}
+
 // ─── Agent 打印 ──────────────────────
 // force=true: 该单已有未完成任务时先批量取消再重新生成(强制重新下发)
 export function createAgentPrintTasks(orderId, agentId, force = false) {

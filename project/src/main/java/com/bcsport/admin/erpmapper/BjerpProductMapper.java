@@ -40,6 +40,15 @@ public interface BjerpProductMapper {
                              @Param("sizeGroupId") String sizeGroupId,
                              @Param("safetyCategory") String safetyCategory);
 
+    /**
+     * 批量更新贴纸可编辑字段（导入用）：MERGE INTO 按 name(货号) 匹配，单 SQL 更新多行。
+     * 值为 null 的字段在 SQL 里用 CASE 保留库内原值（留空=不更新，避免误清 ERP 主数据）。
+     * 调用方需自行分批（每批建议 ≤500 条，避免 SQL 过长/绑定变量超限），且同一批内货号不可重复（否则 ORA-30926）。
+     * @param rows 每行包含 materialNumber + executionStandard/ean13/safetyCategory/fabCode/fabElement/acCode/accElement（除货号外均可为 null）
+     * @return 受影响行数（MERGE 的 UPDATE 行数）
+     */
+    int batchUpdateStickerFields(@Param("list") List<Map<String, String>> rows);
+
     // ==================== 预估成本管理 ====================
 
     /** 预估成本管理 - 计数 */

@@ -156,6 +156,35 @@
         WHERE name = #{materialNumber}
     </update>
 
+    <!-- 批量更新贴纸可编辑字段(导入用):MERGE INTO 按 name 匹配;
+         可空参数必须显式 jdbcType=VARCHAR(未配 jdbcTypeForNull,Oracle 拒绝 OTHER 类型 null 绑定);
+         src 值为 NULL 的字段用 CASE 保留库内原值(留空=不更新,不写 NULL 清空) -->
+    <update id="batchUpdateStickerFields">
+        MERGE INTO M_PRODUCT t
+        USING (
+            <foreach collection="list" item="row" separator="UNION ALL">
+                SELECT #{row.materialNumber, jdbcType=VARCHAR} AS name,
+                       #{row.executionStandard, jdbcType=VARCHAR} AS theme_name,
+                       #{row.ean13, jdbcType=VARCHAR} AS intscode,
+                       #{row.safetyCategory, jdbcType=VARCHAR} AS safety_category,
+                       #{row.fabCode, jdbcType=VARCHAR} AS fabcode,
+                       #{row.fabElement, jdbcType=VARCHAR} AS fabelement,
+                       #{row.acCode, jdbcType=VARCHAR} AS accode,
+                       #{row.accElement, jdbcType=VARCHAR} AS accelement
+                FROM dual
+            </foreach>
+        ) src
+        ON (t.name = src.name)
+        WHEN MATCHED THEN UPDATE SET
+            t.THEME_NAME = CASE WHEN src.theme_name IS NOT NULL THEN src.theme_name ELSE t.THEME_NAME END,
+            t.INTSCODE = CASE WHEN src.intscode IS NOT NULL THEN src.intscode ELSE t.INTSCODE END,
+            t.SAFETY_CATEGORY = CASE WHEN src.safety_category IS NOT NULL THEN src.safety_category ELSE t.SAFETY_CATEGORY END,
+            t.FABCODE = CASE WHEN src.fabcode IS NOT NULL THEN src.fabcode ELSE t.FABCODE END,
+            t.FABELEMENT = CASE WHEN src.fabelement IS NOT NULL THEN src.fabelement ELSE t.FABELEMENT END,
+            t.ACCODE = CASE WHEN src.accode IS NOT NULL THEN src.accode ELSE t.ACCODE END,
+            t.ACCELEMENT = CASE WHEN src.accelement IS NOT NULL THEN src.accelement ELSE t.ACCELEMENT END
+    </update>
+
     <!-- ==================== 预估成本管理 ==================== -->
 
     <sql id="estimatedCostWhere">

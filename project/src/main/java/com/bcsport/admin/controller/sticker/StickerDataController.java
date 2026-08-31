@@ -1,23 +1,45 @@
 package com.bcsport.admin.controller.sticker;
 
+import cn.hutool.poi.excel.ExcelUtil;
+import cn.hutool.poi.excel.ExcelWriter;
 import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.common.Result;
 import com.bcsport.admin.dto.sticker.StickerDataQueryDTO;
+import com.bcsport.admin.entity.sticker.StickerDataImportLog;
+import com.bcsport.admin.mapper.sticker.StickerDataImportLogMapper;
+import com.bcsport.admin.service.sticker.StickerDataImportService;
 import com.bcsport.admin.service.sticker.StickerPrintService;
+import com.bcsport.admin.util.ShiroSecurityUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/sticker/data")
 public class StickerDataController {
 
     @Autowired
     private StickerPrintService stickerPrintService;
+
+    @Autowired
+    private StickerDataImportService stickerDataImportService;
+
+    @Autowired
+    private StickerDataImportLogMapper stickerDataImportLogMapper;
 
     @GetMapping("/page")
     @RequiresPermissions("sticker:data:query")
@@ -84,5 +106,103 @@ public class StickerDataController {
         stickerPrintService.updateEditableFields(materialNumber, executionStandard, ean13,
                 fabCode, fabElement, acCode, accElement, sizeGroupId, safetyCategory);
         return Result.success("保存成功");
+    }
+
+    /**
+     * Excel 批量导入：按货号更新执行标准/EAN13/安全类别/4个材质字段，写回 ERP M_PRODUCT。
+     * Excel 留空的字段不更新（保留库内原值），不写 NULL 清空。
+     */
+    @PostMapping("/import")
+    @RequiresPermissions("sticker:data:import")
+    public Result<Map<String, Object>> importExcel(@RequestParam("file") MultipartFile file) {
+        if (file.isEmpty()) {
+            return Result.paramError("请上传Excel文件");
+        }
+        if (file.getSize() > 100 * 1024 * 1024) {
+            return Result.paramError("文件大小不能超过100MB");
+        }
+        String originalFilename = file.getOriginalFilename();
+        if (originalFilename == null || (!originalFilename.endsWith(".xlsx") && !originalFilename.endsWith(".xls"))) {
+            return Result.paramError("仅支持.xlsx或.xls格式的Excel文件");
+        }
+        try {
+            Map<String, Object> result = stickerDataImportService.importFromExcel(file);
+            return Result.success(result);
+        } catch (cn.hutool.poi.exceptions.POIException | org.apache.poi.ooxml.POIXMLException
+                 | org.apache.poi.util.RecordFormatException e) {
+            log.error("贴纸资料 Excel解析失败: {}", e.getMessage());
+            String errorMsg = "Excel解析失败，请确认文件是标准的 .xlsx/.xls 格式: " + e.getMessage();
+            saveFailedLog(file, errorMsg);
+            return Result.error(errorMsg);
+        } catch (Exception e) {
+            log.error("贴纸资料导入失败: {}", e.getMessage(), e);
+            String errorMsg = "导入失败：" + e.getMessage();
+            saveFailedLog(file, errorMsg);
+            return Result.error(errorMsg);
+        }
+    }
+
+    private void saveFailedLog(MultipartFile file, String errorMsg) {
+        try {
+            StickerDataImportLog logEntity = new StickerDataImportLog();
+            logEntity.setFileName(file.getOriginalFilename());
+            logEntity.setFileSize(file.getSize());
+            logEntity.setTotalCount(0);
+            logEntity.setSuccessCount(0);
+            logEntity.setFailCount(0);
+            logEntity.setStatus("FAILED");
+            logEntity.setErrorMsg(errorMsg.length() > 4000 ? errorMsg.substring(0, 4000) : errorMsg);
+            logEntity.setCreateBy(ShiroSecurityUtils.getCurrentUsername());
+            logEntity.setCreateTime(LocalDateTime.now());
+            stickerDataImportLogMapper.insert(logEntity);
+        } catch (Exception ex) {
+            log.warn("保存贴纸资料失败导入日志失败: {}", ex.getMessage());
+        }
+    }
+
+    /**
+     * 下载导入模板：货号必填，其余列留空=不更新该字段。
+     */
+    @GetMapping("/template")
+    @RequiresPermissions("sticker:data:import")
+    public void downloadTemplate(HttpServletResponse response) throws IOException {
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        response.setHeader("Content-Disposition",
+                "attachment; filename=" + URLEncoder.encode("贴纸资料导入模板.xlsx", StandardCharsets.UTF_8.name()));
+
+        ExcelWriter writer = ExcelUtil.getWriter(true);
+        try {
+            writer.addHeaderAlias("货号", "货号");
+            writer.addHeaderAlias("执行标准", "执行标准");
+            writer.addHeaderAlias("EAN13", "EAN13");
+            writer.addHeaderAlias("安全类别", "安全类别");
+            writer.addHeaderAlias("面料成分1", "面料成分1");
+            writer.addHeaderAlias("面料成分2", "面料成分2");
+            writer.addHeaderAlias("辅料成分1", "辅料成分1");
+            writer.addHeaderAlias("辅料成分2", "辅料成分2");
+
+            Map<String, Object> sample = new LinkedHashMap<>();
+            sample.put("货号", "NLM25001");
+            sample.put("执行标准", "GB/T 22853-2019");
+            sample.put("EAN13", "123456789012");
+            sample.put("安全类别", "GB 31701-2015 B类");
+            sample.put("面料成分1", "100%聚酯纤维");
+            sample.put("面料成分2", "");
+            sample.put("辅料成分1", "100%氨纶");
+            sample.put("辅料成分2", "");
+            writer.write(Collections.singletonList(sample), true);
+            writer.flush(response.getOutputStream());
+        } finally {
+            writer.close();
+        }
+    }
+
+    /**
+     * 导入日志分页查询。
+     */
+    @GetMapping("/import-log/page")
+    @RequiresPermissions("sticker:data:query")
+    public Result<PageResult<StickerDataImportLog>> importLogPage(PageQuery pageQuery) {
+        return Result.success(stickerDataImportService.logPage(pageQuery));
     }
 }

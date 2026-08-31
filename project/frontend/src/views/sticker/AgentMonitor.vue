@@ -69,7 +69,7 @@
     </el-card>
 
     <!-- 任务记录弹窗 -->
-    <el-dialog v-model="taskDialogVisible" :title="`${currentAgent} - 打印任务`" width="1500px" class="dialog-fixed-layout">
+    <el-dialog v-model="taskDialogVisible" :title="`${currentAgent} - 打印任务`" width="1620px" class="dialog-fixed-layout">
       <div class="task-filter-bar dialog-fixed">
         <span class="task-filter-label">批次查询</span>
         <el-input
@@ -94,7 +94,15 @@
         <el-button type="primary" size="small" @click="onBatchSearch">查询</el-button>
         <el-button v-if="taskQuery.batchId || taskQuery.orderNo" size="small" link type="primary" @click="clearBatch">清除</el-button>
       </div>
-      <el-table ref="taskTableRef" :data="taskList" border size="small" :max-height="taskTableMaxHeight">
+      <el-table
+        ref="taskTableRef"
+        :data="taskList"
+        border
+        size="small"
+        :max-height="taskTableMaxHeight"
+        native-scrollbar
+        class="task-record-table"
+      >
         <el-table-column label="任务ID" width="350" show-overflow-tooltip>
           <template #default="{ row }">
             <span>{{ row.taskId }}</span>
@@ -129,7 +137,7 @@
             </el-tooltip>
           </template>
         </el-table-column>
-        <el-table-column label="打印时间" width="160" show-overflow-tooltip>
+        <el-table-column label="打印时间" width="175" show-overflow-tooltip>
           <template #default="{ row }">{{ formatTime(row.printTime) }}</template>
         </el-table-column>
         <el-table-column label="操作" width="140" align="center" fixed="right">
@@ -705,16 +713,26 @@ onUnmounted(() => {
   letter-spacing: 0.04em;
 }
 
-/* 任务记录弹窗表格滚动条常显：el-scrollbar 的轨道条(bar)和滑块(thumb)都被
-   v-show 控制(交互时才短暂出现)，现场发现不了可以横滑。
-   两层都要强制 display(只改滑块不改轨道时，隐藏轨道里滑块渲染宽度为 0 仍不可见)。
-   横向+纵向一起常显，样式保持 Element Plus 默认(与右侧纵向滚动条观感一致)：
-   6px 细条、默认灰、悬停加深，不加轨道底色不改粗。 */
-:deep(.dialog-fixed-layout .el-table .el-scrollbar__bar) {
-  display: block !important;
+/* 任务记录表用浏览器原生滚动条：占位、不盖最后一行。
+   有溢出才出现，没有就不画。覆盖层假滑块(min-width 灰疙瘩)已去掉。 */
+:deep(.dialog-fixed-layout .task-record-table .el-scrollbar__wrap) {
+  scrollbar-width: auto;
+  scrollbar-color: #909399 #ebeef5;
 }
-:deep(.dialog-fixed-layout .el-table .el-scrollbar__bar .el-scrollbar__thumb) {
-  display: block !important;
+:deep(.dialog-fixed-layout .task-record-table .el-scrollbar__wrap::-webkit-scrollbar) {
+  width: 12px;
+  height: 12px;
+}
+:deep(.dialog-fixed-layout .task-record-table .el-scrollbar__wrap::-webkit-scrollbar-track) {
+  background: #ebeef5;
+}
+:deep(.dialog-fixed-layout .task-record-table .el-scrollbar__wrap::-webkit-scrollbar-thumb) {
+  background: #909399;
+  border-radius: 6px;
+  border: 2px solid #ebeef5;
+}
+:deep(.dialog-fixed-layout .task-record-table .el-scrollbar__wrap::-webkit-scrollbar-thumb:hover) {
+  background: #606266;
 }
 .batch-tag.clickable {
   cursor: pointer;
@@ -768,7 +786,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   max-height: calc(100vh - 40px);
-  /* 弹窗宽度写死1500px时,窄屏/浏览器缩放会整体超出视口且遮罩层不产生横向滚动,
+  /* 弹窗宽度写死1600px时,窄屏/浏览器缩放会整体超出视口且遮罩层不产生横向滚动,
      右侧(含固定操作列)被裁掉。限制最大宽度贴住视口,弹窗变窄后
      el-table 列宽总和超出容器会自动出现表格自身的横向滚动条。 */
   max-width: calc(100vw - 24px);

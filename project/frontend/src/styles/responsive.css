@@ -66,6 +66,14 @@
     max-width: 560px !important;
   }
 
+  /* 数据型宽弹窗(任务记录等 dialog-fixed-layout)例外:列宽固定,
+     压到 560px 会挤坏布局,保持按自身宽度属性、贴视口自适应即可,
+     超出部分的横向滚动由表格内部滚动条承担。 */
+  .el-overlay-dialog .el-dialog.dialog-fixed-layout {
+    width: var(--el-dialog-width, 92%) !important;
+    max-width: calc(100vw - 48px) !important;
+  }
+
   .pagination-wrapper {
     flex-wrap: wrap;
     gap: 8px;

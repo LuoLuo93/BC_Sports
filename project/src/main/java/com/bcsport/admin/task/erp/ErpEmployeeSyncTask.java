@@ -279,8 +279,28 @@ public class ErpEmployeeSyncTask {
     /**
      * 变更同步 - ObjectModify 增量更新伯俊ERP员工
      * 伯俊框架通过params中的ak（员工工号）自动定位记录
+     * 兜底：工号在ERP定位不到（报"未找到对象"）时降级走入职创建，与企微变动同步的自动入职行为对齐
      */
     private SyncResult syncUpdate(IhrEmployeeDetail detail) {
+        try {
+            return doModify(detail);
+        } catch (BjErpApiClient.BusinessCallException e) {
+            if (!BjErpApiClient.isRecordNotFound(e.getMessage())) {
+                throw e;
+            }
+            log.info("员工 {}({}) 在伯俊ERP未找到对象，降级走入职创建", detail.getStaffName(), detail.getStaffNo());
+            try {
+                return syncOnboarding(detail);
+            } catch (BjErpApiClient.BusinessCallException createEx) {
+                // 携带创建的请求/响应体，并保留原变更错误，便于日志排查
+                throw new BjErpApiClient.BusinessCallException(
+                        "自动入职失败[原变更错误: " + e.getMessage() + "]: " + createEx.getMessage(),
+                        createEx.getRequestBody(), createEx.getResponseBody());
+            }
+        }
+    }
+
+    private SyncResult doModify(IhrEmployeeDetail detail) {
         JSONObject data = IhrToBjErpConverter.toModifyParams(detail);
         log.debug("变更同步: staffNo={}, staffName={}, params={}", detail.getStaffNo(), detail.getStaffName(), data);
         BjErpApiClient.CallRecord record = bjErpApiClient.call(buildTransactions("ObjectModify", data));

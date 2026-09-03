@@ -213,6 +213,17 @@ public class BjErpApiClient {
         return errMsg != null && errMsg.contains("已存在");
     }
 
+    /**
+     * 判断错误信息是否为"未找到对象"（ObjectModify 按工号 ak 定位不到记录）。
+     * 用于变更同步时识别"该人员不在伯俊ERP"，触发降级创建。
+     *
+     * @param errMsg 错误信息
+     * @return true 表示是"未找到对象"类错误
+     */
+    public static boolean isRecordNotFound(String errMsg) {
+        return errMsg != null && errMsg.contains("未找到对象");
+    }
+
     // ==================== 工具 ====================
 
     private String encode(String value) {

@@ -93,6 +93,7 @@ import {
   syncNxcrmMemberTags,
   getNxcrmSyncStatus
 } from '@/api/nxcrm'
+import { PAGE_SIZES, defaultPageSize } from '@/utils/appConfig'
 
 const activeTab = ref('detail')
 
@@ -100,7 +101,7 @@ const activeTab = ref('detail')
 const detailLoading = ref(false)
 const detailData = ref([])
 const detailTotal = ref(0)
-const detailQuery = reactive({ nasOuid: '', tagName: '', pageNum: 1, pageSize: 20 })
+const detailQuery = reactive({ nasOuid: '', tagName: '', pageNum: 1, pageSize: defaultPageSize.value })
 
 async function loadDetail() {
   detailLoading.value = true
@@ -117,7 +118,7 @@ async function loadDetail() {
 const tagLoading = ref(false)
 const tagData = ref([])
 const tagTotal = ref(0)
-const tagQuery = reactive({ keyword: '', pageNum: 1, pageSize: 20 })
+const tagQuery = reactive({ keyword: '', pageNum: 1, pageSize: defaultPageSize.value })
 
 async function loadTagList() {
   tagLoading.value = true

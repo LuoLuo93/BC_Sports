@@ -119,6 +119,7 @@ import { Search } from '@element-plus/icons-vue'
 import { getLogPage, cleanLogs } from '@/api/log'
 import { usePermission } from '@/composables/usePermission'
 import { formatTime } from '@/utils/format'
+import { PAGE_SIZES, defaultPageSize } from '@/utils/appConfig'
 
 const loading = ref(false)
 const { hasPermission } = usePermission()
@@ -132,7 +133,7 @@ const modules = ['用户管理', '角色管理', '菜单管理', '部门管理',
 
 const query = ref({
   pageNum: 1,
-  pageSize: 20,
+  pageSize: defaultPageSize.value,
   module: '',
   username: '',
   status: null,
@@ -174,7 +175,7 @@ function handleSearch() {
 }
 
 function handleReset() {
-  query.value = { pageNum: 1, pageSize: 20, module: '', username: '', status: null, startTime: null, endTime: null }
+  query.value = { pageNum: 1, pageSize: defaultPageSize.value, module: '', username: '', status: null, startTime: null, endTime: null }
   dateRange.value = null
   loadData()
 }

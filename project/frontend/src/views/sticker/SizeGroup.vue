@@ -267,7 +267,7 @@ import { getSizeGroupPage, getSizeGroup, createSizeGroup, updateSizeGroup, delet
 import { getCommonBrands, getCommonKinds } from '@/api/common'
 import { usePageQuery } from '@/composables/usePageQuery'
 import { usePermission } from '@/composables/usePermission'
-import { PAGE_SIZES } from '@/utils/appConfig'
+import { PAGE_SIZES, defaultPageSize } from '@/utils/appConfig'
 import { formatTime } from '@/utils/format'
 
 defineOptions({ name: 'StickerSizeGroup' })
@@ -518,7 +518,7 @@ function onTabChange(tab) {
 const logLoading = ref(false)
 const logData = ref([])
 const logTotal = ref(0)
-const logQuery = reactive({ pageNum: 1, pageSize: 10 })
+const logQuery = reactive({ pageNum: 1, pageSize: defaultPageSize.value })
 const errorDialogVisible = ref(false)
 const errorDialogContent = ref('')
 

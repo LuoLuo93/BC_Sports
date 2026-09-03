@@ -144,7 +144,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { Search, RefreshRight, Refresh } from '@element-plus/icons-vue'
 import { usePageQuery } from '@/composables/usePageQuery'
 import { useSyncAction } from '@/composables/useSyncAction'
-import { PAGE_SIZES } from '@/utils/appConfig'
+import { PAGE_SIZES, defaultPageSize } from '@/utils/appConfig'
 import { formatTime } from '@/utils/format'
 import { getFollowUserPage, getFollowUserCustomers, getFollowUserGroupStats, syncFollowUsers, getFollowUserSyncStatus } from '@/api/qywx'
 
@@ -187,7 +187,7 @@ const customerLoading = ref(false)
 const customerData = ref([])
 const customerTotal = ref(0)
 const currentUser = ref({})
-const customerQuery = reactive({ userid: '', name: '', pageNum: 1, pageSize: 20 })
+const customerQuery = reactive({ userid: '', name: '', pageNum: 1, pageSize: defaultPageSize.value })
 
 function openCustomerDialog(row) {
   currentUser.value = row
@@ -216,7 +216,7 @@ const groupStatDialogVisible = ref(false)
 const groupStatLoading = ref(false)
 const groupStatData = ref([])
 const groupStatTotal = ref(0)
-const groupStatQuery = reactive({ owner: '', pageNum: 1, pageSize: 20 })
+const groupStatQuery = reactive({ owner: '', pageNum: 1, pageSize: defaultPageSize.value })
 
 function openGroupStatDialog(row) {
   currentUser.value = row

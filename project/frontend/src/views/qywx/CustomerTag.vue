@@ -159,7 +159,7 @@ import { Upload } from '@element-plus/icons-vue'
 import { Search, RefreshRight, Refresh, Plus, Delete } from '@element-plus/icons-vue'
 import { usePermission } from '@/composables/usePermission'
 import { useSyncAction } from '@/composables/useSyncAction'
-import { PAGE_SIZES } from '@/utils/appConfig'
+import { PAGE_SIZES, defaultPageSize } from '@/utils/appConfig'
 import { formatTime } from '@/utils/format'
 import { getCorpTags, syncQywxTags, getQywxTagSyncStatus, getTagTemplate, uploadTagData, getTagRecords, addCorpTagGroup, editCorpTagGroup, deleteCorpTagGroup } from '@/api/qywx'
 
@@ -335,7 +335,7 @@ async function handleDeleteTagGroup(row) {
 const recordLoading = ref(false)
 const recordData = ref([])
 const recordTotal = ref(0)
-const recordQuery = reactive({ externalUserid: '', tagName: '', batchNo: '', pageNum: 1, pageSize: 20 })
+const recordQuery = reactive({ externalUserid: '', tagName: '', batchNo: '', pageNum: 1, pageSize: defaultPageSize.value })
 
 async function loadRecordData() {
   recordLoading.value = true

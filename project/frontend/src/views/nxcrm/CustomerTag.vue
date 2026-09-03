@@ -184,7 +184,7 @@ defineOptions({ name: 'NxcrmCustomerTag' })
 import { ref, reactive, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Plus, RefreshRight, Search } from '@element-plus/icons-vue'
-import { PAGE_SIZES } from '@/utils/appConfig'
+import { PAGE_SIZES, defaultPageSize } from '@/utils/appConfig'
 import { formatTime } from '@/utils/format'
 import { getNxcrmTagTasks, createNxcrmTagTask, executeNxcrmTagTask, getNxcrmTaskDetails, getNxcrmMemberTags, fillNxcrmShopId } from '@/api/nxcrm'
 
@@ -197,7 +197,7 @@ function statusTagType(s) { return ['info', 'warning', 'success', 'danger'][s] |
 const taskLoading = ref(false)
 const taskData = ref([])
 const taskTotal = ref(0)
-const taskQuery = reactive({ pageNum: 1, pageSize: 20 })
+const taskQuery = reactive({ pageNum: 1, pageSize: defaultPageSize.value })
 const executingTaskId = ref(null)
 
 async function loadTasks() {
@@ -238,7 +238,7 @@ const selectedTask = ref(null)
 const detailLoading = ref(false)
 const detailData = ref([])
 const detailTotal = ref(0)
-const detailQuery = reactive({ pageNum: 1, pageSize: 20, status: null })
+const detailQuery = reactive({ pageNum: 1, pageSize: defaultPageSize.value, status: null })
 
 function selectTask(row) { selectedTask.value = row }
 function viewDetails(row) {
@@ -284,7 +284,7 @@ async function handleCreate() {
 const memberTagLoading = ref(false)
 const memberTagData = ref([])
 const memberTagTotal = ref(0)
-const memberTagQuery = reactive({ batchNo: '', status: null, pageNum: 1, pageSize: 20 })
+const memberTagQuery = reactive({ batchNo: '', status: null, pageNum: 1, pageSize: defaultPageSize.value })
 const fillShopLoading = ref(false)
 
 function memberStatusLabel(s) { return ['待处理', 'shopId已填充', '已打标签', '失败'][s] || '未知' }

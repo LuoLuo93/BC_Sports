@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bcsport.admin.bidwmapper.OdsSalesMainMapper">
+
+    <!-- 显式别名为驼峰，不依赖 mapUnderscoreToCamelCase 配置 -->
+    <select id="selectPage" resultType="com.bcsport.admin.entity.bi.OdsSalesMain">
+        SELECT
+            BILL_ID              AS "billId",
+            BILL_NO              AS "billNo",
+            BILL_DATE            AS "billDate",
+            BILL_TIME            AS "billTime",
+            VIP_CODE             AS "vipCode",
+            VIP_MOBILE           AS "vipMobile",
+            OMS_SOURCECODE       AS "omsSourcecode",
+            SALES_TYPE           AS "salesType",
+            ITEM_ID              AS "itemId",
+            BILL_POS_ID          AS "billPosId",
+            BILL_POS_CODE        AS "billPosCode",
+            BILL_POS_NAME        AS "billPosName",
+            STORE_ID             AS "storeId",
+            STORE_CODE           AS "storeCode",
+            STORE_NAME           AS "storeName",
+            PRODUCT_CODE         AS "productCode",
+            PRODUCT_STYLE_NO     AS "productStyleNo",
+            PRODUCT_NAME         AS "productName",
+            COLORSALIAS          AS "colorsalias",
+            BARCODE              AS "barcode",
+            SIZES                AS "sizes",
+            QTY                  AS "qty",
+            RETAIL_PRICE         AS "retailPrice",
+            RETAIL_AMOUNT        AS "retailAmount",
+            TRANSACTION_AMOUNT   AS "transactionAmount",
+            REVENUE              AS "revenue",
+            SETTLEMENT_AMOUNT    AS "settlementAmount",
+            RECALC_REVENUE       AS "recalcRevenue",
+            ANCHOR_SUMMARYID     AS "anchorSummaryid",
+            ANCHOR_SUMMARYNAME   AS "anchorSummaryname"
+        FROM ODS_SALES_MAIN
+        <where>
+            <if test="q != null and q.billNo != null and q.billNo != ''">
+                AND BILL_NO LIKE '%' || #{q.billNo} || '%'
+            </if>
+            <if test="q != null and q.billTimeStart != null">
+                AND BILL_TIME &gt;= #{q.billTimeStart}
+            </if>
+            <!-- 结束日期 +1 天为开区间上界，即包含结束日全天 -->
+            <if test="q != null and q.billTimeEnd != null">
+                AND BILL_TIME &lt; #{q.billTimeEnd} + 1
+            </if>
+        </where>
+        ORDER BY BILL_TIME DESC, ITEM_ID DESC
+    </select>
+
+    <!-- 归属维度字段编辑：表无主键，用 BILL_NO + ITEM_ID 定位行(Oracle空串即NULL，清空字段传空串即可) -->
+    <update id="updateRow">
+        UPDATE ODS_SALES_MAIN
+           SET SALES_TYPE        = #{e.salesType},
+               STORE_CODE        = #{e.storeCode},
+               STORE_NAME        = #{e.storeName},
+               BILL_POS_CODE     = #{e.billPosCode},
+               BILL_POS_NAME     = #{e.billPosName},
+               VIP_CODE          = #{e.vipCode},
+               VIP_MOBILE        = #{e.vipMobile},
+               OMS_SOURCECODE    = #{e.omsSourcecode},
+               ANCHOR_SUMMARYID  = #{e.anchorSummaryid},
+               ANCHOR_SUMMARYNAME = #{e.anchorSummaryname}
+         WHERE BILL_NO = #{e.billNo}
+           AND ITEM_ID = #{e.itemId}
+    </update>
+
+</mapper>

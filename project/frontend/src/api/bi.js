@@ -33,3 +33,12 @@ export function getShopDailyBudgetTemplate() {
 export function getShopDailyBudgetImportLogPage(params) {
   return request.get('/api/bi/shop-daily-budget/import-log/page', { params })
 }
+
+// 数仓销售查看
+export function getDwSalesMainPage(params) {
+  return request.get('/api/bi/dw-sales/page', { params })
+}
+
+export function updateDwSalesMain(data) {
+  return request.post('/api/bi/dw-sales/update', data)
+}

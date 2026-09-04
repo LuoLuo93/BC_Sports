@@ -50,7 +50,7 @@
         ORDER BY BILL_TIME DESC, ITEM_ID DESC
     </select>
 
-    <!-- 归属维度字段编辑：表无主键，用 BILL_NO + ITEM_ID 定位行(Oracle空串即NULL，清空字段传空串即可) -->
+    <!-- 归属维度+金额字段编辑：表无主键，用 BILL_NO + ITEM_ID 定位行(Oracle空串即NULL，清空字段传空串即可) -->
     <update id="updateRow">
         UPDATE ODS_SALES_MAIN
            SET SALES_TYPE        = #{e.salesType},
@@ -62,7 +62,13 @@
                VIP_MOBILE        = #{e.vipMobile},
                OMS_SOURCECODE    = #{e.omsSourcecode},
                ANCHOR_SUMMARYID  = #{e.anchorSummaryid},
-               ANCHOR_SUMMARYNAME = #{e.anchorSummaryname}
+               ANCHOR_SUMMARYNAME = #{e.anchorSummaryname},
+               QTY               = #{e.qty},
+               RETAIL_PRICE      = #{e.retailPrice},
+               RETAIL_AMOUNT     = #{e.retailAmount},
+               TRANSACTION_AMOUNT = #{e.transactionAmount},
+               REVENUE           = #{e.revenue},
+               RECALC_REVENUE    = #{e.recalcRevenue}
          WHERE BILL_NO = #{e.billNo}
            AND ITEM_ID = #{e.itemId}
     </update>

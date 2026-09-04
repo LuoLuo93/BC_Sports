@@ -63,9 +63,9 @@
           <el-table-column prop="vipCode" label="会员卡号" min-width="120" show-overflow-tooltip />
           <el-table-column prop="vipMobile" label="会员手机号" min-width="120" show-overflow-tooltip />
           <el-table-column prop="omsSourcecode" label="网单来源单号" min-width="140" show-overflow-tooltip />
-          <el-table-column v-if="hasPermission('bi:dw-sales:edit')" label="操作" width="80" align="center" fixed="right">
+          <el-table-column v-if="hasPermission('bi:dw-sales:edit')" label="操作" width="90" align="center" fixed="right">
             <template #default="{ row }">
-              <el-button link type="primary" size="small" :disabled="!row.itemId" @click="openEdit(row)">编辑</el-button>
+              <el-button type="primary" plain size="small" :disabled="!row.itemId" @click="openEdit(row)">编辑</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -84,27 +84,59 @@
       </div>
     </el-card>
 
-    <!-- 编辑弹窗：仅归属维度字段，数量金额等源系统数据不可改 -->
-    <el-dialog v-model="editDialogVisible" title="编辑销售明细" width="680px" destroy-on-close>
-      <el-alert type="warning" show-icon :closable="false" style="margin-bottom: 12px"
+    <!-- 编辑弹窗：归属维度 + 数量/金额字段 -->
+    <el-dialog v-model="editDialogVisible" title="编辑销售明细" width="760px" destroy-on-close>
+      <el-alert type="warning" show-icon :closable="false"
         title="该表由ETL按日期范围重灌，人工修改在下次刷新该日期段时会被覆盖，仅作临时修正" />
-      <el-descriptions :column="2" border size="small" style="margin-bottom: 12px">
+      <el-descriptions :column="2" border size="small" class="edit-context">
         <el-descriptions-item label="单据号">{{ editForm.billNo }}</el-descriptions-item>
         <el-descriptions-item label="明细ID">{{ editForm.itemId }}</el-descriptions-item>
+        <el-descriptions-item label="单据日期">{{ formatBillDate(editForm.billDate) }}</el-descriptions-item>
+        <el-descriptions-item label="提交时间">{{ formatTime(editForm.billTime) }}</el-descriptions-item>
       </el-descriptions>
-      <el-form :model="editForm" label-width="100px">
-        <el-row :gutter="12">
-          <el-col :span="12"><el-form-item label="销售类型"><el-input v-model="editForm.salesType" /></el-form-item></el-col>
-          <el-col :span="12"><el-form-item label="网单来源单号"><el-input v-model="editForm.omsSourcecode" /></el-form-item></el-col>
-          <el-col :span="12"><el-form-item label="店铺CODE"><el-input v-model="editForm.storeCode" /></el-form-item></el-col>
-          <el-col :span="12"><el-form-item label="店铺名称"><el-input v-model="editForm.storeName" /></el-form-item></el-col>
-          <el-col :span="12"><el-form-item label="营业员CODE"><el-input v-model="editForm.billPosCode" /></el-form-item></el-col>
-          <el-col :span="12"><el-form-item label="营业员名称"><el-input v-model="editForm.billPosName" /></el-form-item></el-col>
-          <el-col :span="12"><el-form-item label="会员卡号"><el-input v-model="editForm.vipCode" /></el-form-item></el-col>
-          <el-col :span="12"><el-form-item label="会员手机号"><el-input v-model="editForm.vipMobile" /></el-form-item></el-col>
-          <el-col :span="12"><el-form-item label="主播ID"><el-input v-model="editForm.anchorSummaryid" /></el-form-item></el-col>
-          <el-col :span="12"><el-form-item label="主播名称"><el-input v-model="editForm.anchorSummaryname" /></el-form-item></el-col>
-        </el-row>
+      <el-form :model="editForm" label-width="96px" class="edit-form">
+        <el-divider content-position="left">归属信息</el-divider>
+        <div class="form-col-wrap">
+          <div class="form-col">
+            <el-form-item label="销售类型"><el-input v-model="editForm.salesType" /></el-form-item>
+            <el-form-item label="店铺CODE"><el-input v-model="editForm.storeCode" /></el-form-item>
+            <el-form-item label="营业员CODE"><el-input v-model="editForm.billPosCode" /></el-form-item>
+            <el-form-item label="会员卡号"><el-input v-model="editForm.vipCode" /></el-form-item>
+            <el-form-item label="主播ID"><el-input v-model="editForm.anchorSummaryid" /></el-form-item>
+          </div>
+          <div class="form-col">
+            <el-form-item label="网单来源单号"><el-input v-model="editForm.omsSourcecode" /></el-form-item>
+            <el-form-item label="店铺名称"><el-input v-model="editForm.storeName" /></el-form-item>
+            <el-form-item label="营业员名称"><el-input v-model="editForm.billPosName" /></el-form-item>
+            <el-form-item label="会员手机号"><el-input v-model="editForm.vipMobile" /></el-form-item>
+            <el-form-item label="主播名称"><el-input v-model="editForm.anchorSummaryname" /></el-form-item>
+          </div>
+        </div>
+        <el-divider content-position="left">金额信息</el-divider>
+        <div class="form-col-wrap">
+          <div class="form-col">
+            <el-form-item label="数量">
+              <el-input-number v-model="editForm.qty" :controls="false" style="width:100%" />
+            </el-form-item>
+            <el-form-item label="零售金额">
+              <el-input-number v-model="editForm.retailAmount" :controls="false" style="width:100%" />
+            </el-form-item>
+            <el-form-item label="业绩金额">
+              <el-input-number v-model="editForm.revenue" :controls="false" style="width:100%" />
+            </el-form-item>
+          </div>
+          <div class="form-col">
+            <el-form-item label="零售价">
+              <el-input-number v-model="editForm.retailPrice" :controls="false" style="width:100%" />
+            </el-form-item>
+            <el-form-item label="成交金额">
+              <el-input-number v-model="editForm.transactionAmount" :controls="false" style="width:100%" />
+            </el-form-item>
+            <el-form-item label="重算业绩">
+              <el-input-number v-model="editForm.recalcRevenue" :controls="false" style="width:100%" />
+            </el-form-item>
+          </div>
+        </div>
       </el-form>
       <template #footer>
         <el-button @click="editDialogVisible = false">取消</el-button>
@@ -185,20 +217,24 @@ function formatAmount(n) {
   return Number(n).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 6 })
 }
 
-// ===== 编辑（仅归属维度字段，行键 = 单据号 + 明细ID） =====
+// ===== 编辑（归属维度 + 金额字段，行键 = 单据号 + 明细ID） =====
 const editDialogVisible = ref(false)
 const editLoading = ref(false)
 const editForm = reactive({
-  billNo: '', itemId: null,
+  billNo: '', itemId: null, billDate: null, billTime: null,
   salesType: '', omsSourcecode: '',
   storeCode: '', storeName: '', billPosCode: '', billPosName: '',
-  vipCode: '', vipMobile: '', anchorSummaryid: '', anchorSummaryname: ''
+  vipCode: '', vipMobile: '', anchorSummaryid: '', anchorSummaryname: '',
+  qty: null, retailPrice: null, retailAmount: null,
+  transactionAmount: null, revenue: null, recalcRevenue: null
 })
 
 function openEdit(row) {
   Object.assign(editForm, {
     billNo: row.billNo,
     itemId: row.itemId,
+    billDate: row.billDate,
+    billTime: row.billTime,
     salesType: row.salesType ?? '',
     omsSourcecode: row.omsSourcecode ?? '',
     storeCode: row.storeCode ?? '',
@@ -208,7 +244,13 @@ function openEdit(row) {
     vipCode: row.vipCode ?? '',
     vipMobile: row.vipMobile ?? '',
     anchorSummaryid: row.anchorSummaryid ?? '',
-    anchorSummaryname: row.anchorSummaryname ?? ''
+    anchorSummaryname: row.anchorSummaryname ?? '',
+    qty: row.qty ?? null,
+    retailPrice: row.retailPrice ?? null,
+    retailAmount: row.retailAmount ?? null,
+    transactionAmount: row.transactionAmount ?? null,
+    revenue: row.revenue ?? null,
+    recalcRevenue: row.recalcRevenue ?? null
   })
   editDialogVisible.value = true
 }
@@ -244,5 +286,19 @@ async function submitEdit() {
   margin-top: 12px;
   display: flex;
   justify-content: flex-end;
+}
+.edit-context {
+  margin: 12px 0 4px;
+}
+.edit-form .el-divider--horizontal {
+  margin: 12px 0 16px;
+}
+.edit-form .form-col-wrap {
+  display: flex;
+  gap: 24px;
+}
+.edit-form .form-col {
+  flex: 1;
+  min-width: 0;
 }
 </style>

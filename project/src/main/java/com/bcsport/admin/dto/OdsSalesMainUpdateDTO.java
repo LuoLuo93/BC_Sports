@@ -4,10 +4,12 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
+import java.math.BigDecimal;
+
 /**
  * 数仓销售查看(ODS_SALES_MAIN)编辑入参
  * 表无主键，用 BILL_NO + ITEM_ID 组合定位行
- * 仅开放归属维度字段编辑；数量/金额等源系统数据不可改
+ * 可编辑归属维度字段 + 数量/金额字段
  * 注意：SP_FILL_ODS_SALES_MAIN 按日期范围重灌会覆盖人工修改
  */
 @Data
@@ -50,4 +52,22 @@ public class OdsSalesMainUpdateDTO {
 
     /** 主播名称 */
     private String anchorSummaryname;
+
+    /** 数量 */
+    private BigDecimal qty;
+
+    /** 零售价 */
+    private BigDecimal retailPrice;
+
+    /** 零售金额 */
+    private BigDecimal retailAmount;
+
+    /** 成交金额 */
+    private BigDecimal transactionAmount;
+
+    /** 业绩金额 */
+    private BigDecimal revenue;
+
+    /** 重算业绩 */
+    private BigDecimal recalcRevenue;
 }

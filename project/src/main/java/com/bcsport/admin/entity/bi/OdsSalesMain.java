@@ -96,9 +96,6 @@ public class OdsSalesMain implements Serializable {
     /** 业绩金额 */
     private BigDecimal revenue;
 
-    /** 结算金额 */
-    private BigDecimal settlementAmount;
-
     /** 重算业绩 */
     private BigDecimal recalcRevenue;
 

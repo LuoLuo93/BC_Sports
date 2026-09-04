@@ -55,9 +55,6 @@
           <el-table-column label="业绩金额" width="110" align="right">
             <template #default="{ row }">{{ formatAmount(row.revenue) }}</template>
           </el-table-column>
-          <el-table-column label="结算金额" width="110" align="right">
-            <template #default="{ row }">{{ formatAmount(row.settlementAmount) }}</template>
-          </el-table-column>
           <el-table-column label="重算业绩" width="110" align="right">
             <template #default="{ row }">{{ formatAmount(row.recalcRevenue) }}</template>
           </el-table-column>

@@ -31,7 +31,6 @@
             RETAIL_AMOUNT        AS "retailAmount",
             TRANSACTION_AMOUNT   AS "transactionAmount",
             REVENUE              AS "revenue",
-            SETTLEMENT_AMOUNT    AS "settlementAmount",
             RECALC_REVENUE       AS "recalcRevenue",
             ANCHOR_SUMMARYID     AS "anchorSummaryid",
             ANCHOR_SUMMARYNAME   AS "anchorSummaryname"

@@ -278,9 +278,13 @@ function formatAmount(n) {
   return Number(n).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 6 })
 }
 
-// ===== 编辑：跳转独立编辑页(state携带整行数据，刷新后history.state仍保留) =====
+// ===== 编辑：跳转独立编辑页 =====
+// 行对象是Vue响应式代理，直接放state做结构化克隆不可靠，先JSON深克隆成纯对象；
+// 同时写sessionStorage兜底(history.state被浏览器丢弃/刷新场景)
 function openEdit(row) {
-  router.push({ path: '/bi/dw-sales/edit', state: { row } })
+  const plain = JSON.parse(JSON.stringify(row))
+  sessionStorage.setItem('dwSalesEditRow', JSON.stringify(plain))
+  router.push({ path: '/bi/dw-sales/edit', state: { row: plain } })
 }
 
 // 从编辑页返回时刷新列表(仅已搜索过时，保持默认不查询语义)

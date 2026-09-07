@@ -199,8 +199,8 @@ const form = reactive({
 
 const saving = ref(false)
 
-// 列表页 router.push 的 state 携带整行数据；history.state 在刷新后仍保留
-const stateRow = window.history.state?.row
+// 列表页 router.push 的 state 携带整行数据(纯对象)；sessionStorage 兜底刷新/丢state场景
+const stateRow = window.history.state?.row || JSON.parse(sessionStorage.getItem('dwSalesEditRow') || 'null')
 if (stateRow) {
   Object.assign(form, stateRow)
 } else {
@@ -223,6 +223,7 @@ async function handleSave() {
   saving.value = true
   try {
     await updateDwSalesMain(form)
+    sessionStorage.removeItem('dwSalesEditRow')
     ElMessage.success('修改成功')
     router.push('/bi/dw-sales')
   } finally {

@@ -52,19 +52,13 @@
         ORDER BY BILL_TIME DESC, ITEM_ID DESC
     </select>
 
-    <!-- 归属维度+金额字段编辑：行唯一身份 = BILL_ID + ITEM_ID 定位(单据号+货号+尺码不唯一) -->
+    <!-- 编辑(仅店铺/营业员/数量金额)：行唯一身份 = BILL_ID + ITEM_ID 定位(单据号+货号+尺码不唯一) -->
     <update id="updateRow">
         UPDATE ODS_SALES_MAIN
-           SET SALES_TYPE        = #{e.salesType},
-               STORE_CODE        = #{e.storeCode},
+           SET STORE_CODE        = #{e.storeCode},
                STORE_NAME        = #{e.storeName},
                BILL_POS_CODE     = #{e.billPosCode},
                BILL_POS_NAME     = #{e.billPosName},
-               VIP_CODE          = #{e.vipCode},
-               VIP_MOBILE        = #{e.vipMobile},
-               OMS_SOURCECODE    = #{e.omsSourcecode},
-               ANCHOR_SUMMARYID  = #{e.anchorSummaryid},
-               ANCHOR_SUMMARYNAME = #{e.anchorSummaryname},
                QTY               = #{e.qty},
                RETAIL_PRICE      = #{e.retailPrice},
                RETAIL_AMOUNT     = #{e.retailAmount},

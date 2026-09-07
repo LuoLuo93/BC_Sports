@@ -33,6 +33,11 @@ public interface OdsSalesMainMapper {
     void insertBatch(@Param("list") List<OdsSalesMain> list);
 
     /**
+     * 查询已存在的明细ID(导入批次失败幂等恢复用，入参分片≤500避免ORA-01795)
+     */
+    List<Long> selectExistingItemIds(@Param("ids") List<Long> ids);
+
+    /**
      * ITEM_ID 分块取号(每行一个)
      */
     List<Long> drawItemIds(@Param("count") int count);

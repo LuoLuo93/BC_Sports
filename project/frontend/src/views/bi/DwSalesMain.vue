@@ -149,176 +149,6 @@
       </el-tab-pane>
     </el-tabs>
 
-    <!-- 编辑弹窗：模块化展示(贴纸资料详情同款)，仅店铺/营业员/数量金额可编辑 -->
-    <el-dialog v-model="editDialogVisible" title="编辑销售明细" width="880px" destroy-on-close class="dw-edit-dialog">
-      <el-alert type="warning" show-icon :closable="false" style="margin-bottom: 12px"
-        title="该表由ETL按日期范围重灌，人工修改在下次刷新该日期段时会被覆盖，仅作临时修正" />
-
-      <div class="dw-edit-body">
-        <!-- 单据信息(只读) -->
-        <div class="info-section">
-          <div class="section-title"><el-icon><Document /></el-icon> 单据信息</div>
-          <div class="info-grid">
-            <div class="info-card span-2">
-              <span class="info-card-label">单据号</span>
-              <span class="info-card-value mono-value">{{ editForm.billNo || '-' }}</span>
-            </div>
-            <div class="info-card">
-              <span class="info-card-label">单据ID</span>
-              <span class="info-card-value mono-value">{{ editForm.billId ?? '-' }}</span>
-            </div>
-            <div class="info-card">
-              <span class="info-card-label">明细ID</span>
-              <span class="info-card-value mono-value">{{ editForm.itemId ?? '-' }}</span>
-            </div>
-            <div class="info-card">
-              <span class="info-card-label">单据日期</span>
-              <span class="info-card-value">{{ formatBillDate(editForm.billDate) }}</span>
-            </div>
-            <div class="info-card">
-              <span class="info-card-label">提交时间</span>
-              <span class="info-card-value">{{ formatTime(editForm.billTime) }}</span>
-            </div>
-            <div class="info-card span-2">
-              <span class="info-card-label">销售类型</span>
-              <span class="info-card-value">{{ editForm.salesType || '-' }}</span>
-            </div>
-            <div class="info-card span-2">
-              <span class="info-card-label">促销名称</span>
-              <span class="info-card-value">{{ editForm.promotionName || '-' }}</span>
-            </div>
-            <div class="info-card span-2">
-              <span class="info-card-label">网单来源单号</span>
-              <span class="info-card-value">{{ editForm.omsSourcecode || '-' }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- 货品信息(只读) -->
-        <div class="info-section">
-          <div class="section-title"><el-icon><Goods /></el-icon> 货品信息</div>
-          <div class="info-grid">
-            <div class="info-card span-2">
-              <span class="info-card-label">货号</span>
-              <span class="info-card-value mono-value">{{ editForm.productCode || '-' }}</span>
-            </div>
-            <div class="info-card span-2">
-              <span class="info-card-label">款号</span>
-              <span class="info-card-value mono-value">{{ editForm.productStyleNo || '-' }}</span>
-            </div>
-            <div class="info-card span-2">
-              <span class="info-card-label">货品名称</span>
-              <span class="info-card-value">{{ editForm.productName || '-' }}</span>
-            </div>
-            <div class="info-card">
-              <span class="info-card-label">颜色</span>
-              <span class="info-card-value">{{ editForm.colorsalias || '-' }}</span>
-            </div>
-            <div class="info-card">
-              <span class="info-card-label">尺码</span>
-              <span class="info-card-value">{{ editForm.sizes || '-' }}</span>
-            </div>
-            <div class="info-card span-2">
-              <span class="info-card-label">条码</span>
-              <span class="info-card-value mono-value">{{ editForm.barcode || '-' }}</span>
-            </div>
-            <div class="info-card span-2">
-              <span class="info-card-label">新旧货</span>
-              <span class="info-card-value">{{ editForm.newOldNameAdjust || '-' }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- 会员与主播(只读) -->
-        <div class="info-section">
-          <div class="section-title"><el-icon><User /></el-icon> 会员与主播</div>
-          <div class="info-grid">
-            <div class="info-card span-2">
-              <span class="info-card-label">会员卡号</span>
-              <span class="info-card-value">{{ editForm.vipCode || '-' }}</span>
-            </div>
-            <div class="info-card span-2">
-              <span class="info-card-label">会员手机号</span>
-              <span class="info-card-value">{{ editForm.vipMobile || '-' }}</span>
-            </div>
-            <div class="info-card span-2">
-              <span class="info-card-label">主播ID</span>
-              <span class="info-card-value">{{ editForm.anchorSummaryid || '-' }}</span>
-            </div>
-            <div class="info-card span-2">
-              <span class="info-card-label">主播名称</span>
-              <span class="info-card-value">{{ editForm.anchorSummaryname || '-' }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- 店铺与营业员(可编辑) -->
-        <div class="info-section">
-          <div class="section-title">
-            <el-icon><Shop /></el-icon> 店铺与营业员
-            <el-tag size="small" type="warning" effect="plain" style="margin-left:8px">可编辑</el-tag>
-          </div>
-          <div class="info-grid">
-            <div class="info-card editable">
-              <span class="info-card-label">店铺CODE</span>
-              <el-input v-model="editForm.storeCode" placeholder="请输入店铺CODE" size="small" />
-            </div>
-            <div class="info-card editable span-3">
-              <span class="info-card-label">店铺名称</span>
-              <el-input v-model="editForm.storeName" placeholder="请输入店铺名称" size="small" />
-            </div>
-            <div class="info-card editable">
-              <span class="info-card-label">营业员CODE</span>
-              <el-input v-model="editForm.billPosCode" placeholder="请输入营业员CODE" size="small" />
-            </div>
-            <div class="info-card editable span-3">
-              <span class="info-card-label">营业员名称</span>
-              <el-input v-model="editForm.billPosName" placeholder="请输入营业员名称" size="small" />
-            </div>
-          </div>
-        </div>
-
-        <!-- 数量与金额(可编辑) -->
-        <div class="info-section">
-          <div class="section-title">
-            <el-icon><Coin /></el-icon> 数量与金额
-            <el-tag size="small" type="warning" effect="plain" style="margin-left:8px">可编辑</el-tag>
-          </div>
-          <div class="info-grid">
-            <div class="info-card editable">
-              <span class="info-card-label">数量</span>
-              <el-input-number v-model="editForm.qty" :controls="false" size="small" style="width:100%" />
-            </div>
-            <div class="info-card editable">
-              <span class="info-card-label">零售价</span>
-              <el-input-number v-model="editForm.retailPrice" :controls="false" size="small" style="width:100%" />
-            </div>
-            <div class="info-card editable">
-              <span class="info-card-label">零售金额</span>
-              <el-input-number v-model="editForm.retailAmount" :controls="false" size="small" style="width:100%" />
-            </div>
-            <div class="info-card editable">
-              <span class="info-card-label">成交金额</span>
-              <el-input-number v-model="editForm.transactionAmount" :controls="false" size="small" style="width:100%" />
-            </div>
-            <div class="info-card editable">
-              <span class="info-card-label">业绩金额</span>
-              <el-input-number v-model="editForm.revenue" :controls="false" size="small" style="width:100%" />
-            </div>
-            <div class="info-card editable">
-              <span class="info-card-label">重算业绩</span>
-              <el-input-number v-model="editForm.recalcRevenue" :controls="false" size="small" style="width:100%" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <template #footer>
-        <el-button @click="editDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="editLoading" @click="submitEdit">保存</el-button>
-      </template>
-    </el-dialog>
-
     <!-- 批量导入弹窗 -->
     <el-dialog v-model="showImportDialog" title="批量导入销售明细" width="560px" destroy-on-close @open="resetImportState">
       <div class="import-zone">
@@ -370,15 +200,17 @@
 
 <script setup>
 defineOptions({ name: 'DwSalesMain' })
-import { reactive, ref } from 'vue'
+import { reactive, ref, onActivated } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Search, RefreshRight, Upload, Document, Goods, User, Shop, Coin } from '@element-plus/icons-vue'
-import { getDwSalesMainPage, updateDwSalesMain, importDwSalesMain, getDwSalesTemplate, getDwSalesImportLogPage } from '@/api/bi'
+import { Search, RefreshRight, Upload } from '@element-plus/icons-vue'
+import { getDwSalesMainPage, importDwSalesMain, getDwSalesTemplate, getDwSalesImportLogPage } from '@/api/bi'
 import { formatTime } from '@/utils/format'
 import { PAGE_SIZES, defaultPageSize } from '@/utils/appConfig'
 import { usePageQuery } from '@/composables/usePageQuery'
 import { usePermission } from '@/composables/usePermission'
 
+const router = useRouter()
 const { hasPermission } = usePermission()
 
 // ===== Tab =====
@@ -446,66 +278,18 @@ function formatAmount(n) {
   return Number(n).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 6 })
 }
 
-// ===== 编辑（模块化弹窗，可编辑=店铺/营业员/数量金额；行唯一身份 = BILL_ID + ITEM_ID） =====
-const editDialogVisible = ref(false)
-const editLoading = ref(false)
-const editForm = reactive({
-  billId: null, billNo: '', itemId: null, billDate: null, billTime: null,
-  salesType: '', promotionName: '', omsSourcecode: '',
-  productCode: '', productStyleNo: '', productName: '', colorsalias: '', sizes: '', barcode: '', newOldNameAdjust: '',
-  vipCode: '', vipMobile: '', anchorSummaryid: '', anchorSummaryname: '',
-  storeCode: '', storeName: '', billPosCode: '', billPosName: '',
-  qty: null, retailPrice: null, retailAmount: null,
-  transactionAmount: null, revenue: null, recalcRevenue: null
-})
-
+// ===== 编辑：跳转独立编辑页(state携带整行数据，刷新后history.state仍保留) =====
 function openEdit(row) {
-  Object.assign(editForm, {
-    billId: row.billId,
-    billNo: row.billNo,
-    itemId: row.itemId,
-    billDate: row.billDate,
-    billTime: row.billTime,
-    salesType: row.salesType ?? '',
-    promotionName: row.promotionName ?? '',
-    omsSourcecode: row.omsSourcecode ?? '',
-    productCode: row.productCode ?? '',
-    productStyleNo: row.productStyleNo ?? '',
-    productName: row.productName ?? '',
-    colorsalias: row.colorsalias ?? '',
-    sizes: row.sizes ?? '',
-    barcode: row.barcode ?? '',
-    newOldNameAdjust: row.newOldNameAdjust ?? '',
-    vipCode: row.vipCode ?? '',
-    vipMobile: row.vipMobile ?? '',
-    anchorSummaryid: row.anchorSummaryid ?? '',
-    anchorSummaryname: row.anchorSummaryname ?? '',
-    storeCode: row.storeCode ?? '',
-    storeName: row.storeName ?? '',
-    billPosCode: row.billPosCode ?? '',
-    billPosName: row.billPosName ?? '',
-    qty: row.qty ?? null,
-    retailPrice: row.retailPrice ?? null,
-    retailAmount: row.retailAmount ?? null,
-    transactionAmount: row.transactionAmount ?? null,
-    revenue: row.revenue ?? null,
-    recalcRevenue: row.recalcRevenue ?? null
-  })
-  editDialogVisible.value = true
+  router.push({ path: '/bi/dw-sales/edit', state: { row } })
 }
 
-async function submitEdit() {
-  editLoading.value = true
-  try {
-    await updateDwSalesMain(editForm)
-    ElMessage.success('修改成功')
-    editDialogVisible.value = false
+// 从编辑页返回时刷新列表(仅已搜索过时，保持默认不查询语义)
+onActivated(() => {
+  if (hasSearched.value) {
     syncDateRange()
     loadData()
-  } finally {
-    editLoading.value = false
   }
-}
+})
 
 // ===== 导入日志 =====
 const logLoading = ref(false)
@@ -642,75 +426,6 @@ async function submitImport() {
   display: flex;
   justify-content: flex-end;
 }
-/* ===== 编辑弹窗：模块化信息卡片(贴纸资料详情同款) ===== */
-.dw-edit-body {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  max-height: 62vh;
-  overflow-y: auto;
-  padding-right: 4px;
-}
-.info-section {
-  background: #fff;
-  border-radius: 10px;
-  padding: 14px 16px 16px;
-  border: 1px solid #eef2f7;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-}
-.section-title {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  font-weight: 700;
-  color: #1e40af;
-  margin-bottom: 10px;
-  padding-bottom: 8px;
-  border-bottom: 2px solid #e0e7ff;
-}
-.section-title .el-icon { font-size: 16px; color: #6366f1; }
-.info-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-}
-.info-card {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 10px 12px;
-  background: #f8fafc;
-  border-radius: 8px;
-  border: 1px solid #f1f5f9;
-  transition: border-color 0.2s;
-}
-.info-card:hover { border-color: #c7d2fe; }
-.info-card.span-2 { grid-column: span 2; }
-.info-card.span-3 { grid-column: span 3; }
-.info-card-label {
-  font-size: 11px;
-  color: #64748b;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-}
-.info-card-value {
-  font-size: 14px;
-  color: #1e293b;
-  font-weight: 500;
-  word-break: break-all;
-  line-height: 1.5;
-}
-.mono-value {
-  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
-  font-weight: 700;
-  color: #0f172a;
-}
-.info-card.editable {
-  background: #fffbeb;
-  border-color: #fde68a;
-}
-.info-card.editable:hover { border-color: #f59e0b; }
 .upload-hint {
   font-size: 12px;
   color: var(--el-text-color-secondary);

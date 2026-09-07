@@ -34,6 +34,7 @@ const routes = [
       { path: 'bi/goods-data', name: 'GoodsDataImport', component: () => import('@/views/bi/GoodsDataImport.vue'), meta: { pageTitle: '货品资料导入' } },
       { path: 'bi/shop-daily-budget', name: 'ShopDailyBudget', component: () => import('@/views/bi/ShopDailyBudget.vue'), meta: { pageTitle: '店铺日预算' } },
       { path: 'bi/dw-sales', name: 'DwSalesMain', component: () => import('@/views/bi/DwSalesMain.vue'), meta: { pageTitle: '数仓销售查看' } },
+      { path: 'bi/dw-sales/edit', name: 'DwSalesMainEdit', component: () => import('@/views/bi/DwSalesMainEdit.vue'), meta: { pageTitle: '编辑销售明细' } },
       // IHR
       { path: 'ihr/employee-management', name: 'IhrEmployee', component: () => import('@/views/ihr/EmployeeManagement.vue'), meta: { pageTitle: '员工管理' } },
       { path: 'ihr/onboarding-management', name: 'IhrOnboarding', component: () => import('@/views/ihr/OnboardingManagement.vue'), meta: { pageTitle: '入职管理' } },

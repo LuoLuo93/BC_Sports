@@ -30,8 +30,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -48,7 +50,7 @@ public class OdsSalesMainServiceImpl implements OdsSalesMainService {
         org.apache.poi.openxml4j.util.ZipSecureFile.setMinInflateRatio(1e-9);
     }
 
-    private static final int BATCH_SIZE = 1000;
+    private static final int BATCH_SIZE = 500;
     private static final int MAX_ERRORS = 100;
     private static final int MAX_ROWS = 3_000_000;
     /** 序列分块取号大小：一次取1万个，避免150W行逐行NEXTVAL的百万次往返 */
@@ -256,15 +258,28 @@ public class OdsSalesMainServiceImpl implements OdsSalesMainService {
             if (buffer.isEmpty()) return;
             List<OdsSalesMain> toWrite = new ArrayList<>(buffer);
             buffer.clear();
-            TransactionTemplate txTemplate = new TransactionTemplate(bidwTransactionManager);
             try {
-                txTemplate.execute(status -> {
-                    odsSalesMainMapper.insertBatch(toWrite);
-                    return null;
-                });
+                insertWithTx(toWrite);
+                success.addAndGet(toWrite.size());
+                return;
+            } catch (Exception e) {
+                log.warn("数仓销售导入 批量入库失败，尝试幂等恢复(剔除已落库行后重试一次): {}", e.getMessage());
+            }
+            // 超时类失败(如Socket read timed out)无法判断服务端是否已提交：
+            // 按本批预生成的ITEM_ID查已落库行，剔除后重试一次，保证不重复不遗漏
+            try {
+                Set<Long> existing = queryExistingItemIds(toWrite);
+                List<OdsSalesMain> missing = new ArrayList<>(toWrite.size());
+                for (OdsSalesMain r : toWrite) {
+                    if (r.getItemId() == null || !existing.contains(r.getItemId())) missing.add(r);
+                }
+                log.info("数仓销售导入 幂等恢复: 批次{}行, 已落库{}行, 重插{}行", toWrite.size(), existing.size(), missing.size());
+                if (!missing.isEmpty()) {
+                    insertWithTx(missing);
+                }
                 success.addAndGet(toWrite.size());
             } catch (Exception e) {
-                log.error("数仓销售导入 批量入库失败", e);
+                log.error("数仓销售导入 批量入库重试仍失败", e);
                 if (errors.size() < MAX_ERRORS) {
                     String reason = e.getMessage() == null ? "未知错误" : e.getMessage();
                     for (OdsSalesMain item : toWrite) {
@@ -276,6 +291,29 @@ public class OdsSalesMainServiceImpl implements OdsSalesMainService {
                 }
             }
         }
+    }
+
+    private void insertWithTx(List<OdsSalesMain> list) {
+        TransactionTemplate txTemplate = new TransactionTemplate(bidwTransactionManager);
+        txTemplate.execute(status -> {
+            odsSalesMainMapper.insertBatch(list);
+            return null;
+        });
+    }
+
+    /** 按批次预生成ITEM_ID查已落库行(分片≤500，避免ORA-01795的IN列表1000上限) */
+    private Set<Long> queryExistingItemIds(List<OdsSalesMain> rows) {
+        Set<Long> ids = new HashSet<>();
+        for (OdsSalesMain r : rows) {
+            if (r.getItemId() != null) ids.add(r.getItemId());
+        }
+        Set<Long> existing = new HashSet<>();
+        List<Long> idList = new ArrayList<>(ids);
+        for (int i = 0; i < idList.size(); i += 500) {
+            existing.addAll(odsSalesMainMapper.selectExistingItemIds(
+                    idList.subList(i, Math.min(i + 500, idList.size()))));
+        }
+        return existing;
     }
 
     /** 序列分块取号器：本地池空了再批量取 ID_BLOCK 个 */

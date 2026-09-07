@@ -183,7 +183,7 @@ spring:
       type: com.alibaba.druid.pool.DruidDataSource
       driver-class-name: oracle.jdbc.OracleDriver
       # SID 方式连接(:orcl), 与生产主库 BCSports 写法一致
-      url: 'jdbc:oracle:thin:@${BIDW_DB_HOST:192.168.5.177}:${BIDW_DB_PORT:1521}:${BIDW_DB_SID:orcl}?oracle.net.CONNECT_TIMEOUT=10000&oracle.jdbc.ReadTimeout=600000'
+      url: 'jdbc:oracle:thin:@${BIDW_DB_HOST:192.168.5.177}:${BIDW_DB_PORT:1521}:${BIDW_DB_SID:orcl}?oracle.net.CONNECT_TIMEOUT=10000&oracle.jdbc.ReadTimeout=1800000'
       username: ${BIDW_DB_USERNAME:bi_dw}
       password: ${BIDW_DB_PASSWORD:123456}
       initial-size: 1

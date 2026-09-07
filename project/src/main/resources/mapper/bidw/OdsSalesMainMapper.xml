@@ -92,6 +92,13 @@
         </foreach>
     </insert>
 
+    <!-- 批次失败幂等恢复：按预生成ITEM_ID查已落库行(超时类失败无法判断服务端是否已提交) -->
+    <select id="selectExistingItemIds" resultType="long">
+        SELECT ITEM_ID FROM ODS_SALES_MAIN
+         WHERE ITEM_ID IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+    </select>
+
     <!-- 分块取号：一次取 count 个，避免逐行NEXTVAL的百万次往返 -->
     <select id="drawItemIds" resultType="long">
         SELECT SEQ_ODS_SALES_MAIN_ITEM.NEXTVAL FROM DUAL CONNECT BY LEVEL &lt;= #{count}

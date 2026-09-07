@@ -127,8 +127,10 @@ public class OdsSalesMainServiceImpl implements OdsSalesMainService {
         String realFormat = detectFormat(file);
         log.info("数仓销售导入 文件真实格式: {}", realFormat);
         if (!"xlsx".equals(realFormat) && !"xls".equals(realFormat)) {
-            return buildResult(0, 0, 0, Collections.singletonList(
-                    "文件不是标准的 Excel 格式（检测为 " + realFormat + "），请用 Excel 打开后另存为 .xlsx 再上传"));
+            List<String> errs = Collections.singletonList(
+                    "文件不是标准的 Excel 格式（检测为 " + realFormat + "），请用 Excel 打开后另存为 .xlsx 再上传");
+            saveImportLog(file, 0, 0, 0, "FAILED", errs);
+            return buildResult(0, 0, 0, errs);
         }
 
         AtomicInteger total = new AtomicInteger(0);
@@ -162,33 +164,44 @@ public class OdsSalesMainServiceImpl implements OdsSalesMainService {
 
             try {
                 OdsSalesMain row = mapRow(rowCells, ctx);
-                // 必填校验：单据号(自然键)、提交时间(查询主线索)
+                // 必填校验：单据号(自然键)、提交时间(查询主线索)；错误带Excel坐标+行身份，便于在源文件定位
                 if (!StringUtils.hasText(row.getBillNo())) {
-                    if (errors.size() < MAX_ERRORS) errors.add("第" + rowNum + "行：单据号(BILL_NO)不能为空");
+                    if (errors.size() < MAX_ERRORS) errors.add(rowDesc(sheetIndex, rowIndex, rowCells, ctx) + "：单据号(BILL_NO)不能为空");
                     return;
                 }
                 if (row.getBillTime() == null) {
-                    if (errors.size() < MAX_ERRORS) errors.add("第" + rowNum + "行：提交时间(BILL_TIME)为空或格式错误，应为 yyyy-MM-dd HH:mm:ss");
+                    if (errors.size() < MAX_ERRORS) errors.add(rowDesc(sheetIndex, rowIndex, rowCells, ctx) + "：提交时间(BILL_TIME)为空或格式错误，应为 yyyy-MM-dd HH:mm:ss");
                     return;
                 }
                 // ID补全：ITEM_ID每行一号；BILL_ID按单据号分组共号(文件带ID则优先用文件的)
                 if (row.getItemId() == null) row.setItemId(ctx.itemIds.next());
                 row.setBillId(ctx.billIdOf(row.getBillNo(), row.getBillId()));
+                ctx.origins.put(row, "sheet" + (sheetIndex + 1) + "第" + (rowIndex + 1) + "行");
                 ctx.buffer.add(row);
                 if (ctx.buffer.size() >= BATCH_SIZE) {
                     ctx.flush(success);
                 }
             } catch (Exception e) {
-                if (errors.size() < MAX_ERRORS) errors.add("第" + rowNum + "行：解析异常 - " + e.getMessage());
+                if (errors.size() < MAX_ERRORS) errors.add(rowDesc(sheetIndex, rowIndex, rowCells, ctx) + "：解析异常 - " + e.getMessage());
             }
         };
 
-        readAllSheets(file, realFormat, handler);
+        // 解析中断不丢账：已入库批次保持原状，计数照实记录，剩余缓冲照常落库，日志记 PARTIAL/FAILED
+        String parseError = null;
+        try {
+            readAllSheets(file, realFormat, handler);
+        } catch (Exception e) {
+            log.error("数仓销售导入 文件解析中断", e);
+            parseError = "文件解析中断(" + (e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage())
+                    + ")：已读取部分已入库，未读取部分未导入";
+        }
 
         // 表头缺失校验(一个sheet都没识别到表头=整个文件结构不对)
-        if (ctx.headerSeenCount == 0) {
-            return buildResult(0, 0, 0, Collections.singletonList(
-                    "未识别到任何表头行：表头需为英文列名(BILL_NO/BILL_TIME/...)且首个sheet第一行为表头"));
+        if (parseError == null && ctx.headerSeenCount == 0) {
+            List<String> errs = Collections.singletonList(
+                    "未识别到任何表头行：表头需为英文列名(BILL_NO/BILL_TIME/...)且首个sheet第一行为表头");
+            saveImportLog(file, 0, 0, 0, "FAILED", errs);
+            return buildResult(0, 0, 0, errs);
         }
 
         if (!ctx.buffer.isEmpty()) {
@@ -199,9 +212,13 @@ public class OdsSalesMainServiceImpl implements OdsSalesMainService {
         if (fail > MAX_ERRORS && !errors.isEmpty()) {
             errors.add("...共 " + fail + " 条未导入，仅显示前 " + MAX_ERRORS + " 条");
         }
-        log.info("数仓销售导入完成: total={}, success={}, fail={}", total.get(), success.get(), fail);
+        if (parseError != null) {
+            errors.add(parseError);
+        }
+        log.info("数仓销售导入完成: total={}, success={}, fail={}, 中断={}", total.get(), success.get(), fail, parseError != null);
 
-        String status = (total.get() == 0) ? "FAILED" : (fail == 0 ? "SUCCESS" : "PARTIAL");
+        String status = (total.get() == 0) ? "FAILED"
+                : ((fail == 0 && parseError == null) ? "SUCCESS" : "PARTIAL");
         if (fail > 0 && errors.isEmpty()) {
             errors.add("共 " + fail + " 条数据未导入（可能因必填字段为空、数据类型不匹配或数据库约束冲突），请检查源数据");
         }
@@ -215,6 +232,8 @@ public class OdsSalesMainServiceImpl implements OdsSalesMainService {
     private class ImportContext {
         final Map<String, Integer> columnIndex = new HashMap<>();
         final List<OdsSalesMain> buffer = new ArrayList<>(BATCH_SIZE);
+        /** 行对象 -> Excel来源坐标(批次入库失败时定位用)，IdentityHashMap按对象身份匹配 */
+        final Map<OdsSalesMain, String> origins = new java.util.IdentityHashMap<>();
         final List<String> errors;
         /** 单据号 -> BILL_ID(同一单据共号) */
         final Map<String, Long> billIdMap = new HashMap<>();
@@ -259,36 +278,43 @@ public class OdsSalesMainServiceImpl implements OdsSalesMainService {
             List<OdsSalesMain> toWrite = new ArrayList<>(buffer);
             buffer.clear();
             try {
-                insertWithTx(toWrite);
-                success.addAndGet(toWrite.size());
-                return;
-            } catch (Exception e) {
-                log.warn("数仓销售导入 批量入库失败，尝试幂等恢复(剔除已落库行后重试一次): {}", e.getMessage());
-            }
-            // 超时类失败(如Socket read timed out)无法判断服务端是否已提交：
-            // 按本批预生成的ITEM_ID查已落库行，剔除后重试一次，保证不重复不遗漏
-            try {
-                Set<Long> existing = queryExistingItemIds(toWrite);
-                List<OdsSalesMain> missing = new ArrayList<>(toWrite.size());
-                for (OdsSalesMain r : toWrite) {
-                    if (r.getItemId() == null || !existing.contains(r.getItemId())) missing.add(r);
+                try {
+                    insertWithTx(toWrite);
+                    success.addAndGet(toWrite.size());
+                    return;
+                } catch (Exception e) {
+                    log.warn("数仓销售导入 批量入库失败，尝试幂等恢复(剔除已落库行后重试一次): {}", e.getMessage());
                 }
-                log.info("数仓销售导入 幂等恢复: 批次{}行, 已落库{}行, 重插{}行", toWrite.size(), existing.size(), missing.size());
-                if (!missing.isEmpty()) {
-                    insertWithTx(missing);
-                }
-                success.addAndGet(toWrite.size());
-            } catch (Exception e) {
-                log.error("数仓销售导入 批量入库重试仍失败", e);
-                if (errors.size() < MAX_ERRORS) {
-                    String reason = e.getMessage() == null ? "未知错误" : e.getMessage();
-                    for (OdsSalesMain item : toWrite) {
-                        if (errors.size() >= MAX_ERRORS) break;
-                        errors.add("入库失败 [单据号=" + item.getBillNo()
-                                + ", 货号=" + item.getProductCode()
-                                + "]: " + reason);
+                // 超时类失败(如Socket read timed out)无法判断服务端是否已提交：
+                // 按本批预生成的ITEM_ID查已落库行，剔除后重试一次，保证不重复不遗漏
+                try {
+                    Set<Long> existing = queryExistingItemIds(toWrite);
+                    List<OdsSalesMain> missing = new ArrayList<>(toWrite.size());
+                    for (OdsSalesMain r : toWrite) {
+                        if (r.getItemId() == null || !existing.contains(r.getItemId())) missing.add(r);
+                    }
+                    log.info("数仓销售导入 幂等恢复: 批次{}行, 已落库{}行, 重插{}行", toWrite.size(), existing.size(), missing.size());
+                    if (!missing.isEmpty()) {
+                        insertWithTx(missing);
+                    }
+                    success.addAndGet(toWrite.size());
+                } catch (Exception e) {
+                    log.error("数仓销售导入 批量入库重试仍失败", e);
+                    if (errors.size() < MAX_ERRORS) {
+                        String reason = e.getMessage() == null ? "未知错误" : e.getMessage();
+                        for (OdsSalesMain item : toWrite) {
+                            if (errors.size() >= MAX_ERRORS) break;
+                            errors.add("入库失败 " + origins.getOrDefault(item, "")
+                                    + "[单据号=" + item.getBillNo()
+                                    + ", 货号=" + item.getProductCode()
+                                    + ", 颜色=" + item.getColorsalias()
+                                    + ", 尺码=" + item.getSizes()
+                                    + "]: " + reason);
+                        }
                     }
                 }
+            } finally {
+                toWrite.forEach(origins::remove);
             }
         }
     }
@@ -384,6 +410,19 @@ public class OdsSalesMainServiceImpl implements OdsSalesMainService {
         if (v == null) return null;
         String s = String.valueOf(v).trim();
         return s.isEmpty() ? null : s;
+    }
+
+    /** 错误定位描述：sheet号+Excel行号+行身份(单据号/货号/颜色/尺码)，便于在源文件Ctrl+F定位 */
+    private String rowDesc(int sheetIndex, long rowIndex, List<Object> cells, ImportContext ctx) {
+        return "sheet" + (sheetIndex + 1) + "第" + (rowIndex + 1) + "行"
+                + "[单据号=" + nz(cellStr(cells, ctx.columnIndex.get("billNo")))
+                + ", 货号=" + nz(cellStr(cells, ctx.columnIndex.get("productCode")))
+                + ", 颜色=" + nz(cellStr(cells, ctx.columnIndex.get("colorsalias")))
+                + ", 尺码=" + nz(cellStr(cells, ctx.columnIndex.get("sizes"))) + "]";
+    }
+
+    private String nz(String s) {
+        return s == null ? "" : s;
     }
 
     /** BILL_TIME：yyyy-MM-dd HH:mm:ss 为主，兼容 / 分隔与纯日期 */
@@ -492,7 +531,7 @@ public class OdsSalesMainServiceImpl implements OdsSalesMainService {
             logEntity.setStatus(status);
             if (!errors.isEmpty()) {
                 String msg = String.join("\n", errors);
-                logEntity.setErrorMsg(msg.length() > 4000 ? msg.substring(0, 4000) : msg);
+                logEntity.setErrorMsg(msg.length() > 20000 ? msg.substring(0, 20000) : msg);
             }
             logEntity.setCreateBy(ShiroSecurityUtils.getCurrentUsername());
             logEntity.setCreateTime(LocalDateTime.now());

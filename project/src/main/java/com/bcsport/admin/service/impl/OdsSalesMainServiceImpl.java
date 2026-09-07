@@ -391,16 +391,29 @@ public class OdsSalesMainServiceImpl implements OdsSalesMainService {
 
     private void readAllSheets(MultipartFile file, String format, RowHandler handler) throws Exception {
         if ("xlsx".equals(format)) {
-            org.apache.poi.openxml4j.opc.OPCPackage pkg = org.apache.poi.openxml4j.opc.OPCPackage.open(file.getInputStream());
+            // 必须先落临时文件再以 File 方式打开：OPCPackage.open(InputStream) 会把每个 zip entry
+            // (1GB级 sheet XML)整块读进内存字节数组，触发 POI 单数组 300MB 上限；
+            // File 方式走 ZipFile 流式读取，SAX 逐行解析，内存恒定
+            java.io.File tempFile = java.io.File.createTempFile("dw-sales-import-", ".xlsx");
             try {
-                int sheetCount = pkg.getPartsByName(java.util.regex.Pattern.compile("/xl/worksheets/.*\\.xml")).size();
-                log.info("数仓销售导入 xlsx 共 {} 个 sheet", sheetCount);
-                cn.hutool.poi.excel.sax.Excel07SaxReader saxReader = new cn.hutool.poi.excel.sax.Excel07SaxReader(handler);
-                for (int s = 0; s < sheetCount; s++) {
-                    saxReader.read(pkg, s);
+                java.nio.file.Files.copy(file.getInputStream(), tempFile.toPath(),
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                org.apache.poi.openxml4j.opc.OPCPackage pkg = org.apache.poi.openxml4j.opc.OPCPackage.open(
+                        tempFile.getAbsolutePath(), org.apache.poi.openxml4j.opc.PackageAccess.READ);
+                try {
+                    int sheetCount = pkg.getPartsByName(java.util.regex.Pattern.compile("/xl/worksheets/.*\\.xml")).size();
+                    log.info("数仓销售导入 xlsx 共 {} 个 sheet", sheetCount);
+                    cn.hutool.poi.excel.sax.Excel07SaxReader saxReader = new cn.hutool.poi.excel.sax.Excel07SaxReader(handler);
+                    for (int s = 0; s < sheetCount; s++) {
+                        saxReader.read(pkg, s);
+                    }
+                } finally {
+                    pkg.revert();
                 }
             } finally {
-                pkg.revert();
+                if (!tempFile.delete()) {
+                    tempFile.deleteOnExit();
+                }
             }
         } else {
             for (int s = 0; s < 20; s++) {

@@ -42,3 +42,15 @@ export function getDwSalesMainPage(params) {
 export function updateDwSalesMain(data) {
   return request.post('/api/bi/dw-sales/update', data)
 }
+
+export function importDwSalesMain(data) {
+  return request.post('/api/bi/dw-sales/import', data, { timeout: 1800000 })
+}
+
+export function getDwSalesTemplate() {
+  return request.get('/api/bi/dw-sales/template', { responseType: 'blob' })
+}
+
+export function getDwSalesImportLogPage(params) {
+  return request.get('/api/bi/dw-sales/import-log/page', { params })
+}

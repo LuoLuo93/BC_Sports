@@ -7,6 +7,8 @@ import com.bcsport.admin.entity.bi.OdsSalesMain;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.util.List;
+
 /**
  * 数仓销售查看 Mapper（走 bidw 数据源，BI_DW schema）
  * 放在 bidwmapper 包下，由 BidwDataSourceConfig 自动绑定 bidw 数据源
@@ -24,4 +26,19 @@ public interface OdsSalesMainMapper {
      * 按单据号+明细ID更新归属维度字段，返回影响行数(0=行不存在或已被ETL重灌)
      */
     int updateRow(@Param("e") OdsSalesMainUpdateDTO dto);
+
+    /**
+     * 批量插入(期初数据导入，仅INSERT不防重)；BILL_ID/ITEM_ID由Java侧分块取号预生成后带入
+     */
+    void insertBatch(@Param("list") List<OdsSalesMain> list);
+
+    /**
+     * ITEM_ID 分块取号(每行一个)
+     */
+    List<Long> drawItemIds(@Param("count") int count);
+
+    /**
+     * BILL_ID 分块取号(按单据号分组共号)
+     */
+    List<Long> drawBillIds(@Param("count") int count);
 }

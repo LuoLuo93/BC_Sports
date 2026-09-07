@@ -337,9 +337,9 @@ logging:
     org.springframework: DEBUG
     org.apache.shiro: DEBUG
 
-# 文件上传配置
-spring.servlet.multipart.max-file-size: 100MB
-spring.servlet.multipart.max-request-size: 200MB
+# 文件上传配置（数仓销售导入150W行级Excel，上限放大到500MB）
+spring.servlet.multipart.max-file-size: 500MB
+spring.servlet.multipart.max-request-size: 520MB
 
 # 上传文件存储路径（必须在项目外部，避免重新部署时文件丢失）
 # 本地开发默认: E:/work/BC_Sport/uploads

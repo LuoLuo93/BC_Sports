@@ -99,9 +99,15 @@ public class OdsSalesMain implements Serializable {
     /** 重算业绩 */
     private BigDecimal recalcRevenue;
 
+    /** 新旧货分类 */
+    private String newOldNameAdjust;
+
     /** 主播ID */
     private String anchorSummaryid;
 
     /** 主播名称 */
     private String anchorSummaryname;
+
+    /** 促销名称 */
+    private String promotionName;
 }

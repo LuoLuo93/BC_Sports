@@ -22,14 +22,6 @@
             <span class="info-card-value mono-value">{{ form.billNo || '-' }}</span>
           </div>
           <div class="info-card">
-            <span class="info-card-label">单据ID</span>
-            <span class="info-card-value mono-value">{{ form.billId ?? '-' }}</span>
-          </div>
-          <div class="info-card">
-            <span class="info-card-label">明细ID</span>
-            <span class="info-card-value mono-value">{{ form.itemId ?? '-' }}</span>
-          </div>
-          <div class="info-card">
             <span class="info-card-label">单据日期</span>
             <span class="info-card-value">{{ formatBillDate(form.billDate) }}</span>
           </div>
@@ -37,7 +29,7 @@
             <span class="info-card-label">提交时间</span>
             <span class="info-card-value">{{ formatTime(form.billTime) }}</span>
           </div>
-          <div class="info-card span-2">
+          <div class="info-card">
             <span class="info-card-label">销售类型</span>
             <span class="info-card-value">{{ form.salesType || '-' }}</span>
           </div>
@@ -45,9 +37,17 @@
             <span class="info-card-label">促销名称</span>
             <span class="info-card-value">{{ form.promotionName || '-' }}</span>
           </div>
-          <div class="info-card span-2">
+          <div class="info-card">
             <span class="info-card-label">网单来源单号</span>
             <span class="info-card-value">{{ form.omsSourcecode || '-' }}</span>
+          </div>
+          <div class="info-card span-2">
+            <span class="info-card-label">单据ID</span>
+            <span class="info-card-value mono-value">{{ form.billId ?? '-' }}</span>
+          </div>
+          <div class="info-card span-2">
+            <span class="info-card-label">明细ID</span>
+            <span class="info-card-value mono-value">{{ form.itemId ?? '-' }}</span>
           </div>
         </div>
       </div>
@@ -92,16 +92,8 @@
         <div class="section-title"><el-icon><User /></el-icon> 会员与主播</div>
         <div class="info-grid">
           <div class="info-card span-2">
-            <span class="info-card-label">会员卡号</span>
-            <span class="info-card-value">{{ form.vipCode || '-' }}</span>
-          </div>
-          <div class="info-card span-2">
             <span class="info-card-label">会员手机号</span>
             <span class="info-card-value">{{ form.vipMobile || '-' }}</span>
-          </div>
-          <div class="info-card span-2">
-            <span class="info-card-label">主播ID</span>
-            <span class="info-card-value">{{ form.anchorSummaryid || '-' }}</span>
           </div>
           <div class="info-card span-2">
             <span class="info-card-label">主播名称</span>
@@ -110,7 +102,7 @@
         </div>
       </div>
 
-      <!-- 店铺与营业员(可编辑) -->
+      <!-- 店铺与营业员(可编辑，单行四卡) -->
       <div class="info-section">
         <div class="section-title">
           <el-icon><Shop /></el-icon> 店铺与营业员
@@ -121,7 +113,7 @@
             <span class="info-card-label">店铺CODE</span>
             <el-input v-model="form.storeCode" placeholder="请输入店铺CODE" size="small" />
           </div>
-          <div class="info-card editable span-3">
+          <div class="info-card editable">
             <span class="info-card-label">店铺名称</span>
             <el-input v-model="form.storeName" placeholder="请输入店铺名称" size="small" />
           </div>
@@ -129,20 +121,20 @@
             <span class="info-card-label">营业员CODE</span>
             <el-input v-model="form.billPosCode" placeholder="请输入营业员CODE" size="small" />
           </div>
-          <div class="info-card editable span-3">
+          <div class="info-card editable">
             <span class="info-card-label">营业员名称</span>
             <el-input v-model="form.billPosName" placeholder="请输入营业员名称" size="small" />
           </div>
         </div>
       </div>
 
-      <!-- 数量与金额(可编辑) -->
+      <!-- 数量与金额(可编辑，六列单行) -->
       <div class="info-section">
         <div class="section-title">
           <el-icon><Coin /></el-icon> 数量与金额
           <el-tag size="small" type="warning" effect="plain" style="margin-left:8px">可编辑</el-tag>
         </div>
-        <div class="info-grid">
+        <div class="info-grid amount-grid">
           <div class="info-card editable">
             <span class="info-card-label">数量</span>
             <el-input-number v-model="form.qty" :controls="false" size="small" style="width:100%" />
@@ -285,6 +277,13 @@ async function handleSave() {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 10px;
+}
+/* 金额区：六列单行放满；窄屏退化为三列两行 */
+.amount-grid {
+  grid-template-columns: repeat(6, 1fr);
+}
+@media (max-width: 1100px) {
+  .amount-grid { grid-template-columns: repeat(3, 1fr); }
 }
 .info-card {
   display: flex;

@@ -1,6 +1,5 @@
 package com.bcsport.admin.dto;
 
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -8,16 +7,16 @@ import java.math.BigDecimal;
 
 /**
  * 数仓销售查看(ODS_SALES_MAIN)编辑入参
- * 表无主键，用 BILL_NO + ITEM_ID 组合定位行
+ * 行唯一身份 = BILL_ID + ITEM_ID(单据号+货号+尺码不唯一，不能作行定位)
  * 可编辑归属维度字段 + 数量/金额字段
  * 注意：SP_FILL_ODS_SALES_MAIN 按日期范围重灌会覆盖人工修改
  */
 @Data
 public class OdsSalesMainUpdateDTO {
 
-    /** 单据号(行定位键) */
-    @NotBlank(message = "单据号不能为空")
-    private String billNo;
+    /** 单据ID(行定位键) */
+    @NotNull(message = "单据ID不能为空")
+    private Long billId;
 
     /** 单据明细ID(行定位键) */
     @NotNull(message = "明细ID不能为空")

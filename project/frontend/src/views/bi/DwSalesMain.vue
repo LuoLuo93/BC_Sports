@@ -71,7 +71,7 @@
               <el-table-column prop="omsSourcecode" label="网单来源单号" min-width="140" show-overflow-tooltip />
               <el-table-column v-if="hasPermission('bi:dw-sales:edit')" label="操作" width="90" align="center" fixed="right">
                 <template #default="{ row }">
-                  <el-button type="primary" plain size="small" :disabled="!row.itemId" @click="openEdit(row)">编辑</el-button>
+                  <el-button type="primary" plain size="small" :disabled="!row.billId || !row.itemId" @click="openEdit(row)">编辑</el-button>
                 </template>
               </el-table-column>
             </el-table>
@@ -336,11 +336,11 @@ function formatAmount(n) {
   return Number(n).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 6 })
 }
 
-// ===== 编辑（归属维度 + 金额字段，行键 = 单据号 + 明细ID） =====
+// ===== 编辑（归属维度 + 金额字段，行唯一身份 = BILL_ID + ITEM_ID） =====
 const editDialogVisible = ref(false)
 const editLoading = ref(false)
 const editForm = reactive({
-  billNo: '', itemId: null, billDate: null, billTime: null,
+  billId: null, billNo: '', itemId: null, billDate: null, billTime: null,
   salesType: '', omsSourcecode: '',
   storeCode: '', storeName: '', billPosCode: '', billPosName: '',
   vipCode: '', vipMobile: '', anchorSummaryid: '', anchorSummaryname: '',
@@ -350,6 +350,7 @@ const editForm = reactive({
 
 function openEdit(row) {
   Object.assign(editForm, {
+    billId: row.billId,
     billNo: row.billNo,
     itemId: row.itemId,
     billDate: row.billDate,

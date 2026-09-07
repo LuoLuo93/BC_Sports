@@ -2,7 +2,7 @@
 -- 数仓销售导入 - BI_DW 侧脚本（需用 BI_DW 身份执行）
 -- 1. ODS_SALES_MAIN 新增 PROMOTION_NAME(促销名称) 列
 -- 2. BILL_ID / ITEM_ID 取号序列(高位偏移, 避免与ETL源表ID撞号)
--- 3. 编辑定位索引(BILL_NO+ITEM_ID, 编辑功能行定位用)
+-- 3. 编辑定位索引(BILL_ID+ITEM_ID, 行唯一身份, 编辑UPDATE定位用)
 -- 幂等，可重复执行
 -- ==========================================================
 SET DEFINE OFF
@@ -56,13 +56,15 @@ BEGIN
 END;
 /
 
--- 3. 编辑定位索引(BILL_NO+ITEM_ID 为编辑功能的行定位键，避免大表编辑全表扫)
+-- 3. 编辑定位索引(行唯一身份 = BILL_ID + ITEM_ID，编辑功能UPDATE定位用，避免大表全表扫)
+--    注意：若此前已按旧版脚本建过 IDX_SALES_MAIN_EDITKEY(BILL_NO,ITEM_ID)，先执行:
+--    DROP INDEX BI_DW.IDX_SALES_MAIN_EDITKEY;
 DECLARE
   v_cnt NUMBER;
 BEGIN
   SELECT COUNT(*) INTO v_cnt FROM user_indexes WHERE index_name = 'IDX_SALES_MAIN_EDITKEY';
   IF v_cnt = 0 THEN
-    EXECUTE IMMEDIATE 'CREATE INDEX BI_DW.IDX_SALES_MAIN_EDITKEY ON BI_DW.ODS_SALES_MAIN (BILL_NO, ITEM_ID) ONLINE';
+    EXECUTE IMMEDIATE 'CREATE INDEX BI_DW.IDX_SALES_MAIN_EDITKEY ON BI_DW.ODS_SALES_MAIN (BILL_ID, ITEM_ID) ONLINE';
     DBMS_OUTPUT.PUT_LINE('IDX_SALES_MAIN_EDITKEY created');
   ELSE
     DBMS_OUTPUT.PUT_LINE('IDX_SALES_MAIN_EDITKEY already exists, skip');

@@ -23,7 +23,7 @@ public interface OdsSalesMainMapper {
     Page<OdsSalesMain> selectPage(Page<OdsSalesMain> page, @Param("q") OdsSalesMainQueryDTO query);
 
     /**
-     * 按单据号+明细ID更新归属维度字段，返回影响行数(0=行不存在或已被ETL重灌)
+     * 按BILL_ID+ITEM_ID(行唯一身份)更新归属维度字段，返回影响行数(0=行不存在或已被ETL重灌)
      */
     int updateRow(@Param("e") OdsSalesMainUpdateDTO dto);
 

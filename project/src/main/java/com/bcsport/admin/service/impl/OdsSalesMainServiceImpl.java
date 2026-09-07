@@ -42,6 +42,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Service
 public class OdsSalesMainServiceImpl implements OdsSalesMainService {
 
+    static {
+        // 放宽 POI zip炸弹防护的压缩比阈值：150W行级 xlsx 的 sheet XML 高度重复，
+        // 压缩比可达 3e-7 量级，低于默认 0.01 会被误判为攻击(内部受控上传，安全)
+        org.apache.poi.openxml4j.util.ZipSecureFile.setMinInflateRatio(1e-9);
+    }
+
     private static final int BATCH_SIZE = 1000;
     private static final int MAX_ERRORS = 100;
     private static final int MAX_ROWS = 3_000_000;

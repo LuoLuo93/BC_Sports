@@ -5,7 +5,7 @@
     <delete id="deleteYesterdayData">
         DELETE FROM VX_MassMessage
         WHERE insertDate >= DATEADD(DAY, -2, CAST(GETDATE() AS DATE))
-        AND insertDate < DATEADD(DAY, -1, CAST(GETDATE() AS DATE))
+        AND insertDate &lt; DATEADD(DAY, -1, CAST(GETDATE() AS DATE))
     </delete>
 
     <insert id="insertBatch">

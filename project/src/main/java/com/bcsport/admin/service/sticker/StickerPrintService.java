@@ -154,7 +154,7 @@ public class StickerPrintService {
             if (queryDTO.getStatus() != null) {
                 wrapper.eq(StickerPrintOrder::getStatus, queryDTO.getStatus());
             }
-            if (!Boolean.TRUE.equals(queryDTO.getViewAll())) {
+            if (!canViewAll(queryDTO.getViewAll())) {
                 String username = ShiroSecurityUtils.getCurrentUsername();
                 wrapper.eq(StickerPrintOrder::getCreateBy, username);
             }
@@ -181,6 +181,7 @@ public class StickerPrintService {
     public StickerPrintOrder getOrderWithDetails(String orderId) {
         StickerPrintOrder order = orderMapper.selectById(orderId);
         if (order != null) {
+            checkOrderOwner(order);
             List<StickerPrintOrderDetail> details = detailMapper.selectList(
                 new LambdaQueryWrapper<StickerPrintOrderDetail>()
                     .eq(StickerPrintOrderDetail::getOrderId, orderId)
@@ -224,6 +225,7 @@ public class StickerPrintService {
         if (existing == null || existing.getStatus() != 0) {
             throw new BusinessException("只有草稿状态才能编辑");
         }
+        checkOrderOwner(existing);
         order.setId(orderId);
         order.setUpdateTime(LocalDateTime.now());
         orderMapper.updateById(order);
@@ -239,6 +241,7 @@ public class StickerPrintService {
         if (order == null || order.getStatus() != 0) {
             throw new BusinessException("只有草稿状态才能提交");
         }
+        checkOrderOwner(order);
         order.setStatus(1);
         order.setUpdateTime(LocalDateTime.now());
         orderMapper.updateById(order);
@@ -264,14 +267,36 @@ public class StickerPrintService {
         if (order == null || order.getStatus() != 0) {
             throw new BusinessException("只有草稿状态才能删除");
         }
+        checkOrderOwner(order);
         // deleted 是全局逻辑删除字段，updateById 会把它从 SET 中过滤掉，
         // 必须走 deleteById 才能生成 UPDATE ... SET deleted=1
         orderMapper.deleteById(orderId);
     }
 
+    /**
+     * viewAll 只有持 sticker:print:all 权限时才生效(与前端 PrintApplication 的"查看全部"同权限)，
+     * 防止绕过前端直接调 API 传 viewAll=true 看到他人单据。
+     */
+    private boolean canViewAll(Boolean viewAll) {
+        return Boolean.TRUE.equals(viewAll) && ShiroSecurityUtils.hasPermission("sticker:print:all");
+    }
+
+    /**
+     * 属主校验：持 sticker:print:all 的管理员可操作所有单据，普通用户仅限本人单据。
+     * 详情/编辑/提交/删除共用；审核(review)本身就是处理他人单据，不校验。
+     */
+    private void checkOrderOwner(StickerPrintOrder order) {
+        if (ShiroSecurityUtils.hasPermission("sticker:print:all")) {
+            return;
+        }
+        String current = ShiroSecurityUtils.getCurrentUsername();
+        if (current == null || !current.equals(order.getCreateBy())) {
+            throw new BusinessException("无权操作他人的申请单");
+        }
+    }
+
     private void saveDetails(String orderId, List<StickerPrintOrderDetail> details) {
-        if (details == null || details.isEmpty()) return;
-        for (int i = 0; i < details.size(); i++) {
+        if (details == null || details.isEmpty()) return;        for (int i = 0; i < details.size(); i++) {
             StickerPrintOrderDetail d = details.get(i);
             d.setId(IdUtil.fastSimpleUUID());
             d.setOrderId(orderId);

@@ -37,6 +37,9 @@ public class PrintTaskService {
     @Autowired
     private PrintTaskMapper taskMapper;
 
+    /** 批量插入打印任务的单批大小：每行含 printData CLOB，控制单条 SQL 长度 */
+    private static final int PRINT_TASK_INSERT_CHUNK = 100;
+
     @Autowired
     private StickerPrintOrderMapper orderMapper;
 
@@ -406,12 +409,16 @@ public class PrintTaskService {
         // 先校验并缓存每条明细的模板匹配；任一品牌+类别无启用配置即整体抛错回滚，不产生半成品任务
         // （避免回退 default.btw 导致 Agent 端必然"模板不存在"打印失败）。
         // 同一品牌+类别可配多个模板(每模板各打一张,按配置先后打印),此处取全部启用行。
+        // 模板匹配表极小：一次预载按 品牌|类别 分组，替代每条明细一次查询的 N+1(大单千条明细=千次查库)。
+        Map<String, List<BrandTemplateMatch>> matchMap = new HashMap<>();
+        for (BrandTemplateMatch m : brandTemplateMatchService.listActiveAll()) {
+            matchMap.computeIfAbsent(m.getBrandName() + "||" + m.getKindName(), k -> new ArrayList<>()).add(m);
+        }
         List<List<BrandTemplateMatch>> matchesPerDetail = new ArrayList<>();
         List<String> unmatched = new ArrayList<>();
         for (StickerPrintOrderDetail detail : details) {
-            List<BrandTemplateMatch> ms = brandTemplateMatchService.matchAllByName(
-                detail.getBrandName(), detail.getKindName()
-            );
+            List<BrandTemplateMatch> ms = matchMap.getOrDefault(
+                detail.getBrandName() + "||" + detail.getKindName(), Collections.emptyList());
             matchesPerDetail.add(ms);
             if (ms.isEmpty()) {
                 unmatched.add(detail.getBrandName() + "/" + detail.getKindName());
@@ -422,6 +429,7 @@ public class PrintTaskService {
         }
 
         List<String> taskIds = new ArrayList<>();
+        List<PrintTask> tasks = new ArrayList<>();
 
         // 本次下发共享同一个批次号，便于在任务记录中区分"同一批次"
         String batchId = UUID.randomUUID().toString().replace("-", "");
@@ -480,7 +488,8 @@ public class PrintTaskService {
             cover.setCreateTime(LocalDateTime.now());
             cover.setRetryCount(0);
             cover.setBatchId(batchId);
-            taskMapper.insert(cover);
+            cover.setId(UUID.randomUUID().toString().replace("-", "")); // batchInsert 绕过 MP 主键填充
+            tasks.add(cover);
             taskIds.add(cover.getTaskId());
         }
 
@@ -523,10 +532,17 @@ public class PrintTaskService {
                 task.setCreateTime(LocalDateTime.now());
                 task.setRetryCount(0);
                 task.setBatchId(batchId);
+                task.setId(UUID.randomUUID().toString().replace("-", "")); // batchInsert 绕过 MP 主键填充
 
-                taskMapper.insert(task);
+                tasks.add(task);
                 taskIds.add(taskId);
             }
+        }
+
+        // 分块批量插入，替代逐条 insert(大单数千任务时往返次数降两个数量级)
+        for (int i = 0; i < tasks.size(); i += PRINT_TASK_INSERT_CHUNK) {
+            int end = Math.min(i + PRINT_TASK_INSERT_CHUNK, tasks.size());
+            taskMapper.batchInsert(tasks.subList(i, end));
         }
 
         return String.join(",", taskIds);

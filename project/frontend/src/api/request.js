@@ -12,6 +12,20 @@ const request = axios.create({
 let isLoggingOut = false
 // 登录流程中标志：避免 /doLogin 后的请求（如拉用户信息）偶发 401 时，拦截器抢着把用户打回 /login
 let isLoggingIn = false
+// 会话过期单飞标志：页面加载时 N 个并发请求同时 401，只弹一次提示、只跳一次登录页
+let redirecting401 = false
+
+function handleSessionExpired(message) {
+  const authStore = useAuthStore()
+  authStore.clearAuth()
+  if (!isLoggingOut && router.currentRoute.value.path !== '/login') {
+    if (!redirecting401) {
+      redirecting401 = true
+      ElMessage.error(message || '登录已过期，请重新登录')
+      router.push('/login').finally(() => { redirecting401 = false })
+    }
+  }
+}
 
 export function setLoggingOut(value) {
   isLoggingOut = value
@@ -45,36 +59,25 @@ request.interceptors.response.use(
       if (isLoggingIn) {
         return Promise.reject(new Error(res.message || '未登录'))
       }
-      const authStore = useAuthStore()
-      authStore.clearAuth()
-      if (!isLoggingOut && router.currentRoute.value.path !== '/login') {
-        ElMessage.error(res.message || '登录已过期，请重新登录')
-      }
-      router.push('/login')
+      handleSessionExpired(res.message)
       return Promise.reject(new Error(res.message || '未登录'))
     }
-    ElMessage.error(res.message || '操作失败')
+    // grouping: 多个并发请求同时失败时合并为一条提示，不再连弹 N 个 toast
+    ElMessage({ type: 'error', message: res.message || '操作失败', grouping: true })
     return Promise.reject(new Error(res.message || '操作失败'))
   },
   async error => {  // 修复：添加 async 关键字
     if (error.response) {
       const status = error.response.status
       if (status === 401) {
-        if (isLoggingIn) {
-          // 登录流程中的 401 不抢跳转
-        } else {
-          const authStore = useAuthStore()
-          authStore.clearAuth()
-          if (!isLoggingOut && router.currentRoute.value.path !== '/login') {
-            ElMessage.error('登录已过期，请重新登录')
-          }
-          router.push('/login')
+        if (!isLoggingIn) {
+          handleSessionExpired()
         }
       } else if (status === 403) {
-        ElMessage.error('没有操作权限')
+        ElMessage({ type: 'error', message: '没有操作权限', grouping: true })
       } else {
         const msg = error.response.data?.message || error.response.data?.msg || '网络请求失败'
-        ElMessage.error(msg)
+        ElMessage({ type: 'error', message: msg, grouping: true })
       }
     } else {
       ElMessage.error('网络连接异常')

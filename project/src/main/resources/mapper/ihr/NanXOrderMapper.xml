@@ -35,4 +35,23 @@
         LEFT JOIN nanXOrderDetail d ON m.outTradeId = d.outTradeId
     </select>
 
+    <!-- keyset 分页：offset 深翻页越翻越慢且源表变化会漏/重，按 outTradeId 游标前进 -->
+    <select id="selectOrdersAfter" resultMap="orderResultMap">
+        SELECT m.outTradeId, m.totalFee, m.payment, m.nasOuid, m.created, m.num,
+               d.outOrderId, d.title, d.outItemId, d.outerSkuId,
+               d.orderNum, d.orderTotalFee, d.orderPayment, d.orderPrice
+        FROM (
+            SELECT outTradeId, totalFee, payment, nasOuid, created, num
+            FROM nanXOrderMaster
+            <where>
+                <if test="after != null and after != ''">
+                    outTradeId &gt; #{after}
+                </if>
+            </where>
+            ORDER BY outTradeId
+            OFFSET 0 ROWS FETCH FIRST #{limit} ROWS ONLY
+        ) m
+        LEFT JOIN nanXOrderDetail d ON m.outTradeId = d.outTradeId
+    </select>
+
 </mapper>

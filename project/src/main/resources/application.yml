@@ -356,6 +356,8 @@ management:
   endpoint:
     health:
       show-details: when-authorized
+  # redis 健康检查保持开启：Redis 故障会导致登录防爆破降级(AuthCacheService 内已记 error 日志)，
+  # health 必须如实反映 DOWN 让监控可见，不能再静默屏蔽
   health:
     redis:
-      enabled: false
+      enabled: true

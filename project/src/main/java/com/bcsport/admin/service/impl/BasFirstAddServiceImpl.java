@@ -4,6 +4,7 @@ import cn.hutool.poi.excel.ExcelUtil;
 import cn.hutool.poi.excel.sax.handler.RowHandler;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.bcsport.admin.util.ExcelSaxUtils;
 import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.entity.qywx.BasFirstAdd;
@@ -224,30 +225,8 @@ public class BasFirstAddServiceImpl implements BasFirstAddService {
      * 读取全部 sheet（xlsx 复用同一个 OPCPackage；xls 逐个尝试到越界）
      */
     private void readAllSheets(MultipartFile file, String format, RowHandler handler) throws Exception {
-        if ("xlsx".equals(format)) {
-            org.apache.poi.openxml4j.opc.OPCPackage pkg = org.apache.poi.openxml4j.opc.OPCPackage.open(file.getInputStream());
-            try {
-                int sheetCount = pkg.getPartsByName(java.util.regex.Pattern.compile("/xl/worksheets/.*\\.xml")).size();
-                log.info("Bas_FirstAdd xlsx 共 {} 个 sheet", sheetCount);
-                cn.hutool.poi.excel.sax.Excel07SaxReader saxReader = new cn.hutool.poi.excel.sax.Excel07SaxReader(handler);
-                for (int s = 0; s < sheetCount; s++) {
-                    saxReader.read(pkg, s);
-                }
-            } finally {
-                pkg.revert();
-            }
-        } else {
-            // xls：逐个 sheet 尝试，越界则停止
-            for (int s = 0; s < 20; s++) {
-                try {
-                    ExcelUtil.readBySax(file.getInputStream(), s, handler);
-                } catch (Exception e) {
-                    break;
-                }
-            }
-        }
+        ExcelSaxUtils.readAllSheets(file, format, handler, "Bas_FirstAdd");
     }
-
     /**
      * 按列索引将单元格映射到实体（表头未识别时按固定顺序兜底）
      */

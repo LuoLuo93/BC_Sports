@@ -1,5 +1,6 @@
 package com.bcsport.admin.controller;
 
+import com.bcsport.admin.annotation.OperLog;
 import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.common.Result;
@@ -68,6 +69,9 @@ public class OdsSalesMainController {
     @PostMapping("/update")
     @ApiOperation("编辑销售明细归属维度字段")
     @RequiresPermissions("bi:dw-sales:edit")
+    // 事实表人工改数必须留痕：@OperLog 把 OdsSalesMainUpdateDTO(billId/itemId/改动字段)序列化进 sys_log，
+    // 与导入侧的 DwSalesImportLog 形成对称审计
+    @OperLog(module = "数仓销售", operation = "编辑销售明细")
     public Result<?> update(@Valid @RequestBody OdsSalesMainUpdateDTO dto) {
         boolean success = odsSalesMainService.update(dto);
         return success ? Result.success("修改成功") : Result.error("记录不存在(可能已被ETL重灌)，请刷新后重试");

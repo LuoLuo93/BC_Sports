@@ -137,7 +137,8 @@ public class AuthCacheService {
             }
             return count != null ? count : 0;
         } catch (Exception e) {
-            log.warn("Redis记录登录失败次数异常, username={}", username, e);
+            // Redis 不可用时登录失败计数失效(防爆破降级)，必须 error 级暴露给监控/日志告警
+            log.error("Redis不可用, 登录防爆破计数失效(该次失败未被记录), username={}", username, e);
             return 0;
         }
     }
@@ -184,6 +185,8 @@ public class AuthCacheService {
             Long ttl = redisTemplate.getExpire(LOGIN_LOCK_KEY + username, TimeUnit.SECONDS);
             return ttl != null && ttl > 0 ? ttl : 0;
         } catch (Exception e) {
+            // Redis 不可用时锁定状态读不到(防爆破降级)，必须 error 级暴露给监控/日志告警
+            log.error("Redis不可用, 登录锁定状态读取失败(按未锁定处理), username={}", username, e);
             return 0;
         }
     }

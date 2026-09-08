@@ -145,6 +145,15 @@ const iconMap = { Odometer }
 
 const router = useRouter()
 const route = useRoute()
+
+// keep-alive include 取路由 name（路由 name 与各页面 defineOptions 的组件 name 对齐）。
+// 此前用手工 path→name 映射表，与路由表两处维护必然漂移：已失效的 /bi/erp-shop 还在表里，
+// 新增页面(dw-sales/sticker/data/nxcrm 等)全部漏收，导致这些 tab 永不被缓存、每次进页重新拉数据。
+const cachedViews = computed(() => {
+  return tabStore.tabs
+    .map(t => router.resolve(t.path)?.name)
+    .filter(Boolean)
+})
 const authStore = useAuthStore()
 const menuStore = useMenuStore()
 const tabStore = useTabStore()
@@ -168,48 +177,6 @@ const logoFullUrl = computed(() => {
 })
 
 watch(() => themeStore.logoUrl, () => { logoTimestamp.value = Date.now() })
-
-const pathToName = {
-  '/': 'Dashboard',
-  '/system/menu': 'MenuManagement',
-  '/system/user': 'UserManagement',
-  '/system/role': 'RoleManagement',
-  '/system/dept': 'DeptManagement',
-  '/system/dict': 'DictManagement',
-  '/bi/management': 'BiManagement',
-  '/bi/entity-channel': 'EntityChannel',
-  '/bi/entity-channel/form': 'EntityChannelForm',
-  '/bi/erp-shop': 'ErpShop',
-  '/bi/erp-warehouse': 'ErpWarehouse',
-  '/bi/erp-customer': 'ErpCustomer',
-  '/bi/goods-data': 'GoodsDataImport',
-  '/bi/shop-daily-budget': 'ShopDailyBudget',
-  '/sticker/print': 'StickerPrintList',
-  '/sticker/brand-template': 'BrandTemplateMatch',
-  '/sticker/size-group': 'StickerSizeGroup',
-  '/ihr/employee-management': 'IhrEmployee',
-  '/ihr/onboarding-management': 'IhrOnboarding',
-  '/ihr/adjustment-management': 'IhrAdjustment',
-  '/ihr/leaving-management': 'IhrLeaving',
-  '/ihr/onboarding-exclusion': 'IhrExclusion',
-  '/ihr/leaving-exclusion': 'IhrExclusion',
-  '/qywx/customer-tag': 'CustomerTag',
-  '/qywx/follow-user': 'FollowUserList',
-  '/qywx/group-chat': 'GroupChatList',
-  '/qywx/moment': 'MomentList',
-  '/monitor/schedule': 'Schedule',
-  '/statistics': 'Statistics',
-  '/report': 'Report',
-  '/erp/employee-management': 'ErpEmployee',
-  '/profile': 'Profile',
-  '/settings': 'Settings'
-}
-
-const cachedViews = computed(() => {
-  return tabStore.tabs
-    .map(t => pathToName[t.path])
-    .filter(Boolean)
-})
 
 onMounted(async () => {
   await menuStore.loadMenuTree()

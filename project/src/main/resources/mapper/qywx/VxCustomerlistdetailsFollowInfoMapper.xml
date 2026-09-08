@@ -14,6 +14,25 @@
         </foreach>
     </insert>
 
+    <!-- 影子表三件套: 清空STG / 写STG / 切换(与主表deleteAll同一事务调用, 失败回滚保住旧数据) -->
+    <update id="clearStg">
+        TRUNCATE TABLE VX_CustomerListDetails_follow_info_STG
+    </update>
+
+    <insert id="insertBatchStg">
+        INSERT INTO VX_CustomerListDetails_follow_info_STG (userid, remark, createtime, description, createTime2, addWay, operUserid, externalUserid)
+        VALUES
+        <foreach collection="list" index="index" item="item" separator=",">
+            (#{item.userid}, #{item.remark}, #{item.createtime}, #{item.description}, GETDATE(), #{item.addWay}, #{item.operUserid}, #{item.externalUserid})
+        </foreach>
+    </insert>
+
+    <update id="copyFromStg">
+        INSERT INTO VX_CustomerListDetails_follow_info (userid, remark, createtime, description, createTime2, addWay, operUserid, externalUserid)
+        SELECT userid, remark, createtime, description, createTime2, addWay, operUserid, externalUserid
+        FROM VX_CustomerListDetails_follow_info_STG
+    </update>
+
     <select id="selectAll" resultType="com.bcsport.admin.entity.qywx.VxCustomerlistdetailsFollowInfo">
         SELECT id, userid, externalUserid, remark, description, createtime, addWay, operUserid, createTime2
         FROM VX_CustomerListDetails_follow_info

@@ -57,7 +57,9 @@ public class IhrEmployeeTask {
     @Qualifier("ihrTransactionManager")
     private PlatformTransactionManager transactionManager;
 
-    private static final int BATCH_SIZE = 10;  // 减少批量大小，避免超过 SQL Server 2100 参数限制
+    // 批量大小受 SQL Server 单语句 2100 个参数上限约束：本任务最宽的 employees 表 26 列，
+    // 26×65=1690 < 2100；10 行/批会把全量同步拖慢一个数量级
+    private static final int BATCH_SIZE = 65;
     private static final int EMPLOYEE_BATCH_SIZE = 100;
     private static final int DETAIL_SUBMIT_BATCH_SIZE = 500;
 
@@ -210,15 +212,19 @@ public class IhrEmployeeTask {
             }
             log.info("共 {} 名员工需要同步详情", staffIds.size());
 
-            // 1. 先清空旧数据
-            detailMapper.deleteAll();
-            flexAttrMapper.deleteAll();
-
             TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
 
-            // 2. 多线程并发：每个线程独立完成 拉取→写库→释放
+            // 1. 只清空影子表(清掉上轮残留)。主表不动：拉取中途失败时旧数据完整保留，全部成功后才切换
+            txTemplate.execute(status -> {
+                detailMapper.clearStg();
+                flexAttrMapper.clearStg();
+                return null;
+            });
+
+            // 2. 多线程并发：每个线程独立完成 拉取→写影子表→释放
             AtomicInteger successCount = new AtomicInteger(0);
             AtomicInteger failCount = new AtomicInteger(0);
+            boolean aborted = false;
             int concurrent = 5;
             Semaphore semaphore = new Semaphore(concurrent);
 
@@ -238,13 +244,13 @@ public class IhrEmployeeTask {
                                 List<IhrEmployeeFlexAttr> tempFlexList = new ArrayList<>();
                                 fetchEmployeeDetail(staffId, tempDetailList, tempFlexList);
 
-                                // 立即写库（独立短事务）
+                                // 立即写影子表（独立短事务）
                                 txTemplate.execute(status -> {
                                     if (!tempDetailList.isEmpty()) {
-                                        detailMapper.insertBatch(tempDetailList);
+                                        detailMapper.insertBatchStg(tempDetailList);
                                     }
                                     if (!tempFlexList.isEmpty()) {
-                                        flexAttrMapper.insertBatch(tempFlexList);
+                                        flexAttrMapper.insertBatchStg(tempFlexList);
                                     }
                                     return null;
                                 });
@@ -270,18 +276,41 @@ public class IhrEmployeeTask {
                     if (!completed) {
                         futures.forEach(future -> future.cancel(true));
                         log.warn("等待超时，部分任务可能未完成，当前批次: {}-{}", i + 1, end);
+                        aborted = true;
                         break;
                     }
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     futures.forEach(future -> future.cancel(true));
-                    throw e;
+                    aborted = true;
+                    break;
                 }
             }
 
             long fetchTime = System.currentTimeMillis() - startTime;
             log.info("员工详情拉取完成, 成功: {}, 失败: {}, 耗时: {} ms",
                     successCount.get(), failCount.get(), fetchTime);
+
+            // 3. 超时中断或失败率超10%(典型如token失效导致全部失败)时放弃切换，保留主表旧数据
+            if (aborted) {
+                throw new IllegalStateException("员工详情同步超时/中断，保留主表旧数据不切换");
+            }
+            if (failCount.get() * 10 > staffIds.size()) {
+                throw new IllegalStateException(String.format(
+                        "员工详情同步失败率过高(失败 %d/%d)，保留主表旧数据不切换",
+                        failCount.get(), staffIds.size()));
+            }
+
+            // 4. 原子切换：主表清空+影子表回填+清影子表，同一事务，任一步失败整体回滚
+            txTemplate.execute(status -> {
+                detailMapper.deleteAll();
+                detailMapper.copyFromStg();
+                detailMapper.clearStg();
+                flexAttrMapper.deleteAll();
+                flexAttrMapper.copyFromStg();
+                flexAttrMapper.clearStg();
+                return null;
+            });
 
             // 3. 批量获取并写入自定义子集（批量API，逐批写入）
             // log.info("开始同步子集数据...");

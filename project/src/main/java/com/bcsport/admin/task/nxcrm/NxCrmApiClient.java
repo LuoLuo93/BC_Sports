@@ -64,6 +64,18 @@ public class NxCrmApiClient {
     private volatile LocalDateTime tokenExpireTime;
     private final ReentrantLock tokenRefreshLock = new ReentrantLock();
 
+    /**
+     * 单请求超时(ms)。SDK 的 BaseRequest 原生支持按请求设置；不设置时走 SDK 内部
+     * 默认(连接/连接池等待约5秒，读超时由请求级参数决定)。显式设为 60s 与其他四套
+     * API 客户端(30s连接/60s读)的量级保持一致，批量接口(千条会员/订单)留足余量。
+     */
+    private static final Integer REQUEST_TIMEOUT_MS = 60_000;
+
+    private <T extends com.nascent.ecrp.opensdk.core.request.BaseRequest> T withTimeout(T request) {
+        request.setRequestTimeOut(REQUEST_TIMEOUT_MS);
+        return request;
+    }
+
     @PostConstruct
     public void init() {
         log.info("NxCrmApiClient initialized, serverUrl={}", serverUrl);
@@ -94,7 +106,7 @@ public class NxCrmApiClient {
     }
 
     private String doRefreshToken() {
-        AccessTokenRegisterRequest request = new AccessTokenRegisterRequest();
+        AccessTokenRegisterRequest request = withTimeout(new AccessTokenRegisterRequest());
         request.setAppKey(appKey);
         request.setGroupId(groupId);
         request.setForceRefresh(true);
@@ -149,7 +161,7 @@ public class NxCrmApiClient {
                 nickList.add(nap);
             }
 
-            MultipleCustomerTagSetRequest request = new MultipleCustomerTagSetRequest();
+            MultipleCustomerTagSetRequest request = withTimeout(new MultipleCustomerTagSetRequest());
             request.setAppKey(appKey);
             request.setGroupId(groupId);
             request.setAppSecret(appSecret);
@@ -185,7 +197,7 @@ public class NxCrmApiClient {
     public List<CustomerShopInfo> getShopByCustomer(String nasOuid) {
         String token = getAccessToken();
         try {
-            ShopByCustomerQueryRequest request = new ShopByCustomerQueryRequest();
+            ShopByCustomerQueryRequest request = withTimeout(new ShopByCustomerQueryRequest());
             request.setAppKey(appKey);
             request.setGroupId(groupId);
             request.setAppSecret(appSecret);
@@ -212,7 +224,7 @@ public class NxCrmApiClient {
         String token = getAccessToken();
         log.info("查询标签分类, accessToken={}", token != null ? token.substring(0, Math.min(10, token.length())) + "..." : "NULL");
         try {
-            CustomerTagCategoryQueryRequest request = new CustomerTagCategoryQueryRequest();
+            CustomerTagCategoryQueryRequest request = withTimeout(new CustomerTagCategoryQueryRequest());
             request.setAppKey(appKey);
             request.setGroupId(groupId);
             request.setAppSecret(appSecret);
@@ -237,7 +249,7 @@ public class NxCrmApiClient {
     public List<IncrementTagInfo> getIncrementTags(Integer entityCode, Date startTime, Date endTime) {
         String token = getAccessToken();
         try {
-            IncrementTagQueryRequest request = new IncrementTagQueryRequest();
+            IncrementTagQueryRequest request = withTimeout(new IncrementTagQueryRequest());
             request.setAppKey(appKey);
             request.setGroupId(groupId);
             request.setAppSecret(appSecret);
@@ -290,7 +302,7 @@ public class NxCrmApiClient {
     public UnbindResponse unbindCustomer(String nasOuid, String shopId) {
         String token = getAccessToken();
         try {
-            CustomerUnbindRequest request = new CustomerUnbindRequest();
+            CustomerUnbindRequest request = withTimeout(new CustomerUnbindRequest());
             request.setAppKey(appKey);
             request.setGroupId(groupId);
             request.setAppSecret(appSecret);
@@ -367,7 +379,7 @@ public class NxCrmApiClient {
     public int saveCustomers(List<CustomerSaveInfo> customers, String shopId) {
         String token = getAccessToken();
         try {
-            BatchCustomerSaveRequest request = new BatchCustomerSaveRequest();
+            BatchCustomerSaveRequest request = withTimeout(new BatchCustomerSaveRequest());
             request.setAppKey(appKey);
             request.setGroupId(groupId);
             request.setAppSecret(appSecret);
@@ -419,7 +431,7 @@ public class NxCrmApiClient {
     public int updateCustomerGrades(List<CustomerGradeUpdateInfo> gradeUpdates, String shopId) {
         String token = getAccessToken();
         try {
-            CustomerGradeUpdateRequest request = new CustomerGradeUpdateRequest();
+            CustomerGradeUpdateRequest request = withTimeout(new CustomerGradeUpdateRequest());
             request.setAppKey(appKey);
             request.setGroupId(groupId);
             request.setAppSecret(appSecret);
@@ -476,7 +488,7 @@ public class NxCrmApiClient {
     public void saveOrders(List<TradeDetailVo> orders, String shopId) {
         String token = getAccessToken();
         try {
-            TradeSaveRequest request = new TradeSaveRequest();
+            TradeSaveRequest request = withTimeout(new TradeSaveRequest());
             request.setAppKey(appKey);
             request.setGroupId(groupId);
             request.setAppSecret(appSecret);

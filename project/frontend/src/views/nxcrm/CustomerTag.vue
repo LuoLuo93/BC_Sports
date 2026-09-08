@@ -181,7 +181,7 @@
 
 <script setup>
 defineOptions({ name: 'NxcrmCustomerTag' })
-import { ref, reactive, watch } from 'vue'
+import { ref, reactive, watch, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Plus, RefreshRight, Search } from '@element-plus/icons-vue'
 import { PAGE_SIZES, defaultPageSize } from '@/utils/appConfig'
@@ -232,6 +232,11 @@ function startStatusPolling(taskId) {
     } catch { /* keep polling */ }
   }, 3000)
 }
+
+// 任务长时间停留在"处理中"时, 用户切走页面必须停止轮询, 否则每3秒永久打接口
+onUnmounted(() => {
+  if (statusTimer) { clearInterval(statusTimer); statusTimer = null }
+})
 
 // ===== 任务明细 =====
 const selectedTask = ref(null)

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bcsport.admin.mapper.agent.PrintTaskMapper">
+
+    <!-- 批量插入打印任务。注意：绕过了 MyBatis-Plus 的 ASSIGN_UUID 主键填充，
+         调用方必须先 setId(...)。列清单与 PrintTask 实体 @TableField 一一对应，
+         实体加字段时此处同步改。调用方需自行分块(每批≤100)避免单条 SQL 过长。 -->
+    <insert id="batchInsert">
+        INSERT INTO print_task (id, task_id, order_no, order_id, material_number, material_name,
+            style_number, color, brand_name, kind_name, size_name, local_size_name, print_qty,
+            template_file, printer_name, print_data, agent_id, status, error_msg, create_time,
+            print_time, dispatch_time, retry_count, source_task_id, is_reprint, reprint_reason, batch_id)
+        <foreach collection="list" item="t" separator=" UNION ALL ">
+            SELECT #{t.id}, #{t.taskId}, #{t.orderNo}, #{t.orderId}, #{t.materialNumber}, #{t.materialName},
+                #{t.styleNumber}, #{t.color}, #{t.brandName}, #{t.kindName}, #{t.sizeName}, #{t.localSizeName},
+                #{t.printQty}, #{t.templateFile}, #{t.printerName}, #{t.printData}, #{t.agentId}, #{t.status},
+                #{t.errorMsg}, #{t.createTime}, #{t.printTime}, #{t.dispatchTime}, #{t.retryCount},
+                #{t.sourceTaskId}, #{t.isReprint}, #{t.reprintReason}, #{t.batchId} FROM DUAL
+        </foreach>
+    </insert>
+
+</mapper>

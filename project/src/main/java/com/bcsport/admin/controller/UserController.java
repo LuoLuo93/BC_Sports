@@ -72,7 +72,7 @@ public class UserController {
      */
     @PutMapping("/profile")
     @ApiOperation("更新当前登录用户的个人信息")
-    @OperLog(module = "用户管理", operation = "更新个人信息")
+    @OperLog(module = "用户管理", operation = "更新个人信息", saveParams = false)
     public Result<?> updateProfile(@RequestBody UserDTO userDTO) {
         String currentUserId = ShiroSecurityUtils.getCurrentUserId();
         if (currentUserId == null) {
@@ -117,7 +117,8 @@ public class UserController {
     @PostMapping
     @ApiOperation("新增用户")
     @RequiresPermissions("user:add")
-    @OperLog(module = "用户管理", operation = "新增用户")
+    // UserDTO/PasswordDTO 含密码字段，saveParams=false 防止明文密码被切面序列化进 sys_log.params
+    @OperLog(module = "用户管理", operation = "新增用户", saveParams = false)
     public Result<?> addUser(@Validated(User.Create.class) @RequestBody UserDTO userDTO) {
         boolean success = userService.addUserWithRoles(userDTO, userDTO.getRoleIds());
         if (success) {
@@ -132,7 +133,7 @@ public class UserController {
     @PutMapping("/{id}")
     @ApiOperation("更新用户")
     @RequiresPermissions("user:edit")
-    @OperLog(module = "用户管理", operation = "更新用户")
+    @OperLog(module = "用户管理", operation = "更新用户", saveParams = false)
     public Result<?> updateUser(@PathVariable String id, @Validated(User.Update.class) @RequestBody UserDTO userDTO) {
         userDTO.setId(id);
         boolean success = userService.updateUserWithRoles(userDTO, userDTO.getRoleIds());
@@ -163,7 +164,7 @@ public class UserController {
     @PutMapping("/{id}/resetPassword")
     @ApiOperation("重置密码")
     @RequiresPermissions("user:resetPassword")
-    @OperLog(module = "用户管理", operation = "重置密码")
+    @OperLog(module = "用户管理", operation = "重置密码", saveParams = false)
     public Result<?> resetPassword(@PathVariable String id, @Validated @RequestBody PasswordDTO dto) {
         String error = validatePassword(dto.getNewPassword());
         if (error != null) return Result.paramError(error);

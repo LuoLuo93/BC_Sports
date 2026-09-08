@@ -2,7 +2,7 @@
 -- 数仓销售查看 - 菜单脚本（查询 BI_DW.ODS_SALES_MAIN）
 -- 菜单: 挂在 BI管理(BI_DIR) 下, 仅查询权限, 无按钮权限
 -- 第1部分: 用 BC_SPORTS 身份执行(菜单表在 bc_sports schema)
--- 第2部分: 用 BI_DW 身份执行(可选索引, 加速提交时间/单据号查询)
+-- 第2部分: 用 BI_DW 身份执行(查询索引, 列表页翻页依赖, 建议必须执行)
 -- ==========================================================
 SET DEFINE OFF
 WHENEVER SQLERROR EXIT SQL.SQLCODE;
@@ -93,10 +93,23 @@ END;
 COMMIT;
 
 -- ==========================================================
--- 2. 可选: 查询索引(BI_DW schema 执行, 用 BI_DW 身份)
+-- 2. 查询索引(BI_DW schema 执行, 用 BI_DW 身份)
 --    ODS_SALES_MAIN 为 CTAS 新建表无索引, 明细数据量大,
---    按提交时间范围/单据号查询前建议执行, 否则全表扫
+--    列表页 ORDER BY BILL_TIME DESC + BILL_NO 条件查询依赖此索引,
+--    缺失时每次翻页都是全表扫+全表排序。幂等: 已存在则跳过。
 -- ==========================================================
--- CREATE INDEX BI_DW.IDX_ODS_SALES_MAIN_TIME ON BI_DW.ODS_SALES_MAIN (BILL_TIME, BILL_NO) ONLINE;
+DECLARE
+  v_count NUMBER;
+BEGIN
+  SELECT COUNT(*) INTO v_count FROM ALL_INDEXES
+   WHERE OWNER = 'BI_DW' AND INDEX_NAME = 'IDX_ODS_SALES_MAIN_TIME';
+  IF v_count = 0 THEN
+    EXECUTE IMMEDIATE 'CREATE INDEX BI_DW.IDX_ODS_SALES_MAIN_TIME ON BI_DW.ODS_SALES_MAIN (BILL_TIME, BILL_NO) ONLINE';
+    DBMS_OUTPUT.PUT_LINE('IDX_ODS_SALES_MAIN_TIME created');
+  ELSE
+    DBMS_OUTPUT.PUT_LINE('IDX_ODS_SALES_MAIN_TIME already exists, skip');
+  END IF;
+END;
+/
 
 EXIT;

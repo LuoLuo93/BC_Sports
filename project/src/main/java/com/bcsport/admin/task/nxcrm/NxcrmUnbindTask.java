@@ -40,6 +40,12 @@ public class NxcrmUnbindTask {
     private static final int MAX_RETRY = 3;
     private static final int API_CONCURRENCY = 5;
     private static final long PAGE_AWAIT_MINUTES = 30L;
+    /**
+     * 死循环熔断：记录只有状态回写成功才会离开待处理结果集，若"查询正常但回写持续失败"
+     * (如写锁/写超时)，while 会无限重捞并反复调外部解绑接口。正常一轮处理 PAGE_SIZE 条，
+     * 远超此上限即判定回写异常，终止本轮，剩余记录等下个调度周期。
+     */
+    private static final int MAX_ROUNDS = 200;
     /** 单条 errorMsg 字段最大长度，超长截断避免数据库列溢出 */
     private static final int ERROR_MSG_MAX_LEN = 500;
 
@@ -71,8 +77,13 @@ public class NxcrmUnbindTask {
         AtomicInteger totalSuccess = new AtomicInteger(0);
         AtomicInteger totalFailed  = new AtomicInteger(0);
         Semaphore semaphore = new Semaphore(API_CONCURRENCY);
+        int round = 0;
 
         while (true) {
+            if (++round > MAX_ROUNDS) {
+                log.error("解绑循环超过{}轮上限(疑似状态回写持续失败)，终止本轮，剩余记录待下个调度周期重试", MAX_ROUNDS);
+                break;
+            }
             // 始终从 offset=0 捞：成功的记录 status→1 离开结果集，自然前移
             List<NxcrmUnbindQueue> pending;
             try {

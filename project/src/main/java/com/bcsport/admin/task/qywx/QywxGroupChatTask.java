@@ -65,11 +65,29 @@ public class QywxGroupChatTask {
         long totalStartTime = System.currentTimeMillis();
 
         try {
-            // 第一步：获取所有成员的群列表（单线程，直接写库）
+            // 第一步：获取所有成员的群列表（小表内存缓冲，全部拉完后单事务删旧+插新，
+            //         拉取中途失败时群列表主表不受影响）
             Set<String> chatIds = syncGroupChatList();
 
-            // 第二步：获取所有群详情（多线程，边获取边写库）
-            syncGroupChatDetails(new ArrayList<>(chatIds));
+            // 第二步：获取所有群详情（多线程，边获取边写影子表，成功后原子切换）
+            if (!chatIds.isEmpty()) {
+                int[] result = syncGroupChatDetails(new ArrayList<>(chatIds));
+                int failed = result[1];
+                // 失败率超10%(典型如token失效导致全部失败)时放弃切换，保留主表旧数据
+                if (failed * 10 > chatIds.size()) {
+                    throw new IllegalStateException(String.format(
+                            "同步群详情失败率过高(失败 %d/%d)，保留主表旧数据不切换", failed, chatIds.size()));
+                }
+                new TransactionTemplate(transactionManager).execute(status -> {
+                    customerBaseDetailsMapper.deleteAllDetails();
+                    customerBaseDetailsMapper.copyDetailsFromStg();
+                    customerBaseDetailsMapper.clearStgDetails();
+                    customerBaseDetailsMapper.deleteAllGroupMembers();
+                    customerBaseDetailsMapper.copyGroupMembersFromStg();
+                    customerBaseDetailsMapper.clearStgGroupMembers();
+                    return null;
+                });
+            }
 
             long totalTime = System.currentTimeMillis() - totalStartTime;
             log.info("=== 完成: 同步企微群聊, 耗时: {} ms ===", totalTime);
@@ -83,18 +101,11 @@ public class QywxGroupChatTask {
     }
 
     /**
-     * 第一步：获取所有成员的群列表
+     * 第一步：获取所有成员的群列表。群列表每群仅一行(小表)，全量内存缓冲后
+     * 在一个事务里完成"删旧+插新"，中途失败不触碰主表。
      */
     private Set<String> syncGroupChatList() {
         long startTime = System.currentTimeMillis();
-
-        TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
-
-        // 清空群列表表
-        txTemplate.execute(status -> {
-            customerBaseMapper.deleteAll();
-            return null;
-        });
 
         List<String> userIds = departmentMemberMapper.selectAllUserIds();
         if (userIds == null || userIds.isEmpty()) {
@@ -105,7 +116,7 @@ public class QywxGroupChatTask {
         log.info("获取到 {} 个成员，开始批量查询群列表", userIds.size());
 
         Set<String> allChatIds = new HashSet<>();
-        List<VxCustomerBase> batchInsertList = new ArrayList<>();
+        List<VxCustomerBase> allRows = new ArrayList<>();
 
         for (int i = 0; i < userIds.size(); i += USER_BATCH_SIZE) {
             int end = Math.min(i + USER_BATCH_SIZE, userIds.size());
@@ -125,31 +136,25 @@ public class QywxGroupChatTask {
                             VxCustomerBase groupChat = new VxCustomerBase();
                             groupChat.setChatId(chatId);
                             groupChat.setStatus(item.getStr("status", ""));
-                            batchInsertList.add(groupChat);
+                            allRows.add(groupChat);
                             allChatIds.add(chatId);
                         }
                     }
-                }
-
-                // 达到批次大小就写入（独立事务）
-                if (batchInsertList.size() >= BATCH_SIZE) {
-                    final List<VxCustomerBase> toWrite = new ArrayList<>(batchInsertList);
-                    txTemplate.execute(status -> {
-                        customerBaseMapper.insertBatch(toWrite);
-                        return null;
-                    });
-                    batchInsertList.clear();
                 }
 
                 cursor = result.getStr("next_cursor", "");
             } while (cursor != null && cursor.length() > 0);
         }
 
-        // 插入剩余
-        if (!batchInsertList.isEmpty()) {
-            final List<VxCustomerBase> toWrite = new ArrayList<>(batchInsertList);
+        // 全部拉完后单事务切换（分批插入避免单语句参数超限）
+        if (!allRows.isEmpty()) {
+            TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
             txTemplate.execute(status -> {
-                customerBaseMapper.insertBatch(toWrite);
+                customerBaseMapper.deleteAll();
+                for (int i = 0; i < allRows.size(); i += BATCH_SIZE) {
+                    int end = Math.min(i + BATCH_SIZE, allRows.size());
+                    customerBaseMapper.insertBatch(allRows.subList(i, end));
+                }
                 return null;
             });
         }
@@ -159,24 +164,26 @@ public class QywxGroupChatTask {
     }
 
     /**
-     * 第二步：多线程获取群详情，每个线程获取完直接写库
+     * 第二步：多线程获取群详情，每个线程获取完直接写影子表，成功后由调用方原子切换
+     *
+     * @return [成功数, 失败数]
      */
-    private void syncGroupChatDetails(List<String> chatIds) {
+    private int[] syncGroupChatDetails(List<String> chatIds) {
         long startTime = System.currentTimeMillis();
 
         TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
         txTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
 
-        // 清空旧数据
+        // 1. 只清空影子表(清掉上轮残留)。主表不动：拉取中途失败时旧数据完整保留
         txTemplate.execute(status -> {
-            customerBaseDetailsMapper.deleteAllDetails();
-            customerBaseDetailsMapper.deleteAllGroupMembers();
+            customerBaseDetailsMapper.clearStgDetails();
+            customerBaseDetailsMapper.clearStgGroupMembers();
             return null;
         });
 
         if (chatIds == null || chatIds.isEmpty()) {
             log.info("没有群数据，跳过");
-            return;
+            return new int[]{0, 0};
         }
 
         log.info("共 {} 个群，开始并行获取详情", chatIds.size());
@@ -197,16 +204,16 @@ public class QywxGroupChatTask {
                         GroupDetailResult result = fetchGroupDetail(chatId);
 
                         if (result != null && result.success) {
-                            // 2. 立即写库（独立短事务）
+                            // 2. 立即写影子表（独立短事务）
                             txTemplate.execute(status -> {
                                 // 写入群详情
-                                customerBaseDetailsMapper.insertDetail(result.detail);
+                                customerBaseDetailsMapper.insertDetailStg(result.detail);
 
                                 // 写入群成员
                                 if (result.members != null && !result.members.isEmpty()) {
                                     for (int i = 0; i < result.members.size(); i += BATCH_SIZE) {
                                         int end = Math.min(i + BATCH_SIZE, result.members.size());
-                                        customerBaseDetailsMapper.insertGroupMembersBatch(
+                                        customerBaseDetailsMapper.insertGroupMembersBatchStg(
                                                 result.members.subList(i, end));
                                     }
                                 }
@@ -236,15 +243,18 @@ public class QywxGroupChatTask {
         try {
             boolean completed = totalLatch.await(30, TimeUnit.MINUTES);
             if (!completed) {
-                log.warn("等待超时，部分任务可能未完成");
+                // 超时=部分群未执行完，影子表数据不完整，必须放弃切换保住主表旧数据
+                throw new IllegalStateException("等待群详情获取超时(30分钟)，本轮放弃切换");
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+            throw new IllegalStateException("群详情同步被中断，本轮放弃切换", e);
         }
 
         log.info("群详情获取完成, 成功: {}, 失败: {}, 总群成员: {}, 耗时: {} ms",
                 successCount.get(), failCount.get(), totalMembers.get(),
                 System.currentTimeMillis() - startTime);
+        return new int[]{successCount.get(), failCount.get()};
     }
 
     /**

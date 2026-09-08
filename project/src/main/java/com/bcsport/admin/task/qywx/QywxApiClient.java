@@ -961,6 +961,39 @@ public class QywxApiClient {
         });
     }
 
+    /**
+     * 批量获取联系客户统计数据（员工行为数据）。
+     * 企微 get_user_behavior_data 的 userid 参数本身就是逗号分隔的多账号串(官方上限100个/次)，
+     * 响应 behavior_data 数组逐项携带 userid 归属。逐人调用时调用量=成员数，批量后降为成员数/100。
+     */
+    public JSONObject getUserBehaviorDataBatch(List<String> userids, long startTime, long endTime) {
+        return executeWithRetry(() -> {
+            String url = apiBaseUrl + "/cgi-bin/externalcontact/get_user_behavior_data?access_token=" + getAccessToken();
+
+            JSONObject requestBody = new JSONObject();
+            requestBody.set("userid", String.join(",", userids));
+            requestBody.set("start_time", startTime);
+            requestBody.set("end_time", endTime);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            org.springframework.http.HttpEntity<String> entity = new org.springframework.http.HttpEntity<>(requestBody.toString(), headers);
+
+            org.springframework.http.ResponseEntity<String> response = restTemplate.exchange(url, org.springframework.http.HttpMethod.POST, entity, String.class);
+
+            if (response.getStatusCode() == org.springframework.http.HttpStatus.OK && response.getBody() != null) {
+                JSONObject body = JSONUtil.parseObj(response.getBody());
+                Integer errcode = body.getInt("errcode");
+                if (errcode != null && errcode != 0) {
+                    throw new RuntimeException("Failed to get user behavior data(batch), errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
+                }
+                return body;
+            } else {
+                throw new RuntimeException("Failed to get user behavior data(batch)");
+            }
+        });
+    }
+
     private static final java.util.regex.Pattern EMAIL_PATTERN =
             java.util.regex.Pattern.compile("^[\\w.-]+@[\\w.-]+\\.[a-zA-Z]{2,}$");
 

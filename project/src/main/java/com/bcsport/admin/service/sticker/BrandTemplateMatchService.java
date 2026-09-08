@@ -97,6 +97,17 @@ public class BrandTemplateMatchService {
                 .orderByAsc(BrandTemplateMatch::getTemplateName));
     }
 
+    /**
+     * 查全部启用模板匹配，排序与 matchAllByName 一致(创建时间升序,模板名第二排序键)。
+     * 供"多条明细逐一匹配"的场景一次性预载分组，避免每条明细一次查询的 N+1。
+     */
+    public List<BrandTemplateMatch> listActiveAll() {
+        return mapper.selectList(new LambdaQueryWrapper<BrandTemplateMatch>()
+                .eq(BrandTemplateMatch::getIsActive, 1)
+                .orderByAsc(BrandTemplateMatch::getCreateTime)
+                .orderByAsc(BrandTemplateMatch::getTemplateName));
+    }
+
     public void create(BrandTemplateMatch entity) {
         entity.setId(null);
         entity.setIsActive(1);

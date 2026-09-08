@@ -21,14 +21,27 @@ public class YdSyncAllTask {
 
     public void syncAll() {
         log.info("=== 开始执行: 云盯一键同步(客流+天气) ===");
+        // 客流与天气互不依赖：一个失败不能跳过另一个，但任务整体要标记失败告警
+        RuntimeException firstError = null;
         try {
             customerFlowTask.sync();
-            weatherTask.sync();
-            log.info("=== 完成: 云盯一键同步(客流+天气) ===");
         } catch (Exception e) {
-            log.error("=== 失败: 云盯一键同步: {} ===", e.getMessage(), e);
-            throw e;
+            firstError = new RuntimeException("客流数据同步失败: " + e.getMessage(), e);
         }
+        try {
+            weatherTask.sync();
+        } catch (Exception e) {
+            if (firstError == null) {
+                firstError = new RuntimeException("天气数据同步失败: " + e.getMessage(), e);
+            } else {
+                firstError.addSuppressed(e);
+            }
+        }
+        if (firstError != null) {
+            log.error("=== 失败: 云盯一键同步 ===", firstError);
+            throw firstError;
+        }
+        log.info("=== 完成: 云盯一键同步(客流+天气) ===");
     }
 
     /**
@@ -37,13 +50,25 @@ public class YdSyncAllTask {
      */
     public void syncAll(Map<String, String> params) {
         log.info("=== 开始执行: 云盯一键同步(客流+天气, 带参数) ===");
+        RuntimeException firstError = null;
         try {
             customerFlowTask.sync(params);
-            weatherTask.sync(params);
-            log.info("=== 完成: 云盯一键同步(客流+天气, 带参数) ===");
         } catch (Exception e) {
-            log.error("=== 失败: 云盯一键同步(带参数): {} ===", e.getMessage(), e);
-            throw e;
+            firstError = new RuntimeException("客流数据同步失败: " + e.getMessage(), e);
         }
+        try {
+            weatherTask.sync(params);
+        } catch (Exception e) {
+            if (firstError == null) {
+                firstError = new RuntimeException("天气数据同步失败: " + e.getMessage(), e);
+            } else {
+                firstError.addSuppressed(e);
+            }
+        }
+        if (firstError != null) {
+            log.error("=== 失败: 云盯一键同步(带参数) ===", firstError);
+            throw firstError;
+        }
+        log.info("=== 完成: 云盯一键同步(客流+天气, 带参数) ===");
     }
 }

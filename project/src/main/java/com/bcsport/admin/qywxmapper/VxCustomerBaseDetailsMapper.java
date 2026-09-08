@@ -35,6 +35,16 @@ public interface VxCustomerBaseDetailsMapper {
     void insertGroupMembersBatch(@Param("list") List<VxCustomerBaseDetailsGroupMembers> list);
 
     /**
+     * 影子表操作：全量同步先写 STG，成功后与主表 deleteAll* 同一事务切换，失败保留主表旧数据
+     */
+    void clearStgDetails();
+    void clearStgGroupMembers();
+    void insertDetailStg(VxCustomerBaseDetails detail);
+    void insertGroupMembersBatchStg(@Param("list") List<VxCustomerBaseDetailsGroupMembers> list);
+    void copyDetailsFromStg();
+    void copyGroupMembersFromStg();
+
+    /**
      * 分页查询某成员的群聊列表
      */
     List<Map<String, Object>> selectPageByOwner(@Param("owner") String owner,

@@ -3,6 +3,7 @@ package com.bcsport.admin.config;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import jakarta.annotation.PreDestroy;
 import java.util.concurrent.*;
@@ -63,6 +64,28 @@ public class TaskThreadPoolConfig {
         );
 
         return threadPoolExecutor;
+    }
+
+    /**
+     * @Async 专用线程池。必须显式提供：上面 taskThreadPool 是原生 ThreadPoolExecutor(非 TaskExecutor
+     * 类型、Bean 名也不是 taskExecutor)，@Async 的默认查找两级都命中不了，会回退到
+     * SimpleAsyncTaskExecutor——每条异步日志新起一个线程、无上限。当前唯一 @Async 用户是
+     * SysLogServiceImpl.saveLog(操作日志落库)，小池+有界队列足够；队列满走 CallerRuns
+     * 由请求线程兜底写库，不丢日志也不打断业务。
+     */
+    @Bean("taskExecutor")
+    public ThreadPoolTaskExecutor taskExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(2);
+        executor.setMaxPoolSize(8);
+        executor.setQueueCapacity(1000);
+        executor.setKeepAliveSeconds(60);
+        executor.setThreadNamePrefix("oper-log-");
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+        // 停机时等待在途日志写完再退出，避免日志被截断
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(30);
+        return executor;
     }
 
     /**

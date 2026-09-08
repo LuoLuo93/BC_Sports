@@ -316,6 +316,15 @@ public class EntityChannelServiceImpl implements EntityChannelService {
         // 收集提交的已有ID
         Set<String> submittedIds = new HashSet<>();
 
+        // 预取起始 id：循环外一次查 max(id)+1，避免每个新增行一次 MAX(id) 全表扫描
+        Long prefetchedId = null;
+        try {
+            Long maxId = entityChannelMapper.selectMaxId();
+            prefetchedId = (maxId == null ? 0L : maxId) + 1;
+        } catch (Exception ignored) {
+            // 查询失败回退 generateId()(UUID 兜底)
+        }
+
         for (EntityChannelDTO dto : list) {
             if (dto.getId() != null && !dto.getId().trim().isEmpty()) {
                 // 有ID → 更新已有记录
@@ -337,7 +346,7 @@ public class EntityChannelServiceImpl implements EntityChannelService {
                 }
                 // 优先复活软删记录，避免唯一键冲突；复活失败才走 INSERT
                 if (!reviveIfSoftDeleted(entity)) {
-                    entity.setId(generateId());
+                    entity.setId(prefetchedId != null ? String.valueOf(prefetchedId++) : generateId());
                     entityChannelMapper.insert(entity);
                 }
             }
@@ -895,6 +904,16 @@ public class EntityChannelServiceImpl implements EntityChannelService {
             existingMap.put(buildUpsertKey(ec.getExternalId(), ec.getBrandId()), ec);
         }
 
+        // 预取起始 id：循环外一次性查 max(id)+1，循环内自增分配。
+        // 不能每行都调 selectMaxId()——每次都是一次 regexp 全表扫描，且并发下会取号冲突。
+        Long prefetchedId = null;
+        try {
+            Long maxId = entityChannelMapper.selectMaxId();
+            prefetchedId = (maxId == null ? 0L : maxId) + 1;
+        } catch (Exception ignored) {
+            // 查询失败回退 generateId()(UUID 兜底)
+        }
+
         // 4. 遍历数仓结果：品牌匹配不到跳过；缺失的新增；软删的复活；已有的跳过
         int inserted = 0, revived = 0, existingCnt = 0, brandUnmatched = 0;
         Set<String> unmatchedBrands = new TreeSet<>();
@@ -938,7 +957,9 @@ public class EntityChannelServiceImpl implements EntityChannelService {
             entity.setDeleted(0);
             entity.setCreateTime(now);
             entity.setUpdateTime(now);
-            entity.setId(generateId());
+            entity.setId(prefetchedId != null
+                    ? String.valueOf(prefetchedId++)   // 预取区间内自增，避免每行一次 MAX(id) 全表扫
+                    : generateId());
             try {
                 entityChannelMapper.insert(entity);
                 existingMap.put(key, entity); // 防批次内重复

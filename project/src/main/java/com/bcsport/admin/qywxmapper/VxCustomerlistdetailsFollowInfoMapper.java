@@ -24,6 +24,13 @@ public interface VxCustomerlistdetailsFollowInfoMapper {
     void insertBatch(@Param("list") List<VxCustomerlistdetailsFollowInfo> list);
 
     /**
+     * 影子表操作：全量同步先写 STG，成功后与主表 deleteAll 同一事务切换，失败保留主表旧数据
+     */
+    void clearStg();
+    void insertBatchStg(@Param("list") List<VxCustomerlistdetailsFollowInfo> list);
+    void copyFromStg();
+
+    /**
      * 查询所有数据
      */
     List<VxCustomerlistdetailsFollowInfo> selectAll();

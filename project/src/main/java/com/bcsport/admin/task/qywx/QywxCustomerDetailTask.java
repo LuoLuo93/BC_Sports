@@ -57,9 +57,10 @@ public class QywxCustomerDetailTask {
         long startTime = System.currentTimeMillis();
 
         try {
+            // 1. 只清空影子表(清掉上轮残留)。主表不动：拉取中途失败时旧数据完整保留，全部成功后才切换
             new TransactionTemplate(transactionManager).execute(status -> {
-                externalContactMapper.deleteAll();
-                followInfoMapper.deleteAll();
+                externalContactMapper.clearStg();
+                followInfoMapper.clearStg();
                 return null;
             });
 
@@ -82,8 +83,27 @@ public class QywxCustomerDetailTask {
             }
             log.info("共 {} 个成员需要同步客户详情", validUserList.size());
 
-            // 3. 多线程并行
-            syncCustomerDetails(validUserList);
+            // 3. 多线程并行拉取，写入影子表
+            int[] result = syncCustomerDetails(validUserList);
+            int failedBatches = result[1];
+            int totalBatches = (validUserList.size() + USER_BATCH_SIZE - 1) / USER_BATCH_SIZE;
+
+            // 4. 失败率超10%(典型如token失效导致全部批次失败)时放弃切换，保留主表旧数据
+            if (failedBatches * 10 > totalBatches) {
+                throw new IllegalStateException(String.format(
+                        "同步客户详情失败率过高(失败批次 %d/%d)，保留主表旧数据不切换", failedBatches, totalBatches));
+            }
+
+            // 5. 原子切换：主表清空+影子表回填+清影子表，同一事务，任一步失败整体回滚
+            new TransactionTemplate(transactionManager).execute(status -> {
+                externalContactMapper.deleteAll();
+                externalContactMapper.copyFromStg();
+                externalContactMapper.clearStg();
+                followInfoMapper.deleteAll();
+                followInfoMapper.copyFromStg();
+                followInfoMapper.clearStg();
+                return null;
+            });
 
             long totalTime = System.currentTimeMillis() - startTime;
             log.info("=== 完成: 同步客户详情, 耗时: {} ms ===", totalTime);
@@ -95,9 +115,11 @@ public class QywxCustomerDetailTask {
     }
 
     /**
-     * 多线程并行：每个线程请求API一页就写库一页，再请求下一页
+     * 多线程并行：每个线程请求API一页就写影子表一页，再请求下一页
+     *
+     * @return [成功批次数, 失败批次数]
      */
-    private void syncCustomerDetails(List<String> followUserList) {
+    private int[] syncCustomerDetails(List<String> followUserList) {
         long startTime = System.currentTimeMillis();
 
         AtomicInteger successCount = new AtomicInteger(0);
@@ -145,15 +167,18 @@ public class QywxCustomerDetailTask {
         try {
             boolean completed = totalLatch.await(30, TimeUnit.MINUTES);
             if (!completed) {
-                log.warn("等待超时，部分任务可能未完成");
+                // 超时=部分批次未执行完，影子表数据不完整，必须放弃切换保住主表旧数据
+                throw new IllegalStateException("等待客户详情批次超时(30分钟)，本轮放弃切换");
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+            throw new IllegalStateException("客户详情同步被中断，本轮放弃切换", e);
         }
 
         log.info("客户详情同步完成, 成功: {}, 失败: {}, contacts: {}, followInfos: {}, 耗时: {} ms",
                 successCount.get(), failCount.get(), totalContacts.get(), totalFollowInfos.get(),
                 System.currentTimeMillis() - startTime);
+        return new int[]{successCount.get(), failCount.get()};
     }
 
     /**
@@ -199,7 +224,7 @@ public class QywxCustomerDetailTask {
                         if (contactWriteBatch.size() >= BATCH_SIZE) {
                             final List<VxCustomerlistdetailsExternalContact> toWrite = new ArrayList<>(contactWriteBatch);
                             txTemplate.execute(status -> {
-                                externalContactMapper.insertBatch(toWrite);
+                                externalContactMapper.insertBatchStg(toWrite);
                                 return null;
                             });
                             contactWriteBatch.clear();
@@ -231,7 +256,7 @@ public class QywxCustomerDetailTask {
                         if (followInfoWriteBatch.size() >= BATCH_SIZE) {
                             final List<VxCustomerlistdetailsFollowInfo> toWrite = new ArrayList<>(followInfoWriteBatch);
                             txTemplate.execute(status -> {
-                                followInfoMapper.insertBatch(toWrite);
+                                followInfoMapper.insertBatchStg(toWrite);
                                 return null;
                             });
                             followInfoWriteBatch.clear();
@@ -249,14 +274,14 @@ public class QywxCustomerDetailTask {
         if (!contactWriteBatch.isEmpty()) {
             final List<VxCustomerlistdetailsExternalContact> toWrite = new ArrayList<>(contactWriteBatch);
             txTemplate.execute(status -> {
-                externalContactMapper.insertBatch(toWrite);
+                externalContactMapper.insertBatchStg(toWrite);
                 return null;
             });
         }
         if (!followInfoWriteBatch.isEmpty()) {
             final List<VxCustomerlistdetailsFollowInfo> toWrite = new ArrayList<>(followInfoWriteBatch);
             txTemplate.execute(status -> {
-                followInfoMapper.insertBatch(toWrite);
+                followInfoMapper.insertBatchStg(toWrite);
                 return null;
             });
         }

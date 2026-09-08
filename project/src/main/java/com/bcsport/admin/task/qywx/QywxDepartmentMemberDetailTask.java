@@ -204,25 +204,45 @@ public class QywxDepartmentMemberDetailTask {
     private void doSync(List<String> userIds, String source, long startTime) {
         log.info("从 {} 获取到 {} 个成员", source, userIds.size());
 
-        // 先清空旧数据
+        // 1. 只清空影子表(清掉上轮残留)。主表不动：拉取中途失败时旧数据完整保留，全部成功后才切换
         new TransactionTemplate(transactionManager).execute(status -> {
-            detailMapper.deleteAll();
-            departmentMapper.deleteAll();
+            detailMapper.clearStg();
+            departmentMapper.clearStg();
             return null;
         });
 
-        // 边拉边写：每个线程独立完成 API→解析→写库→释放
-        fetchAndWriteConcurrently(userIds);
+        // 2. 边拉边写影子表：每个线程独立完成 API→解析→写STG→释放
+        int[] result = fetchAndWriteConcurrently(userIds);
+        int failed = result[1];
+
+        // 3. 失败率超10%(典型如token失效导致全部失败)时放弃切换，保留主表旧数据
+        if (failed * 10 > userIds.size()) {
+            throw new IllegalStateException(String.format(
+                    "同步部门成员详情失败率过高(失败 %d/%d)，保留主表旧数据不切换", failed, userIds.size()));
+        }
+
+        // 4. 原子切换：主表清空+影子表回填+清影子表，同一事务，任一步失败整体回滚
+        new TransactionTemplate(transactionManager).execute(status -> {
+            detailMapper.deleteAll();
+            detailMapper.copyFromStg();
+            detailMapper.clearStg();
+            departmentMapper.deleteAll();
+            departmentMapper.copyFromStg();
+            departmentMapper.clearStg();
+            return null;
+        });
 
         long totalTime = System.currentTimeMillis() - startTime;
         log.info("=== 完成: 同步部门成员详情 [{}], 耗时: {} ms ===", source, totalTime);
     }
 
     /**
-     * 并发拉取并写库：每个线程独立完成 拉取→解析→写库→释放内存
+     * 并发拉取并写影子表：每个线程独立完成 拉取→解析→写STG→释放内存
+     *
+     * @return [成功数, 失败数]
      */
-    private void fetchAndWriteConcurrently(List<String> userIds) {
-        if (userIds.isEmpty()) return;
+    private int[] fetchAndWriteConcurrently(List<String> userIds) {
+        if (userIds.isEmpty()) return new int[]{0, 0};
 
         long fetchStart = System.currentTimeMillis();
 
@@ -279,12 +299,12 @@ public class QywxDepartmentMemberDetailTask {
                             }
                         }
 
-                        // 立即写库（独立短事务）
+                        // 立即写影子表（独立短事务）
                         List<QywxCustomerListDepartment> finalDeptList = deptList;
                         txTemplate.execute(status -> {
-                            detailMapper.insertBatch(Collections.singletonList(detail));
+                            detailMapper.insertBatchStg(Collections.singletonList(detail));
                             if (!finalDeptList.isEmpty()) {
-                                departmentMapper.insertBatch(finalDeptList);
+                                departmentMapper.insertBatchStg(finalDeptList);
                             }
                             return null;
                         });
@@ -310,18 +330,19 @@ public class QywxDepartmentMemberDetailTask {
             boolean completed = latch.await(THREAD_POOL_TIMEOUT_SECONDS, TimeUnit.SECONDS);
             if (!completed) {
                 futures.forEach(future -> future.cancel(true));
-            }
-            if (!completed) {
-                log.warn("等待超时, 部分任务可能未完成");
+                // 超时=部分成员未执行完，影子表数据不完整，必须放弃切换保住主表旧数据
+                throw new IllegalStateException("等待成员详情拉取超时(" + THREAD_POOL_TIMEOUT_SECONDS + "秒)，本轮放弃切换");
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             futures.forEach(future -> future.cancel(true));
+            throw new IllegalStateException("成员详情同步被中断，本轮放弃切换", e);
         }
 
         long fetchTime = System.currentTimeMillis() - fetchStart;
         log.info("成员详情拉取完成, 成功: {}, 失败: {}, 耗时: {} ms",
                 successCount.get(), failCount.get(), fetchTime);
+        return new int[]{successCount.get(), failCount.get()};
     }
 
 }

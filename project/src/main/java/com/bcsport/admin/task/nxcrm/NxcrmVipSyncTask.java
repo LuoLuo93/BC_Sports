@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -43,6 +44,8 @@ public class NxcrmVipSyncTask {
     private static final int VIP_BATCH_SIZE = 100;
     private static final int MAX_RETRY = 3;
     private static final long PHASE_AWAIT_MINUTES = 30L;
+    /** 同时调用南讯API的批次并发上限(与 NxcrmUnbindTask 保持一致的闸门) */
+    private static final int API_CONCURRENCY = 5;
 
     @Autowired
     private EzrVipInfoMapper ezrVipInfoMapper;
@@ -216,6 +219,8 @@ public class NxcrmVipSyncTask {
     /**
      * 通用阶段执行器：并发提交 + CountDownLatch 等待（带超时）。
      * 超时不强行中断已提交批次（避免半提交状态），仅记录未完成数。
+     * Semaphore 限流：批次对象已在调用方全量构建驻留内存，若不限并发，
+     * 单店上千批次会瞬间塞满共享队列(容量500)触发 CallerRuns，让调度线程自己跑批。
      */
     private <T> PhaseResult runPhase(String phaseName,
                                      List<BatchTask<T>> batches,
@@ -227,11 +232,21 @@ public class NxcrmVipSyncTask {
         }
         log.info("阶段[{}]开始, 共{}个批次", phaseName, batches.size());
 
+        Semaphore semaphore = new Semaphore(API_CONCURRENCY);
         CountDownLatch latch = new CountDownLatch(batches.size());
         for (BatchTask<T> task : batches) {
             taskThreadPool.submit(() -> {
                 try {
-                    runner.run(task, result.success, result.failed);
+                    semaphore.acquire();
+                    try {
+                        runner.run(task, result.success, result.failed);
+                    } finally {
+                        semaphore.release();
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    log.error("阶段[{}]批次被中断, shopId={}", phaseName, task.shopId);
+                    result.failed.addAndGet(task.payload.size());
                 } catch (Exception e) {
                     // runner 内部 retry 已吞异常，理论上不会走到这里；防御性兜底
                     log.error("阶段[{}]批次提交异常, shopId={}: {}",

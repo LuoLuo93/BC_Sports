@@ -9,4 +9,23 @@
             (#{item.id}, #{item.userid}, #{item.department}, GETDATE())
         </foreach>
     </insert>
+
+    <!-- 影子表三件套: 清空STG / 写STG / 切换(与主表deleteAll同一事务调用, 失败回滚保住旧数据) -->
+    <update id="clearStg">
+        TRUNCATE TABLE VX_CustomerList_department_STG
+    </update>
+
+    <insert id="insertBatchStg">
+        INSERT INTO VX_CustomerList_department_STG(id, userid, department, createTime)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.id}, #{item.userid}, #{item.department}, GETDATE())
+        </foreach>
+    </insert>
+
+    <update id="copyFromStg">
+        INSERT INTO VX_CustomerList_department(id, userid, department, createTime)
+        SELECT id, userid, department, createTime
+        FROM VX_CustomerList_department_STG
+    </update>
 </mapper>

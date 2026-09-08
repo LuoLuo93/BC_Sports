@@ -4,6 +4,7 @@ import cn.hutool.poi.excel.ExcelUtil;
 import cn.hutool.poi.excel.sax.handler.RowHandler;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.bcsport.admin.util.ExcelSaxUtils;
 import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.entity.sticker.StickerDataImportLog;
@@ -292,29 +293,8 @@ public class StickerDataImportService {
     }
 
     private void readAllSheets(MultipartFile file, String format, RowHandler handler) throws Exception {
-        if ("xlsx".equals(format)) {
-            org.apache.poi.openxml4j.opc.OPCPackage pkg = org.apache.poi.openxml4j.opc.OPCPackage.open(file.getInputStream());
-            try {
-                int sheetCount = pkg.getPartsByName(java.util.regex.Pattern.compile("/xl/worksheets/.*\\.xml")).size();
-                log.info("贴纸资料导入 xlsx 共 {} 个 sheet", sheetCount);
-                cn.hutool.poi.excel.sax.Excel07SaxReader saxReader = new cn.hutool.poi.excel.sax.Excel07SaxReader(handler);
-                for (int s = 0; s < sheetCount; s++) {
-                    saxReader.read(pkg, s);
-                }
-            } finally {
-                pkg.revert();
-            }
-        } else {
-            for (int s = 0; s < 20; s++) {
-                try {
-                    ExcelUtil.readBySax(file.getInputStream(), s, handler);
-                } catch (Exception e) {
-                    break;
-                }
-            }
-        }
+        ExcelSaxUtils.readAllSheets(file, format, handler, "贴纸资料导入");
     }
-
     private String detectFormat(MultipartFile file) throws Exception {
         byte[] head = new byte[8];
         try (java.io.InputStream in = file.getInputStream()) {

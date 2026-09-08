@@ -4,6 +4,7 @@ import cn.hutool.poi.excel.ExcelUtil;
 import cn.hutool.poi.excel.sax.handler.RowHandler;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.bcsport.admin.util.ExcelSaxUtils;
 import com.bcsport.admin.bidwmapper.OdsSalesMainMapper;
 import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
@@ -467,42 +468,8 @@ public class OdsSalesMainServiceImpl implements OdsSalesMainService {
     }
 
     private void readAllSheets(MultipartFile file, String format, RowHandler handler) throws Exception {
-        if ("xlsx".equals(format)) {
-            // 必须先落临时文件再以 File 方式打开：OPCPackage.open(InputStream) 会把每个 zip entry
-            // (1GB级 sheet XML)整块读进内存字节数组，触发 POI 单数组 300MB 上限；
-            // File 方式走 ZipFile 流式读取，SAX 逐行解析，内存恒定
-            java.io.File tempFile = java.io.File.createTempFile("dw-sales-import-", ".xlsx");
-            try {
-                java.nio.file.Files.copy(file.getInputStream(), tempFile.toPath(),
-                        java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-                org.apache.poi.openxml4j.opc.OPCPackage pkg = org.apache.poi.openxml4j.opc.OPCPackage.open(
-                        tempFile.getAbsolutePath(), org.apache.poi.openxml4j.opc.PackageAccess.READ);
-                try {
-                    int sheetCount = pkg.getPartsByName(java.util.regex.Pattern.compile("/xl/worksheets/.*\\.xml")).size();
-                    log.info("数仓销售导入 xlsx 共 {} 个 sheet", sheetCount);
-                    cn.hutool.poi.excel.sax.Excel07SaxReader saxReader = new cn.hutool.poi.excel.sax.Excel07SaxReader(handler);
-                    for (int s = 0; s < sheetCount; s++) {
-                        saxReader.read(pkg, s);
-                    }
-                } finally {
-                    pkg.revert();
-                }
-            } finally {
-                if (!tempFile.delete()) {
-                    tempFile.deleteOnExit();
-                }
-            }
-        } else {
-            for (int s = 0; s < 20; s++) {
-                try {
-                    ExcelUtil.readBySax(file.getInputStream(), s, handler);
-                } catch (Exception e) {
-                    break;
-                }
-            }
-        }
+        ExcelSaxUtils.readAllSheets(file, format, handler, "数仓销售导入");
     }
-
     private String detectFormat(MultipartFile file) throws Exception {
         byte[] head = new byte[8];
         try (java.io.InputStream in = file.getInputStream()) {

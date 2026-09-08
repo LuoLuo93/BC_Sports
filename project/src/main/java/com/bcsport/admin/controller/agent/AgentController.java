@@ -10,6 +10,7 @@ import com.bcsport.admin.service.agent.PrintTaskService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import jakarta.validation.Valid;
+import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -59,12 +60,14 @@ public class AgentController {
 
     @GetMapping("/list")
     @ApiOperation("Agent 列表")
+    @RequiresPermissions("sticker:agent:query")
     public Result<List<PrintAgent>> list() {
         return Result.success(agentService.listAll());
     }
 
     @GetMapping("/page")
     @ApiOperation("分页查询 Agent")
+    @RequiresPermissions("sticker:agent:query")
     public Result<PageResult<PrintAgent>> page(@Valid PageQuery pageQuery,
                                                @RequestParam(required = false) String agentName) {
         var page = agentService.page(pageQuery.getPageNum(), pageQuery.getPageSize(), agentName);
@@ -73,6 +76,7 @@ public class AgentController {
 
     @GetMapping("/{agentId}")
     @ApiOperation("Agent 详情")
+    @RequiresPermissions("sticker:agent:query")
     public Result<PrintAgent> getDetail(@PathVariable String agentId) {
         PrintAgent agent = agentService.getByAgentId(agentId);
         if (agent == null) {
@@ -83,12 +87,14 @@ public class AgentController {
 
     @GetMapping("/{agentId}/tasks")
     @ApiOperation("Agent 任务记录")
+    @RequiresPermissions("sticker:agent:query")
     public Result<List<PrintTask>> getTasks(@PathVariable String agentId) {
         return Result.success(printTaskService.getTasksByAgentId(agentId));
     }
 
     @GetMapping("/{agentId}/tasks/page")
     @ApiOperation("Agent 任务记录（分页，支持批次号/申请单号筛选）")
+    @RequiresPermissions("sticker:agent:query")
     public Result<PageResult<PrintTask>> getTasksPage(@Valid PageQuery pageQuery,
                                                       @PathVariable String agentId,
                                                       @RequestParam(required = false) String batchId,

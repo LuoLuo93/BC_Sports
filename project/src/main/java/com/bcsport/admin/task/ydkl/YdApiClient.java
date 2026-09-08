@@ -69,7 +69,7 @@ public class YdApiClient {
                 }
                 throw new RuntimeException("获取云盯Token失败, HTTP状态: " + response.getStatus());
             }
-        }, null);
+        });
     }
 
     /**
@@ -90,7 +90,7 @@ public class YdApiClient {
                 }
                 throw new RuntimeException("获取门店列表失败, HTTP状态: " + response.getStatus());
             }
-        }, new ArrayList<>());
+        });
     }
 
     /**
@@ -116,7 +116,7 @@ public class YdApiClient {
                 }
                 throw new RuntimeException("获取客流数据失败, HTTP状态: " + response.getStatus());
             }
-        }, null);
+        });
     }
 
     /**
@@ -142,7 +142,7 @@ public class YdApiClient {
                 }
                 throw new RuntimeException("获取天气数据失败, HTTP状态: " + response.getStatus());
             }
-        }, null);
+        });
     }
 
     /**
@@ -161,27 +161,32 @@ public class YdApiClient {
         T execute() throws Exception;
     }
 
-    private <T> T executeWithRetry(String action, YdApiCallback<T> callback, T fallback) {
+    /**
+     * 统一重试入口：重试耗尽后抛异常，绝不吞错返回兜底值——
+     * 否则调用方会把失败当"无数据"处理，定时任务被记为成功，数据缺失无人知晓。
+     */
+    private <T> T executeWithRetry(String action, YdApiCallback<T> callback) {
         int retryCount = 0;
+        Exception lastError = null;
         while (true) {
             try {
                 return callback.execute();
             } catch (Exception e) {
-                if (retryCount < MAX_RETRY) {
-                    retryCount++;
-                    log.warn("{}失败, 等待{}ms后重试(第{}次): {}", action, RETRY_DELAY_MS, retryCount, e.getMessage());
-                    try {
-                        Thread.sleep(RETRY_DELAY_MS);
-                    } catch (InterruptedException ie) {
-                        Thread.currentThread().interrupt();
-                        break;
-                    }
-                    continue;
+                lastError = e;
+                if (retryCount >= MAX_RETRY) {
+                    break;
                 }
-                log.error("{}失败, 已重试{}次: {}", action, MAX_RETRY, e.getMessage(), e);
-                break;
+                retryCount++;
+                log.warn("{}失败, 等待{}ms后重试(第{}次): {}", action, RETRY_DELAY_MS, retryCount, e.getMessage());
+                try {
+                    Thread.sleep(RETRY_DELAY_MS);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw new RuntimeException(action + "重试等待中被中断", ie);
+                }
             }
         }
-        return fallback;
+        log.error("{}失败, 已重试{}次", action, MAX_RETRY, lastError);
+        throw new RuntimeException(action + "失败, 已重试" + MAX_RETRY + "次", lastError);
     }
 }

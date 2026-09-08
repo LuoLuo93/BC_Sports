@@ -9,6 +9,7 @@
           </svg>
         </div>
         <h1 class="header-title">数据驾驶舱</h1>
+        <span class="demo-badge">演示数据</span>
       </div>
       <div class="header-right">
         <span class="header-time">{{ currentTime }}</span>
@@ -377,8 +378,6 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-
 .cockpit {
   position: relative;
   width: 100%;
@@ -432,6 +431,18 @@ onUnmounted(() => {
   font-weight: 700;
   color: #1e293b;
   letter-spacing: -0.02em;
+}
+
+/* 本页 KPI/趋势/排行均为前端写死的演示值，未接后端接口——徽标明示避免误读为真实经营数据 */
+.demo-badge {
+  padding: 2px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #d97706;
+  background: rgba(217, 119, 6, 0.12);
+  border: 1px solid rgba(217, 119, 6, 0.35);
+  border-radius: 999px;
+  white-space: nowrap;
 }
 
 .header-right {

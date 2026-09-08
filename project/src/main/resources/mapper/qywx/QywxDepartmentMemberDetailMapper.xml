@@ -10,6 +10,25 @@
         </foreach>
     </insert>
 
+    <!-- 影子表三件套: 清空STG / 写STG / 切换(与主表deleteAll同一事务调用, 失败回滚保住旧数据) -->
+    <update id="clearStg">
+        TRUNCATE TABLE VX_DepartmentMembersList_STG
+    </update>
+
+    <insert id="insertBatchStg">
+        INSERT INTO VX_DepartmentMembersList_STG(id, userid, name, open_userid, main_department, position, mobile, status, createTime, updateTime)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.id}, #{item.userid}, #{item.name}, #{item.openUserid}, #{item.mainDepartment}, #{item.position}, #{item.mobile}, #{item.status}, GETDATE(), GETDATE())
+        </foreach>
+    </insert>
+
+    <update id="copyFromStg">
+        INSERT INTO VX_DepartmentMembersList(id, userid, name, open_userid, main_department, position, mobile, status, createTime, updateTime)
+        SELECT id, userid, name, open_userid, main_department, position, mobile, status, createTime, updateTime
+        FROM VX_DepartmentMembersList_STG
+    </update>
+
     <select id="selectNameByUserid" resultType="java.lang.String">
         SELECT name FROM VX_DepartmentMembersList WHERE userid = #{userid}
     </select>

@@ -14,4 +14,11 @@ public interface IhrEmployeeDetailMapper extends BaseMapper<IhrEmployeeDetail> {
     void deleteAll();
     List<IhrEmployeeDetail> selectRecentLeaved(@Param("startDate") Date startDate, @Param("endDate") Date endDate);
     List<IhrEmployeeDetail> selectByStaffIds(@Param("staffIds") List<String> staffIds);
+
+    /**
+     * 影子表操作：全量同步先写 STG，成功后与主表 deleteAll 同一事务切换，失败保留主表旧数据
+     */
+    void clearStg();
+    void insertBatchStg(@Param("list") List<IhrEmployeeDetail> list);
+    void copyFromStg();
 }

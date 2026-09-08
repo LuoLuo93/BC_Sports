@@ -10,8 +10,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import java.util.*;
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Phaser;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -22,6 +24,8 @@ public class NxcrmOrderSyncTask {
     private static final int ORDER_BATCH_SIZE = 100;
     private static final int ORDER_PAGE_SIZE = 1000;
     private static final int MAX_RETRY = 3;
+    /** 全部批次完成的总等待上限 */
+    private static final long SYNC_AWAIT_MINUTES = 60L;
 
     @Autowired
     private NanXOrderMapper nanXOrderMapper;
@@ -51,16 +55,17 @@ public class NxcrmOrderSyncTask {
 
         AtomicInteger totalSynced = new AtomicInteger(0);
         AtomicInteger totalFailed = new AtomicInteger(0);
-        List<Runnable> batchTasks = new ArrayList<>();
-        int offset = 0;
+        // Phaser 动态注册批次：每页转换完立即提交，不再把全部批次攒进内存列表
+        Phaser phaser = new Phaser(1);
+        String cursor = null;
 
         while (true) {
             List<NanXOrderMaster> orders;
             try {
-                orders = nanXOrderMapper.selectAllOrdersPaged(offset, ORDER_PAGE_SIZE);
+                orders = nanXOrderMapper.selectOrdersAfter(cursor, ORDER_PAGE_SIZE);
             } catch (Exception e) {
-                log.error("查询订单失败, offset={}: {}", offset, e.getMessage(), e);
-                break;
+                log.error("查询订单失败, after={}: {}", cursor, e.getMessage(), e);
+                throw new RuntimeException("查询订单失败, 游标=" + cursor, e);
             }
             if (orders == null || orders.isEmpty()) {
                 break;
@@ -74,7 +79,8 @@ public class NxcrmOrderSyncTask {
             for (int i = 0; i < converted.size(); i += ORDER_BATCH_SIZE) {
                 List<TradeDetailVo> batch = new ArrayList<>(
                     converted.subList(i, Math.min(i + ORDER_BATCH_SIZE, converted.size())));
-                batchTasks.add(() -> {
+                phaser.register();
+                taskThreadPool.submit(() -> {
                     try {
                         boolean ok = retrySave(batch, SHOP_ID);
                         if (ok) {
@@ -85,37 +91,33 @@ public class NxcrmOrderSyncTask {
                     } catch (Exception e) {
                         log.error("批次提交异常: {}", e.getMessage(), e);
                         totalFailed.addAndGet(batch.size());
+                    } finally {
+                        phaser.arriveAndDeregister();
                     }
                 });
             }
 
+            // 游标前进(主表按 outTradeId 升序，取本页最后一单)
+            cursor = orders.get(orders.size() - 1).getOutTradeId();
             if (orders.size() < ORDER_PAGE_SIZE) {
                 break;
             }
-            offset += ORDER_PAGE_SIZE;
         }
 
-        if (batchTasks.isEmpty()) {
+        if (cursor == null) {
             log.info("无订单需要同步");
             return;
         }
 
-        CountDownLatch latch = new CountDownLatch(batchTasks.size());
-        for (Runnable task : batchTasks) {
-            taskThreadPool.submit(() -> {
-                try {
-                    task.run();
-                } finally {
-                    latch.countDown();
-                }
-            });
-        }
-
         try {
-            latch.await();
+            // 总超时兜底：SDK 调用若挂死不能让任务无限等待(此前 latch.await() 无超时)
+            int phase = phaser.arrive();
+            phaser.awaitAdvanceInterruptibly(phase, SYNC_AWAIT_MINUTES, TimeUnit.MINUTES);
+        } catch (TimeoutException e) {
+            throw new RuntimeException("订单同步等待超时(" + SYNC_AWAIT_MINUTES + "分钟), 部分批次未确认完成", e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            log.error("订单同步被中断");
+            throw new RuntimeException("订单同步被中断, 部分批次未确认完成", e);
         }
 
         log.info("订单同步完成, 成功={}, 失败={}", totalSynced.get(), totalFailed.get());

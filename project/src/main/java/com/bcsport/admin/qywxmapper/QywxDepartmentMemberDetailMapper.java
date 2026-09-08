@@ -23,6 +23,13 @@ public interface QywxDepartmentMemberDetailMapper {
     void insertBatch(@Param("list") List<QywxDepartmentMemberDetail> list);
 
     /**
+     * 影子表操作：全量同步先写 STG，成功后与主表 deleteAll 同一事务切换，失败保留主表旧数据
+     */
+    void clearStg();
+    void insertBatchStg(@Param("list") List<QywxDepartmentMemberDetail> list);
+    void copyFromStg();
+
+    /**
      * 根据用户ID查找姓名
      */
     String selectNameByUserid(@Param("userid") String userid);

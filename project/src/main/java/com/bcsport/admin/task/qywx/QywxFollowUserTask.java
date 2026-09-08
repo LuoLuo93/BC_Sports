@@ -4,8 +4,10 @@ import com.bcsport.admin.entity.qywx.QywxFollowUser;
 import com.bcsport.admin.qywxmapper.QywxFollowUserMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,6 +29,10 @@ public class QywxFollowUserTask {
 
     @Autowired
     private QywxFollowUserMapper followUserMapper;
+
+    @Autowired
+    @Qualifier("qywxTransactionManager")
+    private PlatformTransactionManager transactionManager;
 
     public void sync() {
         synchronized (QywxFollowUserTask.class) {
@@ -61,12 +67,18 @@ public class QywxFollowUserTask {
         }
     }
 
-    @Transactional(rollbackFor = Exception.class, transactionManager = "qywxTransactionManager")
+    /**
+     * 短事务写库。用编程式事务：sync() 经 this 直接调用本方法会绕过 Spring 代理，
+     * 换回 @Transactional 会静默失效（deleteAll 与 insertBatch 不再原子）。
+     */
     public void doSync(List<QywxFollowUser> entityList) {
-        followUserMapper.deleteAll();
-        for (int i = 0; i < entityList.size(); i += BATCH_SIZE) {
-            int end = Math.min(i + BATCH_SIZE, entityList.size());
-            followUserMapper.insertBatch(entityList.subList(i, end));
-        }
+        new TransactionTemplate(transactionManager).execute(status -> {
+            followUserMapper.deleteAll();
+            for (int i = 0; i < entityList.size(); i += BATCH_SIZE) {
+                int end = Math.min(i + BATCH_SIZE, entityList.size());
+                followUserMapper.insertBatch(entityList.subList(i, end));
+            }
+            return null;
+        });
     }
 }

@@ -153,12 +153,15 @@ public class ShiroConfig {
         filterChainDefinitionMap.put("/static/**", "anon");
         filterChainDefinitionMap.put("/css/**", "anon");
         filterChainDefinitionMap.put("/js/**", "anon");
-        filterChainDefinitionMap.put("/images/**", "anon");
+        // /images/** 映射的是用户上传的业务文件(导入Excel/打印物料)，不是构建产物：
+        // 匿名可达等于按 URL 猜取业务数据，改为需登录(同源 <img> 会自动带会话Cookie，页面展示不受影响)
+        filterChainDefinitionMap.put("/images/**", "spaAuth");
         filterChainDefinitionMap.put("/favicon.ico", "anon");
-        filterChainDefinitionMap.put("/doc.html", "anon");
-        filterChainDefinitionMap.put("/webjars/**", "anon");
-        filterChainDefinitionMap.put("/v2/api-docs", "anon");
-        filterChainDefinitionMap.put("/swagger-resources/**", "anon");
+        // 接口文档属于内部结构信息，纳入认证(登录后仍可查看，不再匿名暴露全部接口)
+        filterChainDefinitionMap.put("/doc.html", "spaAuth");
+        filterChainDefinitionMap.put("/webjars/**", "spaAuth");
+        filterChainDefinitionMap.put("/v2/api-docs", "spaAuth");
+        filterChainDefinitionMap.put("/swagger-resources/**", "spaAuth");
         // 贴纸打印 Agent 端点：仅对 C# 客户端使用的 4 个端点放行（其余 agent/print 端点仍走 spaAuth 供管理后台使用）
         // 由 AgentApiKeyInterceptor 校验 X-API-Key
         filterChainDefinitionMap.put("/api/agent/register", "anon");

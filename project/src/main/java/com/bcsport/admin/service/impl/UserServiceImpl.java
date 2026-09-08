@@ -25,6 +25,7 @@ import com.bcsport.admin.util.PasswordUtil;
 import com.bcsport.admin.vo.UserVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -50,6 +51,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     private AuthCacheService authCacheService;
 
     @Autowired
+    @Lazy // 打断 userRealm↔userService 循环依赖(Realm 认证需查 UserService,本类仅角色变更/踢人时调 Realm 失效授权缓存)
     private com.bcsport.admin.shiro.UserRealm userRealm;
 
     @Autowired

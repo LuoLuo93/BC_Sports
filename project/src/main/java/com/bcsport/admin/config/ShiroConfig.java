@@ -142,7 +142,7 @@ public class ShiroConfig {
      * 配置ShiroFilterFactoryBean
      */
     @Bean
-    public ShiroFilterFactoryBean shiroFilterFactoryBean(SecurityManager securityManager) {
+    public ShiroFilterFactoryBean shiroFilterFactoryBean(SecurityManager securityManager) throws Exception {
         ShiroFilterFactoryBean shiroFilterFactoryBean = new ShiroFilterFactoryBean();
         shiroFilterFactoryBean.setSecurityManager(securityManager);
         
@@ -192,7 +192,16 @@ public class ShiroConfig {
         shiroFilterFactoryBean.setSuccessUrl("/index");
         // 设置未授权页码
         shiroFilterFactoryBean.setUnauthorizedUrl("/403");
-        
+
+        // Shiro 3.0.1 起 OncePerRequestFilter.filterOncePerRequest 默认 false：
+        // forward/error 等二次分发会重新执行过滤链。/login(anon) 内部 forward:/index.html
+        // 会再次命中 /**→spaAuth 被弹回 /login，造成无限重定向（登录页打不开）。
+        // 恢复"每请求只过滤一次"的 1.x 语义。
+        Filter filter = shiroFilterFactoryBean.getObject();
+        if (filter instanceof org.apache.shiro.web.servlet.AbstractShiroFilter abstractShiroFilter) {
+            abstractShiroFilter.setFilterOncePerRequest(true);
+        }
+
         return shiroFilterFactoryBean;
     }
     

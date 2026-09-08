@@ -10,6 +10,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 @Configuration
@@ -39,6 +40,24 @@ public class RedisConfig {
         template.setHashKeySerializer(stringSerializer);
         template.setValueSerializer(serializer);
         template.setHashValueSerializer(serializer);
+        template.afterPropertiesSet();
+
+        return template;
+    }
+
+    /**
+     * byte[] 模板：供 RedisSessionDAO(F33) 存 Shiro 会话的 JDK 序列化字节，
+     * 值用原生字节数组序列化器，避免走 JSON 转换破坏 Serializable 原始字节。
+     */
+    @Bean
+    public RedisTemplate<String, byte[]> byteRedisTemplate(RedisConnectionFactory factory) {
+        RedisTemplate<String, byte[]> template = new RedisTemplate<>();
+        template.setConnectionFactory(factory);
+        StringRedisSerializer stringSerializer = new StringRedisSerializer();
+        template.setKeySerializer(stringSerializer);
+        template.setHashKeySerializer(stringSerializer);
+        template.setValueSerializer(RedisSerializer.byteArray());
+        template.setHashValueSerializer(RedisSerializer.byteArray());
         template.afterPropertiesSet();
 
         return template;

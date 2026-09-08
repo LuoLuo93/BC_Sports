@@ -48,7 +48,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
     @Autowired
     private AuthCacheService authCacheService;
-    
+
+    @Autowired
+    private com.bcsport.admin.shiro.UserRealm userRealm;
+
     @Autowired
     private RoleMapper roleMapper;
     
@@ -200,6 +203,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             userRoleMapper.batchInsert(userRoleList);
         }
         authCacheService.evictUser(userId);
+        // F32: 同步失效 Shiro 授权缓存（角色变更后 @RequiresPermissions 立即生效）
+        userRealm.clearAllAuthorizationCache();
         return true;
     }
     

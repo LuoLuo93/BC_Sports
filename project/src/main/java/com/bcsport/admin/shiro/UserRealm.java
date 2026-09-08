@@ -4,6 +4,7 @@ import com.bcsport.admin.entity.User;
 import com.bcsport.admin.mapper.MenuMapper;
 import com.bcsport.admin.mapper.UserRoleMapper;
 import com.bcsport.admin.service.AuthCacheService;
+import com.bcsport.admin.service.ConfigService;
 import com.bcsport.admin.service.UserService;
 import com.bcsport.admin.util.BCryptPasswordUtil;
 import com.bcsport.admin.util.PasswordUtil;
@@ -39,6 +40,29 @@ public class UserRealm extends AuthorizingRealm {
 
     @Autowired
     private AuthCacheService authCacheService;
+
+    @Autowired
+    private ConfigService configService;
+
+    /**
+     * 权限/角色变更时由 UserServiceImpl 调用：同时失效 Shiro 授权缓存与 Redis 权限缓存，
+     * 下次鉴权重新查库。
+     */
+    public void evictAuthorizationCache(String username) {
+        // Shiro 授权缓存（F32 开启后生效）
+        getAuthorizationCache().remove(username);
+    }
+
+    /**
+     * 清空整个授权缓存（角色批量变更/不确定 username 时用）。
+     * 角色分配是低频管理操作，全量清空可接受。
+     */
+    public void clearAllAuthorizationCache() {
+        var cache = getAuthorizationCache();
+        if (cache != null) {
+            cache.clear();
+        }
+    }
 
     /**
      * 授权（获取用户角色和权限）
@@ -113,6 +137,13 @@ public class UserRealm extends AuthorizingRealm {
         if (passwordNew != null && !passwordNew.isEmpty() && BCryptPasswordUtil.isBCryptFormat(passwordNew)) {
             // BCrypt 格式，返回给 BCryptCredentialsMatcher 验证
             return new SimpleAuthenticationInfo(username, passwordNew, getName());
+        }
+
+        // F34: MD5 限期拒绝——配置 security.md5RejectEnabled=true 后，
+        // MD5-only 账号不允许登录（迁移已有 AuthController 登录成功时自动执行，
+        // 此开关用于"最后通牒"：尚未登录过的遗留账号在截止后被拒，联系管理员重置）
+        if (configService.getBoolean("security.md5RejectEnabled", false)) {
+            throw new LockedAccountException("密码策略已升级，请由管理员重置密码后再登录");
         }
 
         // 回退到旧的 MD5 格式

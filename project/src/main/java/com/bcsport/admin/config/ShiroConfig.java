@@ -36,17 +36,26 @@ public class ShiroConfig {
      * 配置SecurityManager
      */
     @Bean
-    public DefaultWebSecurityManager securityManager(UserRealm userRealm, ConfigService configService) {
+    public DefaultWebSecurityManager securityManager(UserRealm userRealm, ConfigService configService,
+                                                     org.springframework.data.redis.core.RedisTemplate<String, byte[]> redisTemplate) {
         DefaultWebSecurityManager securityManager = new DefaultWebSecurityManager();
 
         // 设置 BCrypt 凭证匹配器（支持渐进式迁移）
         userRealm.setCredentialsMatcher(new BCryptCredentialsMatcher());
 
+        // F32: 启用授权缓存——之前每次 @RequiresPermissions 都执行 doGetAuthorizationInfo
+        // （含一次 getByUsername 查库），同一请求最多打 3 次库。开启后整个方法按 principal
+        // 缓存（默认 MemoryConstrainedCacheManager，LRU 淘汰），权限变更时调
+        // userRealm.clearCachedAuthorizationInfo() 失效（见 UserServiceImpl.evictUser 联动）。
+        userRealm.setCachingEnabled(true);
+        userRealm.setAuthorizationCachingEnabled(true);
+        userRealm.setAuthorizationCacheName("authorizationCache");
+
         // 设置Realm
         securityManager.setRealm(userRealm);
 
-        // 配置 SessionManager
-        securityManager.setSessionManager(sessionManager(configService));
+        // F33: 接入 RedisSessionDAO——此前纯内存 session，重启全员掉线
+        securityManager.setSessionManager(sessionManager(configService, redisTemplate));
 
         // TODO: RememberMe 功能暂时关闭（Redis 连接问题）
         // securityManager.setRememberMeManager(rememberMeManager());
@@ -58,7 +67,8 @@ public class ShiroConfig {
      * 配置 SessionManager（重写getSession，session不存在时返回null而非抛异常）
      */
     @Bean
-    public DefaultWebSessionManager sessionManager(ConfigService configService) {
+    public DefaultWebSessionManager sessionManager(ConfigService configService,
+                                                   org.springframework.data.redis.core.RedisTemplate<String, byte[]> redisTemplate) {
         DefaultWebSessionManager sessionManager = new DefaultWebSessionManager() {
             @Override
             public Session getSession(SessionKey key) throws SessionException {
@@ -69,6 +79,8 @@ public class ShiroConfig {
                 }
             }
         };
+        // F33: Redis 会话持久化，重启不再全员掉线
+        sessionManager.setSessionDAO(new com.bcsport.admin.shiro.RedisSessionDAO(redisTemplate, configService));
         sessionManager.setSessionIdCookie(sessionIdCookie(configService));
         int timeoutMinutes = configService.getInt("security.sessionTimeout", 30);
         sessionManager.setGlobalSessionTimeout(timeoutMinutes * 60 * 1000L);

@@ -38,7 +38,11 @@ public class RedisSessionDAO extends CachingSessionDAO {
 
     @Override
     protected Serializable doCreate(Session session) {
-        Serializable sessionId = session.getId();
+        // Shiro 契约：会话 ID 由 SessionDAO 生成并分配（同 MemorySessionDAO）。
+        // 新建会话的 getId() 恒为 null，直接返回会触发 AbstractSessionDAO.verifySessionId
+        // 的 IllegalStateException——subject.login 一律失败，正确密码也报"用户名或密码错误"。
+        Serializable sessionId = generateSessionId(session);
+        assignSessionId(session, sessionId);
         saveToRedis(session);
         return sessionId;
     }

@@ -11,6 +11,9 @@ import com.bcsport.admin.util.BCryptPasswordUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.authc.UsernamePasswordToken;
+import org.apache.shiro.authc.IncorrectCredentialsException;
+import org.apache.shiro.authc.LockedAccountException;
+import org.apache.shiro.authc.UnknownAccountException;
 import org.apache.shiro.session.Session;
 import org.apache.shiro.session.mgt.DefaultSessionKey;
 import org.apache.shiro.session.mgt.SessionManager;
@@ -144,8 +147,8 @@ public class AuthController {
             // 登录成功直接在响应体返回用户信息，前端无需再发 /api/session/info
             // （避免 JSESSIONID Cookie 未及时落地导致那次请求 401，从而首次登录不跳转）
             return Result.success("登录成功", sessionCheckController.buildSessionInfo());
-        } catch (Exception e) {
-            // 登录失败，记录失败次数
+        } catch (UnknownAccountException | IncorrectCredentialsException e) {
+            // 真实凭证错误：计失败次数，超限锁号
             long failCount = authCacheService.recordLoginFailure(username);
             int maxRetry = configService.getInt("security.loginMaxRetry", 5);
             int lockMinutes = configService.getInt("security.loginLockMinutes", 30);
@@ -156,8 +159,17 @@ public class AuthController {
                 return Result.error("登录失败次数过多，账号已暂时锁定");
             }
 
-            log.error("登录失败: username={}, 剩余尝试次数={}", username, maxRetry - failCount);
+            log.warn("登录失败: username={}, 剩余尝试次数={}", username, maxRetry - failCount);
             return Result.error("用户名或密码错误");
+        } catch (LockedAccountException e) {
+            // 禁用/密码策略锁定：透传具体原因，不计失败次数
+            log.warn("登录被拒: username={}, reason={}", username, e.getMessage());
+            return Result.error(e.getMessage());
+        } catch (Exception e) {
+            // 基础设施/系统异常（会话、Redis、DB 等）：全栈入日志，不烧失败计数，
+            // 不伪装成"用户名或密码错误"误导排查
+            log.error("登录系统异常: username={}", username, e);
+            return Result.error("系统繁忙，请稍后再试");
         }
     }
     

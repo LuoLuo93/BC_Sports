@@ -11,9 +11,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.shiro.authc.*;
 import org.apache.shiro.authz.AuthorizationInfo;
 import org.apache.shiro.authz.SimpleAuthorizationInfo;
+import org.apache.shiro.lang.util.ByteSource;
 import org.apache.shiro.realm.AuthorizingRealm;
 import org.apache.shiro.subject.PrincipalCollection;
-import org.apache.shiro.util.ByteSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -122,6 +122,7 @@ public class UserRealm extends AuthorizingRealm {
         }
 
         // 设置盐值，返回给 BCryptCredentialsMatcher 验证
+        // Shiro 3.0 ByteSource 从 shiro.util 移到了 shiro.lang.util，用法不变
         ByteSource credentialsSalt = null;
         if (user.getSalt() != null && !user.getSalt().trim().isEmpty()) {
             credentialsSalt = ByteSource.Util.bytes(user.getSalt());

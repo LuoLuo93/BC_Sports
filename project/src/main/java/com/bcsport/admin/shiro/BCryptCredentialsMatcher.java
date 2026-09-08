@@ -8,7 +8,7 @@ import org.apache.shiro.authc.AuthenticationToken;
 import org.apache.shiro.authc.SaltedAuthenticationInfo;
 import org.apache.shiro.authc.UsernamePasswordToken;
 import org.apache.shiro.authc.credential.CredentialsMatcher;
-import org.apache.shiro.util.ByteSource;
+import org.apache.shiro.lang.util.ByteSource;
 
 /**
  * BCrypt 密码匹配器
@@ -38,14 +38,13 @@ public class BCryptCredentialsMatcher implements CredentialsMatcher {
         // 如果不是 BCrypt 格式，使用旧的 MD5 方式验证
         log.debug("检测到旧的 MD5 密码格式，使用 MD5 验证");
 
-        // 获取盐值
-        ByteSource saltBytes = null;
-        if (info instanceof SaltedAuthenticationInfo saltedInfo) {
-            saltBytes = saltedInfo.getCredentialsSalt();
-        }
+        // 获取盐值（Shiro 3.0 ByteSource 从 shiro.util 移到了 shiro.lang.util，用法不变）
         String salt = null;
-        if (saltBytes != null) {
-            salt = new String(saltBytes.getBytes());
+        if (info instanceof SaltedAuthenticationInfo saltedInfo) {
+            ByteSource saltBytes = saltedInfo.getCredentialsSalt();
+            if (saltBytes != null) {
+                salt = new String(saltBytes.getBytes());
+            }
         }
 
         // 使用 PasswordUtil 验证 MD5 密码

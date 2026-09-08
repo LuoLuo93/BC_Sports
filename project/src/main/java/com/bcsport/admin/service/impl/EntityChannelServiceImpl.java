@@ -730,17 +730,20 @@ public class EntityChannelServiceImpl implements EntityChannelService {
             // ========== 5. 批量写入：新增逐条 insert(冲突降级为错误而非整批失败)，更新走 updateById ==========
             // 原方案用 BATCH insert，但任何一条违反唯一约束会导致整批 flushStatements 抛 BatchUpdateException，
             // 已成功的也无法提交，用户体验差。改为逐条 insert：单条冲突只记错误跳过，其余继续。
+            int conflictCnt = 0;
             for (EntityChannel ins : toInsert) {
                 try {
                     entityChannelMapper.insert(ins);
                 } catch (org.springframework.dao.DuplicateKeyException dke) {
+                    conflictCnt++;
                     if (errors.size() < maxErrors) {
                         errors.add("店铺「" + ins.getExternalId() + "」+品牌冲突：该组合已存在或与其它行重复（" + dke.getMostSpecificCause().getMessage() + "）");
                     }
                 }
             }
-            // 统计实际新增成功条数（toInsert 中未抛冲突的）
-            int insertedOk = toInsert.size() - (int) errors.stream().filter(e -> e.contains("冲突")).count();
+            // 统计实际新增成功条数：用独立计数器，不依赖 errors.contains("冲突") 反推——
+            // errors 截断后超过 maxErrors 的冲突行不再记错误，字符串反推 insertedOk 虚高
+            int insertedOk = toInsert.size() - conflictCnt;
             // 更新：upsert 命中的记录，按 id 更新渠道属性/地区等字段
             for (EntityChannel upd : toUpdate) {
                 entityChannelMapper.updateById(upd);

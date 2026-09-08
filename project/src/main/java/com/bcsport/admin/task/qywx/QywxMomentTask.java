@@ -26,6 +26,9 @@ public class QywxMomentTask {
 
     private static volatile boolean isSyncing = false;
 
+    /** 游标翻页熔断上限：服务端 next_cursor 异常回环时防无限拉取 */
+    private static final int MAX_CURSOR_PAGES = 1000;
+
     public static boolean isSyncing() { return isSyncing; }
 
     @Autowired
@@ -76,9 +79,14 @@ public class QywxMomentTask {
 
             int totalInserted = 0;
             String cursor = "";
+            int cursorPages = 0;
 
             // 循环获取所有数据（支持游标翻页），每批获取后立即插入
             do {
+                if (++cursorPages > MAX_CURSOR_PAGES) {
+                    log.error("游标翻页超过{}页上限(疑似next_cursor回环)，中止朋友圈拉取", MAX_CURSOR_PAGES);
+                    break;
+                }
                 JSONObject result = apiClient.getMomentList(yesterdayStartTimestamp, yesterdayEndTimestamp, cursor);
 
                 JSONArray momentList = result.getJSONArray("moment_list");

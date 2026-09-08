@@ -165,7 +165,6 @@ const { isMobile, isTablet } = useResponsive()
 const mobileMenuOpen = ref(false)
 const tabScrollRef = ref(null)
 
-const apiBase = import.meta.env.VITE_API_BASE || ''
 const logoTimestamp = ref(Date.now())
 
 const logoFullUrl = computed(() => {

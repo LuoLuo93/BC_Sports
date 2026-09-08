@@ -1,6 +1,7 @@
 package com.bcsport.admin.service.agent;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bcsport.admin.entity.agent.PrintTask;
@@ -659,22 +660,17 @@ public class PrintTaskService {
         log.info("任务 {} 已手动取消(原状态 {})，orderNo={}", taskId, statusName(oldStatus), task.getOrderNo());
     }
 
-    /** 批量取消申请单下所有未完成任务(0/1/4→5)，供强制重新下发前清理 */
+    /** 批量取消申请单下所有未完成任务(0/1/4→5)，供强制重新下发前清理。
+     *  不再 selectList 全量实体(含 printData CLOB 大字段)再逐条 updateById，一条 UPDATE 完成 */
     private void cancelUnfinishedByOrderId(String orderId, String reason) {
-        List<PrintTask> blockers = taskMapper.selectList(
-            new LambdaQueryWrapper<PrintTask>()
+        int affected = taskMapper.update(null, new LambdaUpdateWrapper<PrintTask>()
                 .eq(PrintTask::getOrderId, orderId)
                 .in(PrintTask::getStatus, 0, 1, 4)
-        );
-        for (PrintTask task : blockers) {
-            int oldStatus = task.getStatus() == null ? -1 : task.getStatus();
-            task.setStatus(5);
-            task.setErrorMsg(reason + "（原状态：" + statusName(oldStatus) + "）");
-            task.setPrintTime(LocalDateTime.now());
-            taskMapper.updateById(task);
-        }
-        if (!blockers.isEmpty()) {
-            log.info("强制重新下发：申请单 {} 已取消 {} 个未完成任务", orderId, blockers.size());
+                .set(PrintTask::getStatus, 5)
+                .set(PrintTask::getErrorMsg, reason)
+                .set(PrintTask::getPrintTime, LocalDateTime.now()));
+        if (affected > 0) {
+            log.info("强制重新下发：申请单 {} 已取消 {} 个未完成任务", orderId, affected);
         }
     }
 

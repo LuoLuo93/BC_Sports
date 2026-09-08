@@ -99,7 +99,7 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.PAYLOAD_TOO_LARGE)
     public Result<?> handleMaxUploadSizeExceededException(MaxUploadSizeExceededException e) {
         log.warn("文件上传超过大小限制: {}", e.getMessage());
-        return Result.error("上传文件过大，单文件不能超过 100MB");
+        return Result.error("上传文件过大，单文件不能超过 500MB");
     }
 
     /**

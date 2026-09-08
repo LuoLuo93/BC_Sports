@@ -27,12 +27,13 @@
         </encoder>
     </appender>
     
-    <!-- 异步日志 -->
+    <!-- 异步日志：includeCallerData 每条日志做一次栈快照，开销大且当前无 %class/%method 输出，移除；
+         queueSize 512 满时直接阻塞业务线程，提到 2048；discardingThreshold 256 = 队列吃紧时丢
+         INFO 级保住 WARN/ERROR 且不再阻塞 -->
     <appender name="ASYNC_FILE" class="ch.qos.logback.classic.AsyncAppender">
         <appender-ref ref="FILE"/>
-        <queueSize>512</queueSize>
-        <discardingThreshold>0</discardingThreshold>
-        <includeCallerData>true</includeCallerData>
+        <queueSize>2048</queueSize>
+        <discardingThreshold>256</discardingThreshold>
     </appender>
     
     <!-- 开发环境 -->

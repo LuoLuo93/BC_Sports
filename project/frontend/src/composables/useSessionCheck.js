@@ -11,6 +11,15 @@ export function useSessionCheck() {
   let timer = null
   let failCount = 0
   let kickedOut = false
+  let inFlight = false
+
+  function onVisibilityChange() {
+    if (document.hidden) {
+      stopCheck()
+    } else if (authStore.isAuthenticated) {
+      startCheck()
+    }
+  }
 
   function handleKickedOut(msg) {
     if (kickedOut) return
@@ -28,6 +37,8 @@ export function useSessionCheck() {
   function startCheck(interval = 10000) {
     if (timer) return
     timer = setInterval(async () => {
+      if (inFlight) return
+      inFlight = true
       try {
         const res = await checkSession()
         failCount = 0
@@ -39,6 +50,8 @@ export function useSessionCheck() {
         if (failCount >= 3) {
           handleKickedOut('网络连接异常，请重新登录')
         }
+      } finally {
+        inFlight = false
       }
     }, interval)
   }
@@ -54,10 +67,12 @@ export function useSessionCheck() {
     if (authStore.isAuthenticated) {
       startCheck()
     }
+    document.addEventListener('visibilitychange', onVisibilityChange)
   })
 
   onUnmounted(() => {
     stopCheck()
+    document.removeEventListener('visibilitychange', onVisibilityChange)
   })
 
   return { startCheck, stopCheck }

@@ -6,7 +6,7 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Base64;
-import java.util.Random;
+import java.security.SecureRandom;
 
 /**
  * 简易验证码图片生成
@@ -17,7 +17,7 @@ public class CaptchaUtil {
     private static final int HEIGHT = 40;
     private static final int CODE_LENGTH = 4;
     private static final String CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    private static final Random RANDOM = new Random();
+    private static final SecureRandom RANDOM = new SecureRandom(); // 验证码可预测序列无意义, SecureRandom 零成本替代
 
     public static String generateCode() {
         StringBuilder sb = new StringBuilder();

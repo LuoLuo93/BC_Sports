@@ -24,6 +24,9 @@ import java.util.List;
 @Component("qywxMassMessageTask")
 public class QywxMassMessageTask {
 
+    /** 游标翻页熔断上限：服务端 next_cursor 异常回环时防无限拉取 */
+    private static final int MAX_CURSOR_PAGES = 1000;
+
     @Autowired
     private QywxApiClient apiClient;
 
@@ -68,9 +71,14 @@ public class QywxMassMessageTask {
 
             int totalInserted = 0;
             String cursor = "";
+            int cursorPages = 0;
 
             // 循环获取所有数据（支持游标翻页），每批获取后立即插入
             do {
+                if (++cursorPages > MAX_CURSOR_PAGES) {
+                    log.error("游标翻页超过{}页上限(疑似next_cursor回环)，中止群发消息拉取", MAX_CURSOR_PAGES);
+                    break;
+                }
                 JSONObject result = apiClient.getMassMessageList(yesterdayStartTimestamp, yesterdayEndTimestamp, cursor, "single");
 
                 JSONArray groupMsgList = result.getJSONArray("group_msg_list");

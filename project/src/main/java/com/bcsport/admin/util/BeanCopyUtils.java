@@ -56,7 +56,9 @@ public class BeanCopyUtils {
         targetPage.setPages(sourcePage.getPages());
         targetPage.setPageNum(sourcePage.getPageNum());
         targetPage.setPageSize(sourcePage.getPageSize());
-        
+        targetPage.setHasPrevious(sourcePage.getHasPrevious());
+        targetPage.setHasNext(sourcePage.getHasNext());
+
         List<T> targetRecords = copyList(sourcePage.getRecords(), targetClass);
         targetPage.setRecords(targetRecords);
         return targetPage;

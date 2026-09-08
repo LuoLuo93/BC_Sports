@@ -11,7 +11,8 @@
                 AND module = #{query.module}
             </if>
             <if test="query.username != null and query.username != ''">
-                AND username LIKE '%' || #{query.username} || '%'
+                <!-- 右模糊: 前置通配会让 idx_log_username 失效, 用户名检索习惯为前缀/精确 -->
+                AND username LIKE #{query.username} || '%'
             </if>
             <if test="query.status != null">
                 AND status = #{query.status}

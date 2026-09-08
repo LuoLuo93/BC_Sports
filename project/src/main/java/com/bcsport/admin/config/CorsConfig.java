@@ -22,20 +22,22 @@ public class CorsConfig implements WebMvcConfigurer {
             "http://127.0.0.1:5176"
         };
 
-        registry.addMapping("/bcsports/api/**")
+        // Spring MVC 的 CORS mapping 匹配的是相对 context-path 的路径，
+        // 此前带 /bcsports 前缀导致 dev 跨域(不走 vite 代理直连后端)时三条映射全部匹配不到
+        registry.addMapping("/api/**")
                 .allowedOrigins(devOrigins)
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
                 .allowCredentials(true)
                 .maxAge(3600);
 
-        registry.addMapping("/bcsports/doLogin")
+        registry.addMapping("/doLogin")
                 .allowedOrigins(devOrigins)
                 .allowedMethods("POST", "OPTIONS")
                 .allowedHeaders("*")
                 .allowCredentials(true);
 
-        registry.addMapping("/bcsports/doLogout")
+        registry.addMapping("/doLogout")
                 .allowedOrigins(devOrigins)
                 .allowedMethods("POST", "OPTIONS")
                 .allowedHeaders("*")

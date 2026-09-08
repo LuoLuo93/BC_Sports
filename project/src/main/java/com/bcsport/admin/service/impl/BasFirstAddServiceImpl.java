@@ -214,11 +214,16 @@ public class BasFirstAddServiceImpl implements BasFirstAddService {
         List<BasFirstAdd> toWrite = new ArrayList<>(buffer);
         buffer.clear();
         batchIds.clear();
-        txTemplate.execute(status -> {
-            basFirstAddMapper.mergeBatch(toWrite);
-            return null;
-        });
-        success.addAndGet(toWrite.size());
+        try {
+            txTemplate.execute(status -> {
+                basFirstAddMapper.mergeBatch(toWrite);
+                return null;
+            });
+            success.addAndGet(toWrite.size());
+        } catch (Exception e) {
+            log.error("BasFirstAdd 批量入库失败, 本批{}条已丢弃", toWrite.size(), e);
+            if (errors.size() < 200) errors.add("批量入库失败: " + e.getMessage());
+        }
     }
 
     /**

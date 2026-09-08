@@ -26,6 +26,10 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -56,6 +60,12 @@ public class ScheduleConfig {
 
     private ThreadPoolTaskScheduler taskScheduler;
 
+    /**
+     * 手动执行专用池：与 cron 调度分离，避免多个手动触发的长任务(IHR/QW全量同步动辄数十分钟)
+     * 占满调度线程导致所有 cron 触发被排队延迟；也避免调度器关闭中 execute 直接拒绝。
+     */
+    private ThreadPoolExecutor manualExecutor;
+
     @PostConstruct
     public void init() {
         taskScheduler = new ThreadPoolTaskScheduler();
@@ -64,7 +74,18 @@ public class ScheduleConfig {
         taskScheduler.setWaitForTasksToCompleteOnShutdown(true);
         taskScheduler.setAwaitTerminationSeconds(60);
         taskScheduler.initialize();
-        log.info("定时任务调度器初始化完成, 线程池大小：10");
+
+        manualExecutor = new ThreadPoolExecutor(
+                2, 4, 60L, TimeUnit.SECONDS,
+                new LinkedBlockingQueue<>(50),
+                r -> {
+                    Thread t = new Thread(r);
+                    t.setName("schedule-manual-" + t.getId());
+                    t.setDaemon(false);
+                    return t;
+                },
+                new ThreadPoolExecutor.AbortPolicy());
+        log.info("定时任务调度器初始化完成, cron池：10, 手动执行池：2-4");
     }
 
     /**
@@ -123,7 +144,16 @@ public class ScheduleConfig {
         runningJobNames.put(job.getId(), job.getJobName());
         runningJobStartTimes.put(job.getId(), System.currentTimeMillis());
 
-        taskScheduler.execute(createRunnable(job, option, "MANUAL"));
+        try {
+            manualExecutor.execute(createRunnable(job, option, "MANUAL"));
+        } catch (RejectedExecutionException e) {
+            // 先加的执行标记必须回收，否则该任务在重启前永远显示"执行中"
+            runningJobStartTimes.remove(job.getId());
+            runningJobNames.remove(job.getId());
+            runningJobIds.remove(job.getId());
+            log.error("手动执行池已满或关闭, 任务[{}]提交失败", job.getJobName());
+            throw new IllegalStateException("手动执行队列已满，请稍后再试");
+        }
     }
 
     @PreDestroy
@@ -131,6 +161,17 @@ public class ScheduleConfig {
         scheduledFutures.values().forEach(future -> future.cancel(false));
         scheduledFutures.clear();
         runningLocks.clear();
+        if (manualExecutor != null) {
+            manualExecutor.shutdown();
+            try {
+                if (!manualExecutor.awaitTermination(60, TimeUnit.SECONDS)) {
+                    manualExecutor.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                manualExecutor.shutdownNow();
+            }
+        }
         if (taskScheduler != null) {
             taskScheduler.shutdown();
         }

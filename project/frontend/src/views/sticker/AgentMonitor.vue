@@ -668,13 +668,24 @@ async function confirmReprint() {
 const POLL_INTERVAL = 30000
 let pollTimer = null
 
+function onVisibilityChange() {
+  if (document.hidden) {
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
+  } else {
+    refreshAll()
+    pollTimer = setInterval(refreshAll, POLL_INTERVAL)
+  }
+}
+
 onMounted(() => {
   refreshAll()
   pollTimer = setInterval(refreshAll, POLL_INTERVAL)
+  document.addEventListener('visibilitychange', onVisibilityChange)
 })
 
 onUnmounted(() => {
   if (pollTimer) clearInterval(pollTimer)
+  document.removeEventListener('visibilitychange', onVisibilityChange)
 })
 </script>
 

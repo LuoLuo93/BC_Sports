@@ -716,7 +716,8 @@ public class IhrEmployeeTask {
             syncDetail();
             log.info("=== 完成: IHR同步全部员工数据 ===");
         } catch (Exception e) {
-            log.error("=== 失败: IHR同步全部员工数据: {} ===", e.getMessage());
+            log.error("=== 失败: IHR同步全部员工数据(手动触发): {} ===", e.getMessage());
+            throw new RuntimeException("IHR手动同步失败", e);
         } finally {
             synchronized (IhrEmployeeTask.class) {
                 isSyncing = false;

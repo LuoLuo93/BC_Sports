@@ -128,26 +128,27 @@ public class WechatChannel implements NotifyChannel {
         String jsonBody = JSONUtil.toJsonStr(body);
         log.debug("企微群推送请求: {}", jsonBody);
 
-        HttpResponse response = HttpRequest.post(webhookUrl)
+        // hutool HttpResponse 依赖 GC 释放底层连接，notify 高频时句柄堆积——try-with-resources 显式归还
+        try (HttpResponse response = HttpRequest.post(webhookUrl)
                 .header("Content-Type", "application/json")
                 .body(jsonBody)
                 .timeout(10000)
-                .execute();
+                .execute()) {
+            String responseBody = response.body();
+            log.debug("企微群推送响应: {}", responseBody);
 
-        String responseBody = response.body();
-        log.debug("企微群推送响应: {}", responseBody);
+            if (response.getStatus() != 200) {
+                throw new RuntimeException("HTTP请求失败，状态码: " + response.getStatus());
+            }
 
-        if (response.getStatus() != 200) {
-            throw new RuntimeException("HTTP请求失败，状态码: " + response.getStatus());
+            JSONObject result = JSONUtil.parseObj(responseBody);
+            int errcode = result.getInt("errcode", -1);
+            if (errcode != 0) {
+                String errmsg = result.getStr("errmsg");
+                throw new RuntimeException("企微返回错误: " + errmsg);
+            }
+
+            log.info("企微群推送成功");
         }
-
-        JSONObject result = JSONUtil.parseObj(responseBody);
-        int errcode = result.getInt("errcode", -1);
-        if (errcode != 0) {
-            String errmsg = result.getStr("errmsg");
-            throw new RuntimeException("企微返回错误: " + errmsg);
-        }
-
-        log.info("企微群推送成功");
     }
 }

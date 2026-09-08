@@ -18,6 +18,8 @@ export function usePageQuery(apiFn, defaultQuery = {}) {
       if (id !== requestId) return // 过期响应，丢弃
       tableData.value = res.data?.records || []
       total.value = res.data?.total || 0
+    } catch {
+      // 拦截器已统一 toast，此处仅吞异常避免 @current-change="loadData" 模板调用产生 unhandled rejection
     } finally {
       if (id === requestId) loading.value = false
     }

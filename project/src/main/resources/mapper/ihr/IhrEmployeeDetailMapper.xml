@@ -134,10 +134,14 @@
         FROM employee_information_STG
     </update>
 
+    <!-- 只取调用方(QywxEmployeeLeaveSyncTask)实际使用的列，不再 SELECT * 拖全表 88 列 PII
+         (id_card_no/spouse_name/living_address 等)；日期过滤 sargable 不在列上包 CONVERT -->
     <select id="selectRecentLeaved" resultType="com.bcsport.admin.entity.ihr.IhrEmployeeDetail">
-        SELECT * FROM employee_information
+        SELECT id, staff_no, staff_name, mobile_no, email, leave_date, enroll_in_date
+        FROM employee_information
         WHERE leave_date IS NOT NULL
-        AND CONVERT(DATE, leave_date) BETWEEN CONVERT(DATE, #{startDate}) AND CONVERT(DATE, #{endDate})
+        AND leave_date &gt;= CAST(#{startDate} AS DATETIME)
+        AND leave_date &lt; DATEADD(DAY, 1, CAST(#{endDate} AS DATETIME))
     </select>
 
     <select id="selectByStaffIds" resultType="com.bcsport.admin.entity.ihr.IhrEmployeeDetail">

@@ -251,30 +251,9 @@ mybatis-plus:
       logic-delete-field: deleted
       logic-delete-value: 1
       logic-not-delete-value: 0
-    # Oracle 方言配置
-    db-type: oracle
-
-# Shiro 配置
-shiro:
-  sessionManager:
-    sessionIdUrlRewritingEnabled: false
-  web:
-    enabled: true
-  filter:
-    chain-definition-manager:
-      chain-definitions:
-        /bcsports/login anon
-        /bcsports/doLogin anon
-        /bcsports/api/config/public anon
-        /bcsports/assets/** anon
-        /bcsports/static/** anon
-        /bcsports/css/** anon
-        /bcsports/js/** anon
-        /bcsports/images/** anon
-        /bcsports/favicon.ico anon
-        /bcsports/index.avif anon
-        /bcsports/index.html anon
-        "/**" authc
+      # db-type 必须在 db-config 之下才生效；此前挂在 global-config 直下是死配置
+      # （方言实际由各 DataSourceConfig 构造 MapperFactoryBean 时显式指定，此处仅作全局兜底）
+      db-type: oracle
 
 # Knife4j 配置
 knife4j:

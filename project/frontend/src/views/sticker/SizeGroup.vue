@@ -1,6 +1,6 @@
 <template>
   <div class="page-container">
-    <el-tabs v-model="activeTab" @tab-change="onTabChange">
+    <el-tabs v-model="activeTab">
       <el-tab-pane label="尺码组列表" name="data">
     <el-card shadow="never" class="search-card">
       <el-form inline>
@@ -194,67 +194,11 @@
       </el-tab-pane>
 
       <!-- 导入日志 -->
-      <el-tab-pane label="导入日志" name="log">
-        <el-card shadow="never">
-          <template #header>
-            <div class="card-header-row">
-              <span class="card-header-title">导入日志</span>
-              <el-button size="small" :icon="RefreshRight" @click="loadLogData">刷新</el-button>
-            </div>
-          </template>
-          <div class="table-responsive">
-            <el-table v-loading="logLoading" :data="logData" border stripe empty-text="暂无导入记录">
-              <el-table-column label="#" width="60" align="center">
-                <template #default="{ $index }">{{ (logQuery.pageNum - 1) * logQuery.pageSize + $index + 1 }}</template>
-              </el-table-column>
-              <el-table-column prop="fileName" label="文件名" min-width="160" show-overflow-tooltip />
-              <el-table-column label="文件大小" width="110" align="right">
-                <template #default="{ row }">{{ formatSize(row.fileSize) }}</template>
-              </el-table-column>
-              <el-table-column prop="totalCount" label="总行数" width="90" align="right" />
-              <el-table-column prop="successCount" label="成功" width="80" align="right">
-                <template #default="{ row }"><span style="color:var(--el-color-success)">{{ row.successCount }}</span></template>
-              </el-table-column>
-              <el-table-column prop="failCount" label="失败" width="80" align="right">
-                <template #default="{ row }"><span :style="{color: row.failCount > 0 ? 'var(--el-color-danger)' : ''}">{{ row.failCount }}</span></template>
-              </el-table-column>
-              <el-table-column label="状态" width="100" align="center">
-                <template #default="{ row }">
-                  <el-tag :type="statusTagType(row.status)" size="small">{{ statusLabel(row.status) }}</el-tag>
-                </template>
-              </el-table-column>
-              <el-table-column prop="createBy" label="操作人" width="130" show-overflow-tooltip />
-              <el-table-column label="导入时间" width="180">
-                <template #default="{ row }">{{ formatTime(row.createTime) }}</template>
-              </el-table-column>
-              <el-table-column label="操作" width="110" align="center" fixed="right">
-                <template #default="{ row }">
-                  <el-button v-if="row.errorMsg" link type="primary" size="small" @click="viewErrors(row)">查看错误</el-button>
-                </template>
-              </el-table-column>
-            </el-table>
-          </div>
-          <div class="pagination-wrapper">
-            <el-pagination
-              v-model:current-page="logQuery.pageNum"
-              v-model:page-size="logQuery.pageSize"
-              :total="logTotal"
-              :page-sizes="PAGE_SIZES"
-              layout="total, sizes, prev, pager, next, jumper"
-              @size-change="loadLogData"
-              @current-change="loadLogData"
-            />
-          </div>
-        </el-card>
+      <el-tab-pane label="导入日志" name="log" lazy>
+        <ImportLogPanel ref="logPanel" :fetcher="fetchSizeGroupLogPage" />
       </el-tab-pane>
     </el-tabs>
 
-    <!-- 错误详情弹窗 -->
-    <el-dialog v-model="errorDialogVisible" title="导入错误详情" width="600px">
-      <div style="max-height:420px;overflow-y:auto;border:1px solid var(--el-border-color-lighter);border-radius:6px;padding:8px 12px;background:var(--el-fill-color-lighter)">
-        <pre style="white-space:pre-wrap;font-size:12px;color:var(--el-color-danger);line-height:1.8;margin:0">{{ errorDialogContent }}</pre>
-      </div>
-    </el-dialog>
   </div>
 </template>
 
@@ -265,6 +209,7 @@ import { Search, RefreshRight, Plus, Upload } from '@element-plus/icons-vue'
 import request from '@/api/request'
 import { getSizeGroupPage, getSizeGroup, createSizeGroup, updateSizeGroup, deleteSizeGroup } from '@/api/sticker'
 import { getCommonBrands, getCommonKinds } from '@/api/common'
+import ImportLogPanel from '@/components/ImportLogPanel.vue'
 import { usePageQuery } from '@/composables/usePageQuery'
 import { usePermission } from '@/composables/usePermission'
 import { PAGE_SIZES, defaultPageSize } from '@/utils/appConfig'
@@ -273,6 +218,10 @@ import { formatTime } from '@/utils/format'
 defineOptions({ name: 'StickerSizeGroup' })
 
 const { hasPermission } = usePermission()
+
+// 导入日志面板(F70 收口)：tab lazy 首切自动加载
+const logPanel = ref(null)
+const fetchSizeGroupLogPage = (params) => request.get('/api/sticker/size-group/import-log/page', { params })
 
 const brandList = ref([])
 const kindList = ref([])
@@ -482,6 +431,7 @@ async function submitImport() {
     if (res.data?.success > 0) {
       ElMessage.success('导入完成')
       loadData()
+      if (activeTab.value === 'log') logPanel.value?.loadLog()
     }
   } catch (e) {
     ElMessage.error('导入失败：' + (e.message || '服务器错误'))
@@ -510,44 +460,7 @@ async function handleDownloadTemplate() {
 
 // ===== Tab =====
 const activeTab = ref('data')
-function onTabChange(tab) {
-  if (tab === 'log') loadLogData()
-}
 
-// ===== 导入日志 =====
-const logLoading = ref(false)
-const logData = ref([])
-const logTotal = ref(0)
-const logQuery = reactive({ pageNum: 1, pageSize: defaultPageSize.value })
-const errorDialogVisible = ref(false)
-const errorDialogContent = ref('')
-
-async function loadLogData() {
-  logLoading.value = true
-  try {
-    const res = await request.get('/api/sticker/size-group/import-log/page', { params: { pageNum: logQuery.pageNum, pageSize: logQuery.pageSize } })
-    logData.value = res.data?.records || []
-    logTotal.value = res.data?.total || 0
-  } finally {
-    logLoading.value = false
-  }
-}
-function formatSize(bytes) {
-  if (!bytes) return '-'
-  if (bytes < 1024) return bytes + ' B'
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
-  return (bytes / 1024 / 1024).toFixed(2) + ' MB'
-}
-function statusLabel(s) {
-  return { SUCCESS: '全部成功', PARTIAL: '部分失败', FAILED: '失败' }[s] || s
-}
-function statusTagType(s) {
-  return { SUCCESS: 'success', PARTIAL: 'warning', FAILED: 'danger' }[s] || 'info'
-}
-function viewErrors(row) {
-  errorDialogContent.value = row.errorMsg || ''
-  errorDialogVisible.value = true
-}
 
 onMounted(() => {
   loadData()

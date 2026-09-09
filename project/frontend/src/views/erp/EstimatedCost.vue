@@ -1,6 +1,6 @@
 <template>
   <div class="page-container">
-    <el-tabs v-model="activeTab" class="cost-tabs" @tab-change="onTabChange">
+    <el-tabs v-model="activeTab" class="cost-tabs">
     <!-- 数据列表 -->
     <el-tab-pane label="数据列表" name="data">
         <el-card shadow="never" class="search-card">
@@ -67,56 +67,7 @@
 
       <!-- 导入记录 -->
       <el-tab-pane label="导入记录" name="log" lazy>
-        <el-card shadow="never">
-          <template #header>
-            <div class="card-header-row">
-              <span class="card-header-title">导入记录</span>
-            </div>
-          </template>
-          <div class="table-responsive">
-            <el-table v-loading="logLoading" :data="logData" border size="small" height="100%" empty-text="暂无导入记录">
-              <el-table-column label="#" width="50">
-                <template #default="{ $index }">{{ (logQuery.pageNum - 1) * logQuery.pageSize + $index + 1 }}</template>
-              </el-table-column>
-              <el-table-column prop="fileName" label="文件名" min-width="200" show-overflow-tooltip />
-              <el-table-column label="文件大小" width="100" align="center">
-                <template #default="{ row }">{{ row.fileSize ? (row.fileSize / 1024).toFixed(1) + ' KB' : '-' }}</template>
-              </el-table-column>
-              <el-table-column prop="totalCount" label="总行数" width="90" align="center" />
-              <el-table-column prop="successCount" label="成功" width="80" align="center">
-                <template #default="{ row }"><span style="color:#67c23a">{{ row.successCount }}</span></template>
-              </el-table-column>
-              <el-table-column prop="failCount" label="失败" width="80" align="center">
-                <template #default="{ row }"><span :style="{ color: row.failCount > 0 ? '#f56c6c' : '' }">{{ row.failCount }}</span></template>
-              </el-table-column>
-              <el-table-column label="状态" width="90" align="center">
-                <template #default="{ row }">
-                  <el-tag :type="statusTag(row.status)" size="small">{{ statusLabel(row.status) }}</el-tag>
-                </template>
-              </el-table-column>
-              <el-table-column prop="createBy" label="操作人" width="100" />
-              <el-table-column label="导入时间" width="170" align="center">
-                <template #default="{ row }">{{ formatTime(row.createTime) }}</template>
-              </el-table-column>
-              <el-table-column label="操作" width="90" align="center">
-                <template #default="{ row }">
-                  <el-button v-if="row.errorMsg" type="primary" link size="small" @click="showError(row)">查看错误</el-button>
-                </template>
-              </el-table-column>
-            </el-table>
-          </div>
-          <div class="pagination-wrapper--sm">
-            <el-pagination
-              v-model:current-page="logQuery.pageNum"
-              v-model:page-size="logQuery.pageSize"
-              :total="logTotal"
-              :page-sizes="PAGE_SIZES"
-              layout="total, sizes, prev, pager, next"
-              @size-change="() => { logQuery.pageNum = 1; loadLogData() }"
-              @current-change="loadLogData"
-            />
-          </div>
-        </el-card>
+        <ImportLogPanel ref="logPanel" :fetcher="getEstimatedCostImportLogPage" title="导入记录" />
       </el-tab-pane>
     </el-tabs>
 
@@ -174,11 +125,6 @@
         <el-button type="primary" :loading="importLoading" :disabled="importLoading" @click="handleImport">开始导入</el-button>
       </template>
     </el-dialog>
-
-    <!-- 错误详情弹窗 -->
-    <el-dialog v-model="errorDialogVisible" title="导入错误详情" width="640px">
-      <pre class="error-pre">{{ errorDialogContent }}</pre>
-    </el-dialog>
   </div>
 </template>
 
@@ -189,8 +135,8 @@ import { ElMessage } from 'element-plus'
 import { Search, RefreshRight, Upload } from '@element-plus/icons-vue'
 import { usePermission } from '@/composables/usePermission'
 import { PAGE_SIZES, defaultPageSize } from '@/utils/appConfig'
-import { formatTime } from '@/utils/format'
 import { getEstimatedCostPage, updateEstimatedCost, importEstimatedCost, getEstimatedCostTemplate, getEstimatedCostImportLogPage } from '@/api/erp-estimated-cost'
+import ImportLogPanel from '@/components/ImportLogPanel.vue'
 
 const { hasPermission } = usePermission()
 const activeTab = ref('data')
@@ -259,35 +205,8 @@ async function submitEdit() {
   } catch { /* interceptor */ } finally { editLoading.value = false }
 }
 
-// ===== 导入记录 =====
-const logLoading = ref(false)
-const logData = ref([])
-const logTotal = ref(0)
-const logQuery = reactive({ pageNum: 1, pageSize: defaultPageSize.value })
-
-async function loadLogData() {
-  logLoading.value = true
-  try {
-    const res = await getEstimatedCostImportLogPage(logQuery)
-    logData.value = res.data?.records || []
-    logTotal.value = res.data?.total || 0
-  } finally { logLoading.value = false }
-}
-
-function statusLabel(s) {
-  return { SUCCESS: '成功', PARTIAL: '部分成功', FAILED: '失败' }[s] || s || '-'
-}
-function statusTag(s) {
-  return { SUCCESS: 'success', PARTIAL: 'warning', FAILED: 'danger' }[s] || 'info'
-}
-
-// 错误详情
-const errorDialogVisible = ref(false)
-const errorDialogContent = ref('')
-function showError(row) {
-  errorDialogContent.value = row.errorMsg || '（无）'
-  errorDialogVisible.value = true
-}
+// 导入日志面板（F70：收口到 ImportLogPanel）
+const logPanel = ref(null)
 
 // ===== 导入 =====
 const showImportDialog = ref(false)
@@ -342,7 +261,7 @@ async function handleImport() {
     const res = await importEstimatedCost(formData)
     importResult.value = res.data
     // 导入成功后刷新日志页签（若当前在日志页）
-    if (activeTab.value === 'log') loadLogData()
+    if (activeTab.value === 'log') logPanel.value?.loadLog()
     // 同时刷新数据列表
     if (hasSearched.value) loadData()
   } catch { /* interceptor */ } finally {
@@ -351,9 +270,6 @@ async function handleImport() {
 }
 
 // ===== 页签切换 =====
-function onTabChange(tab) {
-  if (tab === 'log') loadLogData()
-}
 
 onMounted(() => {
   // 默认不查询，等用户输入条件点搜索

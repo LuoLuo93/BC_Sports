@@ -34,21 +34,13 @@ export function getShopDailyBudgetImportLogPage(params) {
   return request.get('/api/bi/shop-daily-budget/import-log/page', { params })
 }
 
-// 数仓销售查看
+// 数仓销售查看（Excel 期初导入功能已删除，保留查询/编辑与历史导入日志）
 export function getDwSalesMainPage(params) {
   return request.get('/api/bi/dw-sales/page', { params })
 }
 
 export function updateDwSalesMain(data) {
   return request.post('/api/bi/dw-sales/update', data)
-}
-
-export function importDwSalesMain(data) {
-  return request.post('/api/bi/dw-sales/import', data, { timeout: 1800000 })
-}
-
-export function getDwSalesTemplate() {
-  return request.get('/api/bi/dw-sales/template', { responseType: 'blob' })
 }
 
 export function getDwSalesImportLogPage(params) {

@@ -69,43 +69,4 @@
            AND ITEM_ID = #{e.itemId}
     </update>
 
-    <!-- 期初数据导入：纯批量INSERT(不防重，重复导入同文件会产生重复数据)，ID由Java侧分块取号预生成 -->
-    <insert id="insertBatch" parameterType="java.util.List">
-        INSERT INTO ODS_SALES_MAIN (
-            BILL_ID, BILL_NO, BILL_DATE, BILL_TIME, VIP_CODE, VIP_MOBILE,
-            OMS_SOURCECODE, SALES_TYPE, ITEM_ID, BILL_POS_ID, BILL_POS_CODE,
-            BILL_POS_NAME, STORE_ID, STORE_CODE, STORE_NAME, PRODUCT_CODE,
-            PRODUCT_STYLE_NO, PRODUCT_NAME, COLORSALIAS, BARCODE, SIZES, QTY,
-            RETAIL_PRICE, RETAIL_AMOUNT, TRANSACTION_AMOUNT, REVENUE,
-            RECALC_REVENUE, NEW_OLD_NAME_ADJUST, ANCHOR_SUMMARYID,
-            ANCHOR_SUMMARYNAME, PROMOTION_NAME)
-        <foreach collection="list" item="it" separator=" UNION ALL ">
-            SELECT
-                #{it.billId}, #{it.billNo}, #{it.billDate}, #{it.billTime}, #{it.vipCode}, #{it.vipMobile},
-                #{it.omsSourcecode}, #{it.salesType}, #{it.itemId}, #{it.billPosId}, #{it.billPosCode},
-                #{it.billPosName}, #{it.storeId}, #{it.storeCode}, #{it.storeName}, #{it.productCode},
-                #{it.productStyleNo}, #{it.productName}, #{it.colorsalias}, #{it.barcode}, #{it.sizes}, #{it.qty},
-                #{it.retailPrice}, #{it.retailAmount}, #{it.transactionAmount}, #{it.revenue},
-                #{it.recalcRevenue}, #{it.newOldNameAdjust}, #{it.anchorSummaryid},
-                #{it.anchorSummaryname}, #{it.promotionName}
-            FROM dual
-        </foreach>
-    </insert>
-
-    <!-- 批次失败幂等恢复：按预生成ITEM_ID查已落库行(超时类失败无法判断服务端是否已提交) -->
-    <select id="selectExistingItemIds" resultType="long">
-        SELECT ITEM_ID FROM ODS_SALES_MAIN
-         WHERE ITEM_ID IN
-        <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
-    </select>
-
-    <!-- 分块取号：一次取 count 个，避免逐行NEXTVAL的百万次往返 -->
-    <select id="drawItemIds" resultType="long">
-        SELECT SEQ_ODS_SALES_MAIN_ITEM.NEXTVAL FROM DUAL CONNECT BY LEVEL &lt;= #{count}
-    </select>
-
-    <select id="drawBillIds" resultType="long">
-        SELECT SEQ_ODS_SALES_MAIN_BILL.NEXTVAL FROM DUAL CONNECT BY LEVEL &lt;= #{count}
-    </select>
-
 </mapper>

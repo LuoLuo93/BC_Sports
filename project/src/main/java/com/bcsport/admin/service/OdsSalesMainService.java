@@ -4,14 +4,12 @@ import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.dto.OdsSalesMainQueryDTO;
 import com.bcsport.admin.dto.OdsSalesMainUpdateDTO;
-import com.bcsport.admin.entity.bi.DwSalesImportLog;
+import com.bcsport.admin.entity.SysImportLog;
 import com.bcsport.admin.entity.bi.OdsSalesMain;
-import org.springframework.web.multipart.MultipartFile;
-
-import java.util.Map;
 
 /**
  * 数仓销售查看(ODS_SALES_MAIN) Service
+ * Excel 期初导入功能已删除（2026-09-09，期初数据已灌入，后续走 ETL）；导入日志保留历史查询。
  */
 public interface OdsSalesMainService {
 
@@ -27,13 +25,7 @@ public interface OdsSalesMainService {
     boolean update(OdsSalesMainUpdateDTO dto);
 
     /**
-     * Excel 期初数据导入：SAX 流式解析 + 分批纯INSERT(不防重)
-     * BILL_ID/ITEM_ID 空缺时分块取号自动生成(BILL_ID按单据号分组共号)
+     * 导入日志分页（历史记录，读统一日志表）
      */
-    Map<String, Object> importFromExcel(MultipartFile file) throws Exception;
-
-    /**
-     * 导入日志分页
-     */
-    PageResult<DwSalesImportLog> logPage(PageQuery pageQuery);
+    PageResult<SysImportLog> logPage(PageQuery pageQuery);
 }

@@ -22,7 +22,6 @@
           <template #header>
             <div class="card-header-row">
               <span class="card-header-title">数仓销售明细（ODS_SALES_MAIN）</span>
-              <el-button v-if="hasPermission('bi:dw-sales:import')" type="warning" plain size="small" :icon="Upload" @click="showImportDialog = true">批量导入</el-button>
             </div>
           </template>
 
@@ -149,47 +148,7 @@
       </el-tab-pane>
     </el-tabs>
 
-    <!-- 批量导入弹窗 -->
-    <el-dialog v-model="showImportDialog" title="批量导入销售明细" width="560px" destroy-on-close @open="resetImportState">
-      <div class="import-zone">
-        <el-upload :limit="1" accept=".xlsx,.xls" :auto-upload="false" :before-upload="beforeUpload" drag :on-change="handleFileChange" :on-remove="handleFileRemove" :on-exceed="() => ElMessage.warning('只能上传一个文件')">
-          <el-icon :size="40" style="color:var(--el-text-color-placeholder)"><Upload /></el-icon>
-          <div style="margin-top:8px">将 Excel 文件拖到此处，或 <em>点击上传</em></div>
-          <template #tip>
-            <div class="upload-hint">
-              仅支持 .xlsx / .xls，文件 ≤500MB、≤300万行（150W行约5~15分钟，请勿关闭页面；中途断网不影响后台处理，结果可在导入日志查看）<br/>
-              表头须为英文列名（BILL_NO / BILL_TIME / ...），多个 sheet 时每个 sheet 需含表头行<br/>
-              期初数据导入：仅插入不防重，同一文件重复导入会产生重复数据；BILL_ID / ITEM_ID 留空将自动生成（同一单据号共用 BILL_ID）
-            </div>
-          </template>
-        </el-upload>
-        <div style="margin-top:12px;text-align:center">
-          <el-button link type="primary" :loading="templateLoading" @click="handleDownloadTemplate">下载导入模板</el-button>
-        </div>
-      </div>
-
-      <div v-if="importResult" style="margin-top:16px">
-        <el-alert
-          :title="`导入完成：共 ${importResult.total} 条，成功 ${importResult.success} 条，失败 ${importResult.fail} 条`"
-          :type="importResult.fail === 0 ? 'success' : (importResult.success === 0 ? 'error' : 'warning')"
-          show-icon
-          :closable="false"
-          style="margin-bottom:8px"
-        />
-        <div v-if="importResult.errors?.length" style="max-height:240px;overflow-y:auto;border:1px solid var(--el-border-color-lighter);border-radius:6px;padding:8px 12px;background:var(--el-fill-color-lighter)">
-          <div v-for="(err, idx) in importResult.errors" :key="idx" style="font-size:12px;color:var(--el-color-danger);line-height:2;border-bottom:1px dashed var(--el-border-color-extra-light)">
-            {{ err }}
-          </div>
-        </div>
-      </div>
-
-      <template #footer>
-        <el-button @click="showImportDialog = false">关闭</el-button>
-        <el-button type="primary" :loading="importLoading" :disabled="importLoading" @click="submitImport">开始导入</el-button>
-      </template>
-    </el-dialog>
-
-    <!-- 错误详情弹窗 -->
+    <!-- 错误详情弹窗（导入日志历史记录查看） -->
     <el-dialog v-model="errorDialogVisible" title="导入错误详情" width="600px">
       <div style="max-height:420px;overflow-y:auto;border:1px solid var(--el-border-color-lighter);border-radius:6px;padding:8px 12px;background:var(--el-fill-color-lighter)">
         <pre style="white-space:pre-wrap;font-size:12px;color:var(--el-color-danger);line-height:1.8;margin:0">{{ errorDialogContent }}</pre>
@@ -203,8 +162,8 @@ defineOptions({ name: 'DwSalesMain' })
 import { reactive, ref, onActivated } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Search, RefreshRight, Upload } from '@element-plus/icons-vue'
-import { getDwSalesMainPage, importDwSalesMain, getDwSalesTemplate, getDwSalesImportLogPage } from '@/api/bi'
+import { Search, RefreshRight } from '@element-plus/icons-vue'
+import { getDwSalesMainPage, getDwSalesImportLogPage } from '@/api/bi'
 import { formatTime } from '@/utils/format'
 import { PAGE_SIZES, defaultPageSize } from '@/utils/appConfig'
 import { usePageQuery } from '@/composables/usePageQuery'
@@ -325,90 +284,12 @@ function statusTagType(s) {
   return { SUCCESS: 'success', PARTIAL: 'warning', FAILED: 'danger' }[s] || 'info'
 }
 
-// 错误详情弹窗
+// 错误详情弹窗（导入日志历史记录查看）
 const errorDialogVisible = ref(false)
 const errorDialogContent = ref('')
 function viewErrors(row) {
   errorDialogContent.value = row.errorMsg || ''
   errorDialogVisible.value = true
-}
-
-// ===== 批量导入 =====
-const showImportDialog = ref(false)
-const importLoading = ref(false)
-const templateLoading = ref(false)
-const importResult = ref(null)
-const selectedFile = ref(null)
-
-const MAX_IMPORT_SIZE = 500 * 1024 * 1024
-
-function beforeUpload(file) {
-  const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls')
-  if (!isExcel) {
-    ElMessage.error('仅支持 .xlsx / .xls 格式的 Excel 文件')
-    return false
-  }
-  if (file.size > MAX_IMPORT_SIZE) {
-    ElMessage.error(`文件大小不能超过 500MB（当前 ${(file.size / 1024 / 1024).toFixed(1)}MB）`)
-    return false
-  }
-  return true
-}
-
-function handleFileChange(uploadFile) {
-  const raw = uploadFile.raw
-  if (!raw) return
-  if (!raw.name.endsWith('.xlsx') && !raw.name.endsWith('.xls')) {
-    ElMessage.error('仅支持 .xlsx / .xls 格式的 Excel 文件')
-    return
-  }
-  if (raw.size > MAX_IMPORT_SIZE) {
-    ElMessage.error(`文件大小不能超过 500MB（当前 ${(raw.size / 1024 / 1024).toFixed(1)}MB）`)
-    return
-  }
-  selectedFile.value = raw
-  importResult.value = null
-}
-function handleFileRemove() { selectedFile.value = null }
-function resetImportState() { selectedFile.value = null; importResult.value = null; importLoading.value = false }
-
-async function handleDownloadTemplate() {
-  templateLoading.value = true
-  try {
-    const res = await getDwSalesTemplate()
-    const blob = new Blob([res], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = '数仓销售导入模板.xlsx'
-    a.click()
-    window.URL.revokeObjectURL(url)
-  } catch {
-    ElMessage.error('下载模板失败')
-  } finally {
-    templateLoading.value = false
-  }
-}
-
-async function submitImport() {
-  if (!selectedFile.value) { ElMessage.warning('请先选择 Excel 文件'); return }
-  importLoading.value = true
-  importResult.value = null
-  try {
-    const formData = new FormData()
-    formData.append('file', selectedFile.value)
-    const res = await importDwSalesMain(formData)
-    importResult.value = res.data
-    if (res.data?.success > 0) {
-      ElMessage.success('导入完成')
-      if (hasSearched.value) loadData()
-      if (activeTab.value === 'log') loadLogData()
-    }
-  } catch (e) {
-    ElMessage.error('导入失败：' + (e.message || '服务器错误'))
-  } finally {
-    importLoading.value = false
-  }
 }
 </script>
 
@@ -429,11 +310,5 @@ async function submitImport() {
   margin-top: 12px;
   display: flex;
   justify-content: flex-end;
-}
-.upload-hint {
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-  margin-top: 4px;
-  line-height: 1.8;
 }
 </style>

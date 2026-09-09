@@ -180,6 +180,9 @@ public class ShiroConfig {
         // Actuator: 仅 health 端点允许匿名访问，其余需认证
         filterChainDefinitionMap.put("/actuator/health", "anon");
         filterChainDefinitionMap.put("/actuator/**", "spaAuth");
+        // 移动端运动积分排名:对外分享的免登录页面(前端路由 meta.requiresAuth=false)。
+        // 页面本身无敏感数据;后续接真实接口时,榜单查询接口也须在此放行 anon(建议只读+限频)
+        filterChainDefinitionMap.put("/points", "anon");
 
         // 需要认证的路径（使用 SpaAuthFilter 处理 API 请求返回 JSON 而非重定向，支持 Remember-Me）
         filterChainDefinitionMap.put("/**", "spaAuth");

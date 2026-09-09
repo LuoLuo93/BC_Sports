@@ -366,4 +366,24 @@ public class ExcelImportRunnerTest {
         assertTrue(spec.batches.isEmpty());
         assertEquals(ImportOutcome.STATUS_FAILED, recorder.outcomes.get(0).getStatus());
     }
+
+    /**
+     * 整个文件未识别到任何表头（row0 无一命中别名）时必须拒收——
+     * 否则完全无表头的文件会走固定列序兜底把所有行按位置映射全部导入（GoodsOldNew 原实现此场景报缺列）。
+     * 期间已进缓冲的行随 abort 丢弃，不 flush。
+     */
+    @Test
+    void headerlessFileIsRejectedInsteadOfFixedColumnFallback() throws Exception {
+        PersonSpec spec = new PersonSpec();
+        spec.requireHeaders = true;
+
+        // row0 是纯数据样式（无任何别名命中），后续为数据行
+        ImportOutcome outcome = new ExcelImportRunner(new CapturingRecorder()).run(xlsx(
+                new String[]{"x1", "y1"}, rows(new String[]{"a", "A"}, new String[]{"b", "B"})), spec);
+
+        assertEquals(0, outcome.getTotal());
+        assertEquals(ImportOutcome.STATUS_FAILED, outcome.getStatus());
+        assertEquals(List.of("Excel缺少必需列：姓名，请检查表头"), outcome.getErrors());
+        assertTrue(spec.batches.isEmpty());
+    }
 }

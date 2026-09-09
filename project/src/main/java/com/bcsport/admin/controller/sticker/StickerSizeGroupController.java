@@ -119,7 +119,7 @@ public class StickerSizeGroupController {
     @GetMapping("/import-log/page")
     @ApiOperation("导入日志分页查询")
     @RequiresPermissions("sticker:size-group:query")
-    public Result<PageResult<com.bcsport.admin.entity.sticker.SizeGroupImportLog>> importLogPage(PageQuery pageQuery) {
+    public Result<PageResult<com.bcsport.admin.entity.SysImportLog>> importLogPage(PageQuery pageQuery) {
         return Result.success(service.logPage(pageQuery));
     }
 

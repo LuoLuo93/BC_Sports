@@ -5,17 +5,22 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.common.exception.BusinessException;
-import com.bcsport.admin.entity.sticker.SizeGroupImportLog;
+import com.bcsport.admin.entity.SysImportLog;
 import com.bcsport.admin.entity.sticker.StickerSize;
 import com.bcsport.admin.entity.sticker.StickerSizeGroup;
-import com.bcsport.admin.mapper.sticker.SizeGroupImportLogMapper;
+import com.bcsport.admin.importer.ImportLogRecorder;
+import com.bcsport.admin.importer.ImportOutcome;
+import com.bcsport.admin.importer.ImportType;
 import com.bcsport.admin.mapper.sticker.StickerSizeGroupMapper;
 import com.bcsport.admin.mapper.sticker.StickerSizeMapper;
+import com.bcsport.admin.service.ImportLogService;
 import com.bcsport.admin.erpmapper.BjerpProductMapper;
 import com.bcsport.admin.util.ShiroSecurityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import cn.hutool.poi.excel.ExcelReader;
@@ -39,8 +44,15 @@ public class StickerSizeGroupService {
     @Autowired
     private BjerpProductMapper bjerpProductMapper;
 
+    /** 主库事务管理器（组/尺码表在主库）；导入每组独立短事务用 */
     @Autowired
-    private SizeGroupImportLogMapper importLogMapper;
+    private PlatformTransactionManager transactionManager;
+
+    @Autowired
+    private ImportLogRecorder importLogRecorder;
+
+    @Autowired
+    private ImportLogService importLogService;
 
     /**
      * 分页查询(支持 brandId/kindId/status/groupCode/groupName 筛选)
@@ -274,35 +286,41 @@ public class StickerSizeGroupService {
      * Excel 格式(纵向布局)：每行一个尺码，
      * 列依次为 组编码/组名称/品牌/类别/尺码编码/尺码名称/排序/状态/备注。
      * 组信息在每行重复，同组编码+品牌+类别的多行自动合并到同一组下。
+     * <p>
+     * F54 修复：不能整体一个事务+组级 catch——组内"更新组头→软删尺码→插入"中途失败被捕获后事务照常提交，
+     * 会留下组员不完整的残组。现每组独立短事务（组级原子、组间隔离，一组失败回滚该组不影响其他组）；
+     * 同(品牌+类别+组编码)存在多个活跃组时报错拒导，不再只更新第一个留下其余旧组残留。
      *
      * @return {total, success, fail, errors}
      */
-    @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> importFromExcel(MultipartFile file) {
-        Map<String, Object> result = new LinkedHashMap<>();
         List<String> errors = new ArrayList<>();
 
         // 1. 构建 品牌/类别 名称→ID 反查表
-        Map<String, String> brandNameToId = buildNameToIdMap(bjerpProductMapper.getBrands());
-        Map<String, String> kindNameToId = buildNameToIdMap(bjerpProductMapper.getKinds());
+        Map<String, String> brandNameToId;
+        Map<String, String> kindNameToId;
+        try {
+            brandNameToId = buildNameToIdMap(bjerpProductMapper.getBrands());
+            kindNameToId = buildNameToIdMap(bjerpProductMapper.getKinds());
+        } catch (Exception e) {
+            ImportOutcome rejected = ImportOutcome.rejected("品牌/类别字典加载失败：" + e.getMessage());
+            importLogRecorder.record(ImportType.STICKER_SIZE_GROUP, rejected, file);
+            return rejected.toResultMap();
+        }
 
         List<Map<String, Object>> rawRows;
         try (ExcelReader reader = ExcelUtil.getReader(file.getInputStream())) {
             rawRows = reader.readAll();
         } catch (Exception e) {
-            result.put("total", 0);
-            result.put("success", 0);
-            result.put("fail", 0);
-            result.put("errors", List.of("Excel 解析失败：" + e.getMessage()));
-            return result;
+            ImportOutcome rejected = ImportOutcome.rejected("Excel 解析失败：" + e.getMessage());
+            importLogRecorder.record(ImportType.STICKER_SIZE_GROUP, rejected, file);
+            return rejected.toResultMap();
         }
 
         if (rawRows.isEmpty()) {
-            result.put("total", 0);
-            result.put("success", 0);
-            result.put("fail", 0);
-            result.put("errors", List.of());
-            return result;
+            ImportOutcome rejected = ImportOutcome.rejected("未读取到任何数据行");
+            importLogRecorder.record(ImportType.STICKER_SIZE_GROUP, rejected, file);
+            return rejected.toResultMap();
         }
 
         // 2. 按行解析并按 (groupCode, brandName, kindName) 合并
@@ -420,69 +438,85 @@ public class StickerSizeGroupService {
             }
         }
 
-        // 4. 批量写入（upsert）
+        // 4. 批量写入（upsert）——每组独立短事务（F54：组内半写不再残留）
         String currentUser = ShiroSecurityUtils.getCurrentUsername();
         LocalDateTime now = LocalDateTime.now();
+        TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
         int success = 0;
 
         for (ParsedGroup pg : groupMap.values()) {
             try {
-                // 校验尺码明细：编码/名称必填 + 组内编码唯一（含本次新增与已有存量的合并校验见下）
+                // 校验尺码明细：编码/名称必填 + 组内编码唯一
                 validateSizes(pg.sizes);
                 // 查重：同 brandId + kindId + groupCode
-                StickerSizeGroup existing = groupMapper.selectOne(
+                List<StickerSizeGroup> existings = groupMapper.selectList(
                         new LambdaQueryWrapper<StickerSizeGroup>()
                                 .eq(StickerSizeGroup::getBrandId, pg.brandId)
                                 .eq(StickerSizeGroup::getKindId, pg.kindId)
                                 .eq(StickerSizeGroup::getGroupCode, pg.groupCode)
-                                .last("FETCH FIRST 1 ROWS ONLY"));
+                                .orderByAsc(StickerSizeGroup::getCreateTime));
+                if (existings.size() > 1) {
+                    // F54：多个活跃重复组只更新第一个会留下其余旧组残留——显式报错让用户先清理
+                    StringBuilder ids = new StringBuilder();
+                    for (StickerSizeGroup g : existings) {
+                        if (ids.length() > 0) ids.append(",");
+                        ids.append(g.getId());
+                    }
+                    throw new BusinessException("同品牌+类别下存在 " + existings.size()
+                            + " 个重复组(id=" + ids + ")，请先在页面删除多余组后再导入");
+                }
+                StickerSizeGroup existing = existings.isEmpty() ? null : existings.get(0);
 
                 if (existing != null) {
-                    // 更新基本信息
-                    existing.setGroupName(pg.groupName);
-                    existing.setSort(pg.sort);
-                    existing.setStatus(pg.status);
-                    existing.setRemark(pg.remark);
-                    existing.setUpdateBy(currentUser);
-                    existing.setUpdateTime(now);
-                    groupMapper.updateById(existing);
-                    // 差量更新尺码明细(导入场景: 按sizeCode匹配已有尺码, 无id也能正确更新)
-                    List<StickerSize> dbSizes = listSizesByGroupId(existing.getId());
-                    java.util.Map<String, String> codeToIdMap = new java.util.HashMap<>();
-                    for (StickerSize ds : dbSizes) {
-                        if (ds.getSizeCode() != null) codeToIdMap.put(ds.getSizeCode(), ds.getId());
-                    }
-                    for (StickerSize s : pg.sizes) {
-                        if (s.getSizeCode() != null && codeToIdMap.containsKey(s.getSizeCode())) {
-                            s.setId(codeToIdMap.get(s.getSizeCode()));
+                    txTemplate.executeWithoutResult(txStatus -> {
+                        // 更新基本信息
+                        existing.setGroupName(pg.groupName);
+                        existing.setSort(pg.sort);
+                        existing.setStatus(pg.status);
+                        existing.setRemark(pg.remark);
+                        existing.setUpdateBy(currentUser);
+                        existing.setUpdateTime(now);
+                        groupMapper.updateById(existing);
+                        // 差量更新尺码明细(导入场景: 按sizeCode匹配已有尺码, 无id也能正确更新)
+                        List<StickerSize> dbSizes = listSizesByGroupId(existing.getId());
+                        java.util.Map<String, String> codeToIdMap = new java.util.HashMap<>();
+                        for (StickerSize ds : dbSizes) {
+                            if (ds.getSizeCode() != null) codeToIdMap.put(ds.getSizeCode(), ds.getId());
                         }
-                    }
-                    diffUpdateSizes(existing.getId(), pg.sizes, now);
+                        for (StickerSize s : pg.sizes) {
+                            if (s.getSizeCode() != null && codeToIdMap.containsKey(s.getSizeCode())) {
+                                s.setId(codeToIdMap.get(s.getSizeCode()));
+                            }
+                        }
+                        diffUpdateSizes(existing.getId(), pg.sizes, now);
+                    });
                 } else {
-                    // 新增
-                    StickerSizeGroup entity = new StickerSizeGroup();
-                    entity.setGroupCode(pg.groupCode);
-                    entity.setGroupName(pg.groupName);
-                    entity.setBrandId(pg.brandId);
-                    entity.setBrandName(pg.brandName);
-                    entity.setKindId(pg.kindId);
-                    entity.setKindName(pg.kindName);
-                    entity.setStatus(pg.status);
-                    entity.setSort(pg.sort);
-                    entity.setRemark(pg.remark);
-                    entity.setDeleted(0);
-                    entity.setCreateBy(currentUser);
-                    entity.setCreateTime(now);
-                    entity.setUpdateBy(currentUser);
-                    entity.setUpdateTime(now);
-                    groupMapper.insert(entity);
-                    // 保存尺码明细
-                    for (StickerSize sz : pg.sizes) {
-                        sz.setGroupId(entity.getId());
-                        sz.setDeleted(0);
-                        sz.setCreateTime(now);
-                        sizeMapper.insert(sz);
-                    }
+                    txTemplate.executeWithoutResult(txStatus -> {
+                        // 新增
+                        StickerSizeGroup entity = new StickerSizeGroup();
+                        entity.setGroupCode(pg.groupCode);
+                        entity.setGroupName(pg.groupName);
+                        entity.setBrandId(pg.brandId);
+                        entity.setBrandName(pg.brandName);
+                        entity.setKindId(pg.kindId);
+                        entity.setKindName(pg.kindName);
+                        entity.setStatus(pg.status);
+                        entity.setSort(pg.sort);
+                        entity.setRemark(pg.remark);
+                        entity.setDeleted(0);
+                        entity.setCreateBy(currentUser);
+                        entity.setCreateTime(now);
+                        entity.setUpdateBy(currentUser);
+                        entity.setUpdateTime(now);
+                        groupMapper.insert(entity);
+                        // 保存尺码明细
+                        for (StickerSize sz : pg.sizes) {
+                            sz.setGroupId(entity.getId());
+                            sz.setDeleted(0);
+                            sz.setCreateTime(now);
+                            sizeMapper.insert(sz);
+                        }
+                    });
                 }
                 success++;
             } catch (Exception e) {
@@ -499,45 +533,16 @@ public class StickerSizeGroupService {
             errors.add("...共 " + fail + " 条错误，仅显示前 100 条");
         }
 
-        // 写导入日志
-        String status = (total == 0) ? "FAILED" : (fail == 0 ? "SUCCESS" : "PARTIAL");
-        saveImportLog(file, total, success, fail, status, errors);
-
-        result.put("total", total);
-        result.put("success", success);
-        result.put("fail", fail);
-        result.put("errors", errors);
-        return result;
+        ImportOutcome outcome = ImportOutcome.of(total, success, fail, errors);
+        importLogRecorder.record(ImportType.STICKER_SIZE_GROUP, outcome, file);
+        return outcome.toResultMap();
     }
 
     /**
-     * 导入日志分页查询
+     * 导入日志分页查询（统一日志表）
      */
-    public PageResult<SizeGroupImportLog> logPage(PageQuery pageQuery) {
-        Page<SizeGroupImportLog> page = importLogMapper.selectPage(pageQuery.toPage(),
-                new LambdaQueryWrapper<SizeGroupImportLog>().orderByDesc(SizeGroupImportLog::getId));
-        return PageResult.of(page);
-    }
-
-    private void saveImportLog(MultipartFile file, int total, int success, int fail, String status, List<String> errors) {
-        try {
-            SizeGroupImportLog logEntity = new SizeGroupImportLog();
-            logEntity.setFileName(file.getOriginalFilename());
-            logEntity.setFileSize(file.getSize());
-            logEntity.setTotalCount(total);
-            logEntity.setSuccessCount(success);
-            logEntity.setFailCount(fail);
-            logEntity.setStatus(status);
-            if (!errors.isEmpty()) {
-                String msg = String.join("\n", errors);
-                logEntity.setErrorMsg(msg.length() > 4000 ? msg.substring(0, 4000) : msg);
-            }
-            logEntity.setCreateBy(ShiroSecurityUtils.getCurrentUsername());
-            logEntity.setCreateTime(LocalDateTime.now());
-            importLogMapper.insert(logEntity);
-        } catch (Exception e) {
-            System.out.println("保存导入日志失败: " + e.getMessage());
-        }
+    public PageResult<SysImportLog> logPage(PageQuery pageQuery) {
+        return importLogService.page(ImportType.STICKER_SIZE_GROUP, pageQuery);
     }
 
     /** 解析过程中的临时数据结构 */

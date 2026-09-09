@@ -48,6 +48,10 @@ public class ExcelImportRunner {
 
         Session<T> session = new Session<>(spec);
         ExcelSaxUtils.readAllSheets(file, format, session::handleRow, label);
+        // 整个文件未识别到任何表头（row0 无一命中别名）时，用空映射补一次校验：
+        // 否则完全无表头的文件会走固定列序兜底把所有行按位置映射全部导入（GoodsOldNew 原实现在此场景报缺列拒收），
+        // 空文件也会丢失"缺少必需列"提示
+        session.eofHeaderCheck();
         if (session.abortMsg != null) {
             ImportOutcome rejected = ImportOutcome.rejected(session.abortMsg);
             logRecorder.record(spec.type(), rejected, file);
@@ -144,6 +148,17 @@ public class ExcelImportRunner {
             } catch (Exception e) {
                 log.error("{} 批量入库失败, 本批{}条已丢弃", label, toWrite.size(), e);
                 error("批量入库失败: " + e.getMessage());
+            }
+        }
+
+        /** 读完全部 sheet 后仍无任何表头时的补校验（见 run() 注释） */
+        void eofHeaderCheck() {
+            if (abortMsg == null && columnIndex.isEmpty()) {
+                try {
+                    spec.validateHeaders(columnIndex);
+                } catch (IllegalArgumentException e) {
+                    abortMsg = e.getMessage();
+                }
             }
         }
 

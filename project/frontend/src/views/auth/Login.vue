@@ -347,7 +347,14 @@ async function handleLogin() {
     await authStore.login(loginData)
     tabStore.clearAll()
     tabStore.initDashboard()
-    router.push('/')
+    // 登录后原路返回(如手机上被守卫带到 /login 的 /m 页面);
+    // 只接受站内路径,拒绝 //xxx 形式的外部协议跳转
+    const redirect = typeof route.query.redirect === 'string'
+      && route.query.redirect.startsWith('/')
+      && !route.query.redirect.startsWith('//')
+      ? route.query.redirect
+      : '/'
+    router.push(redirect)
   } catch (e) {
     errorMsg.value = e.message || '凭据检验未通过，请核对后重试'
     if (captchaEnabled.value) {

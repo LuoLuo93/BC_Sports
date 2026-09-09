@@ -4,6 +4,7 @@ import path from 'path'
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
+import { VantResolver } from 'unplugin-vue-components/resolvers'
 
 export default defineConfig({
   base: '/bcsports/',
@@ -11,11 +12,11 @@ export default defineConfig({
     vue(),
     AutoImport({
       imports: ['vue', 'vue-router', 'pinia'],
-      resolvers: [ElementPlusResolver()],
+      resolvers: [ElementPlusResolver(), VantResolver()],
       dts: false
     }),
     Components({
-      resolvers: [ElementPlusResolver()],
+      resolvers: [ElementPlusResolver(), VantResolver()],
       dts: false
     })
   ],
@@ -48,6 +49,7 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes('node_modules/element-plus')) return 'element-plus'
+          if (id.includes('node_modules/vant')) return 'vant'
           if (id.includes('node_modules/echarts') || id.includes('node_modules/vue-echarts')) return 'echarts'
           if (id.includes('node_modules/vue/') || id.includes('node_modules/vue-router/') || id.includes('node_modules/pinia/')) return 'vue-vendor'
         }

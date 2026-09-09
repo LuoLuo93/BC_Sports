@@ -9,6 +9,14 @@ const routes = [
     component: () => import('@/views/auth/Login.vue'),
     meta: { requiresAuth: false }
   },
+  // 移动端 H5(独立布局,不进 MainLayout)。运动积分排名是对外分享的免登录外链;
+  // 后续接真实接口时,后端需在 Shiro filterChainDefinitionMap 把对应接口放行为 anon
+  {
+    path: '/points',
+    name: 'MobileRank',
+    component: () => import('@/views/mobile/MobileRank.vue'),
+    meta: { pageTitle: '运动积分排名', requiresAuth: false }
+  },
   {
     path: '/',
     component: () => import('@/layouts/MainLayout.vue'),
@@ -99,7 +107,8 @@ router.beforeEach(async (to, from, next) => {
       next()
     } catch {
       useTabStore().clearAll()
-      next('/login')
+      // 带上回跳地址,登录成功后原路返回(如手机上直接打开 /points)
+      next({ path: '/login', query: { redirect: to.fullPath } })
     }
   } else {
     next()

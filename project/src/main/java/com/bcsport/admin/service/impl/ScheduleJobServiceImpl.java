@@ -252,13 +252,17 @@ public class ScheduleJobServiceImpl extends ServiceImpl<ScheduleJobMapper, Sched
         LambdaQueryWrapper<ScheduleJob> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(ScheduleJob::getStatus, 1).eq(ScheduleJob::getDeleted, 0);
         List<ScheduleJob> jobs = list(wrapper);
+        int registered = 0;
         for (ScheduleJob job : jobs) {
             try {
-                scheduleConfig.registerTask(job);
+                if (scheduleConfig.registerTask(job)) {
+                    registered++;
+                }
             } catch (Exception e) {
                 log.error("注册定时任务失败: {}", job.getJobName(), e);
             }
         }
-        log.info("共注册 {} 个定时任务", jobs.size());
+        log.info("共注册 {} 个定时任务(候选 {} 个{})", registered, jobs.size(),
+                registered < jobs.size() ? "，部分未注册：调度禁用或任务不存在" : "");
     }
 }

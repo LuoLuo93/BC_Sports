@@ -10,6 +10,7 @@ import com.bcsport.admin.task.ScheduleTaskRegistry;
 import com.bcsport.admin.util.CronUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
@@ -63,6 +64,15 @@ public class ScheduleConfig {
     @Autowired
     private ConfigService configService;
 
+    /**
+     * 调度总开关,默认 false（安全默认:忘记带参数也不会跑任务）。
+     * 生产唯一开启点 = CI/CD 工作流(deploy-prod.yml)的 nssm 启动命令显式带 --schedule.enabled=true。
+     * 刻意不在 application-prod.yml 里开启——本地测试用的就是 prod profile
+     * (2026-09-09 双跑事故:本地 prod 实例连生产库,调度器与生产双跑)。
+     */
+    @Value("${schedule.enabled:false}")
+    private boolean scheduleEnabled;
+
     @Autowired(required = false)
     private StringRedisTemplate stringRedisTemplate;
 
@@ -102,6 +112,10 @@ public class ScheduleConfig {
                 },
                 new ThreadPoolExecutor.AbortPolicy());
         log.info("定时任务调度器初始化完成, cron池：10, 手动执行池：2-4");
+        if (!scheduleEnabled) {
+            log.warn("定时任务调度已禁用(schedule.enabled=false), 本实例不会注册/执行任何定时任务。" +
+                    "生产实例应由部署命令显式携带 --schedule.enabled=true, 若生产日志出现本行说明部署命令缺参!");
+        }
     }
 
     /**
@@ -119,13 +133,19 @@ public class ScheduleConfig {
         return cronExpression;
     }
 
-    public void registerTask(ScheduleJob job) {
+    /** @return 是否真正完成调度注册(调度禁用/任务不存在时返回 false) */
+    public boolean registerTask(ScheduleJob job) {
+        if (!scheduleEnabled) {
+            log.warn("调度已禁用(schedule.enabled=false)，跳过注册定时任务: [{}] {}", job.getJobName(), job.getTaskKey());
+            return false;
+        }
+
         removeTask(job.getId());
 
         ScheduleTaskRegistry.TaskOption option = ScheduleTaskRegistry.getTask(job.getTaskKey());
         if (option == null) {
             log.warn("预设任务不存在 {}", job.getTaskKey());
-            return;
+            return false;
         }
 
         Runnable runnable = createRunnable(job, option, "CRON");
@@ -134,6 +154,7 @@ public class ScheduleConfig {
         ScheduledFuture<?> future = taskScheduler.schedule(runnable, cronTrigger);
         scheduledFutures.put(job.getId(), future);
         log.info("注册定时任务: [{}] {}, cron: {}", job.getId(), job.getJobName(), normalizedCron);
+        return true;
     }
 
     public void removeTask(String jobId) {
@@ -145,6 +166,11 @@ public class ScheduleConfig {
     }
 
     public void executeJobImmediately(ScheduleJob job) {
+        if (!scheduleEnabled) {
+            log.warn("调度已禁用(schedule.enabled=false)，拒绝手动执行任务: [{}]", job.getJobName());
+            throw new IllegalStateException("调度已禁用(schedule.enabled=false)，本实例不执行任何任务");
+        }
+
         ScheduleTaskRegistry.TaskOption option = ScheduleTaskRegistry.getTask(job.getTaskKey());
         if (option == null) {
             log.warn("预设任务不存在 {}", job.getTaskKey());

@@ -8,6 +8,13 @@ server:
     max-connections: 8192
     accept-count: 100
 
+# 定时任务调度总开关。
+# ★ 默认 false（安全默认）：本地/验证实例怎么启动都不会执行定时任务,忘记加参数也安全。
+# ★ 生产唯一开启点：CI/CD 工作流(deploy-prod.yml)的 nssm 启动命令里显式带 --schedule.enabled=true。
+#   不要在 application-prod.yml 里开启——本地测试用的就是 prod profile(2026-09-09 双跑事故根因)。
+schedule:
+  enabled: false
+
 # 贴纸打印 Agent 共享密钥（C# 客户端通过 X-API-Key 请求头携带）。
 # 默认 local-dev-key 便于本地联调；生产环境用环境变量 AGENT_API_KEY 覆盖，不在仓库存明文。
 agent:

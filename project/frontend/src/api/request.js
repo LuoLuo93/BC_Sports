@@ -67,6 +67,8 @@ request.interceptors.response.use(
     return Promise.reject(new Error(res.message || '操作失败'))
   },
   async error => {  // 修复：添加 async 关键字
+    // 登录页静默:登录页自己会处理错误(catch 里显示表单级提示),不需要拦截器弹全局 toast
+    const onLoginPage = router.currentRoute.value.path === '/login'
     if (error.response) {
       const status = error.response.status
       if (status === 401) {
@@ -74,13 +76,19 @@ request.interceptors.response.use(
           handleSessionExpired()
         }
       } else if (status === 403) {
-        ElMessage({ type: 'error', message: '没有操作权限', grouping: true })
+        if (!onLoginPage) {
+          ElMessage({ type: 'error', message: '没有操作权限', grouping: true })
+        }
       } else {
-        const msg = error.response.data?.message || error.response.data?.msg || '网络请求失败'
-        ElMessage({ type: 'error', message: msg, grouping: true })
+        if (!onLoginPage) {
+          const msg = error.response.data?.message || error.response.data?.msg || '网络请求失败'
+          ElMessage({ type: 'error', message: msg, grouping: true })
+        }
       }
     } else {
-      ElMessage.error('网络连接异常')
+      if (!onLoginPage) {
+        ElMessage.error('网络连接异常')
+      }
     }
     return Promise.reject(error)
   }

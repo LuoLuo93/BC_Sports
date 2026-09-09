@@ -1268,19 +1268,19 @@ async function handleLogin() {
 }
 
 @media (max-width: 768px) {
-  /* 背景:砍掉点阵+模糊圆,换成品牌渐变(和 /points 排名页同系列) */
+  /* 极简白底,砍掉所有装饰 */
   .dot-grid,
   .blob { display: none; }
   .form-side {
     padding: 0;
-    background: linear-gradient(135deg, #1e40af 0%, #3b82f6 55%, #6366f1 100%);
+    background: #fff;
     justify-content: flex-start;
     align-items: stretch;
     min-height: 100vh;
-    min-height: 100dvh; /* 移动端真实视口高度 */
+    min-height: 100dvh;
   }
 
-  /* safe-area 适配:刘海屏/底部横条 */
+  /* safe-area 顶部 */
   .form-side::before {
     content: '';
     display: block;
@@ -1288,39 +1288,68 @@ async function handleLogin() {
     flex-shrink: 0;
   }
 
-  /* 表单卡片:透明贴屏,去掉毛玻璃+投影,保留圆角但收紧 */
+  /* 表单卡片:完全透明,无边框无阴影无圆角 */
   .form-wrapper {
     max-width: 100%;
-    margin: 24px 20px 0;
-    padding: 28px 24px 32px;
-    border-radius: 20px;
-    background: rgba(255, 255, 255, 0.95);
+    margin: 0;
+    padding: 48px 28px 0;
+    border-radius: 0;
+    background: transparent;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
     border: none;
-    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.08);
-    animation: none; /* 关掉入场动画,移动端不需要 */
+    box-shadow: none;
+    animation: none;
   }
 
-  /* Logo:缩小间距 */
-  .login-header { margin-bottom: 24px; }
-  .logo-badge { margin-bottom: 16px; padding: 8px 18px 8px 10px; border-radius: 14px; }
-  .logo-icon { width: 32px; height: 32px; border-radius: 10px; font-size: 15px; }
-  .login-header h2 { font-size: 1.3rem; margin-bottom: 8px; }
+  /* Logo:居中放大 */
+  .login-header {
+    margin-bottom: 36px;
+    text-align: center;
+  }
+  .logo-badge {
+    margin: 0 auto 20px;
+    padding: 8px 18px 8px 10px;
+    border-radius: 14px;
+  }
+  .logo-icon { width: 36px; height: 36px; border-radius: 12px; font-size: 16px; }
+  .login-header h2 { font-size: 1.5rem; margin-bottom: 10px; }
   .login-subtitle { font-size: 0.85rem; }
 
-  /* 输入框:加大触摸区,44px 高度 + 更大圆角 */
-  .bc-form-group { margin-bottom: 20px; }
+  /* 输入框:小米风格-只有底部分割线,无边框无背景 */
+  .bc-form-group {
+    margin-bottom: 28px;
+    animation: none;
+  }
+  .bc-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    margin-bottom: 6px;
+  }
   .bc-form-group :deep(.el-input__wrapper) {
-    border-radius: 16px;
-    padding: 14px 18px;
+    border-radius: 0;
+    border: none !important;
+    border-bottom: 1.5px solid #e5e7eb !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 10px 0;
+    transition: border-color 0.25s;
+  }
+  .bc-form-group :deep(.el-input__wrapper:hover),
+  .bc-form-group :deep(.el-input__wrapper:focus-within) {
+    border-color: #3b82f6 !important;
+    box-shadow: none !important;
   }
   .bc-form-group :deep(.el-input__inner) {
-    font-size: 16px; /* 防止 iOS 自动放大(小于16px 时触发) */
+    font-size: 16px;
     height: 44px;
+    padding-left: 4px;
   }
 
-  /* 按钮:52px 高度,加大字号 */
+  /* 选项栏 */
+  .options-bar { margin-bottom: 32px; animation: none; }
+
+  /* 按钮:大圆角 */
   .btn-adventure {
     height: 52px;
     font-size: 1.05rem;
@@ -1328,25 +1357,23 @@ async function handleLogin() {
     animation: none;
   }
 
-  /* 底部 badge:手机上没意义,直接砍掉 */
-  .brand-footer {
-    display: none;
-  }
+  /* 底部 badge:砍掉 */
+  .brand-footer { display: none; }
 
-  /* 底部 safe-area 留白(登录成功跳转前避免按钮被遮挡) */
+  /* 底部 safe-area */
   .form-side::after {
     content: '';
     display: block;
-    height: calc(env(safe-area-inset-bottom) + 16px);
+    height: calc(env(safe-area-inset-bottom) + 20px);
     flex-shrink: 0;
   }
 }
 
 @media (max-width: 480px) {
+  .form-side { padding: 20px 14px; }
   .form-wrapper {
-    margin: 20px 14px 0;
-    padding: 24px 20px 28px;
-    border-radius: 18px;
+    padding: 28px 20px 24px;
+    border-radius: 22px;
   }
   .login-header { margin-bottom: 20px; }
 }

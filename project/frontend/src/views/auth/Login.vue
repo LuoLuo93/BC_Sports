@@ -1370,12 +1370,9 @@ async function handleLogin() {
 }
 
 @media (max-width: 480px) {
-  .form-side { padding: 20px 14px; }
-  .form-wrapper {
-    padding: 28px 20px 24px;
-    border-radius: 22px;
-  }
-  .login-header { margin-bottom: 20px; }
+  .form-side { padding-left: 20px; padding-right: 20px; }
+  .form-wrapper { padding: 0; }
+  .login-header { margin-bottom: 28px; }
 }
 
 /* ============================================================

@@ -1268,18 +1268,87 @@ async function handleLogin() {
 }
 
 @media (max-width: 768px) {
-  .form-side { padding: 32px 24px; }
-  .form-wrapper { max-width: 100%; padding: 32px 24px; border-radius: 20px; }
-  .login-header h2 { font-size: 1.4rem; }
-  .brand-footer { max-width: 100%; padding-top: 24px; }
-  .badge-item { padding: 0 14px; }
-  .badge-item span { font-size: 0.6rem; }
+  /* 背景:砍掉点阵+模糊圆,换成品牌渐变(和 /points 排名页同系列) */
+  .dot-grid,
+  .blob { display: none; }
+  .form-side {
+    padding: 0;
+    background: linear-gradient(135deg, #1e40af 0%, #3b82f6 55%, #6366f1 100%);
+    justify-content: flex-start;
+    align-items: stretch;
+    min-height: 100vh;
+    min-height: 100dvh; /* 移动端真实视口高度 */
+  }
+
+  /* safe-area 适配:刘海屏/底部横条 */
+  .form-side::before {
+    content: '';
+    display: block;
+    height: env(safe-area-inset-top);
+    flex-shrink: 0;
+  }
+
+  /* 表单卡片:透明贴屏,去掉毛玻璃+投影,保留圆角但收紧 */
+  .form-wrapper {
+    max-width: 100%;
+    margin: 24px 20px 0;
+    padding: 28px 24px 32px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border: none;
+    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.08);
+    animation: none; /* 关掉入场动画,移动端不需要 */
+  }
+
+  /* Logo:缩小间距 */
+  .login-header { margin-bottom: 24px; }
+  .logo-badge { margin-bottom: 16px; padding: 8px 18px 8px 10px; border-radius: 14px; }
+  .logo-icon { width: 32px; height: 32px; border-radius: 10px; font-size: 15px; }
+  .login-header h2 { font-size: 1.3rem; margin-bottom: 8px; }
+  .login-subtitle { font-size: 0.85rem; }
+
+  /* 输入框:加大触摸区,44px 高度 + 更大圆角 */
+  .bc-form-group { margin-bottom: 20px; }
+  .bc-form-group :deep(.el-input__wrapper) {
+    border-radius: 16px;
+    padding: 14px 18px;
+  }
+  .bc-form-group :deep(.el-input__inner) {
+    font-size: 16px; /* 防止 iOS 自动放大(小于16px 时触发) */
+    height: 44px;
+  }
+
+  /* 按钮:52px 高度,加大字号 */
+  .btn-adventure {
+    height: 52px;
+    font-size: 1.05rem;
+    border-radius: 14px;
+    animation: none;
+  }
+
+  /* 底部 badge:手机上没意义,直接砍掉 */
+  .brand-footer {
+    display: none;
+  }
+
+  /* 底部 safe-area 留白(登录成功跳转前避免按钮被遮挡) */
+  .form-side::after {
+    content: '';
+    display: block;
+    height: calc(env(safe-area-inset-bottom) + 16px);
+    flex-shrink: 0;
+  }
 }
 
 @media (max-width: 480px) {
-  .form-side { padding: 24px 16px; }
-  .form-wrapper { padding: 28px 20px; }
-  .login-header { margin-bottom: 28px; }
+  .form-wrapper {
+    margin: 20px 14px 0;
+    padding: 24px 20px 28px;
+    border-radius: 18px;
+  }
+  .login-header { margin-bottom: 20px; }
 }
 
 /* ============================================================

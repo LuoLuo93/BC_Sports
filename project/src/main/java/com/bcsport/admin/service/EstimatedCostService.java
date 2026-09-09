@@ -2,7 +2,7 @@ package com.bcsport.admin.service;
 
 import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
-import com.bcsport.admin.entity.bi.EstimatedCostImportLog;
+import com.bcsport.admin.entity.SysImportLog;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Map;
@@ -27,5 +27,5 @@ public interface EstimatedCostService {
     /**
      * 导入日志分页
      */
-    PageResult<EstimatedCostImportLog> logPage(PageQuery pageQuery);
+    PageResult<SysImportLog> logPage(PageQuery pageQuery);
 }

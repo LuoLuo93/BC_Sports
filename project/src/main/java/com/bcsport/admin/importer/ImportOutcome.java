@@ -35,6 +35,27 @@ public final class ImportOutcome {
         return new ImportOutcome(0, 0, 0, Collections.singletonList(reason));
     }
 
+    /** 标准状态推导（total==0→FAILED、fail==0→SUCCESS、否则 PARTIAL），供保留自有流程的模块复用 */
+    public static ImportOutcome of(int total, int success, int fail, List<String> errors) {
+        return new ImportOutcome(total, success, fail, errors);
+    }
+
+    /**
+     * 自定义状态（不走计数推导）——供保留自有流程的特殊模块使用，
+     * 如数仓销售的"解析中断已读部分已入库"需记 PARTIAL 而计数推导不出。
+     */
+    public static ImportOutcome withStatus(int total, int success, int fail, List<String> errors, String status) {
+        return new ImportOutcome(total, success, fail, errors, status);
+    }
+
+    private ImportOutcome(int total, int success, int fail, List<String> errors, String status) {
+        this.total = total;
+        this.success = success;
+        this.fail = fail;
+        this.errors = Collections.unmodifiableList(new ArrayList<>(errors));
+        this.status = status;
+    }
+
     public int getTotal() {
         return total;
     }

@@ -6,7 +6,7 @@ import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.common.Result;
 import com.bcsport.admin.entity.bi.GoodsOldNew;
-import com.bcsport.admin.entity.bi.GoodsImportLog;
+import com.bcsport.admin.entity.SysImportLog;
 import com.bcsport.admin.service.GoodsOldNewService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -46,7 +46,7 @@ public class GoodsOldNewController {
     @GetMapping("/import-log/page")
     @ApiOperation("导入日志分页查询")
     @RequiresPermissions("bi:goods-data:query")
-    public Result<PageResult<GoodsImportLog>> importLogPage(PageQuery pageQuery) {
+    public Result<PageResult<SysImportLog>> importLogPage(PageQuery pageQuery) {
         return Result.success(goodsOldNewService.logPage(pageQuery));
     }
 

@@ -6,11 +6,13 @@ import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.common.Result;
 import com.bcsport.admin.dto.sticker.StickerDataQueryDTO;
-import com.bcsport.admin.entity.sticker.StickerDataImportLog;
-import com.bcsport.admin.mapper.sticker.StickerDataImportLogMapper;
+import com.bcsport.admin.entity.SysImportLog;
+import com.bcsport.admin.importer.ImportLogRecorder;
+import com.bcsport.admin.importer.ImportOutcome;
+import com.bcsport.admin.importer.ImportType;
 import com.bcsport.admin.service.sticker.StickerDataImportService;
 import com.bcsport.admin.service.sticker.StickerPrintService;
-import com.bcsport.admin.util.ShiroSecurityUtils;
+
 import lombok.extern.slf4j.Slf4j;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,7 +24,6 @@ import jakarta.validation.Valid;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -39,7 +40,7 @@ public class StickerDataController {
     private StickerDataImportService stickerDataImportService;
 
     @Autowired
-    private StickerDataImportLogMapper stickerDataImportLogMapper;
+    private ImportLogRecorder importLogRecorder;
 
     @GetMapping("/page")
     @RequiresPermissions("sticker:data:query")
@@ -132,31 +133,13 @@ public class StickerDataController {
                  | org.apache.poi.util.RecordFormatException e) {
             log.error("贴纸资料 Excel解析失败: {}", e.getMessage());
             String errorMsg = "Excel解析失败，请确认文件是标准的 .xlsx/.xls 格式: " + e.getMessage();
-            saveFailedLog(file, errorMsg);
+            importLogRecorder.record(ImportType.STICKER_DATA, ImportOutcome.rejected(errorMsg), file);
             return Result.error(errorMsg);
         } catch (Exception e) {
             log.error("贴纸资料导入失败: {}", e.getMessage(), e);
             String errorMsg = "导入失败：" + e.getMessage();
-            saveFailedLog(file, errorMsg);
+            importLogRecorder.record(ImportType.STICKER_DATA, ImportOutcome.rejected(errorMsg), file);
             return Result.error(errorMsg);
-        }
-    }
-
-    private void saveFailedLog(MultipartFile file, String errorMsg) {
-        try {
-            StickerDataImportLog logEntity = new StickerDataImportLog();
-            logEntity.setFileName(file.getOriginalFilename());
-            logEntity.setFileSize(file.getSize());
-            logEntity.setTotalCount(0);
-            logEntity.setSuccessCount(0);
-            logEntity.setFailCount(0);
-            logEntity.setStatus("FAILED");
-            logEntity.setErrorMsg(errorMsg.length() > 4000 ? errorMsg.substring(0, 4000) : errorMsg);
-            logEntity.setCreateBy(ShiroSecurityUtils.getCurrentUsername());
-            logEntity.setCreateTime(LocalDateTime.now());
-            stickerDataImportLogMapper.insert(logEntity);
-        } catch (Exception ex) {
-            log.warn("保存贴纸资料失败导入日志失败: {}", ex.getMessage());
         }
     }
 
@@ -202,7 +185,7 @@ public class StickerDataController {
      */
     @GetMapping("/import-log/page")
     @RequiresPermissions("sticker:data:query")
-    public Result<PageResult<StickerDataImportLog>> importLogPage(PageQuery pageQuery) {
+    public Result<PageResult<SysImportLog>> importLogPage(PageQuery pageQuery) {
         return Result.success(stickerDataImportService.logPage(pageQuery));
     }
 }

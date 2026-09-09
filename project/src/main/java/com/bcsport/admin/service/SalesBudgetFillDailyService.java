@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.dto.SalesBudgetQueryDTO;
-import com.bcsport.admin.entity.bi.BudgetImportLog;
+import com.bcsport.admin.entity.SysImportLog;
 import com.bcsport.admin.entity.bi.SalesBudgetFillDaily;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -29,5 +29,5 @@ public interface SalesBudgetFillDailyService extends IService<SalesBudgetFillDai
     /**
      * 导入日志分页查询
      */
-    PageResult<BudgetImportLog> logPage(PageQuery pageQuery);
+    PageResult<SysImportLog> logPage(PageQuery pageQuery);
 }

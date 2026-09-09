@@ -6,22 +6,21 @@ import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.common.Result;
 import com.bcsport.admin.dto.SalesBudgetQueryDTO;
-import com.bcsport.admin.entity.bi.BudgetImportLog;
+import com.bcsport.admin.entity.SysImportLog;
 import com.bcsport.admin.entity.bi.SalesBudgetFillDaily;
+import com.bcsport.admin.importer.ImportLogRecorder;
+import com.bcsport.admin.importer.ImportOutcome;
+import com.bcsport.admin.importer.ImportType;
 import com.bcsport.admin.service.SalesBudgetFillDailyService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
-import com.bcsport.admin.entity.bi.BudgetImportLog;
-import com.bcsport.admin.mapper.BudgetImportLogMapper;
-import com.bcsport.admin.util.ShiroSecurityUtils;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.servlet.http.HttpServletResponse;
-import java.time.LocalDateTime;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -40,7 +39,7 @@ public class ShopDailyBudgetController {
     private SalesBudgetFillDailyService salesBudgetService;
 
     @Autowired
-    private BudgetImportLogMapper importLogMapper;
+    private ImportLogRecorder importLogRecorder;
 
     /**
      * 分页查询店铺日预算
@@ -76,12 +75,12 @@ public class ShopDailyBudgetController {
                  | org.apache.poi.util.RecordFormatException e) {
             log.error("店铺日预算 Excel解析失败: {}", e.getMessage());
             String errorMsg = "Excel解析失败，请确认文件是标准的 .xlsx/.xls 格式: " + e.getMessage();
-            saveFailedLog(file, 0, 0, 0, errorMsg);
+            importLogRecorder.record(ImportType.SALES_BUDGET, ImportOutcome.rejected(errorMsg), file);
             return Result.error(errorMsg);
         } catch (Exception e) {
             log.error("店铺日预算 导入失败: {}", e.getMessage(), e);
             String errorMsg = "导入失败：" + e.getMessage();
-            saveFailedLog(file, 0, 0, 0, errorMsg);
+            importLogRecorder.record(ImportType.SALES_BUDGET, ImportOutcome.rejected(errorMsg), file);
             return Result.error(errorMsg);
         }
     }
@@ -92,30 +91,13 @@ public class ShopDailyBudgetController {
     @GetMapping("/import-log/page")
     @ApiOperation("导入日志分页查询")
     @RequiresPermissions("bi:shop-daily-budget:query")
-    public Result<PageResult<BudgetImportLog>> importLogPage(PageQuery pageQuery) {
+    public Result<PageResult<SysImportLog>> importLogPage(PageQuery pageQuery) {
         return Result.success(salesBudgetService.logPage(pageQuery));
     }
 
     /**
      * 下载导入模板
      */
-    private void saveFailedLog(MultipartFile file, int total, int success, int fail, String errorMsg) {
-        try {
-            BudgetImportLog logEntity = new BudgetImportLog();
-            logEntity.setFileName(file.getOriginalFilename());
-            logEntity.setFileSize(file.getSize());
-            logEntity.setTotalCount(total);
-            logEntity.setSuccessCount(success);
-            logEntity.setFailCount(fail);
-            logEntity.setStatus("FAILED");
-            logEntity.setErrorMsg(errorMsg.length() > 4000 ? errorMsg.substring(0, 4000) : errorMsg);
-            logEntity.setCreateBy(ShiroSecurityUtils.getCurrentUsername());
-            logEntity.setCreateTime(LocalDateTime.now());
-            importLogMapper.insert(logEntity);
-        } catch (Exception ex) {
-            log.warn("保存失败导入日志失败: {}", ex.getMessage());
-        }
-    }
     @GetMapping("/template")
     @ApiOperation("下载导入模板")
     @RequiresPermissions("bi:shop-daily-budget:import")

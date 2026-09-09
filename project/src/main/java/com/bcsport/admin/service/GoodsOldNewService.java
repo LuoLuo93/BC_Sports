@@ -3,7 +3,7 @@ package com.bcsport.admin.service;
 import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.entity.bi.GoodsOldNew;
-import com.bcsport.admin.entity.bi.GoodsImportLog;
+import com.bcsport.admin.entity.SysImportLog;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Map;
@@ -23,5 +23,5 @@ public interface GoodsOldNewService {
     /**
      * 导入日志分页
      */
-    PageResult<GoodsImportLog> logPage(PageQuery pageQuery);
+    PageResult<SysImportLog> logPage(PageQuery pageQuery);
 }

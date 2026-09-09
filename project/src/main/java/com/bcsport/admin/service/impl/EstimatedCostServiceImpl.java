@@ -1,18 +1,17 @@
 package com.bcsport.admin.service.impl;
 
-import cn.hutool.poi.excel.ExcelUtil;
 import cn.hutool.poi.excel.sax.handler.RowHandler;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bcsport.admin.util.ExcelSaxUtils;
 import com.bcsport.admin.common.exception.BusinessException;
 import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
-import com.bcsport.admin.entity.bi.EstimatedCostImportLog;
+import com.bcsport.admin.entity.SysImportLog;
 import com.bcsport.admin.erpmapper.BjerpProductMapper;
-import com.bcsport.admin.mapper.EstimatedCostImportLogMapper;
+import com.bcsport.admin.importer.ImportLogRecorder;
+import com.bcsport.admin.importer.ImportOutcome;
+import com.bcsport.admin.importer.ImportType;
 import com.bcsport.admin.service.EstimatedCostService;
-import com.bcsport.admin.util.ShiroSecurityUtils;
+import com.bcsport.admin.service.ImportLogService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -22,13 +21,15 @@ import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.time.LocalDateTime;
 import java.util.*;
 
 /**
  * 预估成本管理实现
  * <p>
- * 数据存伯俊 ERP M_PRODUCT.PRECOST（跨库直读直写），导入日志存本地 Oracle 主库。
+ * 数据存伯俊 ERP M_PRODUCT.PRECOST（跨库直读直写），导入日志存统一日志表（R01）。
+ * <p>
+ * 导入为两段式（读时校验收集→读后存在性检查→单事务批量 MERGE 全有或全无），
+ * 与引擎的"批满即写"语义不同，故保留自有流程、只复用公共工具与统一日志（R01 决策，见方案文档 §5）。
  */
 @Slf4j
 @Service
@@ -55,13 +56,16 @@ public class EstimatedCostServiceImpl implements EstimatedCostService {
     @Autowired
     private BjerpProductMapper bjerpProductMapper;
 
-    @Autowired
-    private EstimatedCostImportLogMapper importLogMapper;
-
     /** 伯俊ERP数据源事务管理器（导入整体回滚用） */
     @Autowired
     @Qualifier("bjerpTransactionManager")
     private PlatformTransactionManager bjerpTransactionManager;
+
+    @Autowired
+    private ImportLogRecorder importLogRecorder;
+
+    @Autowired
+    private ImportLogService importLogService;
 
     @Override
     public PageResult<Map<String, Object>> page(PageQuery pageQuery, String materialNumber, String styleNumber, String materialName) {
@@ -116,11 +120,13 @@ public class EstimatedCostServiceImpl implements EstimatedCostService {
     @Override
     public Map<String, Object> importFromExcel(MultipartFile file) throws Exception {
         // 0. 文件格式检测
-        String realFormat = detectFormat(file);
+        String realFormat = ExcelSaxUtils.detectFormat(file);
         log.info("预估成本导入文件真实格式: {}", realFormat);
         if (!"xlsx".equals(realFormat) && !"xls".equals(realFormat)) {
-            return buildResult(0, 0, 0, Collections.singletonList(
-                    "文件不是标准的 Excel 格式（检测为 " + realFormat + "），请用 Excel 打开后另存为 .xlsx 再上传"));
+            ImportOutcome rejected = ImportOutcome.rejected(
+                    "文件不是标准的 Excel 格式（检测为 " + realFormat + "），请用 Excel 打开后另存为 .xlsx 再上传");
+            importLogRecorder.record(ImportType.ESTIMATED_COST, rejected, file);
+            return rejected.toResultMap();
         }
 
         // 1. SAX 流式读取全部行，同时做行级校验
@@ -166,8 +172,8 @@ public class EstimatedCostServiceImpl implements EstimatedCostService {
                 return;
             }
 
-            String materialNumber = cellStr(rowCells, columnIndex.get("materialNumber"));
-            String precost = cellStr(rowCells, columnIndex.get("precost"));
+            String materialNumber = ExcelSaxUtils.cellStr(rowCells, columnIndex.get("materialNumber"));
+            String precost = ExcelSaxUtils.cellStr(rowCells, columnIndex.get("precost"));
 
             // 校验：货号必填
             if (!StringUtils.hasText(materialNumber)) {
@@ -192,15 +198,17 @@ public class EstimatedCostServiceImpl implements EstimatedCostService {
             validRows.put(materialNumber, cleanedPrecost);
         };
 
-        readAllSheets(file, realFormat, handler);
+        ExcelSaxUtils.readAllSheets(file, realFormat, handler, "预估成本");
 
         // 2. 表头缺失校验（缺列直接返回，不执行任何更新）
         List<String> missingHeaders = new ArrayList<>();
         if (!columnIndex.containsKey("materialNumber")) missingHeaders.add("货号");
         if (!columnIndex.containsKey("precost")) missingHeaders.add("预估成本");
         if (!missingHeaders.isEmpty()) {
-            return buildResult(0, 0, 0, Collections.singletonList(
-                    "Excel缺少必需列：" + String.join("、", missingHeaders) + "，请检查表头或下载导入模板"));
+            ImportOutcome rejected = ImportOutcome.rejected(
+                    "Excel缺少必需列：" + String.join("、", missingHeaders) + "，请检查表头或下载导入模板");
+            importLogRecorder.record(ImportType.ESTIMATED_COST, rejected, file);
+            return rejected.toResultMap();
         }
 
         // 2.5 重复行提示（后行覆盖，告知用户哪些货号被覆盖了）
@@ -269,21 +277,18 @@ public class EstimatedCostServiceImpl implements EstimatedCostService {
         }
         log.info("预估成本导入完成: total={}, success={}, fail={}, notExist={}", total[0], success[0], fail, notExistCount);
 
-        String status = (total[0] == 0) ? "FAILED" : (fail == 0 ? "SUCCESS" : "PARTIAL");
         // 兜底：有失败但 errors 为空，补一条说明
         if (fail > 0 && errors.isEmpty()) {
             errors.add("共 " + fail + " 条数据未导入（可能因必填字段为空、数据类型不匹配或数据库约束冲突），请检查源数据");
         }
-        saveImportLog(file, total[0], success[0], fail, status, errors);
-
-        return buildResult(total[0], success[0], fail, errors);
+        ImportOutcome outcome = ImportOutcome.of(total[0], success[0], fail, errors);
+        importLogRecorder.record(ImportType.ESTIMATED_COST, outcome, file);
+        return outcome.toResultMap();
     }
 
     @Override
-    public PageResult<EstimatedCostImportLog> logPage(PageQuery pageQuery) {
-        Page<EstimatedCostImportLog> page = importLogMapper.selectPage(pageQuery.toPage(),
-                new LambdaQueryWrapper<EstimatedCostImportLog>().orderByDesc(EstimatedCostImportLog::getId));
-        return PageResult.of(page);
+    public PageResult<SysImportLog> logPage(PageQuery pageQuery) {
+        return importLogService.page(ImportType.ESTIMATED_COST, pageQuery);
     }
 
     // ==================== 工具方法 ====================
@@ -308,63 +313,5 @@ public class EstimatedCostServiceImpl implements EstimatedCostService {
     private String escapeLike(String value) {
         if (value == null || value.isEmpty()) return value;
         return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
-    }
-
-    private String cellStr(List<Object> cells, Integer idx) {
-        if (idx == null || idx < 0 || idx >= cells.size()) return null;
-        Object v = cells.get(idx);
-        if (v == null) return null;
-        String s = String.valueOf(v).trim();
-        return s.isEmpty() ? null : s;
-    }
-
-    private void readAllSheets(MultipartFile file, String format, RowHandler handler) throws Exception {
-        ExcelSaxUtils.readAllSheets(file, format, handler, "预估成本");
-    }
-    private String detectFormat(MultipartFile file) throws Exception {
-        byte[] head = new byte[8];
-        try (java.io.InputStream in = file.getInputStream()) {
-            int read = in.read(head);
-            if (read < 4) return "unknown(空文件)";
-        }
-        if ((head[0] & 0xFF) == 0x50 && (head[1] & 0xFF) == 0x4B) return "xlsx";
-        if ((head[0] & 0xFF) == 0xD0 && (head[1] & 0xFF) == 0xCF
-                && (head[2] & 0xFF) == 0x11 && (head[3] & 0xFF) == 0xE0) return "xls";
-        String preview = new String(head, java.nio.charset.StandardCharsets.ISO_8859_1).trim();
-        String lower = preview.toLowerCase();
-        if (lower.startsWith("<") || preview.contains("<table") || preview.contains("<html")
-                || preview.contains("<?xml")) return "HTML/XML（伪Excel）";
-        if (lower.contains(",") || lower.contains("\t") || lower.contains(";")) return "CSV/文本（伪Excel）";
-        return "未知格式";
-    }
-
-    private void saveImportLog(MultipartFile file, int total, int success, int fail, String status, List<String> errors) {
-        try {
-            EstimatedCostImportLog logEntity = new EstimatedCostImportLog();
-            logEntity.setFileName(file.getOriginalFilename());
-            logEntity.setFileSize(file.getSize());
-            logEntity.setTotalCount(total);
-            logEntity.setSuccessCount(success);
-            logEntity.setFailCount(fail);
-            logEntity.setStatus(status);
-            if (!errors.isEmpty()) {
-                String msg = String.join("\n", errors);
-                logEntity.setErrorMsg(msg.length() > 4000 ? msg.substring(0, 4000) : msg);
-            }
-            logEntity.setCreateBy(ShiroSecurityUtils.getCurrentUsername());
-            logEntity.setCreateTime(LocalDateTime.now());
-            importLogMapper.insert(logEntity);
-        } catch (Exception e) {
-            log.warn("保存预估成本导入日志失败: {}", e.getMessage());
-        }
-    }
-
-    private Map<String, Object> buildResult(int total, int success, int fail, List<String> errors) {
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("total", total);
-        result.put("success", success);
-        result.put("fail", fail);
-        result.put("errors", errors);
-        return result;
     }
 }

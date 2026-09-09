@@ -35,6 +35,7 @@ public class ExcelImportRunnerTest {
         boolean failBatch = false;
         boolean throwRuntime = false;
         boolean throwNumberFormat = false;
+        boolean requireHeaders = false;
 
         @Override
         public String logLabel() {
@@ -49,6 +50,13 @@ public class ExcelImportRunnerTest {
         @Override
         public Map<String, String> headerAlias() {
             return Map.of("客户id", "id", "姓名", "name");
+        }
+
+        @Override
+        public void validateHeaders(Map<String, Integer> columnIndex) {
+            if (requireHeaders && !columnIndex.containsKey("name")) {
+                throw new IllegalArgumentException("Excel缺少必需列：姓名，请检查表头");
+            }
         }
 
         @Override
@@ -339,5 +347,23 @@ public class ExcelImportRunnerTest {
         assertEquals(1, outcome.getSuccess());
         assertEquals("x1", spec.batches.get(0).get(0).id());
         assertEquals("X1", spec.batches.get(0).get(0).name());
+    }
+
+    /** 表头校验在数据行之前执行：缺列中止读取、不写库、按拒绝返回业务文案 */
+    @Test
+    void headerValidationAbortsBeforeAnyRowIsWritten() throws Exception {
+        PersonSpec spec = new PersonSpec();
+        spec.requireHeaders = true;
+        CapturingRecorder recorder = new CapturingRecorder();
+
+        // 表头只匹配到 id，没有 name 列
+        ImportOutcome outcome = new ExcelImportRunner(recorder).run(xlsx(
+                new String[]{"客户id", "x"}, rows(new String[]{"a", "A"}, new String[]{"b", "B"})), spec);
+
+        assertEquals(0, outcome.getTotal());
+        assertEquals(ImportOutcome.STATUS_FAILED, outcome.getStatus());
+        assertEquals(List.of("Excel缺少必需列：姓名，请检查表头"), outcome.getErrors());
+        assertTrue(spec.batches.isEmpty());
+        assertEquals(ImportOutcome.STATUS_FAILED, recorder.outcomes.get(0).getStatus());
     }
 }

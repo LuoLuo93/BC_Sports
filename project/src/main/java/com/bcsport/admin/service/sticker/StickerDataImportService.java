@@ -1,16 +1,15 @@
 package com.bcsport.admin.service.sticker;
 
-import cn.hutool.poi.excel.ExcelUtil;
 import cn.hutool.poi.excel.sax.handler.RowHandler;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bcsport.admin.util.ExcelSaxUtils;
 import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
-import com.bcsport.admin.entity.sticker.StickerDataImportLog;
+import com.bcsport.admin.entity.SysImportLog;
 import com.bcsport.admin.erpmapper.BjerpProductMapper;
-import com.bcsport.admin.mapper.sticker.StickerDataImportLogMapper;
-import com.bcsport.admin.util.ShiroSecurityUtils;
+import com.bcsport.admin.importer.ImportLogRecorder;
+import com.bcsport.admin.importer.ImportOutcome;
+import com.bcsport.admin.importer.ImportType;
+import com.bcsport.admin.service.ImportLogService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -21,15 +20,16 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.*;
 
 /**
  * 贴纸资料批量导入：按货号(name)更新 ERP M_PRODUCT 的执行标准/EAN13/安全类别/4个材质字段。
  * <p>
- * 数据写伯俊 ERP M_PRODUCT（跨库直写），导入日志存本地 Oracle 主库。
+ * 数据写伯俊 ERP M_PRODUCT（跨库直写），导入日志存统一日志表（R01）。
  * 语义与详情页手工编辑的差别：Excel 留空的字段不更新（保留库内原值），不写 NULL 清空，避免模板漏填误清 ERP 主数据。
- * 实现骨架与预估成本导入(EstimatedCostServiceImpl)一致：SAX 流式读取 + 表头别名 + 货号存在性分批校验 + MERGE 分批更新。
+ * <p>
+ * 导入为两段式（读时校验收集→读后存在性检查→单事务批量 MERGE 全有或全无），
+ * 与引擎的"批满即写"语义不同，故保留自有流程、只复用公共工具与统一日志（R01 决策，见方案文档 §5）。
  */
 @Slf4j
 @Service
@@ -78,17 +78,20 @@ public class StickerDataImportService {
     @Autowired
     private BjerpProductMapper bjerpProductMapper;
 
-    @Autowired
-    private StickerDataImportLogMapper importLogMapper;
-
     /** 伯俊ERP数据源事务管理器（导入整体回滚用） */
     @Autowired
     @Qualifier("bjerpTransactionManager")
     private PlatformTransactionManager bjerpTransactionManager;
 
+    @Autowired
+    private ImportLogRecorder importLogRecorder;
+
+    @Autowired
+    private ImportLogService importLogService;
+
     public Map<String, Object> importFromExcel(MultipartFile file) throws Exception {
         // 0. 文件格式检测
-        String realFormat = detectFormat(file);
+        String realFormat = ExcelSaxUtils.detectFormat(file);
         log.info("贴纸资料导入文件真实格式: {}", realFormat);
         if (!"xlsx".equals(realFormat) && !"xls".equals(realFormat)) {
             return failFast(file, "文件不是标准的 Excel 格式（检测为 " + realFormat + "），请用 Excel 打开后另存为 .xlsx 再上传");
@@ -142,7 +145,7 @@ public class StickerDataImportService {
                 return;
             }
 
-            String materialNumber = normalizeNumericText(cellStr(rowCells, columnIndex.get("materialNumber")));
+            String materialNumber = normalizeNumericText(ExcelSaxUtils.cellStr(rowCells, columnIndex.get("materialNumber")));
             // 校验：货号必填
             if (!StringUtils.hasText(materialNumber)) {
                 if (errors.size() < MAX_ERRORS) errors.add("第" + rowNum + "行：货号不能为空");
@@ -150,7 +153,7 @@ public class StickerDataImportService {
             }
             Map<String, String> values = new HashMap<>();
             for (String field : VALUE_FIELDS) {
-                values.put(field, cellStr(rowCells, columnIndex.get(field)));
+                values.put(field, ExcelSaxUtils.cellStr(rowCells, columnIndex.get(field)));
             }
             // EAN13：允许空，非空必须 12 位纯数字（与详情页编辑同规则，不算校验位）
             String ean13 = normalizeNumericText(values.get("ean13"));
@@ -178,7 +181,7 @@ public class StickerDataImportService {
             }
         };
 
-        readAllSheets(file, realFormat, handler);
+        ExcelSaxUtils.readAllSheets(file, realFormat, handler, "贴纸资料导入");
 
         // 2. 表头缺失校验（缺货号列或没有任何可更新列时不执行任何更新，同时落 FAILED 日志留审计）
         boolean anyDataSheet = sheetColumns.values().stream()
@@ -266,58 +269,29 @@ public class StickerDataImportService {
         if (total[0] == 0 && errors.isEmpty()) {
             errors.add("未读取到任何数据行");
         }
-        // success=0（含 total=0）都算 FAILED；只有部分失败才标 PARTIAL
-        String status = (success[0] == 0) ? "FAILED" : (fail == 0 ? "SUCCESS" : "PARTIAL");
+        // success=0（含 total=0）都算 FAILED；只有部分失败才标 PARTIAL——非标准状态推导，走 withStatus
+        String status = (success[0] == 0) ? ImportOutcome.STATUS_FAILED
+                : (fail == 0 ? ImportOutcome.STATUS_SUCCESS : ImportOutcome.STATUS_PARTIAL);
         // 兜底：有失败但 errors 为空，补一条说明
         if (fail > 0 && errors.isEmpty()) {
             errors.add("共 " + fail + " 条数据未导入（可能因必填字段为空、数据类型不匹配或数据库约束冲突），请检查源数据");
         }
-        saveImportLog(file, total[0], success[0], fail, status, errors);
-
-        return buildResult(total[0], success[0], fail, errors);
+        ImportOutcome outcome = ImportOutcome.withStatus(total[0], success[0], fail, errors, status);
+        importLogRecorder.record(ImportType.STICKER_DATA, outcome, file);
+        return outcome.toResultMap();
     }
 
-    public PageResult<StickerDataImportLog> logPage(PageQuery pageQuery) {
-        Page<StickerDataImportLog> page = importLogMapper.selectPage(pageQuery.toPage(),
-                new LambdaQueryWrapper<StickerDataImportLog>().orderByDesc(StickerDataImportLog::getId));
-        return PageResult.of(page);
+    public PageResult<SysImportLog> logPage(PageQuery pageQuery) {
+        return importLogService.page(ImportType.STICKER_DATA, pageQuery);
     }
 
     // ==================== 工具方法 ====================
 
     /** 导入未执行任何更新即终止（伪Excel/缺表头等）：同样落 FAILED 日志，保证审计无断档 */
     private Map<String, Object> failFast(MultipartFile file, String error) {
-        List<String> errors = Collections.singletonList(error);
-        saveImportLog(file, 0, 0, 0, "FAILED", errors);
-        return buildResult(0, 0, 0, errors);
-    }
-
-    private void readAllSheets(MultipartFile file, String format, RowHandler handler) throws Exception {
-        ExcelSaxUtils.readAllSheets(file, format, handler, "贴纸资料导入");
-    }
-    private String detectFormat(MultipartFile file) throws Exception {
-        byte[] head = new byte[8];
-        try (java.io.InputStream in = file.getInputStream()) {
-            int read = in.read(head);
-            if (read < 4) return "unknown(空文件)";
-        }
-        if ((head[0] & 0xFF) == 0x50 && (head[1] & 0xFF) == 0x4B) return "xlsx";
-        if ((head[0] & 0xFF) == 0xD0 && (head[1] & 0xFF) == 0xCF
-                && (head[2] & 0xFF) == 0x11 && (head[3] & 0xFF) == 0xE0) return "xls";
-        String preview = new String(head, java.nio.charset.StandardCharsets.ISO_8859_1).trim();
-        String lower = preview.toLowerCase();
-        if (lower.startsWith("<") || preview.contains("<table") || preview.contains("<html")
-                || preview.contains("<?xml")) return "HTML/XML（伪Excel）";
-        if (lower.contains(",") || lower.contains("\t") || lower.contains(";")) return "CSV/文本（伪Excel）";
-        return "未知格式";
-    }
-
-    private String cellStr(List<Object> cells, Integer idx) {
-        if (idx == null || idx < 0 || idx >= cells.size()) return null;
-        Object v = cells.get(idx);
-        if (v == null) return null;
-        String s = String.valueOf(v).trim();
-        return s.isEmpty() ? null : s;
+        ImportOutcome rejected = ImportOutcome.rejected(error);
+        importLogRecorder.record(ImportType.STICKER_DATA, rejected, file);
+        return rejected.toResultMap();
     }
 
     /**
@@ -334,35 +308,5 @@ public class StickerDataImportService {
             return new BigDecimal(s).toPlainString();
         }
         return raw.trim();
-    }
-
-    private void saveImportLog(MultipartFile file, int total, int success, int fail, String status, List<String> errors) {
-        try {
-            StickerDataImportLog logEntity = new StickerDataImportLog();
-            logEntity.setFileName(file.getOriginalFilename());
-            logEntity.setFileSize(file.getSize());
-            logEntity.setTotalCount(total);
-            logEntity.setSuccessCount(success);
-            logEntity.setFailCount(fail);
-            logEntity.setStatus(status);
-            if (!errors.isEmpty()) {
-                String msg = String.join("\n", errors);
-                logEntity.setErrorMsg(msg.length() > 4000 ? msg.substring(0, 4000) : msg);
-            }
-            logEntity.setCreateBy(ShiroSecurityUtils.getCurrentUsername());
-            logEntity.setCreateTime(LocalDateTime.now());
-            importLogMapper.insert(logEntity);
-        } catch (Exception e) {
-            log.warn("保存贴纸资料导入日志失败: {}", e.getMessage());
-        }
-    }
-
-    private Map<String, Object> buildResult(int total, int success, int fail, List<String> errors) {
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("total", total);
-        result.put("success", success);
-        result.put("fail", fail);
-        result.put("errors", errors);
-        return result;
     }
 }

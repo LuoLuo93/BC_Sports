@@ -48,6 +48,11 @@ public class ExcelImportRunner {
 
         Session<T> session = new Session<>(spec);
         ExcelSaxUtils.readAllSheets(file, format, session::handleRow, label);
+        if (session.abortMsg != null) {
+            ImportOutcome rejected = ImportOutcome.rejected(session.abortMsg);
+            logRecorder.record(spec.type(), rejected, file);
+            return rejected;
+        }
         session.flush();
         ImportOutcome outcome = session.finish();
         logRecorder.record(spec.type(), outcome, file);
@@ -65,6 +70,8 @@ public class ExcelImportRunner {
         private final Map<String, Integer> columnIndex = new HashMap<>();
         private final Set<String> dedupKeys = new HashSet<>();
         private final List<T> buffer;
+        /** 表头校验失败的消息，非 null 时丢弃后续所有行 */
+        String abortMsg;
 
         Session(ExcelImportSpec<T> spec) {
             this.spec = spec;
@@ -83,9 +90,17 @@ public class ExcelImportRunner {
                         String field = alias.get(String.valueOf(h).trim());
                         if (field != null) columnIndex.put(field, i);
                     }
+                    if (!columnIndex.isEmpty()) {
+                        try {
+                            spec.validateHeaders(columnIndex);
+                        } catch (IllegalArgumentException e) {
+                            abortMsg = e.getMessage();
+                        }
+                    }
                 }
                 return;
             }
+            if (abortMsg != null) return;
             if (rowCells == null || rowCells.isEmpty()) return;
 
             int rowNum = (int) rowIndex + 1;
@@ -134,6 +149,7 @@ public class ExcelImportRunner {
 
         ImportOutcome finish() {
             int fail = total.get() - success.get();
+            spec.onFinish(total.get(), success.get(), fail, errors);
             if (fail > MAX_ROW_ERRORS && !errors.isEmpty()) {
                 errors.add("...共 " + fail + " 条未导入，仅显示前 " + MAX_ROW_ERRORS + " 条");
             }

@@ -5,10 +5,11 @@ import cn.hutool.poi.excel.ExcelWriter;
 import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.common.Result;
-import com.bcsport.admin.entity.bi.EstimatedCostImportLog;
-import com.bcsport.admin.mapper.EstimatedCostImportLogMapper;
+import com.bcsport.admin.entity.SysImportLog;
+import com.bcsport.admin.importer.ImportLogRecorder;
+import com.bcsport.admin.importer.ImportOutcome;
+import com.bcsport.admin.importer.ImportType;
 import com.bcsport.admin.service.EstimatedCostService;
-import com.bcsport.admin.util.ShiroSecurityUtils;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
@@ -21,7 +22,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
 import java.util.*;
 
 /**
@@ -37,7 +37,7 @@ public class EstimatedCostController {
     private EstimatedCostService estimatedCostService;
 
     @Autowired
-    private EstimatedCostImportLogMapper importLogMapper;
+    private ImportLogRecorder importLogRecorder;
 
     @GetMapping("/page")
     @ApiOperation("分页查询预估成本")
@@ -84,31 +84,13 @@ public class EstimatedCostController {
                  | org.apache.poi.util.RecordFormatException e) {
             log.error("预估成本 Excel解析失败: {}", e.getMessage());
             String errorMsg = "Excel解析失败，请确认文件是标准的 .xlsx/.xls 格式: " + e.getMessage();
-            saveFailedLog(file, errorMsg);
+            importLogRecorder.record(ImportType.ESTIMATED_COST, ImportOutcome.rejected(errorMsg), file);
             return Result.error(errorMsg);
         } catch (Exception e) {
             log.error("预估成本导入失败: {}", e.getMessage(), e);
             String errorMsg = "导入失败：" + e.getMessage();
-            saveFailedLog(file, errorMsg);
+            importLogRecorder.record(ImportType.ESTIMATED_COST, ImportOutcome.rejected(errorMsg), file);
             return Result.error(errorMsg);
-        }
-    }
-
-    private void saveFailedLog(MultipartFile file, String errorMsg) {
-        try {
-            EstimatedCostImportLog logEntity = new EstimatedCostImportLog();
-            logEntity.setFileName(file.getOriginalFilename());
-            logEntity.setFileSize(file.getSize());
-            logEntity.setTotalCount(0);
-            logEntity.setSuccessCount(0);
-            logEntity.setFailCount(0);
-            logEntity.setStatus("FAILED");
-            logEntity.setErrorMsg(errorMsg.length() > 4000 ? errorMsg.substring(0, 4000) : errorMsg);
-            logEntity.setCreateBy(ShiroSecurityUtils.getCurrentUsername());
-            logEntity.setCreateTime(LocalDateTime.now());
-            importLogMapper.insert(logEntity);
-        } catch (Exception ex) {
-            log.warn("保存失败导入日志失败: {}", ex.getMessage());
         }
     }
 
@@ -138,7 +120,7 @@ public class EstimatedCostController {
     @GetMapping("/import-log/page")
     @ApiOperation("导入日志分页查询")
     @RequiresPermissions("erp:estimatedCost:query")
-    public Result<PageResult<EstimatedCostImportLog>> importLogPage(PageQuery pageQuery) {
+    public Result<PageResult<SysImportLog>> importLogPage(PageQuery pageQuery) {
         return Result.success(estimatedCostService.logPage(pageQuery));
     }
 

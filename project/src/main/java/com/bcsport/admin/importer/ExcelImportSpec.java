@@ -28,6 +28,14 @@ public interface ExcelImportSpec<T> {
     T mapRow(RowCtx ctx) throws Exception;
 
     /**
+     * 表头首次识别成功后立即校验（在读任何数据行之前）。缺少必需列时抛
+     * {@link IllegalArgumentException}("Excel缺少必需列：...")，引擎中止读取并按拒绝处理——
+     * 避免按固定列序兜底把垃圾数据写入库之后才报缺列。
+     */
+    default void validateHeaders(Map<String, Integer> columnIndex) {
+    }
+
+    /**
      * 一批实体入库。各模块自行决定策略（MERGE 短事务 / 纯插入 / 先攒清单读完再两段式写）。
      * 写库成功后调用 ctx.success(batch.size())；抛出异常由引擎记为"批量入库失败"并丢弃本批。
      */
@@ -46,5 +54,9 @@ public interface ExcelImportSpec<T> {
     /** 行数安全上限，超出的行计入 total 并记错，不再解析 */
     default int maxRows() {
         return 2_000_000;
+    }
+
+    /** 读取与入库全部结束后、生成最终结果前回调（追加模块特有的收尾提示用） */
+    default void onFinish(int total, int success, int fail, List<String> errors) {
     }
 }

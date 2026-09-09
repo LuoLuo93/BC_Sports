@@ -9,6 +9,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.util.List;
 import java.util.regex.Pattern;
 
 /**
@@ -26,6 +27,15 @@ public final class ExcelSaxUtils {
     private static final Pattern SHEET_PART_PATTERN = Pattern.compile("/xl/worksheets/.*\\.xml");
 
     private ExcelSaxUtils() {
+    }
+
+    /** 单元格取字符串：越界/空/空白返回 null，去首尾空白。各导入服务原各自拷贝的同名私有方法收口于此 */
+    public static String cellStr(List<Object> cells, Integer idx) {
+        if (idx == null || idx < 0 || idx >= cells.size()) return null;
+        Object v = cells.get(idx);
+        if (v == null) return null;
+        String s = String.valueOf(v).trim();
+        return s.isEmpty() ? null : s;
     }
 
     /**

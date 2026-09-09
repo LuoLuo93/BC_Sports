@@ -1,21 +1,21 @@
 package com.bcsport.admin.service.impl;
 
-import cn.hutool.poi.excel.ExcelUtil;
-import cn.hutool.poi.excel.sax.handler.RowHandler;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.bcsport.admin.util.ExcelSaxUtils;
 import com.bcsport.admin.bidwmapper.SalesBudgetFillDailyMapper;
 import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.dto.SalesBudgetQueryDTO;
-import com.bcsport.admin.entity.bi.BudgetImportLog;
+import com.bcsport.admin.entity.SysImportLog;
 import com.bcsport.admin.entity.bi.SalesBudgetFillDaily;
-import com.bcsport.admin.mapper.BudgetImportLogMapper;
+import com.bcsport.admin.importer.BatchCtx;
+import com.bcsport.admin.importer.ExcelImportRunner;
+import com.bcsport.admin.importer.ExcelImportSpec;
+import com.bcsport.admin.importer.ImportType;
+import com.bcsport.admin.importer.RowCtx;
+import com.bcsport.admin.service.ImportLogService;
 import com.bcsport.admin.service.SalesBudgetFillDailyService;
-import com.bcsport.admin.util.ShiroSecurityUtils;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
@@ -25,27 +25,23 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 店铺日预算实现
- * SAX 流式读取 + 批量 MERGE 入库(BI_DW) + 导入日志(BC_SPORTS)
+ * 流程骨架由 ExcelImportRunner 承担（R01），本类只声明表头别名、行映射与 MERGE 入库策略（bidw 数据源）
  * extends ServiceImpl<SalesBudgetFillDailyMapper, SalesBudgetFillDaily>
  *   → baseMapper 自动绑定 SalesBudgetFillDailyMapper(走 bidw 数据源)
  */
-@Slf4j
 @Service
 public class SalesBudgetFillDailyServiceImpl
         extends ServiceImpl<SalesBudgetFillDailyMapper, SalesBudgetFillDaily>
         implements SalesBudgetFillDailyService {
-
-    private static final int BATCH_SIZE = 500;
-    private static final int MAX_ERRORS = 100;
-    private static final int MAX_ROWS = 2_000_000;
 
     /** 表头别名 → 字段标识 */
     private static final Map<String, String> HEADER_ALIAS = new HashMap<>();
@@ -88,13 +84,16 @@ public class SalesBudgetFillDailyServiceImpl
     @Autowired
     private SalesBudgetFillDailyMapper budgetMapper;
 
-    @Autowired
-    private BudgetImportLogMapper importLogMapper;
-
     /** bidw 数据源事务管理器（MERGE 入库用） */
     @Autowired
     @Qualifier("bidwTransactionManager")
     private PlatformTransactionManager bidwTransactionManager;
+
+    @Autowired
+    private ExcelImportRunner importRunner;
+
+    @Autowired
+    private ImportLogService importLogService;
 
     @Override
     public PageResult<SalesBudgetFillDaily> page(PageQuery pageQuery, SalesBudgetQueryDTO queryDTO) {
@@ -134,176 +133,106 @@ public class SalesBudgetFillDailyServiceImpl
 
     @Override
     public Map<String, Object> importFromExcel(MultipartFile file) throws Exception {
-        // 0. 文件格式检测
-        String realFormat = detectFormat(file);
-        log.info("店铺日预算 导入文件真实格式: {}", realFormat);
-        if (!"xlsx".equals(realFormat) && !"xls".equals(realFormat)) {
-            return buildResult(0, 0, 0, Collections.singletonList(
-                    "文件不是标准的 Excel 格式（检测为 " + realFormat + "），请用 Excel 打开后另存为 .xlsx 再上传"));
-        }
+        return importRunner.run(file, new ExcelImportSpec<SalesBudgetFillDaily>() {
+            @Override
+            public String logLabel() {
+                return "店铺日预算";
+            }
 
-        AtomicInteger total = new AtomicInteger(0);
-        AtomicInteger success = new AtomicInteger(0);
-        List<String> errors = Collections.synchronizedList(new ArrayList<>());
+            @Override
+            public ImportType type() {
+                return ImportType.SALES_BUDGET;
+            }
 
-        Map<String, Integer> columnIndex = new HashMap<>();
-        // 文件内去重：store_name + brand_name + budget_dtm 组合键
-        Set<String> batchKeys = new HashSet<>();
-        List<SalesBudgetFillDaily> buffer = new ArrayList<>(BATCH_SIZE);
+            @Override
+            public Map<String, String> headerAlias() {
+                return HEADER_ALIAS;
+            }
 
-        RowHandler handler = (sheetIndex, rowIndex, rowCells) -> {
-            if (rowIndex == 0) {
-                if (columnIndex.isEmpty() && rowCells != null) {
-                    for (int i = 0; i < rowCells.size(); i++) {
-                        Object h = rowCells.get(i);
-                        if (h == null) continue;
-                        String field = HEADER_ALIAS.get(String.valueOf(h).trim());
-                        if (field != null) columnIndex.put(field, i);
+            @Override
+            public void validateHeaders(Map<String, Integer> columnIndex) {
+                List<String> missing = new ArrayList<>();
+                if (!columnIndex.containsKey("storeName")) missing.add("店仓名称");
+                if (!columnIndex.containsKey("brandName")) missing.add("店仓品牌");
+                if (!columnIndex.containsKey("budgetDtm")) missing.add("预算日期");
+                if (!columnIndex.containsKey("budgetAmount")) missing.add("预算金额");
+                if (!missing.isEmpty()) {
+                    throw new IllegalArgumentException("Excel缺少必需列：" + String.join("、", missing) + "，请检查表头");
+                }
+            }
+
+            /** 本模块无固定列序兜底：表头缺列即取不到值（列索引 null） */
+            @Override
+            public SalesBudgetFillDaily mapRow(RowCtx ctx) {
+                SalesBudgetFillDaily e = new SalesBudgetFillDaily();
+                e.setRegionLevel1(ctx.str("regionLevel1"));
+                e.setRegionLevel2(ctx.str("regionLevel2"));
+                e.setChannelProperty(ctx.str("channelProperty"));
+                e.setChannelDef(ctx.str("channelDef"));
+                e.setStoreName(ctx.str("storeName"));
+                e.setBrandName(ctx.str("brandName"));
+                e.setMonthlyName(ctx.str("monthlyName"));
+                e.setBudgetDtm(parseDate(ctx.str("budgetDtm")));
+                e.setBudgetAmount(parseBigDecimal(ctx.str("budgetAmount")));
+                e.setBusinessType(ctx.str("businessType"));
+                e.setBusinessProperty(ctx.str("businessProperty"));
+                e.setSalesType(ctx.str("salesType"));
+                // 表有9个NOT NULL列，全部必填，按原校验顺序
+                if (!StringUtils.hasText(e.getRegionLevel1())) throw new IllegalArgumentException("一级地区不能为空");
+                if (!StringUtils.hasText(e.getRegionLevel2())) throw new IllegalArgumentException("二级地区不能为空");
+                if (!StringUtils.hasText(e.getChannelProperty())) throw new IllegalArgumentException("渠道类型不能为空");
+                if (!StringUtils.hasText(e.getChannelDef())) throw new IllegalArgumentException("渠道定义不能为空");
+                if (!StringUtils.hasText(e.getStoreName())) throw new IllegalArgumentException("店仓名称不能为空");
+                if (!StringUtils.hasText(e.getBrandName())) throw new IllegalArgumentException("店仓品牌不能为空");
+                if (!StringUtils.hasText(e.getMonthlyName())) throw new IllegalArgumentException("预算月份不能为空");
+                if (e.getBudgetDtm() == null) throw new IllegalArgumentException("预算日期不能为空");
+                if (e.getBudgetAmount() == null) throw new IllegalArgumentException("预算金额不能为空");
+                return e;
+            }
+
+            /** 文件内去重：store_name + brand_name + budget_dtm 组合键 */
+            @Override
+            public String dedupKey(SalesBudgetFillDaily entity) {
+                return entity.getStoreName() + "|" + entity.getBrandName() + "|" + entity.getBudgetDtm().getTime();
+            }
+
+            /** MERGE 走 bidw 数据源事务；批失败保留逐条明细错误（模块特有报文） */
+            @Override
+            public void onBatch(List<SalesBudgetFillDaily> batch, BatchCtx ctx) {
+                List<SalesBudgetFillDaily> toWrite = new ArrayList<>(batch);
+                try {
+                    new TransactionTemplate(bidwTransactionManager).execute(status -> {
+                        budgetMapper.mergeBatch(toWrite);
+                        return null;
+                    });
+                    ctx.success(toWrite.size());
+                } catch (Exception e) {
+                    String reason = e.getMessage() == null ? "未知错误" : e.getMessage();
+                    for (SalesBudgetFillDaily item : toWrite) {
+                        ctx.error("入库失败 [店仓=" + item.getStoreName()
+                                + ", 品牌=" + item.getBrandName()
+                                + ", 日期=" + item.getBudgetDtm()
+                                + "]: " + reason);
                     }
                 }
-                return;
-            }
-            if (rowCells == null || rowCells.isEmpty()) return;
-
-            int rowNum = (int) rowIndex + 1;
-            int cnt = total.incrementAndGet();
-            if (cnt > MAX_ROWS) {
-                if (errors.size() < MAX_ERRORS) {
-                    errors.add("数据超过 " + MAX_ROWS + " 行上限，已停止处理");
-                }
-                return;
             }
 
-            try {
-                SalesBudgetFillDaily entity = mapRow(rowCells, columnIndex);
-                // 校验所有 NOT NULL 字段（表有9个NOT NULL列，全部必填）
-                String missing = null;
-                if (!StringUtils.hasText(entity.getRegionLevel1())) missing = "一级地区";
-                else if (!StringUtils.hasText(entity.getRegionLevel2())) missing = "二级地区";
-                else if (!StringUtils.hasText(entity.getChannelProperty())) missing = "渠道类型";
-                else if (!StringUtils.hasText(entity.getChannelDef())) missing = "渠道定义";
-                else if (!StringUtils.hasText(entity.getStoreName())) missing = "店仓名称";
-                else if (!StringUtils.hasText(entity.getBrandName())) missing = "店仓品牌";
-                else if (!StringUtils.hasText(entity.getMonthlyName())) missing = "预算月份";
-                else if (entity.getBudgetDtm() == null) missing = "预算日期";
-                else if (entity.getBudgetAmount() == null) missing = "预算金额";
-                if (missing != null) {
-                    if (errors.size() < MAX_ERRORS) errors.add("第" + rowNum + "行：" + missing + "不能为空");
-                    return;
+            /** 兜底：有失败但无错误明细时补一条说明 */
+            @Override
+            public void onFinish(int total, int success, int fail, List<String> errors) {
+                if (fail > 0 && errors.isEmpty()) {
+                    errors.add("共 " + fail + " 条数据未导入（可能因必填字段为空、数据类型不匹配或数据库约束冲突），请检查源数据");
                 }
-
-                String key = entity.getStoreName() + "|" + entity.getBrandName() + "|" + entity.getBudgetDtm().getTime();
-                if (batchKeys.contains(key)) {
-                    buffer.removeIf(e -> key.equals(e.getStoreName() + "|" + e.getBrandName() + "|" + e.getBudgetDtm().getTime()));
-                } else {
-                    batchKeys.add(key);
-                }
-                buffer.add(entity);
-
-                if (buffer.size() >= BATCH_SIZE) {
-                    flushBatch(buffer, batchKeys, success, errors);
-                }
-            } catch (Exception e) {
-                if (errors.size() < MAX_ERRORS) errors.add("第" + rowNum + "行：解析异常 - " + e.getMessage());
             }
-        };
-
-        readAllSheets(file, realFormat, handler);
-
-        // 表头缺失校验（必填列）
-        List<String> missingHeaders = new ArrayList<>();
-        if (!columnIndex.containsKey("storeName")) missingHeaders.add("店仓名称");
-        if (!columnIndex.containsKey("brandName")) missingHeaders.add("店仓品牌");
-        if (!columnIndex.containsKey("budgetDtm")) missingHeaders.add("预算日期");
-        if (!columnIndex.containsKey("budgetAmount")) missingHeaders.add("预算金额");
-        if (!missingHeaders.isEmpty()) {
-            return buildResult(0, 0, 0, Collections.singletonList(
-                    "Excel缺少必需列：" + String.join("、", missingHeaders) + "，请检查表头"));
-        }
-
-        if (!buffer.isEmpty()) {
-            flushBatch(buffer, batchKeys, success, errors);
-        }
-
-        int fail = total.get() - success.get();
-        if (fail > MAX_ERRORS && !errors.isEmpty()) {
-            errors.add("...共 " + fail + " 条未导入，仅显示前 " + MAX_ERRORS + " 条");
-        }
-        log.info("店铺日预算 导入完成: total={}, success={}, fail={}", total.get(), success.get(), fail);
-
-        String status = (total.get() == 0) ? "FAILED" : (fail == 0 ? "SUCCESS" : "PARTIAL");
-        // 兜底：如果有失败但 errors 为空，补一条说明
-        if (fail > 0 && errors.isEmpty()) {
-            errors.add("共 " + fail + " 条数据未导入（可能因必填字段为空、数据类型不匹配或数据库约束冲突），请检查源数据");
-        }
-        saveImportLog(file, total.get(), success.get(), fail, status, errors);
-
-        return buildResult(total.get(), success.get(), fail, errors);
+        }).toResultMap();
     }
 
     @Override
-    public PageResult<BudgetImportLog> logPage(PageQuery pageQuery) {
-        Page<BudgetImportLog> page = importLogMapper.selectPage(pageQuery.toPage(),
-                new LambdaQueryWrapper<BudgetImportLog>().orderByDesc(BudgetImportLog::getId));
-        return PageResult.of(page);
+    public PageResult<SysImportLog> logPage(PageQuery pageQuery) {
+        return importLogService.page(ImportType.SALES_BUDGET, pageQuery);
     }
 
-    private void flushBatch(List<SalesBudgetFillDaily> buffer, Set<String> batchKeys,
-                            AtomicInteger success, List<String> errors) {
-        if (buffer.isEmpty()) return;
-        List<SalesBudgetFillDaily> toWrite = new ArrayList<>(buffer);
-        buffer.clear();
-        batchKeys.clear();
-        // MERGE 走 bidw 数据源事务
-        TransactionTemplate txTemplate = new TransactionTemplate(bidwTransactionManager);
-        try {
-            txTemplate.execute(status -> {
-                budgetMapper.mergeBatch(toWrite);
-                return null;
-            });
-            success.addAndGet(toWrite.size());
-        } catch (Exception e) {
-            log.error("店铺日预算 批量入库失败", e);
-            if (errors.size() < MAX_ERRORS) {
-                String reason = e.getMessage() == null ? "未知错误" : e.getMessage();
-                for (SalesBudgetFillDaily item : toWrite) {
-                    if (errors.size() >= MAX_ERRORS) break;
-                    errors.add("入库失败 [店仓=" + item.getStoreName()
-                            + ", 品牌=" + item.getBrandName()
-                            + ", 日期=" + item.getBudgetDtm()
-                            + "]: " + reason);
-                }
-            }
-        }
-    }
-
-    private SalesBudgetFillDaily mapRow(List<Object> cells, Map<String, Integer> columnIndex) {
-        SalesBudgetFillDaily e = new SalesBudgetFillDaily();
-        boolean useHeader = !columnIndex.isEmpty();
-        e.setRegionLevel1(cellStr(cells, useHeader ? columnIndex.get("regionLevel1") : null));
-        e.setRegionLevel2(cellStr(cells, useHeader ? columnIndex.get("regionLevel2") : null));
-        e.setChannelProperty(cellStr(cells, useHeader ? columnIndex.get("channelProperty") : null));
-        e.setChannelDef(cellStr(cells, useHeader ? columnIndex.get("channelDef") : null));
-        e.setStoreName(cellStr(cells, useHeader ? columnIndex.get("storeName") : null));
-        e.setBrandName(cellStr(cells, useHeader ? columnIndex.get("brandName") : null));
-        e.setMonthlyName(cellStr(cells, useHeader ? columnIndex.get("monthlyName") : null));
-        e.setBudgetDtm(parseDate(cellStr(cells, useHeader ? columnIndex.get("budgetDtm") : null)));
-        e.setBudgetAmount(parseBigDecimal(cellStr(cells, useHeader ? columnIndex.get("budgetAmount") : null)));
-        e.setBusinessType(cellStr(cells, useHeader ? columnIndex.get("businessType") : null));
-        e.setBusinessProperty(cellStr(cells, useHeader ? columnIndex.get("businessProperty") : null));
-        e.setSalesType(cellStr(cells, useHeader ? columnIndex.get("salesType") : null));
-        return e;
-    }
-
-    private String cellStr(List<Object> cells, Integer idx) {
-        if (idx == null || idx < 0 || idx >= cells.size()) return null;
-        Object v = cells.get(idx);
-        if (v == null) return null;
-        String s = String.valueOf(v).trim();
-        return s.isEmpty() ? null : s;
-    }
-
-    private java.util.Date parseDate(String s) {
+    private static java.util.Date parseDate(String s) {
         if (!StringUtils.hasText(s)) return null;
         // 兼容多种日期格式
         String[] patterns = {"yyyy-MM-dd", "yyyy/MM/dd", "yyyy-MM-dd HH:mm:ss", "yyyy/MM/dd HH:mm:ss"};
@@ -327,62 +256,12 @@ public class SalesBudgetFillDailyServiceImpl
         return null;
     }
 
-    private BigDecimal parseBigDecimal(String s) {
+    private static BigDecimal parseBigDecimal(String s) {
         if (!StringUtils.hasText(s)) return null;
         try {
             return new BigDecimal(s.replace(",", "").trim());
         } catch (NumberFormatException e) {
             return null;
         }
-    }
-
-    private void readAllSheets(MultipartFile file, String format, RowHandler handler) throws Exception {
-        ExcelSaxUtils.readAllSheets(file, format, handler, "店铺日预算");
-    }
-    private String detectFormat(MultipartFile file) throws Exception {
-        byte[] head = new byte[8];
-        try (java.io.InputStream in = file.getInputStream()) {
-            int read = in.read(head);
-            if (read < 4) return "unknown(空文件)";
-        }
-        if ((head[0] & 0xFF) == 0x50 && (head[1] & 0xFF) == 0x4B) return "xlsx";
-        if ((head[0] & 0xFF) == 0xD0 && (head[1] & 0xFF) == 0xCF
-                && (head[2] & 0xFF) == 0x11 && (head[3] & 0xFF) == 0xE0) return "xls";
-        String preview = new String(head, java.nio.charset.StandardCharsets.ISO_8859_1).trim();
-        String lower = preview.toLowerCase();
-        if (lower.startsWith("<") || preview.contains("<table") || preview.contains("<html")
-                || preview.contains("<?xml")) return "HTML/XML（伪Excel）";
-        if (lower.contains(",") || lower.contains("\t") || lower.contains(";")) return "CSV/文本（伪Excel）";
-        return "未知格式";
-    }
-
-    private void saveImportLog(MultipartFile file, int total, int success, int fail, String status, List<String> errors) {
-        try {
-            BudgetImportLog logEntity = new BudgetImportLog();
-            logEntity.setFileName(file.getOriginalFilename());
-            logEntity.setFileSize(file.getSize());
-            logEntity.setTotalCount(total);
-            logEntity.setSuccessCount(success);
-            logEntity.setFailCount(fail);
-            logEntity.setStatus(status);
-            if (!errors.isEmpty()) {
-                String msg = String.join("\n", errors);
-                logEntity.setErrorMsg(msg.length() > 4000 ? msg.substring(0, 4000) : msg);
-            }
-            logEntity.setCreateBy(ShiroSecurityUtils.getCurrentUsername());
-            logEntity.setCreateTime(LocalDateTime.now());
-            importLogMapper.insert(logEntity);
-        } catch (Exception e) {
-            log.warn("保存导入日志失败: {}", e.getMessage());
-        }
-    }
-
-    private Map<String, Object> buildResult(int total, int success, int fail, List<String> errors) {
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("total", total);
-        result.put("success", success);
-        result.put("fail", fail);
-        result.put("errors", errors);
-        return result;
     }
 }

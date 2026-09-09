@@ -25,14 +25,44 @@ public final class ExcelSaxUtils {
 
     private static final Pattern SHEET_PART_PATTERN = Pattern.compile("/xl/worksheets/.*\\.xml");
 
-    /** xls 逐 sheet 尝试的尝试上限（越界异常即停止） */
-    private static final int XLS_MAX_SHEET_TRY = 20;
-
     private ExcelSaxUtils() {
     }
 
     /**
-     * 读取全部 sheet：xlsx 复用同一个 OPCPackage；xls 逐个尝试到越界。
+     * 通过文件头魔数探测真实格式，拒绝伪 Excel（HTML/CSV 改扩展名）。
+     * 返回 "xlsx" / "xls"，其余返回可直接拼进提示文案的描述。
+     * xlsx: ZIP 头 PK\x03\x04；xls: OLE 复合文档头 D0CF11E0；其余多为 HTML/CSV/XML
+     */
+    public static String detectFormat(MultipartFile file) throws Exception {
+        byte[] head = new byte[8];
+        try (java.io.InputStream in = file.getInputStream()) {
+            int read = in.read(head);
+            if (read < 4) return "unknown(空文件)";
+        }
+        if ((head[0] & 0xFF) == 0x50 && (head[1] & 0xFF) == 0x4B) {
+            return "xlsx";
+        }
+        if ((head[0] & 0xFF) == 0xD0 && (head[1] & 0xFF) == 0xCF
+                && (head[2] & 0xFF) == 0x11 && (head[3] & 0xFF) == 0xE0) {
+            return "xls";
+        }
+        String preview = new String(head, java.nio.charset.StandardCharsets.ISO_8859_1).trim();
+        String lower = preview.toLowerCase();
+        if (lower.startsWith("<") || preview.contains("<table") || preview.contains("<html")
+                || preview.contains("<?xml")) {
+            return "HTML/XML（伪Excel）";
+        }
+        if (lower.contains(",") || lower.contains("\t") || lower.contains(";")) {
+            return "CSV/文本（伪Excel）";
+        }
+        return "未知格式";
+    }
+
+    /**
+     * 读取全部 sheet（按工作簿顺序）。
+     * 不能按"下标+1 拼 rId"逐个读：POI/hutool 生成的 xlsx 里 rId1 是 styles、rId2 是 sharedStrings，
+     * sheet 从 rId3 起——按 rId1 读会把样式表当 sheet 解析出 0 行且不报错（系统下载的模板就是这类文件）。
+     * hutool 的 rid=-1 走 XSSFReader 的 sheet 迭代器，与 rId 编号无关。
      *
      * @param logLabel 日志里的模块名（如 "Bas_FirstAdd"），仅用于日志区分
      */
@@ -45,12 +75,8 @@ public final class ExcelSaxUtils {
                 org.apache.poi.openxml4j.opc.OPCPackage pkg = org.apache.poi.openxml4j.opc.OPCPackage.open(
                         tempFile.getAbsolutePath(), org.apache.poi.openxml4j.opc.PackageAccess.READ);
                 try {
-                    int sheetCount = pkg.getPartsByName(SHEET_PART_PATTERN).size();
-                    log.info("{} xlsx 共 {} 个 sheet", logLabel, sheetCount);
-                    Excel07SaxReader saxReader = new Excel07SaxReader(handler);
-                    for (int s = 0; s < sheetCount; s++) {
-                        saxReader.read(pkg, s);
-                    }
+                    log.info("{} xlsx 共 {} 个 sheet", logLabel, pkg.getPartsByName(SHEET_PART_PATTERN).size());
+                    new Excel07SaxReader(handler).read(pkg, -1);
                 } finally {
                     pkg.revert();
                 }
@@ -60,13 +86,7 @@ public final class ExcelSaxUtils {
                 }
             }
         } else {
-            for (int s = 0; s < XLS_MAX_SHEET_TRY; s++) {
-                try {
-                    ExcelUtil.readBySax(file.getInputStream(), s, handler);
-                } catch (Exception e) {
-                    break;
-                }
-            }
+            ExcelUtil.readBySax(file.getInputStream(), -1, handler);
         }
     }
 }

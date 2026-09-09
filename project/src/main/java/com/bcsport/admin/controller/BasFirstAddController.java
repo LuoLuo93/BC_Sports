@@ -5,8 +5,8 @@ import cn.hutool.poi.excel.ExcelWriter;
 import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.common.Result;
+import com.bcsport.admin.entity.SysImportLog;
 import com.bcsport.admin.entity.qywx.BasFirstAdd;
-import com.bcsport.admin.entity.qywx.BasFirstAddImportLog;
 import com.bcsport.admin.service.BasFirstAddService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -46,7 +46,7 @@ public class BasFirstAddController {
     @GetMapping("/import-log/page")
     @ApiOperation("导入日志分页查询")
     @RequiresPermissions("bi:first-add:import")
-    public Result<PageResult<BasFirstAddImportLog>> importLogPage(PageQuery pageQuery) {
+    public Result<PageResult<SysImportLog>> importLogPage(PageQuery pageQuery) {
         return Result.success(basFirstAddService.logPage(pageQuery));
     }
 

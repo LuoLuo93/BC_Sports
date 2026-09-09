@@ -82,16 +82,6 @@ public class ErpStoreController {
     }
 
     /**
-     * 查询所有店仓（下拉选择用）
-     */
-    @GetMapping("/list-all")
-    @ApiOperation("查询所有店仓")
-    @RequiresPermissions("bi:erpStore:query")
-    public Result<List<Map<String, Object>>> listAll() {
-        return Result.success(bjerpStoreMapper.listAllStores());
-    }
-
-    /**
      * 店仓主品牌下拉（C_STOREATTRIBVALUE DIM5）
      */
     @GetMapping("/brands")

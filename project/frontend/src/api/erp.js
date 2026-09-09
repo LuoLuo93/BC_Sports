@@ -10,10 +10,6 @@ export function getErpStoreSimplePage(params) {
   return request.get('/api/erp-store/simple-page', { params })
 }
 
-export function getErpStoreListAll() {
-  return request.get('/api/erp-store/list-all')
-}
-
 // 店仓品牌下拉（C_STOREATTRIBVALUE DIM5）
 export function getErpStoreBrands() {
   return request.get('/api/erp-store/brands')
@@ -92,10 +88,6 @@ export function getEnabledErpWarehouseList() {
 // ERP Customer (bjerp WMS_CUSTOMER)
 export function getErpCustomerPage(params) {
   return request.get('/api/erp-customer/page', { params })
-}
-
-export function getErpCustomerListAll() {
-  return request.get('/api/erp-customer/list-all')
 }
 
 // 揽众客户押金资料 (bjerp LZCUSTOMERINFOR)

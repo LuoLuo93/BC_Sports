@@ -3,6 +3,7 @@ package com.bcsport.admin.service.notify;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 
 /**
  * 重试工具类
@@ -17,6 +18,9 @@ public class RetryUtil {
 
     /** 默认基础重试间隔（毫秒） */
     private static final long DEFAULT_BASE_DELAY = 1000;
+
+    /** F62: 严格匹配 HTTP 5xx 状态码（替代 contains("HTTP")&&contains("5")——那会把 "HTTP2"、消息里任意"5"误判为可重试） */
+    private static final Pattern HTTP_5XX = Pattern.compile("HTTP/?\\s*5\\d{2}\\b", Pattern.CASE_INSENSITIVE);
 
     /**
      * 执行带重试的操作
@@ -100,38 +104,28 @@ public class RetryUtil {
     /**
      * 判断异常是否可重试
      *
+     * F62: 以异常类型为准（遍历 cause 链，覆盖被 SDK 包装的情况），
+     * 文本匹配仅保留严格 HTTP 5xx 状态码——原先 contains("连接")/("超时") 依赖消息措辞，
+     * contains("HTTP")&&contains("5") 会把 "HTTP2"、任意含"5"的消息误判为可重试。
+     *
      * 可重试的异常类型：
-     * - 网络连接异常
-     * - 超时异常
-     * - HTTP 5xx 错误
+     * - 网络连接异常 / 超时异常 / DNS 解析失败 / IO 异常
+     * - HTTP 5xx 错误（服务器临时错误）
      */
     private static boolean isRetryable(Exception e) {
-        // 网络相关异常
-        if (e instanceof java.net.ConnectException ||
-            e instanceof java.net.SocketTimeoutException ||
-            e instanceof java.net.UnknownHostException ||
-            e instanceof java.io.IOException) {
-            return true;
+        // 类型判断：网络/超时类异常（含 cause 链中被包装的情况）
+        for (Throwable t = e; t != null; t = t.getCause()) {
+            if (t instanceof java.net.ConnectException
+                    || t instanceof java.net.SocketTimeoutException
+                    || t instanceof java.net.UnknownHostException
+                    || t instanceof java.io.IOException) {
+                return true;
+            }
         }
 
-        // 包含特定消息的异常
+        // HTTP 5xx（严格状态码匹配）
         String message = e.getMessage();
-        if (message != null) {
-            // 超时
-            if (message.contains("timeout") || message.contains("超时")) {
-                return true;
-            }
-            // 连接相关
-            if (message.contains("connection") || message.contains("连接")) {
-                return true;
-            }
-            // HTTP 5xx 错误（服务器临时错误）
-            if (message.contains("HTTP") && message.contains("5")) {
-                return true;
-            }
-        }
-
-        return false;
+        return message != null && HTTP_5XX.matcher(message).find();
     }
 
     /**

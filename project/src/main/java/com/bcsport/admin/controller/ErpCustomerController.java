@@ -51,14 +51,4 @@ public class ErpCustomerController {
 
         return Result.success(pageResult);
     }
-
-    /**
-     * 查询所有客户（下拉选择用）
-     */
-    @GetMapping("/list-all")
-    @ApiOperation("查询所有客户")
-    @RequiresPermissions("bi:erpCustomer:query")
-    public Result<List<Map<String, Object>>> listAll() {
-        return Result.success(bjerpCustomerMapper.listAllCustomers());
-    }
 }

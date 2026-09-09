@@ -28,8 +28,15 @@
         <include refid="searchProductsWhere"/>
     </select>
 
+    <!-- F47: SIZES 的 LISTAGG 相关子查询移到分页外层——原先对"所有命中行"逐行执行聚合再丢弃
+         非当前页结果；现在仅对当前页(≤pageSize 行)各执行一次。语义不变(SIZES 不参与排序/过滤) -->
     <select id="searchProducts" resultType="java.util.Map">
-        SELECT * FROM (
+        SELECT paged.*,
+               (SELECT LISTAGG(c.VALUE2_CODE, ',') WITHIN GROUP (ORDER BY c.VALUE2_CODE)
+                FROM M_PRODUCT_ALIAS a
+                LEFT JOIN M_ATTRIBUTESETINSTANCE c ON a.M_ATTRIBUTESETINSTANCE_ID = c.id
+                WHERE a.M_PRODUCT_ID = paged.PRODUCT_ID AND c.VALUE2_CODE IS NOT NULL) AS SIZES
+        FROM (
             SELECT TMP.*, ROW_NUMBER() OVER (ORDER BY product_name) AS RN FROM (
                 SELECT product.ID AS PRODUCT_ID,
                 product.name AS PRODUCT_NAME,
@@ -54,17 +61,14 @@
                 product.ACCELEMENT AS ACC_ELEMENT,
                 product.SAFETY_CATEGORY AS SAFETY_CATEGORY,
                 product.M_SIZEGROUP_ID AS SIZEGROUP_ID,
-                product.BOX_QTY_NEW AS SIZE_GROUP_ID,
-                (SELECT LISTAGG(c.VALUE2_CODE, ',') WITHIN GROUP (ORDER BY c.VALUE2_CODE)
-                 FROM M_PRODUCT_ALIAS a
-                 LEFT JOIN M_ATTRIBUTESETINSTANCE c ON a.M_ATTRIBUTESETINSTANCE_ID = c.id
-                 WHERE a.M_PRODUCT_ID = product.ID AND c.VALUE2_CODE IS NOT NULL) AS SIZES
+                product.BOX_QTY_NEW AS SIZE_GROUP_ID
                 FROM M_PRODUCT product
                 LEFT JOIN M_DIM brand ON product.M_DIM1_ID = brand.ID
                 LEFT JOIN M_DIM Kind ON product.M_DIM4_ID = Kind.ID
                 <include refid="searchProductsWhere"/>
             ) TMP
-        ) WHERE RN &gt; #{offset} AND RN &lt;= #{offset} + #{pageSize}
+        ) paged
+        WHERE RN &gt; #{offset} AND RN &lt;= #{offset} + #{pageSize}
     </select>
 
     <select id="getProductByEan13" resultType="java.util.Map">

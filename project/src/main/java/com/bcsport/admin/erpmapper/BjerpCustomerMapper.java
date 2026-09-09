@@ -13,6 +13,4 @@ public interface BjerpCustomerMapper {
 
     List<Map<String, Object>> searchCustomers(@Param("code") String code, @Param("name") String name,
                                               @Param("offset") long offset, @Param("pageSize") long pageSize);
-
-    List<Map<String, Object>> listAllCustomers();
 }

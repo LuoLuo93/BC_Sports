@@ -1,7 +1,6 @@
 package com.bcsport.admin.controller;
 
 import cn.hutool.poi.excel.ExcelUtil;
-import cn.hutool.poi.excel.ExcelReader;
 import cn.hutool.poi.excel.ExcelWriter;
 import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
@@ -30,10 +29,11 @@ import java.util.*;
 @Api(tags = "揽众客户押金资料")
 public class LzCustomerController {
 
-    private static final int BATCH_SIZE = 200;
-
     @Autowired
     private LzCustomerMapper lzCustomerMapper;
+
+    @Autowired
+    private com.bcsport.admin.service.LzCustomerService lzCustomerService;
 
     /**
      * 分页查询
@@ -126,69 +126,20 @@ public class LzCustomerController {
 
     /**
      * Excel 批量导入（以店铺代码为业务键，存在则更新，不存在则新增）
+     * F63: 解析/合并逻辑下沉 LzCustomerService，Controller 只做 HTTP 编排
      */
     @PostMapping("/import")
     @ApiOperation("Excel批量导入揽众客户资料")
     @RequiresPermissions("erp:lzCustomer:import")
     public Result<Map<String, Object>> importExcel(@RequestParam("file") MultipartFile file) {
-        if (file.isEmpty()) {
-            return Result.paramError("请上传 Excel 文件");
-        }
-        String filename = file.getOriginalFilename();
-        if (filename == null || (!filename.endsWith(".xlsx") && !filename.endsWith(".xls"))) {
-            return Result.paramError("仅支持 .xlsx 或 .xls 格式的 Excel 文件");
-        }
-
-        List<Map<String, Object>> allRows = new ArrayList<>();
-        int total = 0;
-        int success = 0;
-        int fail = 0;
-        List<String> errors = new ArrayList<>();
-
-        try (ExcelReader reader = ExcelUtil.getReader(file.getInputStream())) {
-            List<Map<String, Object>> rawRows = reader.readAll();
-            total = rawRows.size();
-
-            for (int i = 0; i < rawRows.size(); i++) {
-                Map<String, Object> raw = rawRows.get(i);
-                int rowNum = i + 2; // Excel 行号（第1行是表头）
-                try {
-                    String shopCode = getCellString(raw, "店铺代码", "shopcode", "SHOPCODE");
-                    if (shopCode == null || shopCode.trim().isEmpty()) {
-                        fail++;
-                        errors.add("第" + rowNum + "行：店铺代码不能为空");
-                        continue;
-                    }
-                    Map<String, Object> row = new HashMap<>();
-                    row.put("shopCode", shopCode.trim());
-                    row.put("shopName", getCellString(raw, "店铺名称", "shopname", "SHOPNAME"));
-                    row.put("shopBoss", getCellString(raw, "门店所属联营老板", "shopboss", "SHOPBOSS"));
-                    row.put("fundingLimit", getCellString(raw, "资金额度", "fundinglimit", "FUNDINGLIMIT"));
-                    row.put("fundingRatio", getCellString(raw, "资金倍率", "fundingratio", "FUNDINGRATIO"));
-                    allRows.add(row);
-                } catch (Exception e) {
-                    fail++;
-                    errors.add("第" + rowNum + "行：" + e.getMessage());
-                }
-            }
-
-            // 分批 merge
-            for (int i = 0; i < allRows.size(); i += BATCH_SIZE) {
-                int end = Math.min(i + BATCH_SIZE, allRows.size());
-                lzCustomerMapper.mergeBatch(allRows.subList(i, end));
-                success += end - i;
-            }
+        try {
+            return Result.success(lzCustomerService.importExcel(file));
+        } catch (IllegalArgumentException e) {
+            return Result.paramError(e.getMessage());
         } catch (Exception e) {
             log.error("揽众资料导入失败: {}", e.getMessage(), e);
             return Result.error("导入失败：" + e.getMessage());
         }
-
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("total", total);
-        result.put("success", success);
-        result.put("fail", fail);
-        result.put("errors", errors);
-        return Result.success(result);
     }
 
     /**
@@ -222,19 +173,5 @@ public class LzCustomerController {
         } finally {
             writer.close();
         }
-    }
-
-    /**
-     * 从 Excel 行中按多个可能的列名取值（兼容中英文表头）
-     */
-    private static String getCellString(Map<String, Object> row, String... keys) {
-        for (String key : keys) {
-            Object val = row.get(key);
-            if (val != null) {
-                String str = val.toString().trim();
-                if (!str.isEmpty()) return str;
-            }
-        }
-        return null;
     }
 }

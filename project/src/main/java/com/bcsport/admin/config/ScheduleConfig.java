@@ -11,6 +11,8 @@ import com.bcsport.admin.util.CronUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.scheduling.support.CronTrigger;
@@ -21,10 +23,13 @@ import jakarta.annotation.PreDestroy;
 import cn.hutool.json.JSONUtil;
 
 import java.lang.reflect.Method;
+import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
@@ -57,6 +62,17 @@ public class ScheduleConfig {
 
     @Autowired
     private ConfigService configService;
+
+    @Autowired(required = false)
+    private StringRedisTemplate stringRedisTemplate;
+
+    // F43: 定时任务分布式锁(Redis SETNX + TTL,实例崩溃后 TTL 自动过期)。
+    // TTL 取 2 小时,长于最长的同步任务(订单同步 60 分钟);Redis 不可用时回退 JVM 内锁。
+    private static final String REDIS_LOCK_PREFIX = "schedule:lock:";
+    private static final Duration REDIS_LOCK_TTL = Duration.ofHours(2);
+    private static final DefaultRedisScript<Long> UNLOCK_SCRIPT = new DefaultRedisScript<>(
+            "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end",
+            Long.class);
 
     private ThreadPoolTaskScheduler taskScheduler;
 
@@ -234,17 +250,39 @@ public class ScheduleConfig {
             scheduleLog.setCreateBy("system");
 
             String lockKey = getLockKey(option);
-            ReentrantLock runningLock = runningLocks.computeIfAbsent(lockKey, key -> new ReentrantLock());
-            boolean locked = false;
+            String lockToken = UUID.randomUUID().toString();
+            ReentrantLock runningLock = null;
+            boolean locked = false;      // 已持有锁(Redis 或 JVM)
+            boolean jvmLocked = false;   // 锁类型为 JVM 锁（finally 区分解锁方式）
             boolean skipped = false;  // 标记是否被跳过
             try {
-                locked = runningLock.tryLock();
+                boolean redisLockError = false;
+                try {
+                    locked = stringRedisTemplate != null && Boolean.TRUE.equals(
+                            stringRedisTemplate.opsForValue()
+                                    .setIfAbsent(REDIS_LOCK_PREFIX + lockKey, lockToken, REDIS_LOCK_TTL));
+                } catch (Exception e) {
+                    redisLockError = true;
+                    log.warn("Redis 分布式锁不可用，回退 JVM 内锁: lockKey={}, error={}", lockKey, e.getMessage());
+                }
                 if (!locked) {
-                    skipped = true;
-                    scheduleLog.setStatus(0);
-                    scheduleLog.setErrorMsg("Task skipped because module is already running: " + lockKey);
-                    log.warn("定时任务跳过: [{}] {}, lockKey={}", job.getId(), job.getJobName(), lockKey);
-                    return;
+                    if (!redisLockError) {
+                        // 其他实例正在执行同模块任务
+                        skipped = true;
+                        scheduleLog.setStatus(0);
+                        scheduleLog.setErrorMsg("Task skipped because module is already running: " + lockKey);
+                        log.warn("定时任务跳过: [{}] {}, lockKey={}", job.getId(), job.getJobName(), lockKey);
+                        return;
+                    }
+                    runningLock = runningLocks.computeIfAbsent(lockKey, key -> new ReentrantLock());
+                    locked = jvmLocked = runningLock.tryLock();
+                    if (!locked) {
+                        skipped = true;
+                        scheduleLog.setStatus(0);
+                        scheduleLog.setErrorMsg("Task skipped because module is already running: " + lockKey);
+                        log.warn("定时任务跳过: [{}] {}, lockKey={}", job.getId(), job.getJobName(), lockKey);
+                        return;
+                    }
                 }
 
                 Object bean = applicationContext.getBean(option.getBeanName());
@@ -273,7 +311,17 @@ public class ScheduleConfig {
                     logService.saveLog(scheduleLog);
                 } finally {
                     if (locked) {
-                        runningLock.unlock();
+                        if (jvmLocked) {
+                            runningLock.unlock();
+                        } else {
+                            try {
+                                stringRedisTemplate.execute(UNLOCK_SCRIPT,
+                                        Collections.singletonList(REDIS_LOCK_PREFIX + lockKey), lockToken);
+                            } catch (Exception e) {
+                                log.warn("Redis 分布式锁释放失败(TTL 到期自动过期): lockKey={}, error={}",
+                                        lockKey, e.getMessage());
+                            }
+                        }
                     }
                     if ("MANUAL".equals(triggerType)) {
                         runningJobIds.remove(job.getId());

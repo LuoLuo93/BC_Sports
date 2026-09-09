@@ -115,7 +115,8 @@
         from Bas_Personnel
         where AllowUsed = 0
           and PersonnelStatus = 0
-          and CONVERT(VARCHAR(10), ModifyDTM, 121) &lt;= CONVERT(VARCHAR(10), getdate() - 30, 121)
+          <!-- F48: CONVERT(VARCHAR,ModifyDTM) 包列致索引失效，改 sargable 范围(语义等价:ModifyDTM 的日期部分 &lt;= 今天-30) -->
+          and ModifyDTM &lt; DATEADD(DAY, -29, CAST(getdate() AS date))
     </select>
 
     <update id="updateStatus">
@@ -132,22 +133,38 @@
           and CompanyID = 'BC'
     </select>
 
+    <!-- F48: (A or B) 跨列 OR 致索引失效。两条 SET 值固定的幂等 UPDATE 拆开写，各自走索引；
+         返回值 void，不依赖受影响行数 -->
     <update id="updateUserShopId">
-        update Bas_Personnel
-        set ShopID     = #{newShopId},
+        UPDATE Bas_Personnel
+        SET ShopID      = #{shopId},
             AllShopName = #{newDepartment},
-            StockID    = #{stockId}
-        where (Mobilephone = #{mobileNo} or Telphone = #{mobileNo})
-          and ShopID = #{shopId}
-          and PersonnelName = #{staffName}
+            StockID     = #{stockId}
+        WHERE PersonnelName = #{staffName}
+          AND Mobilephone = #{mobileNo}
+          AND ShopID = #{shopId};
+
+        UPDATE Bas_Personnel
+        SET ShopID      = #{shopId},
+            AllShopName = #{newDepartment},
+            StockID     = #{stockId}
+        WHERE PersonnelName = #{staffName}
+          AND Telphone = #{mobileNo}
+          AND ShopID = #{shopId}
     </update>
 
     <update id="updateUserPh">
-        update Bas_Personnel
-        set Mobilephone = #{newPhone},
+        UPDATE Bas_Personnel
+        SET Mobilephone = #{newPhone},
             Telphone    = #{newPhone}
-        where (Mobilephone = #{mobileNo} or Telphone = #{mobileNo})
-          and PersonnelName = #{staffName}
+        WHERE PersonnelName = #{staffName}
+          AND Mobilephone = #{mobileNo};
+
+        UPDATE Bas_Personnel
+        SET Mobilephone = #{newPhone},
+            Telphone    = #{newPhone}
+        WHERE PersonnelName = #{staffName}
+          AND Telphone = #{mobileNo}
     </update>
 
     <select id="getStockIdByShopId" parameterType="java.lang.String" resultType="java.lang.String">

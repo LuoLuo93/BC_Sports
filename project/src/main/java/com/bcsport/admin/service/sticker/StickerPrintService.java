@@ -311,9 +311,12 @@ public class StickerPrintService {
         detailMapper.batchInsert(details);
     }
 
+    /** F56: 订单号序列(进程内自增,替代 Math.random——随机数同秒内可能撞号) */
+    private final java.util.concurrent.atomic.AtomicLong orderNoSeq = new java.util.concurrent.atomic.AtomicLong();
+
     private String generateOrderNo() {
         return "SP" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
-            + String.format("%03d", (int) (Math.random() * 1000));
+            + String.format("%03d", orderNoSeq.incrementAndGet() % 1000);
     }
 
     private String escapeLike(String value) {

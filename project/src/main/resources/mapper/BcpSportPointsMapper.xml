@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bcsport.admin.mapper.BcpSportPointsMapper">
+
+    <!-- Oracle MERGE upsert：sporter 唯一(存在即更新, 一名运动员只保留一行积分) -->
+    <insert id="mergeBatch" parameterType="java.util.List">
+        MERGE INTO BC_SPORTS_BCP_SPORT_POINTS target
+        USING (
+            <foreach collection="list" item="item" separator=" UNION ALL ">
+                SELECT
+                    #{item.sporter} AS sporter,
+                    #{item.points} AS points,
+                    #{item.createBy} AS create_by,
+                    #{item.updateBy} AS update_by
+                FROM dual
+            </foreach>
+        ) source
+        ON (target.sporter = source.sporter
+            AND target.deleted = 0)
+        WHEN MATCHED THEN
+            UPDATE SET
+                target.points = source.points,
+                target.update_time = SYSTIMESTAMP,
+                target.update_by = source.update_by
+        WHEN NOT MATCHED THEN
+            INSERT (sporter, points, create_time, update_time, create_by, update_by, deleted)
+            VALUES (source.sporter, source.points,
+                    SYSTIMESTAMP, SYSTIMESTAMP, source.create_by, source.update_by, 0)
+    </insert>
+
+</mapper>

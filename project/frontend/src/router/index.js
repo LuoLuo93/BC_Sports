@@ -79,6 +79,8 @@ const routes = [
       { path: 'erp/estimated-cost', name: 'ErpEstimatedCost', component: () => import('@/views/erp/EstimatedCost.vue'), meta: { pageTitle: '预估成本管理' } },
       // HK ERP（旧版直写链路，移植自 interfaceForHK）
       { path: 'hkerp/personnel-sync', name: 'HkPersonnelSync', component: () => import('@/views/hkerp/PersonnelSync.vue'), meta: { pageTitle: 'HK ERP同步' } },
+      // BC好玩家
+      { path: 'bcp/sport-points', name: 'BcpSportPointsImport', component: () => import('@/views/bcp/SportPointsImport.vue'), meta: { pageTitle: '运动积分导入' } },
       // User
       { path: 'profile', name: 'Profile', component: () => import('@/views/user/Profile.vue'), meta: { pageTitle: '个人中心' } },
       { path: 'settings', name: 'Settings', component: () => import('@/views/user/Settings.vue'), meta: { pageTitle: '系统设置' } }

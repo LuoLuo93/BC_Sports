@@ -12,7 +12,8 @@ public enum ImportType {
     DW_SALES("数仓销售主明细"),
     ESTIMATED_COST("预估成本"),
     STICKER_DATA("贴纸货品数据"),
-    STICKER_SIZE_GROUP("贴纸尺码组");
+    STICKER_SIZE_GROUP("贴纸尺码组"),
+    BCP_SPORT_POINTS("BC好玩家运动积分");
 
     private final String label;
 

@@ -7,7 +7,7 @@ import {
   HomeFilled, Location, MapLocation, Edit, Delete,
   Plus, Search, Download, Upload, Bell,
   Calendar, ChatDotRound, Management,
-  Monitor, DataAnalysis, Opportunity, Avatar, Tools
+  Monitor, DataAnalysis, Opportunity, Avatar, Tools, Trophy
 } from '@element-plus/icons-vue'
 
 const biIconMap = {
@@ -69,7 +69,8 @@ const biIconMap = {
   'bi-menu-button-wide': MenuIcon,
   'bi-layout-sidebar': MenuIcon,
   'bi-table': Grid,
-  'bi-card-list': List
+  'bi-card-list': List,
+  'bi-trophy': Trophy
 }
 
 const iconColorMap = {

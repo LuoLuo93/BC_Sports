@@ -28,7 +28,12 @@ public interface VxCustomerlistdetailsFollowInfoMapper {
      */
     void clearStg();
     void insertBatchStg(@Param("list") List<VxCustomerlistdetailsFollowInfo> list);
-    void copyFromStg();
+
+    /**
+     * 分批回填 STG → 主表（返回本批行数）：表无唯一键，按全列稳定排序分页，
+     * 完全重复的行彼此等价不会因分页边界丢失，每批一条语句秒级返回避免 Read timed out
+     */
+    int copyFromStgPage(@Param("offset") long offset, @Param("limit") int limit);
 
     /**
      * 查询所有数据

@@ -27,10 +27,13 @@
         </foreach>
     </insert>
 
-    <update id="copyFromStg">
+    <!-- 分批回填(由QywxCustomerDetailTask在同一事务内循环调用): externalUserid拉取时已全局去重, 排序稳定, 分页边界不丢行 -->
+    <update id="copyFromStgPage">
         INSERT INTO VX_CustomerListDetails_external_contact (externalUserid, name, type, gender, unionid, corp_name, createTime)
         SELECT externalUserid, name, type, gender, unionid, corp_name, createTime
         FROM VX_CustomerListDetails_external_contact_STG
+        ORDER BY externalUserid
+        OFFSET #{offset} ROWS FETCH NEXT #{limit} ROWS ONLY
     </update>
 
 </mapper>

@@ -33,6 +33,8 @@ public class QywxCustomerDetailTask {
     private static final int CONCURRENT_TASKS = 3;
     /** 游标翻页熔断上限：服务端 next_cursor 异常回环时防无限拉取 */
     private static final int MAX_CURSOR_PAGES = 1000;
+    /** 切换时分批回填每批行数：单条 INSERT...SELECT 秒级完成，避免整表回填长时间占住 socket 读触发 Read timed out */
+    private static final int COPY_CHUNK_SIZE = 50_000;
 
     @Autowired
     private QywxApiClient apiClient;
@@ -88,21 +90,28 @@ public class QywxCustomerDetailTask {
             // 3. 多线程并行拉取，写入影子表
             int[] result = syncCustomerDetails(validUserList);
             int failedBatches = result[1];
+            int truncatedBatches = result[2];
             int totalBatches = (validUserList.size() + USER_BATCH_SIZE - 1) / USER_BATCH_SIZE;
 
-            // 4. 失败率超10%(典型如token失效导致全部批次失败)时放弃切换，保留主表旧数据
+            // 4a. 任一批次游标回环熔断 → 影子表确定不完整，直接放弃切换（旧数据只旧一天，残缺数据无法补救）
+            if (truncatedBatches > 0) {
+                throw new IllegalStateException(String.format(
+                        "%d个批次触发游标回环熔断，影子表数据不完整，保留主表旧数据不切换", truncatedBatches));
+            }
+
+            // 4b. 失败率超10%(典型如token失效导致全部批次失败)时放弃切换，保留主表旧数据
             if (failedBatches * 10 > totalBatches) {
                 throw new IllegalStateException(String.format(
                         "同步客户详情失败率过高(失败批次 %d/%d)，保留主表旧数据不切换", failedBatches, totalBatches));
             }
 
-            // 5. 原子切换：主表清空+影子表回填+清影子表，同一事务，任一步失败整体回滚
+            // 5. 原子切换：主表清空+影子表分批回填+清影子表，同一事务，任一步失败整体回滚
             new TransactionTemplate(transactionManager).execute(status -> {
                 externalContactMapper.deleteAll();
-                externalContactMapper.copyFromStg();
+                copyStgInChunks("external_contact", externalContactMapper::copyFromStgPage);
                 externalContactMapper.clearStg();
                 followInfoMapper.deleteAll();
-                followInfoMapper.copyFromStg();
+                copyStgInChunks("follow_info", followInfoMapper::copyFromStgPage);
                 followInfoMapper.clearStg();
                 return null;
             });
@@ -119,13 +128,14 @@ public class QywxCustomerDetailTask {
     /**
      * 多线程并行：每个线程请求API一页就写影子表一页，再请求下一页
      *
-     * @return [成功批次数, 失败批次数]
+     * @return [成功批次数, 失败批次数, 游标回环熔断批次数]
      */
     private int[] syncCustomerDetails(List<String> followUserList) {
         long startTime = System.currentTimeMillis();
 
         AtomicInteger successCount = new AtomicInteger(0);
         AtomicInteger failCount = new AtomicInteger(0);
+        AtomicInteger truncatedCount = new AtomicInteger(0);
         AtomicInteger totalContacts = new AtomicInteger(0);
         AtomicInteger totalFollowInfos = new AtomicInteger(0);
 
@@ -157,6 +167,11 @@ public class QywxCustomerDetailTask {
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     failCount.incrementAndGet();
+                } catch (CursorLoopException e) {
+                    // 游标回环熔断：本批数据不完整（剩余成员的客户整体缺失，且回环重复页会导致跟进信息重复膨胀）
+                    log.error("处理批次 {}/{} 触发游标回环熔断: {}", currentBatch + 1, totalBatches, e.getMessage());
+                    truncatedCount.incrementAndGet();
+                    failCount.incrementAndGet();
                 } catch (Exception e) {
                     log.error("处理批次失败 {}/{}", currentBatch + 1, totalBatches, e);
                     failCount.incrementAndGet();
@@ -177,10 +192,10 @@ public class QywxCustomerDetailTask {
             throw new IllegalStateException("客户详情同步被中断，本轮放弃切换", e);
         }
 
-        log.info("客户详情同步完成, 成功: {}, 失败: {}, contacts: {}, followInfos: {}, 耗时: {} ms",
-                successCount.get(), failCount.get(), totalContacts.get(), totalFollowInfos.get(),
+        log.info("客户详情同步完成, 成功: {}, 失败: {}, 游标回环熔断: {}, contacts: {}, followInfos: {}, 耗时: {} ms",
+                successCount.get(), failCount.get(), truncatedCount.get(), totalContacts.get(), totalFollowInfos.get(),
                 System.currentTimeMillis() - startTime);
-        return new int[]{successCount.get(), failCount.get()};
+        return new int[]{successCount.get(), failCount.get(), truncatedCount.get()};
     }
 
     /**
@@ -196,8 +211,9 @@ public class QywxCustomerDetailTask {
         int cursorPages = 0;
         do {
             if (++cursorPages > MAX_CURSOR_PAGES) {
-                log.error("游标翻页超过{}页上限(疑似next_cursor回环)，中止本批拉取", MAX_CURSOR_PAGES);
-                break;
+                // 抛专用异常而不是静默中止：熔断意味着本批数据不完整，上层必须据此放弃影子表切换
+                throw new CursorLoopException("游标翻页超过" + MAX_CURSOR_PAGES
+                        + "页上限(疑似next_cursor回环)，中止本批拉取，本轮放弃切换");
             }
             // 1. 请求一页
             JSONObject result = apiClient.batchGetByUser(userIds, cursor);
@@ -292,5 +308,34 @@ public class QywxCustomerDetailTask {
                 return null;
             });
         }
+    }
+
+    /** 游标回环熔断专用异常：触发即代表该批数据不完整，本轮必须放弃影子表切换 */
+    private static class CursorLoopException extends RuntimeException {
+        CursorLoopException(String message) {
+            super(message);
+        }
+    }
+
+    @FunctionalInterface
+    private interface StgPageCopier {
+        int copyPage(long offset, int limit);
+    }
+
+    /**
+     * 影子表分批回填主表：循环按 OFFSET/FETCH 翻页回填，返回值小于批行数即读完
+     * （整表一条 INSERT...SELECT 约50万行时，socket 读等待可能先于语句完成而超时，且中途失败整连接报废）
+     */
+    private long copyStgInChunks(String tableLabel, StgPageCopier copier) {
+        long total = 0;
+        for (long offset = 0; ; offset += COPY_CHUNK_SIZE) {
+            int rows = copier.copyPage(offset, COPY_CHUNK_SIZE);
+            total += rows;
+            if (rows < COPY_CHUNK_SIZE) {
+                break;
+            }
+        }
+        log.info("影子表[{}]分批回填完成, 共 {} 行, 每批 {} 行", tableLabel, total, COPY_CHUNK_SIZE);
+        return total;
     }
 }

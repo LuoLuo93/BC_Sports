@@ -27,10 +27,14 @@
         </foreach>
     </insert>
 
-    <update id="copyFromStg">
+    <!-- 分批回填(由QywxCustomerDetailTask在同一事务内循环调用): 表无唯一键按全列排序,
+         完全重复的行彼此等价, 分页边界不会丢行/重行 -->
+    <update id="copyFromStgPage">
         INSERT INTO VX_CustomerListDetails_follow_info (userid, remark, createtime, description, createTime2, addWay, operUserid, externalUserid)
         SELECT userid, remark, createtime, description, createTime2, addWay, operUserid, externalUserid
         FROM VX_CustomerListDetails_follow_info_STG
+        ORDER BY userid, externalUserid, remark, description, createtime, addWay, operUserid, createTime2
+        OFFSET #{offset} ROWS FETCH NEXT #{limit} ROWS ONLY
     </update>
 
     <select id="selectAll" resultType="com.bcsport.admin.entity.qywx.VxCustomerlistdetailsFollowInfo">

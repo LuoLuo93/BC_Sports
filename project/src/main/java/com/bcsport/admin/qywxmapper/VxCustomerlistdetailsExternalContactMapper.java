@@ -27,6 +27,11 @@ public interface VxCustomerlistdetailsExternalContactMapper {
      */
     void clearStg();
     void insertBatchStg(@Param("list") List<VxCustomerlistdetailsExternalContact> list);
-    void copyFromStg();
+
+    /**
+     * 分批回填 STG → 主表（返回本批行数）：externalUserid 拉取时已全局去重可作稳定排序键，
+     * 每批一条语句秒级返回，避免整表回填长时间占住 socket 读触发 Read timed out
+     */
+    int copyFromStgPage(@Param("offset") long offset, @Param("limit") int limit);
 
 }

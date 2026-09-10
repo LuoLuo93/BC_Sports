@@ -28,4 +28,25 @@
                     SYSTIMESTAMP, SYSTIMESTAMP, source.create_by, source.update_by, 0)
     </insert>
 
+    <!-- 移动端榜单前 N 名：ROW_NUMBER 产绝对名次(同分按姓名稳定排序,与页面演示版排序语义一致) -->
+    <resultMap id="SportPointsRankVoMap" type="com.bcsport.admin.vo.SportPointsRankVO">
+        <id property="id" column="id"/>
+        <result property="name" column="name"/>
+        <result property="points" column="points"/>
+        <result property="rank" column="rank_no"/>
+    </resultMap>
+    <select id="selectRankTop" resultMap="SportPointsRankVoMap">
+        SELECT id, name, points, rank_no
+        FROM (
+            SELECT t.id AS id,
+                   t.sporter AS name,
+                   t.points AS points,
+                   ROW_NUMBER() OVER (ORDER BY t.points DESC, t.sporter ASC) AS rank_no
+            FROM BC_SPORTS_BCP_SPORT_POINTS t
+            WHERE t.deleted = 0
+        )
+        WHERE rank_no &lt;= #{limit}
+        ORDER BY rank_no
+    </select>
+
 </mapper>

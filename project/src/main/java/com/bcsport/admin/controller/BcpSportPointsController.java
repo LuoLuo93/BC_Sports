@@ -8,6 +8,7 @@ import com.bcsport.admin.common.Result;
 import com.bcsport.admin.entity.bcp.BcpSportPoints;
 import com.bcsport.admin.entity.SysImportLog;
 import com.bcsport.admin.service.BcpSportPointsService;
+import com.bcsport.admin.vo.SportPointsRankVO;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
@@ -31,8 +32,17 @@ import java.util.*;
 @Api(tags = "BC好玩家运动积分")
 public class BcpSportPointsController {
 
+    /** 移动端榜单展示上限（业务口径：领奖台 3 人 + 列表最多 97 人） */
+    static final int RANK_TOP_LIMIT = 100;
+
     @Autowired
     private BcpSportPointsService bcpSportPointsService;
+
+    @GetMapping("/rank")
+    @ApiOperation("移动端榜单前100名（免登录，Shiro 已放行 anon）")
+    public Result<List<SportPointsRankVO>> rank() {
+        return Result.success(bcpSportPointsService.rankTop(RANK_TOP_LIMIT));
+    }
 
     @GetMapping("/page")
     @ApiOperation("分页查询")
@@ -74,6 +84,14 @@ public class BcpSportPointsController {
             log.error("BcpSportPoints 导入失败: {}", e.getMessage(), e);
             return Result.error("导入失败：" + e.getMessage());
         }
+    }
+
+    @PutMapping("/{id}")
+    @ApiOperation("编辑一条运动积分")
+    @RequiresPermissions("bcp:sport-points:edit")
+    public Result<Void> update(@PathVariable Long id, @RequestBody BcpSportPoints body) {
+        bcpSportPointsService.updateSportPoints(id, body.getSporter(), body.getPoints());
+        return Result.success(null);
     }
 
     @GetMapping("/template")

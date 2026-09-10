@@ -16,3 +16,7 @@ export function getSportPointsTemplate() {
 export function getSportPointsImportLogPage(params) {
   return request.get('/api/bcp/sport-points/import-log/page', { params })
 }
+
+export function updateSportPoints(id, data) {
+  return request.put(`/api/bcp/sport-points/${id}`, data)
+}

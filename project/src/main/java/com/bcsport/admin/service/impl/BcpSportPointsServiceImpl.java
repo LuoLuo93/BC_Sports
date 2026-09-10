@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
+import com.bcsport.admin.common.exception.BusinessException;
 import com.bcsport.admin.entity.SysImportLog;
 import com.bcsport.admin.entity.bcp.BcpSportPoints;
 import com.bcsport.admin.importer.BatchCtx;
@@ -15,7 +16,9 @@ import com.bcsport.admin.mapper.BcpSportPointsMapper;
 import com.bcsport.admin.service.BcpSportPointsService;
 import com.bcsport.admin.service.ImportLogService;
 import com.bcsport.admin.util.ShiroSecurityUtils;
+import com.bcsport.admin.vo.SportPointsRankVO;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -157,5 +160,42 @@ public class BcpSportPointsServiceImpl implements BcpSportPointsService {
     @Override
     public PageResult<SysImportLog> logPage(PageQuery pageQuery) {
         return importLogService.page(ImportType.BCP_SPORT_POINTS, pageQuery);
+    }
+
+    @Override
+    public List<SportPointsRankVO> rankTop(int limit) {
+        return bcpSportPointsMapper.selectRankTop(limit);
+    }
+
+    @Override
+    public void updateSportPoints(Long id, String sporter, Long points) {
+        if (sporter == null || sporter.trim().isEmpty()) {
+            throw new BusinessException("运动员不能为空");
+        }
+        if (points == null) {
+            throw new BusinessException("积分不能为空");
+        }
+        sporter = sporter.trim();
+        BcpSportPoints exists = bcpSportPointsMapper.selectById(id);
+        if (exists == null) {
+            throw new BusinessException("记录不存在或已删除，请刷新列表");
+        }
+        // 改名时预检重名（唯一索引兜底并发窗口）
+        if (!sporter.equals(exists.getSporter())) {
+            Long cnt = bcpSportPointsMapper.selectCount(
+                    new LambdaQueryWrapper<BcpSportPoints>().eq(BcpSportPoints::getSporter, sporter));
+            if (cnt != null && cnt > 0) {
+                throw new BusinessException("运动员「" + sporter + "」已存在，不能改为重名");
+            }
+        }
+        BcpSportPoints update = new BcpSportPoints();
+        update.setId(id);
+        update.setSporter(sporter);
+        update.setPoints(points);
+        try {
+            bcpSportPointsMapper.updateById(update);
+        } catch (DuplicateKeyException e) {
+            throw new BusinessException("运动员「" + sporter + "」已存在，不能改为重名");
+        }
     }
 }

@@ -181,8 +181,10 @@ public class ShiroConfig {
         filterChainDefinitionMap.put("/actuator/health", "anon");
         filterChainDefinitionMap.put("/actuator/**", "spaAuth");
         // 移动端运动积分排名:对外分享的免登录页面(前端路由 meta.requiresAuth=false)。
-        // 页面本身无敏感数据;后续接真实接口时,榜单查询接口也须在此放行 anon(建议只读+限频)
+        // 榜单数据来自 BC_SPORTS_BCP_SPORT_POINTS 导入表,接口只读、只返回姓名+积分+名次,
+        // 无参数无敏感字段,固定前100名;与页面同域部署,放行 anon 供外链直接打开
         filterChainDefinitionMap.put("/points", "anon");
+        filterChainDefinitionMap.put("/api/bcp/sport-points/rank", "anon");
 
         // 需要认证的路径（使用 SpaAuthFilter 处理 API 请求返回 JSON 而非重定向，支持 Remember-Me）
         filterChainDefinitionMap.put("/**", "spaAuth");

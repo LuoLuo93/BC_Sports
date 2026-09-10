@@ -34,6 +34,11 @@
               <el-table-column label="修改时间" min-width="180">
                 <template #default="{ row }">{{ formatTime(row.updateTime) }}</template>
               </el-table-column>
+              <el-table-column v-if="hasPermission('bcp:sport-points:edit')" label="操作" width="90" align="center" fixed="right">
+                <template #default="{ row }">
+                  <el-button type="primary" plain size="small" @click="openEdit(row)">编辑</el-button>
+                </template>
+              </el-table-column>
             </el-table>
           </div>
 
@@ -55,7 +60,50 @@
       <el-tab-pane label="导入日志" name="log" lazy>
         <ImportLogPanel ref="logPanel" :fetcher="getSportPointsImportLogPage" />
       </el-tab-pane>
+
+      <!-- 排名预览：手机尺寸内嵌 /points 移动端页面，改完数据直接看排名变化 -->
+      <el-tab-pane label="排名预览" name="preview" lazy>
+        <el-card shadow="never">
+          <template #header>
+            <div class="card-header-row">
+              <span class="card-header-title">移动端排名预览</span>
+              <div>
+                <el-button size="small" :icon="RefreshRight" @click="refreshPreview">刷新</el-button>
+                <el-button size="small" :icon="View" tag="a" href="/bcsports/points" target="_blank">新窗口打开</el-button>
+              </div>
+            </div>
+          </template>
+          <div class="preview-wrap">
+            <div class="phone-frame">
+              <div class="phone-notch"></div>
+              <iframe
+                :key="previewKey"
+                :src="`/bcsports/points?_pv=${previewKey}`"
+                class="phone-screen"
+                title="运动积分排名移动端预览"
+              />
+            </div>
+            <p class="preview-hint">展示内容与手机外链完全一致（前 100 名）；导入或编辑成功后自动刷新，无需进手机查看。</p>
+          </div>
+        </el-card>
+      </el-tab-pane>
     </el-tabs>
+
+    <!-- 编辑弹窗 -->
+    <el-dialog v-model="editDialogVisible" title="编辑运动积分" width="440px" destroy-on-close>
+      <el-form ref="editFormRef" :model="editForm" :rules="editRules" label-width="80px">
+        <el-form-item label="运动员" prop="sporter">
+          <el-input v-model="editForm.sporter" maxlength="100" placeholder="运动员姓名" />
+        </el-form-item>
+        <el-form-item label="积分" prop="points">
+          <el-input v-model="editForm.points" placeholder="整数，可为负" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="editDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="editLoading" @click="submitEdit">保存</el-button>
+      </template>
+    </el-dialog>
 
     <!-- 批量导入弹窗 -->
     <el-dialog v-model="showImportDialog" title="批量导入运动积分" width="520px" destroy-on-close @open="resetImportState">
@@ -99,8 +147,8 @@
 defineOptions({ name: 'BcpSportPointsImport' })
 import { ref, reactive, onMounted, onActivated } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Search, RefreshRight, Upload } from '@element-plus/icons-vue'
-import { getSportPointsPage, importSportPoints, getSportPointsTemplate, getSportPointsImportLogPage } from '@/api/bcp'
+import { Search, RefreshRight, Upload, View } from '@element-plus/icons-vue'
+import { getSportPointsPage, importSportPoints, getSportPointsTemplate, getSportPointsImportLogPage, updateSportPoints } from '@/api/bcp'
 import { usePermission } from '@/composables/usePermission'
 import { PAGE_SIZES, defaultPageSize } from '@/utils/appConfig'
 import { formatTime } from '@/utils/format'
@@ -132,6 +180,48 @@ async function loadData() {
 }
 function handleSearch() { query.pageNum = 1; loadData() }
 function resetQuery() { query.sporter = ''; handleSearch() }
+
+// ===== 排名预览 =====
+// 每次变化重挂 iframe（key + 时间戳双保险），导入/编辑成功后自动刷新预览
+const previewKey = ref(Date.now())
+function refreshPreview() { previewKey.value = Date.now() }
+
+// ===== 编辑 =====
+const editDialogVisible = ref(false)
+const editLoading = ref(false)
+const editFormRef = ref(null)
+const editForm = reactive({ id: null, sporter: '', points: '' })
+
+const editRules = {
+  sporter: [{ required: true, message: '运动员不能为空', trigger: 'blur' }],
+  points: [
+    { required: true, message: '积分不能为空', trigger: 'blur' },
+    { pattern: /^[+-]?\d+$/, message: '积分必须是整数', trigger: 'blur' }
+  ]
+}
+
+function openEdit(row) {
+  editForm.id = row.id
+  editForm.sporter = row.sporter
+  editForm.points = String(row.points)
+  editDialogVisible.value = true
+}
+
+async function submitEdit() {
+  await editFormRef.value?.validate()
+  editLoading.value = true
+  try {
+    await updateSportPoints(editForm.id, { sporter: editForm.sporter.trim(), points: Number(editForm.points) })
+    ElMessage.success('保存成功')
+    editDialogVisible.value = false
+    loadData()
+    refreshPreview()
+  } catch (e) {
+    ElMessage.error(e.message || '保存失败')
+  } finally {
+    editLoading.value = false
+  }
+}
 
 // ===== 导入 =====
 const showImportDialog = ref(false)
@@ -206,6 +296,7 @@ async function submitImport() {
     if (res.data?.success > 0) {
       ElMessage.success('导入完成')
       loadData()
+      refreshPreview()
       if (activeTab.value === 'log') logPanel.value?.loadLog()
     }
   } catch (e) {
@@ -241,5 +332,46 @@ onActivated(() => loadData())
   margin-top: 12px;
   display: flex;
   justify-content: flex-end;
+}
+
+/* ===== 排名预览：手机外框 ===== */
+.preview-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 0 4px;
+}
+.phone-frame {
+  position: relative;
+  width: 392px;
+  max-width: 100%;
+  height: 720px;
+  border-radius: 36px;
+  border: 10px solid #1f2937;
+  box-shadow: 0 12px 32px rgba(28, 25, 23, 0.18);
+  overflow: hidden;
+  background: #fff;
+}
+.phone-notch {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 120px;
+  height: 22px;
+  background: #1f2937;
+  border-radius: 0 0 14px 14px;
+  z-index: 2;
+}
+.phone-screen {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+.preview-hint {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
 }
 </style>

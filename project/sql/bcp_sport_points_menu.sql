@@ -25,6 +25,16 @@ SELECT 'BCP_SPORT_POINTS_IMPORT', 'BCP_SPORT_POINTS', '导入运动积分', NULL
 FROM DUAL
 WHERE NOT EXISTS (SELECT 1 FROM bc_sports_sys_menu WHERE id = 'BCP_SPORT_POINTS_IMPORT');
 
+-- 3.1 按钮：编辑权限（2026-09-10 增补：列表行内编辑积分/姓名）
+INSERT INTO bc_sports_sys_menu (id, parent_id, menu_name, icon, menu_type, path, permission, sort, status, visible, description, icon_color, create_time, update_time, create_by, update_by, deleted)
+SELECT 'BCP_SPORT_POINTS_EDIT', 'BCP_SPORT_POINTS', '编辑运动积分', NULL, 2, NULL, 'bcp:sport-points:edit', 2, 1, 0, '列表行内编辑运动员/积分', NULL, SYSTIMESTAMP, SYSTIMESTAMP, 'admin', 'admin', 0
+FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM bc_sports_sys_menu WHERE id = 'BCP_SPORT_POINTS_EDIT');
+
+INSERT INTO bc_sports_sys_role_menu (id, role_id, menu_id, create_time, create_by)
+SELECT RAWTOHEX(SYS_GUID()), '1', 'BCP_SPORT_POINTS_EDIT', SYSTIMESTAMP, 'admin' FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM bc_sports_sys_role_menu WHERE role_id = '1' AND menu_id = 'BCP_SPORT_POINTS_EDIT');
+
 -- 4. 为管理员角色 (Role ID = 1) 授权
 INSERT INTO bc_sports_sys_role_menu (id, role_id, menu_id, create_time, create_by)
 SELECT RAWTOHEX(SYS_GUID()), '1', 'BCP_DIR', SYSTIMESTAMP, 'admin' FROM DUAL

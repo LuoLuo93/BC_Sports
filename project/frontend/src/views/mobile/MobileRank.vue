@@ -7,7 +7,7 @@
           <h1 class="m-hero-title">运动积分排名</h1>
           <p class="m-hero-sub">
             <span class="m-live-dot"></span>
-            {{ summary.date }} · 第{{ summary.weekNo }}周 · {{ activePeriod }}
+            {{ summary.date }} · 第{{ summary.weekNo }}周
           </p>
         </div>
       </div>
@@ -48,7 +48,7 @@
       </div>
     </section>
 
-    <!-- 吸顶工具条:搜索 + 榜单周期 -->
+    <!-- 吸顶工具条:搜索 -->
     <div class="m-toolbar">
       <van-search
         v-model="keyword"
@@ -58,10 +58,6 @@
         @search="onSearchNow"
         @clear="onSearchNow"
       />
-      <van-tabs v-model:active="activePeriod" class="m-tabs" shrink @change="onRefresh">
-        <!-- name 必须显式绑定文字,否则 v-model:active 拿到的是索引数字,筛选会全部落空 -->
-        <van-tab v-for="p in PERIODS" :key="p" :title="p" :name="p" />
-      </van-tabs>
     </div>
 
     <!-- 第 4 名起的列表:下拉刷新 + 触底自动加载 -->
@@ -114,12 +110,11 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
-import { fetchRankList, fetchRankSummary, PERIODS } from '@/api/mobile'
+import { fetchRankList, fetchRankSummary } from '@/api/mobile'
 
 const PAGE_SIZE = 10
 
 const keyword = ref('')
-const activePeriod = ref('周榜')
 const list = ref([])
 const top3 = ref([])
 const loading = ref(false)
@@ -165,8 +160,7 @@ async function loadPage(targetPage) {
   const res = await fetchRankList({
     page: targetPage,
     pageSize: PAGE_SIZE,
-    keyword: keyword.value.trim(),
-    period: activePeriod.value
+    keyword: keyword.value.trim()
   })
   if (res.code !== 200) return
   if (targetPage === 1) {
@@ -205,8 +199,7 @@ function onSearchNow() {
 
 async function loadSummary() {
   const res = await fetchRankSummary({
-    keyword: keyword.value.trim(),
-    period: activePeriod.value
+    keyword: keyword.value.trim()
   })
   if (res.code === 200) {
     summary.value = res.data
@@ -474,30 +467,6 @@ onMounted(() => {
 .m-search :deep(.van-search__content) {
   background: #fff;
   box-shadow: var(--bc-shadow-sm);
-}
-
-.m-tabs {
-  background: transparent;
-}
-
-.m-tabs :deep(.van-tabs__wrap) {
-  height: 38px;
-}
-
-.m-tabs :deep(.van-tab) {
-  font-size: 14px;
-  color: #78716c;
-}
-
-.m-tabs :deep(.van-tab--active) {
-  color: #1d4ed8;
-  font-weight: 700;
-}
-
-.m-tabs :deep(.van-tabs__line) {
-  width: 20px;
-  border-radius: 2px;
-  background: linear-gradient(90deg, #3b82f6, #6366f1);
 }
 
 /* ==================== 排名列表 ==================== */

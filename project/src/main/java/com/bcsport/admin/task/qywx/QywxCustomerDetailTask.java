@@ -31,8 +31,10 @@ public class QywxCustomerDetailTask {
     private static final int BATCH_SIZE = 100;
     private static final int USER_BATCH_SIZE = 100;
     private static final int CONCURRENT_TASKS = 3;
-    /** 游标翻页熔断上限：服务端 next_cursor 异常回环时防无限拉取 */
-    private static final int MAX_CURSOR_PAGES = 1000;
+    /** 游标翻页熔断兜底上限：真回环由 next_cursor 重复检测精确识别，此上限只防"页页有数据"的异常超量翻页 */
+    private static final int MAX_CURSOR_PAGES = 2000;
+    /** 连续空页判定阈值：连续多页无数据但 next_cursor 仍不终止，判定服务端游标异常且数据已到尾，本批按完整结束 */
+    private static final int MAX_CONSECUTIVE_EMPTY_PAGES = 10;
     /** 切换时分批回填每批行数：单条 INSERT...SELECT 秒级完成，避免整表回填长时间占住 socket 读触发 Read timed out */
     private static final int COPY_CHUNK_SIZE = 50_000;
 
@@ -93,10 +95,10 @@ public class QywxCustomerDetailTask {
             int truncatedBatches = result[2];
             int totalBatches = (validUserList.size() + USER_BATCH_SIZE - 1) / USER_BATCH_SIZE;
 
-            // 4a. 任一批次游标回环熔断 → 影子表确定不完整，直接放弃切换（旧数据只旧一天，残缺数据无法补救）
+            // 4a. 任一批次游标翻页熔断 → 影子表确定不完整，直接放弃切换（旧数据只旧一天，残缺数据无法补救）
             if (truncatedBatches > 0) {
                 throw new IllegalStateException(String.format(
-                        "%d个批次触发游标回环熔断，影子表数据不完整，保留主表旧数据不切换", truncatedBatches));
+                        "%d个批次触发游标翻页熔断，影子表数据不完整，保留主表旧数据不切换", truncatedBatches));
             }
 
             // 4b. 失败率超10%(典型如token失效导致全部批次失败)时放弃切换，保留主表旧数据
@@ -168,8 +170,8 @@ public class QywxCustomerDetailTask {
                     Thread.currentThread().interrupt();
                     failCount.incrementAndGet();
                 } catch (CursorLoopException e) {
-                    // 游标回环熔断：本批数据不完整（剩余成员的客户整体缺失，且回环重复页会导致跟进信息重复膨胀）
-                    log.error("处理批次 {}/{} 触发游标回环熔断: {}", currentBatch + 1, totalBatches, e.getMessage());
+                    // 游标翻页熔断：真回环(重复页会膨胀跟进信息)或超量翻页，两种情况本批数据都不完整
+                    log.error("处理批次 {}/{} 触发游标翻页熔断: {}", currentBatch + 1, totalBatches, e.getMessage());
                     truncatedCount.incrementAndGet();
                     failCount.incrementAndGet();
                 } catch (Exception e) {
@@ -182,10 +184,11 @@ public class QywxCustomerDetailTask {
         }
 
         try {
-            boolean completed = totalLatch.await(30, TimeUnit.MINUTES);
+            boolean completed = totalLatch.await(45, TimeUnit.MINUTES);
             if (!completed) {
                 // 超时=部分批次未执行完，影子表数据不完整，必须放弃切换保住主表旧数据
-                throw new IllegalStateException("等待客户详情批次超时(30分钟)，本轮放弃切换");
+                // 45分钟=兜底页上限2000页按0.7s/页约23分钟+写库耗时的余量
+                throw new IllegalStateException("等待客户详情批次超时(45分钟)，本轮放弃切换");
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -209,11 +212,18 @@ public class QywxCustomerDetailTask {
 
         String cursor = "";
         int cursorPages = 0;
+        // 游标异常诊断三件套：见过的cursor(真回环精确检测)、连续空页数(游标不终止但数据到尾)、本批累计行数(超量翻页判据)
+        Set<String> seenCursors = new HashSet<>();
+        int consecutiveEmptyPages = 0;
+        int contactsInBatch = 0;
+        int followInfosInBatch = 0;
         do {
             if (++cursorPages > MAX_CURSOR_PAGES) {
                 // 抛专用异常而不是静默中止：熔断意味着本批数据不完整，上层必须据此放弃影子表切换
-                throw new CursorLoopException("游标翻页超过" + MAX_CURSOR_PAGES
-                        + "页上限(疑似next_cursor回环)，中止本批拉取，本轮放弃切换");
+                throw new CursorLoopException(String.format(
+                        "游标翻页超过%d页上限, 连续空页: %d, 本批已拉取 contacts: %d, followInfos: %d"
+                                + "(若连续空页为0且contacts接近页数上限x100，说明该批真实客户量超上限，应减小USER_BATCH_SIZE)",
+                        MAX_CURSOR_PAGES, consecutiveEmptyPages, contactsInBatch, followInfosInBatch));
             }
             // 1. 请求一页
             JSONObject result = apiClient.batchGetByUser(userIds, cursor);
@@ -221,7 +231,9 @@ public class QywxCustomerDetailTask {
 
             // 2. 解析这一页
             JSONArray externalContactList = result.getJSONArray("external_contact_list");
-            if (externalContactList != null && externalContactList.size() > 0) {
+            int itemsThisPage = externalContactList == null ? 0 : externalContactList.size();
+            consecutiveEmptyPages = (itemsThisPage == 0) ? consecutiveEmptyPages + 1 : 0;
+            if (itemsThisPage > 0) {
                 for (int j = 0; j < externalContactList.size(); j++) {
                     JSONObject item = externalContactList.getJSONObject(j);
 
@@ -242,6 +254,7 @@ public class QywxCustomerDetailTask {
                         contact.setCorpName(externalContact.getStr("corp_name", ""));
                         contactWriteBatch.add(contact);
                         totalContacts.incrementAndGet();
+                        contactsInBatch++;
 
                         // 达到批次大小就写库
                         if (contactWriteBatch.size() >= BATCH_SIZE) {
@@ -274,6 +287,7 @@ public class QywxCustomerDetailTask {
                         info.setExternalUserid(externalUserid);
                         followInfoWriteBatch.add(info);
                         totalFollowInfos.incrementAndGet();
+                        followInfosInBatch++;
 
                         // 达到批次大小就写库
                         if (followInfoWriteBatch.size() >= BATCH_SIZE) {
@@ -288,10 +302,24 @@ public class QywxCustomerDetailTask {
                 }
             }
 
-            // 3. 取下一页cursor
-            cursor = result.getStr("next_cursor", "");
-
-        } while (cursor != null && cursor.length() > 0);
+            // 3. 取下一页cursor：空=正常完结；非空则查重(真回环)，并判定"连续空页+游标不终止"型异常
+            String nextCursor = result.getStr("next_cursor", "");
+            if (nextCursor == null || nextCursor.isEmpty()) {
+                break;
+            }
+            if (!seenCursors.add(nextCursor)) {
+                throw new CursorLoopException(String.format(
+                        "next_cursor重复出现(真实回环), 已拉取%d页, 本批 contacts: %d, followInfos: %d",
+                        cursorPages, contactsInBatch, followInfosInBatch));
+            }
+            if (consecutiveEmptyPages >= MAX_CONSECUTIVE_EMPTY_PAGES) {
+                // 数据若未到尾页内应有数据；连续空页说明已到尾，服务端只是游标不置空，本批按完整成功结束
+                log.warn("连续{}页空数据但next_cursor未终止(服务端游标异常)，判定本批数据已拉取完整: 共{}页, contacts: {}, followInfos: {}",
+                        consecutiveEmptyPages, cursorPages, contactsInBatch, followInfosInBatch);
+                break;
+            }
+            cursor = nextCursor;
+        } while (true);
 
         // 写入剩余数据
         if (!contactWriteBatch.isEmpty()) {

@@ -473,6 +473,11 @@ onMounted(() => {
   box-shadow: var(--bc-shadow-sm);
 }
 
+/* iOS Safari 在输入框字号<16px时聚焦会自动放大页面,提到16px根治 */
+.m-search :deep(.van-field__control) {
+  font-size: 16px;
+}
+
 /* ==================== 排名列表 ==================== */
 .m-refresh {
   min-height: 40vh;

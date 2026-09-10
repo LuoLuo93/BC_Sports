@@ -3,31 +3,25 @@
  *
  * 数据来自后台导入的 BC_SPORTS_BCP_SPORT_POINTS 表（BC好玩家 → 运动积分导入），
  * 后端 GET /api/bcp/sport-points/rank 已在 Shiro 放行 anon（免登录外链可直接打开）。
- * 接口固定返回前 100 名（业务上限），关键字过滤与"第4名起分页"都在前端对这份数据做，
- * 与原演示版行为一致。
+ * 无关键字返回前 100 名 + 全表真实统计；带关键字后端全表按姓名模糊搜索（可搜到
+ * 100 名以外的人，名次为全榜绝对名次）。领奖台切片与触底分页在前端完成。
  */
 import request from './request'
 
-// 榜单最多展示前 100 名（与后端 RANK_TOP_LIMIT 一致）
-const MAX_SHOW = 100
-
 /* ============================ 数据获取 ============================ */
 
-// 同一时刻并发刷新（汇总+列表）共享一次请求；不做时间缓存，下拉刷新始终取最新
-let inFlight = null
+// 同一关键字并发刷新（汇总+列表）共享一次请求；不做时间缓存，下拉刷新始终取最新
+const inFlight = new Map()
 
-async function fetchRankRows() {
-  if (inFlight) return inFlight
-  inFlight = request
-    .get('/api/bcp/sport-points/rank')
-    .then(res => res.data || [])
-    .finally(() => { inFlight = null })
-  return inFlight
-}
-
-function filterRows(rows, { keyword = '' } = {}) {
-  if (!keyword) return rows
-  return rows.filter(r => r.name.includes(keyword))
+async function fetchBoard(keyword = '') {
+  const key = keyword || '__all__'
+  if (inFlight.has(key)) return inFlight.get(key)
+  const p = request
+    .get('/api/bcp/sport-points/rank', { params: keyword ? { keyword } : {} })
+    .then(res => res.data || { list: [], participants: 0, totalPoints: 0 })
+    .finally(() => inFlight.delete(key))
+  inFlight.set(key, p)
+  return p
 }
 
 function todayLabel() {
@@ -46,7 +40,8 @@ function weekNo() {
 /* ============================ 对外接口 ============================ */
 
 /**
- * 分页查询排名列表。领奖台已展示前三名,本接口从第 4 名起返回
+ * 分页查询排名列表。
+ * 无关键字:领奖台占用前三名,本接口从第 4 名起返回;搜索命中不足 3 人时领奖台不渲染,全部结果进列表。
  * @param {{ page: number, pageSize: number, keyword?: string }} params
  * @returns {Promise<{code: number, data: {list: Array, total: number}}>}
  *   list 元素: { id, name, points, rank }  rank 为全榜绝对名次
@@ -54,8 +49,10 @@ function weekNo() {
 export async function fetchRankList(params) {
   const { page = 1, pageSize = 10, keyword = '' } = params || {}
   try {
-    const ranked = filterRows(await fetchRankRows(), { keyword }).slice(0, MAX_SHOW)
-    const listArea = ranked.slice(3) // 前三名在领奖台展示,列表跳过
+    const board = await fetchBoard(keyword.trim())
+    const rows = board.list || []
+    // 只有完整榜单(无关键字)才把前三名让给领奖台;搜索结果不足3人时领奖台不显示,列表展示全部命中
+    const listArea = rows.length >= 3 ? rows.slice(3) : rows
     const start = (page - 1) * pageSize
     return { code: 200, data: { list: listArea.slice(start, start + pageSize), total: listArea.length } }
   } catch {
@@ -71,15 +68,16 @@ export async function fetchRankList(params) {
 export async function fetchRankSummary(params) {
   const { keyword = '' } = params || {}
   try {
-    const ranked = filterRows(await fetchRankRows(), { keyword }).slice(0, MAX_SHOW)
-    const totalPoints = ranked.reduce((s, r) => s + (r.points || 0), 0)
+    const board = await fetchBoard(keyword.trim())
+    const participants = board.participants || 0
+    const totalPoints = board.totalPoints || 0
     return {
       code: 200,
       data: {
-        participants: ranked.length,
+        participants,
         totalPoints,
-        avgPoints: ranked.length ? Math.round(totalPoints / ranked.length) : 0,
-        top3: ranked.slice(0, 3),
+        avgPoints: participants ? Math.round(totalPoints / participants) : 0,
+        top3: board.list.slice(0, 3),
         date: todayLabel(),
         weekNo: weekNo()
       }

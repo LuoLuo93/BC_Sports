@@ -7,6 +7,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
+import java.util.Map;
 
 @Mapper
 public interface BcpSportPointsMapper extends BaseMapper<BcpSportPoints> {
@@ -17,7 +18,12 @@ public interface BcpSportPointsMapper extends BaseMapper<BcpSportPoints> {
     void mergeBatch(@Param("list") List<BcpSportPoints> list);
 
     /**
-     * 移动端榜单：前 N 名（ROW_NUMBER 名次，积分降序 + 姓名稳定排序）
+     * 移动端榜单：无关键字返回前 N 名；有关键字按姓名模糊匹配全表（均带 ROW_NUMBER 绝对名次）
      */
-    List<SportPointsRankVO> selectRankTop(@Param("limit") int limit);
+    List<SportPointsRankVO> selectRank(@Param("limit") int limit, @Param("keyword") String keyword);
+
+    /**
+     * 全表统计：参与人数 / 累计积分
+     */
+    Map<String, Object> selectRankStats();
 }

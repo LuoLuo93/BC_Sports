@@ -30,7 +30,7 @@
       </div>
     </header>
 
-    <!-- 前三名领奖台 -->
+    <!-- 前三名领奖台:榜单不足3人(如搜索只命中1-2人)时不渲染,搜索结果直接进列表 -->
     <section class="m-podium" v-if="top3.length === 3">
       <div
         class="m-pod"

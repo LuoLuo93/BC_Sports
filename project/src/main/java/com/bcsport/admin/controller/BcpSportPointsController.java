@@ -8,7 +8,7 @@ import com.bcsport.admin.common.Result;
 import com.bcsport.admin.entity.bcp.BcpSportPoints;
 import com.bcsport.admin.entity.SysImportLog;
 import com.bcsport.admin.service.BcpSportPointsService;
-import com.bcsport.admin.vo.SportPointsRankVO;
+import com.bcsport.admin.vo.SportPointsBoardVO;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
@@ -39,9 +39,10 @@ public class BcpSportPointsController {
     private BcpSportPointsService bcpSportPointsService;
 
     @GetMapping("/rank")
-    @ApiOperation("移动端榜单前100名（免登录，Shiro 已放行 anon）")
-    public Result<List<SportPointsRankVO>> rank() {
-        return Result.success(bcpSportPointsService.rankTop(RANK_TOP_LIMIT));
+    @ApiOperation("移动端榜单（免登录，Shiro 已放行 anon；keyword 可选=按姓名搜全表）")
+    public Result<SportPointsBoardVO> rank(@RequestParam(required = false) String keyword) {
+        String kw = keyword != null && keyword.length() > 50 ? keyword.substring(0, 50) : keyword;
+        return Result.success(bcpSportPointsService.rankBoard(kw, RANK_TOP_LIMIT));
     }
 
     @GetMapping("/page")

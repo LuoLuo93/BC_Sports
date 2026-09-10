@@ -4,10 +4,9 @@ import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.entity.bcp.BcpSportPoints;
 import com.bcsport.admin.entity.SysImportLog;
-import com.bcsport.admin.vo.SportPointsRankVO;
+import com.bcsport.admin.vo.SportPointsBoardVO;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.List;
 import java.util.Map;
 
 public interface BcpSportPointsService {
@@ -33,7 +32,7 @@ public interface BcpSportPointsService {
     void updateSportPoints(Long id, String sporter, Long points);
 
     /**
-     * 移动端榜单前 N 名（只读展示字段）
+     * 移动端榜单：无关键字=前 limit 名 + 全表统计；有关键字=姓名模糊匹配（带绝对名次）
      */
-    List<SportPointsRankVO> rankTop(int limit);
+    SportPointsBoardVO rankBoard(String keyword, int limit);
 }

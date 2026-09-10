@@ -16,6 +16,7 @@ import com.bcsport.admin.mapper.BcpSportPointsMapper;
 import com.bcsport.admin.service.BcpSportPointsService;
 import com.bcsport.admin.service.ImportLogService;
 import com.bcsport.admin.util.ShiroSecurityUtils;
+import com.bcsport.admin.vo.SportPointsBoardVO;
 import com.bcsport.admin.vo.SportPointsRankVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
@@ -163,8 +164,32 @@ public class BcpSportPointsServiceImpl implements BcpSportPointsService {
     }
 
     @Override
-    public List<SportPointsRankVO> rankTop(int limit) {
-        return bcpSportPointsMapper.selectRankTop(limit);
+    public SportPointsBoardVO rankBoard(String keyword, int limit) {
+        SportPointsBoardVO board = new SportPointsBoardVO();
+        String kw = escapeLike(keyword);
+        board.setList(bcpSportPointsMapper.selectRank(limit, kw));
+        if (kw == null) {
+            // 无关键字：头部指标取全表真实统计（参与人数 1201 就显示 1201，不受前100截断影响）
+            Map<String, Object> stats = bcpSportPointsMapper.selectRankStats();
+            board.setParticipants(((Number) stats.get("participants")).longValue());
+            board.setTotalPoints(((Number) stats.get("totalPoints")).longValue());
+        } else {
+            board.setParticipants((long) board.getList().size());
+            board.setTotalPoints(board.getList().stream().mapToLong(SportPointsRankVO::getPoints).sum());
+        }
+        return board;
+    }
+
+    /** Oracle LIKE 通配符转义（配合 XML 里的 ESCAPE '\'），用户输入的 % _ \ 按字面匹配 */
+    private String escapeLike(String keyword) {
+        if (keyword == null) {
+            return null;
+        }
+        String trimmed = keyword.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+        return trimmed.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }
 
     @Override

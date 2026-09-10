@@ -41,7 +41,8 @@ function weekNo() {
 
 /**
  * 分页查询排名列表。
- * 无关键字:领奖台占用前三名,本接口从第 4 名起返回;搜索命中不足 3 人时领奖台不渲染,全部结果进列表。
+ * 无关键字:领奖台(全榜前三)占用榜单前三名,列表从第 4 名起;
+ * 搜索时:领奖台保持全榜前三不变,列表显示全部命中(从第 1 名起,含前三名)。
  * @param {{ page: number, pageSize: number, keyword?: string }} params
  * @returns {Promise<{code: number, data: {list: Array, total: number}}>}
  *   list 元素: { id, name, points, rank }  rank 为全榜绝对名次
@@ -51,8 +52,8 @@ export async function fetchRankList(params) {
   try {
     const board = await fetchBoard(keyword.trim())
     const rows = board.list || []
-    // 只有完整榜单(无关键字)才把前三名让给领奖台;搜索结果不足3人时领奖台不显示,列表展示全部命中
-    const listArea = rows.length >= 3 ? rows.slice(3) : rows
+    const searching = Boolean(keyword.trim())
+    const listArea = searching ? rows : rows.slice(3)
     const start = (page - 1) * pageSize
     return { code: 200, data: { list: listArea.slice(start, start + pageSize), total: listArea.length } }
   } catch {
@@ -77,7 +78,8 @@ export async function fetchRankSummary(params) {
         participants,
         totalPoints,
         avgPoints: participants ? Math.round(totalPoints / participants) : 0,
-        top3: board.list.slice(0, 3),
+        // 领奖台永远用全榜前三(board.top3),搜索时不变
+        top3: board.top3 || board.list.slice(0, 3),
         date: todayLabel(),
         weekNo: weekNo()
       }

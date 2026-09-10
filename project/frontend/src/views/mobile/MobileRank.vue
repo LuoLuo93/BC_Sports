@@ -30,7 +30,7 @@
       </div>
     </header>
 
-    <!-- 前三名领奖台:榜单不足3人(如搜索只命中1-2人)时不渲染,搜索结果直接进列表 -->
+    <!-- 前三名领奖台:永远显示全榜前三(与搜索无关);全表人数不足3人时不渲染 -->
     <section class="m-podium" v-if="top3.length === 3">
       <div
         class="m-pod"
@@ -220,7 +220,11 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* 手机画布:手机上(视口<=480px)无感知;桌面打开时居中成手机宽度,两侧暗色留白 */
 .m-page {
+  max-width: 480px;
+  margin: 0 auto;
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.25);
   min-height: 100vh;
   background: #f4f6fb;
   padding-bottom: calc(24px + env(safe-area-inset-bottom));
@@ -544,3 +548,11 @@ onMounted(() => {
   font-variant-numeric: tabular-nums;
 }
 </style>
+
+<style>
+/* 桌面居中画布的两侧底色(仅 /points 独立路由使用,不在后台布局内) */
+body:has(.m-page) {
+  background: #111827;
+}
+</style>
+

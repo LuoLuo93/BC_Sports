@@ -44,6 +44,24 @@ BEGIN
 END;
 /
 
+-- 3. 排名索引：deleted + points DESC + sporter
+--    支撑移动端榜单"取前N即停"(ROW_NUMBER ORDER BY points DESC, sporter)：十万级行数时
+--    优化器可沿索引序直接取前100/前3行，避免每次请求全表排序。
+--    姓名关键字搜索(WITH %kw% 前置通配)不走此索引仍为全表扫，十万级为几十毫秒，可接受
+DECLARE
+  v_cnt NUMBER;
+BEGIN
+  SELECT COUNT(*) INTO v_cnt FROM user_indexes WHERE index_name = 'IDX_BCP_SPORT_POINTS_RANK';
+  IF v_cnt = 0 THEN
+    EXECUTE IMMEDIATE 'CREATE INDEX idx_bcp_sport_points_rank '
+                   || 'ON BC_SPORTS_BCP_SPORT_POINTS (deleted, points DESC, sporter)';
+    DBMS_OUTPUT.PUT_LINE('[3] idx_bcp_sport_points_rank 已创建');
+  ELSE
+    DBMS_OUTPUT.PUT_LINE('[3] idx_bcp_sport_points_rank 已存在，跳过');
+  END IF;
+END;
+/
+
 COMMENT ON TABLE  BC_SPORTS_BCP_SPORT_POINTS IS 'BC好玩家运动积分（Excel 导入，走统一导入骨架）';
 COMMENT ON COLUMN BC_SPORTS_BCP_SPORT_POINTS.sporter IS '运动员/玩家名，导入去重键';
 COMMENT ON COLUMN BC_SPORTS_BCP_SPORT_POINTS.points IS '积分，整数';

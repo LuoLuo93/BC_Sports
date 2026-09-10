@@ -30,14 +30,20 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-
-/**
+import java.util.Map;/**
  * BC好玩家运动积分导入实现
  * 流程骨架由 ExcelImportRunner 承担（R01），本类只声明表头别名、行映射与 MERGE 入库策略
  */
 @Service
 public class BcpSportPointsServiceImpl implements BcpSportPointsService {
+
+    /** 头部统计缓存有效期兜底：数据只有导入/编辑两个写入口（写入时主动失效），TTL 只防外部直接改库的陈旧 */
+    private static final long STATS_TTL_MS = 60_000L;
+
+    /** 全表统计快照（participants / totalPoints / 缓存时刻），volatile 整体换引用保证可见性 */
+    private record StatsSnapshot(long participants, long totalPoints, long cachedAt) {}
+
+    private volatile StatsSnapshot statsCache;
 
     /** 表头别名 → 字段标识 */
     private static final Map<String, String> HEADER_ALIAS = new HashMap<>();
@@ -153,6 +159,7 @@ public class BcpSportPointsServiceImpl implements BcpSportPointsService {
                     bcpSportPointsMapper.mergeBatch(batch);
                     return null;
                 });
+                statsCache = null; // 导入落库后头部统计立即可见（下次请求重算）
                 ctx.success(batch.size());
             }
         }).toResultMap();
@@ -168,14 +175,25 @@ public class BcpSportPointsServiceImpl implements BcpSportPointsService {
         SportPointsBoardVO board = new SportPointsBoardVO();
         String kw = escapeLike(keyword);
         board.setList(bcpSportPointsMapper.selectRank(limit, kw));
-        if (kw == null) {
-            // 无关键字：头部指标取全表真实统计（参与人数 1201 就显示 1201，不受前100截断影响）
+        // 头部指标固定为全表真实统计，不随搜索变化（搜索只影响榜单列表内容）。
+        // 走缓存：十万级时 COUNT/SUM 全表扫不该每次请求都做；写入路径(导入/编辑)会主动失效
+        StatsSnapshot snapshot = statsCache;
+        long now = System.currentTimeMillis();
+        if (snapshot == null || now - snapshot.cachedAt() > STATS_TTL_MS) {
             Map<String, Object> stats = bcpSportPointsMapper.selectRankStats();
-            board.setParticipants(((Number) stats.get("participants")).longValue());
-            board.setTotalPoints(((Number) stats.get("totalPoints")).longValue());
+            snapshot = new StatsSnapshot(
+                    ((Number) stats.get("participants")).longValue(),
+                    ((Number) stats.get("totalPoints")).longValue(), now);
+            statsCache = snapshot;
+        }
+        board.setParticipants(snapshot.participants());
+        board.setTotalPoints(snapshot.totalPoints());
+        if (kw == null) {
+            // 无关键字：top3 直接从榜单结果切，零额外查询
+            board.setTop3(new ArrayList<>(board.getList().subList(0, Math.min(3, board.getList().size()))));
         } else {
-            board.setParticipants((long) board.getList().size());
-            board.setTotalPoints(board.getList().stream().mapToLong(SportPointsRankVO::getPoints).sum());
+            // 搜索时领奖台仍显示全榜前三：多一条取前3的小查询（与榜单同形状，成本可忽略）
+            board.setTop3(bcpSportPointsMapper.selectRank(3, null));
         }
         return board;
     }
@@ -219,6 +237,7 @@ public class BcpSportPointsServiceImpl implements BcpSportPointsService {
         update.setPoints(points);
         try {
             bcpSportPointsMapper.updateById(update);
+            statsCache = null; // 积分/姓名变更后头部统计立即可见（下次请求重算）
         } catch (DuplicateKeyException e) {
             throw new BusinessException("运动员「" + sporter + "」已存在，不能改为重名");
         }

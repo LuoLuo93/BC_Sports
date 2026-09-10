@@ -13,6 +13,9 @@ public class SportPointsBoardVO {
     /** 榜单/搜索结果（无关键字=前N名；有关键字=姓名匹配，均带绝对名次） */
     private List<SportPointsRankVO> list;
 
+    /** 全榜前三名（领奖台用，与关键字无关，搜索时保持不变） */
+    private List<SportPointsRankVO> top3;
+
     /** 参与人数（无关键字=全表真实人数；有关键字=匹配条数） */
     private Long participants;
 

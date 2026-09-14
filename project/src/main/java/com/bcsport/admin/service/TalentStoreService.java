@@ -12,12 +12,12 @@ public interface TalentStoreService {
     PageResult<TalentStore> page(PageQuery pageQuery, String talentName, String storeCode, String storeName);
 
     /**
-     * 新增一条达人店铺绑定（达人+店仓组合不能重复）
+     * 新增一条达人店铺绑定（达人名称不能与其他记录重复，一个达人只绑一个店仓）
      */
     void add(String talentName, String storeCode, String storeName);
 
     /**
-     * 编辑一条达人店铺绑定（改名/换店仓后不能与其他记录组合重复）
+     * 编辑一条达人店铺绑定（达人名称不能与其他记录重复，换店仓直接改本行）
      */
     void update(Long id, String talentName, String storeCode, String storeName);
 

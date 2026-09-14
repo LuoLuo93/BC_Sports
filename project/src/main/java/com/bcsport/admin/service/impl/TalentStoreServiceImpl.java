@@ -42,11 +42,11 @@ public class TalentStoreServiceImpl implements TalentStoreService {
     @Override
     public void add(String talentName, String storeCode, String storeName) {
         TalentStore entity = buildValidated(talentName, storeCode, storeName);
-        checkPairDup(entity.getTalentName(), entity.getStoreCode(), null);
+        checkTalentDup(entity.getTalentName(), null);
         try {
             talentStoreMapper.insert(entity);
         } catch (DuplicateKeyException e) {
-            throw new BusinessException("达人「" + entity.getTalentName() + "」已绑定店仓「" + entity.getStoreName() + "」，不能重复添加");
+            throw new BusinessException("达人「" + entity.getTalentName() + "」已存在，一个达人只能绑定一个店仓");
         }
     }
 
@@ -57,12 +57,12 @@ public class TalentStoreServiceImpl implements TalentStoreService {
             throw new BusinessException("记录不存在或已删除，请刷新列表");
         }
         TalentStore entity = buildValidated(talentName, storeCode, storeName);
-        checkPairDup(entity.getTalentName(), entity.getStoreCode(), id);
+        checkTalentDup(entity.getTalentName(), id);
         entity.setId(id);
         try {
             talentStoreMapper.updateById(entity);
         } catch (DuplicateKeyException e) {
-            throw new BusinessException("达人「" + entity.getTalentName() + "」已绑定店仓「" + entity.getStoreName() + "」，不能重复添加");
+            throw new BusinessException("达人「" + entity.getTalentName() + "」已存在，一个达人只能绑定一个店仓");
         }
     }
 
@@ -97,17 +97,16 @@ public class TalentStoreServiceImpl implements TalentStoreService {
         return entity;
     }
 
-    /** 达人+店仓组合重复预检（excludeId=编辑时排除自身；唯一索引兜底并发窗口） */
-    private void checkPairDup(String talentName, String storeCode, Long excludeId) {
+    /** 达人名称重复预检（excludeId=编辑时排除自身；唯一索引兜底并发窗口） */
+    private void checkTalentDup(String talentName, Long excludeId) {
         LambdaQueryWrapper<TalentStore> wrapper = new LambdaQueryWrapper<TalentStore>()
-                .eq(TalentStore::getTalentName, talentName)
-                .eq(TalentStore::getStoreCode, storeCode);
+                .eq(TalentStore::getTalentName, talentName);
         if (excludeId != null) {
             wrapper.ne(TalentStore::getId, excludeId);
         }
         Long cnt = talentStoreMapper.selectCount(wrapper);
         if (cnt != null && cnt > 0) {
-            throw new BusinessException("该达人已绑定此店仓，不能重复添加");
+            throw new BusinessException("达人「" + talentName + "」已存在，一个达人只能绑定一个店仓");
         }
     }
 }

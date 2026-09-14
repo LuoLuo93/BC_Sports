@@ -35,25 +35,41 @@ END;
 /
 
 -- ==========================================================
--- 2. 唯一索引：未删除记录内 达人+店仓 组合唯一（同一达人可绑多个店仓，但同组合只一行；
---    Oracle 无部分索引语法，用函数式唯一索引，同 uk_bcp_sport_points_sporter 写法）
+-- 2. 唯一索引：未删除记录内 talent_name 唯一（一个达人只绑定一个店仓，换绑走编辑）
+--    Oracle 无部分索引语法，用函数式唯一索引，同 uk_bcp_sport_points_sporter 写法
 -- ==========================================================
+
+-- 2.1 若历史版本脚本已建过 达人+店仓组合唯一索引(UK_BI_TALENT_STORE_PAIR)，先删掉
 DECLARE
   v_cnt NUMBER;
 BEGIN
   SELECT COUNT(*) INTO v_cnt FROM user_indexes WHERE index_name = 'UK_BI_TALENT_STORE_PAIR';
-  IF v_cnt = 0 THEN
-    EXECUTE IMMEDIATE 'CREATE UNIQUE INDEX uk_bi_talent_store_pair '
-                   || 'ON BC_SPORTS_BI_TALENT_STORE (CASE WHEN deleted = 0 THEN talent_name || ''|'' || store_code END)';
-    DBMS_OUTPUT.PUT_LINE('uk_bi_talent_store_pair created');
+  IF v_cnt > 0 THEN
+    EXECUTE IMMEDIATE 'DROP INDEX UK_BI_TALENT_STORE_PAIR';
+    DBMS_OUTPUT.PUT_LINE('uk_bi_talent_store_pair dropped (legacy pair index)');
   ELSE
-    DBMS_OUTPUT.PUT_LINE('uk_bi_talent_store_pair already exists, skip');
+    DBMS_OUTPUT.PUT_LINE('uk_bi_talent_store_pair not exists, skip drop');
+  END IF;
+END;
+/
+
+-- 2.2 达人名称唯一索引
+DECLARE
+  v_cnt NUMBER;
+BEGIN
+  SELECT COUNT(*) INTO v_cnt FROM user_indexes WHERE index_name = 'UK_BI_TALENT_STORE_TALENT';
+  IF v_cnt = 0 THEN
+    EXECUTE IMMEDIATE 'CREATE UNIQUE INDEX uk_bi_talent_store_talent '
+                   || 'ON BC_SPORTS_BI_TALENT_STORE (CASE WHEN deleted = 0 THEN talent_name END)';
+    DBMS_OUTPUT.PUT_LINE('uk_bi_talent_store_talent created');
+  ELSE
+    DBMS_OUTPUT.PUT_LINE('uk_bi_talent_store_talent already exists, skip');
   END IF;
 END;
 /
 
 COMMENT ON TABLE  BC_SPORTS_BI_TALENT_STORE IS '达人店铺维护（达人名称+伯俊ERP店仓编码/店仓名称，手工表单维护）';
-COMMENT ON COLUMN BC_SPORTS_BI_TALENT_STORE.talent_name IS '达人名称';
+COMMENT ON COLUMN BC_SPORTS_BI_TALENT_STORE.talent_name IS '达人名称，未删除记录内唯一(一个达人只绑定一个店仓)';
 COMMENT ON COLUMN BC_SPORTS_BI_TALENT_STORE.store_code IS '伯俊ERP店仓编码(C_STORE.CODE)';
 COMMENT ON COLUMN BC_SPORTS_BI_TALENT_STORE.store_name IS '伯俊ERP店仓名称(C_STORE.NAME)';
 COMMENT ON COLUMN BC_SPORTS_BI_TALENT_STORE.deleted IS '逻辑删除：0 正常 1 已删除';

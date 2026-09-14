@@ -46,3 +46,20 @@ export function updateDwSalesMain(data) {
 export function getDwSalesImportLogPage(params) {
   return request.get('/api/bi/dw-sales/import-log/page', { params })
 }
+
+// 达人店铺管理
+export function getTalentStorePage(params) {
+  return request.get('/api/bi/talent-store/page', { params })
+}
+
+export function addTalentStore(data) {
+  return request.post('/api/bi/talent-store', data)
+}
+
+export function updateTalentStore(id, data) {
+  return request.put(`/api/bi/talent-store/${id}`, data)
+}
+
+export function deleteTalentStore(id) {
+  return request.delete(`/api/bi/talent-store/${id}`)
+}

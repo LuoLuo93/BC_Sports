@@ -43,6 +43,7 @@ const routes = [
       { path: 'bi/shop-daily-budget', name: 'ShopDailyBudget', component: () => import('@/views/bi/ShopDailyBudget.vue'), meta: { pageTitle: '店铺日预算' } },
       { path: 'bi/dw-sales', name: 'DwSalesMain', component: () => import('@/views/bi/DwSalesMain.vue'), meta: { pageTitle: '数仓销售查看' } },
       { path: 'bi/dw-sales/edit', name: 'DwSalesMainEdit', component: () => import('@/views/bi/DwSalesMainEdit.vue'), meta: { pageTitle: '编辑销售明细' } },
+      { path: 'bi/talent-store', name: 'TalentStore', component: () => import('@/views/bi/TalentStore.vue'), meta: { pageTitle: '达人店铺管理' } },
       // IHR
       { path: 'ihr/employee-management', name: 'IhrEmployee', component: () => import('@/views/ihr/EmployeeManagement.vue'), meta: { pageTitle: '员工管理' } },
       { path: 'ihr/onboarding-management', name: 'IhrOnboarding', component: () => import('@/views/ihr/OnboardingManagement.vue'), meta: { pageTitle: '入职管理' } },

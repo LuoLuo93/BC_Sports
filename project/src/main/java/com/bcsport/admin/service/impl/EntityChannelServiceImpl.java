@@ -835,7 +835,9 @@ public class EntityChannelServiceImpl implements EntityChannelService {
         // 按"新名称"分组聚合更新，减少 UPDATE 次数(同名变更通常集中在个别店铺)
         Map<String, List<String>> newNameToCodes = new HashMap<>();
         // 变更明细(code/oldName/newName)，供任务层推送企微群
+        // 同一店铺编码在本地可能有多行(每品牌一行)，按 code+旧名+新名 去重，推送只出一条
         List<Map<String, String>> changes = new ArrayList<>();
+        Set<String> changeKeys = new HashSet<>();
         for (EntityChannel ec : localStores) {
             String code = ec.getExternalId();
             if (code == null || code.trim().isEmpty()) {
@@ -857,11 +859,14 @@ public class EntityChannelServiceImpl implements EntityChannelService {
                 continue;
             }
             newNameToCodes.computeIfAbsent(erpName, k -> new ArrayList<>()).add(code);
-            Map<String, String> change = new HashMap<>();
-            change.put("code", code);
-            change.put("oldName", localName == null ? "" : localName.trim());
-            change.put("newName", erpName);
-            changes.add(change);
+            String oldName = localName == null ? "" : localName.trim();
+            if (changeKeys.add(code + "|" + oldName + "|" + erpName)) {
+                Map<String, String> change = new HashMap<>();
+                change.put("code", code);
+                change.put("oldName", oldName);
+                change.put("newName", erpName);
+                changes.add(change);
+            }
         }
 
         // 执行批量更新：UPDATE ... SET entity_name=?, update_time=? WHERE external_id IN (...)

@@ -40,8 +40,9 @@
             PROMOTION_NAME       AS "promotionName"
         FROM ODS_SALES_MAIN
         <where>
+            <!-- 单据号精确等值: 走 IDX_ODS_SALES_MAIN_BILLNO 毫秒级; 前后模糊 LIKE 索引不可用, 无日期范围时 797 万行全表扫秒级(2026-09-16 由模糊改精确) -->
             <if test="q != null and q.billNo != null and q.billNo != ''">
-                AND BILL_NO LIKE '%' || #{q.billNo} || '%'
+                AND BILL_NO = #{q.billNo}
             </if>
             <if test="q != null and q.billTimeStart != null">
                 AND BILL_TIME &gt;= #{q.billTimeStart}

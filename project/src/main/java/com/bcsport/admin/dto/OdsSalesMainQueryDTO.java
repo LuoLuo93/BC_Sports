@@ -12,7 +12,7 @@ import java.util.Date;
 @Data
 public class OdsSalesMainQueryDTO {
 
-    /** 单据号(模糊) */
+    /** 单据号(精确匹配,须输入完整单据号;走 BILL_NO 索引) */
     private String billNo;
 
     /** 提交时间-起(yyyy-MM-dd，含当天) */

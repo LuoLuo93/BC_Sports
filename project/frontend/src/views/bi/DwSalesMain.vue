@@ -6,7 +6,7 @@
         <el-card shadow="never" class="search-card">
           <el-form :model="query" inline>
             <el-form-item label="单据号">
-              <el-input v-model="query.billNo" placeholder="请输入单据号(模糊)" clearable @keyup.enter="onSearch" />
+              <el-input v-model="query.billNo" placeholder="请输入完整单据号" clearable @keyup.enter="onSearch" />
             </el-form-item>
             <el-form-item label="提交时间">
               <el-date-picker v-model="billTimeRange" type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" value-format="YYYY-MM-DD" style="width:240px" />

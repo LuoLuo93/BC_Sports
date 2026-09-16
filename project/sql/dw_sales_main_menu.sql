@@ -112,4 +112,24 @@ BEGIN
 END;
 /
 
+-- ==========================================================
+-- 3. 单据号精确查询索引(2026-09-16 新增, BI_DW 身份执行)
+--    单据号改为精确等值匹配(BILL_NO = ?)后走此索引毫秒级;
+--    前后模糊 LIKE 无索引可用, 无日期范围时 797 万行全表扫秒级。
+--    幂等: 已存在则跳过。
+-- ==========================================================
+DECLARE
+  v_count NUMBER;
+BEGIN
+  SELECT COUNT(*) INTO v_count FROM ALL_INDEXES
+   WHERE OWNER = 'BI_DW' AND INDEX_NAME = 'IDX_ODS_SALES_MAIN_BILLNO';
+  IF v_count = 0 THEN
+    EXECUTE IMMEDIATE 'CREATE INDEX BI_DW.IDX_ODS_SALES_MAIN_BILLNO ON BI_DW.ODS_SALES_MAIN (BILL_NO) ONLINE';
+    DBMS_OUTPUT.PUT_LINE('IDX_ODS_SALES_MAIN_BILLNO created');
+  ELSE
+    DBMS_OUTPUT.PUT_LINE('IDX_ODS_SALES_MAIN_BILLNO already exists, skip');
+  END IF;
+END;
+/
+
 EXIT;

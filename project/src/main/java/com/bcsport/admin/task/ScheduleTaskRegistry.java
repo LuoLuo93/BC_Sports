@@ -100,6 +100,7 @@ public class ScheduleTaskRegistry {
         // === 系统维护 ===
         register("system.log.clean", "系统-清理执行日志", "scheduleLogCleanTask", "clean", "自动清理7天前的定时任务执行日志", MODULE_SYS, 1);
         register("bidw.entitychannel.brand.sync", "数仓-同步店铺品牌到实体渠道", "entityChannelBrandSyncTask", "syncStoreBrands", "从数仓销售+库存提取店铺+品牌, 缺失的自动新增到实体渠道配置(品牌匹配不到本地品牌的跳过)", MODULE_SYS, 2);
+        register("sys.jenkins.monitor", "SYS-Jenkins构建监控", "jenkinsMonitorTask", "monitor", "轮询Jenkins全部任务最近完成构建,新失败/不稳定推企微群告警,由失败恢复成功也通知;首次运行只记基线不告警(地址配置jenkins.monitor.baseUrl)", MODULE_SYS, 3);
 
         // === 示例任务 ===
         register("demoTask.noParams", "示例任务-无参数", "demoTask", "noParams", "演示定时任务基本功能", MODULE_DEMO, 1);

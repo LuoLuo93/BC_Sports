@@ -29,7 +29,9 @@
             <el-tag size="small" effect="plain">最近同步: {{ info.lastSyncTime || '-' }}</el-tag>
           </div>
           <div>
-            <el-button v-if="info.baseUrl" size="small" :icon="Position" @click="openConsole">打开Jenkins控制台</el-button>
+            <el-tooltip content="Jenkins登录账号：admin　密码：admin123" placement="bottom" :show-after="200">
+              <el-button v-if="info.baseUrl" type="warning" plain size="small" :icon="Position" @click="openConsole">打开Jenkins控制台</el-button>
+            </el-tooltip>
             <el-button type="primary" size="small" :loading="syncing" :icon="Refresh" @click="onSync">立即同步</el-button>
           </div>
         </div>

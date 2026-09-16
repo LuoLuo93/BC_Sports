@@ -88,7 +88,7 @@ public class EntityChannelStoreNameSyncTask {
             sb.append("――――――――\n");
             sb.append("店铺编码：").append(c.get("code")).append("\n");
             sb.append("原名称：").append(oldName == null || oldName.isEmpty() ? "(空)" : oldName).append("\n");
-            sb.append("新名称：").append(c.get("newName"));
+            sb.append("新名称：").append(c.get("newName")).append("\n");
         }
         if (changes.size() > shown) {
             sb.append("\n――――――――\n……其余 ").append(changes.size() - shown).append(" 家详见系统");

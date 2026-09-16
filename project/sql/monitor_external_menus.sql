@@ -1,0 +1,45 @@
+-- ==========================================================
+-- 运维监控 - 外链菜单(Jenkins监控 / FineOPS监控)
+-- 点击后新窗口打开第三方控制台,不内嵌iframe:
+--   Jenkins 默认 X-Frame-Options:deny,iframe 白屏;
+--   FineOPS(/ops/decision)跨站iframe受SameSite Cookie限制登录态丢失。
+-- 前端 SidebarMenu.navigate 对 http 开头的 PATH 直接 window.open。
+-- 第1部分: 菜单(BC_SPORTS 身份执行,幂等可重复)
+-- 第2部分: 授权超管角色(超管本身返回全量菜单,授权保持与其他菜单一致)
+-- ==========================================================
+SET DEFINE OFF
+WHENEVER SQLERROR EXIT SQL.SQLCODE;
+
+-- 1.1 Jenkins监控
+INSERT INTO BC_SPORTS_SYS_MENU
+  (ID, PARENT_ID, MENU_NAME, ICON, MENU_TYPE, PATH, PERMISSION, SORT, STATUS, VISIBLE,
+   DESCRIPTION, ICON_COLOR, CREATE_TIME, UPDATE_TIME, CREATE_BY, UPDATE_BY, DELETED)
+SELECT 'MONITOR_JENKINS', 'MONITOR_DIR', 'Jenkins监控', 'bi-cloud', 1,
+       'http://192.168.5.151:8085/', NULL, 3, 1, 1,
+       'Jenkins构建监控(外链,新窗口打开)', NULL, SYSTIMESTAMP, SYSTIMESTAMP, 'admin', 'admin', 0
+  FROM DUAL
+ WHERE NOT EXISTS (SELECT 1 FROM BC_SPORTS_SYS_MENU WHERE ID = 'MONITOR_JENKINS');
+
+-- 1.2 FineOPS监控
+INSERT INTO BC_SPORTS_SYS_MENU
+  (ID, PARENT_ID, MENU_NAME, ICON, MENU_TYPE, PATH, PERMISSION, SORT, STATUS, VISIBLE,
+   DESCRIPTION, ICON_COLOR, CREATE_TIME, UPDATE_TIME, CREATE_BY, UPDATE_BY, DELETED)
+SELECT 'MONITOR_FINEOPS', 'MONITOR_DIR', 'FineOPS监控', 'bi-display', 1,
+       'http://192.168.5.149/ops/decision/login', NULL, 4, 1, 1,
+       '帆软FineOPS运维监控(外链,新窗口打开)', NULL, SYSTIMESTAMP, SYSTIMESTAMP, 'admin', 'admin', 0
+  FROM DUAL
+ WHERE NOT EXISTS (SELECT 1 FROM BC_SPORTS_SYS_MENU WHERE ID = 'MONITOR_FINEOPS');
+
+-- 2. 授权超管角色(role_id='1',与其他菜单脚本惯例一致)
+INSERT INTO BC_SPORTS_SYS_ROLE_MENU (ID, ROLE_ID, MENU_ID, CREATE_TIME, CREATE_BY)
+SELECT RAWTOHEX(SYS_GUID()), '1', 'MONITOR_JENKINS', SYSTIMESTAMP, 'admin'
+  FROM DUAL
+ WHERE NOT EXISTS (SELECT 1 FROM BC_SPORTS_SYS_ROLE_MENU WHERE ROLE_ID = '1' AND MENU_ID = 'MONITOR_JENKINS');
+
+INSERT INTO BC_SPORTS_SYS_ROLE_MENU (ID, ROLE_ID, MENU_ID, CREATE_TIME, CREATE_BY)
+SELECT RAWTOHEX(SYS_GUID()), '1', 'MONITOR_FINEOPS', SYSTIMESTAMP, 'admin'
+  FROM DUAL
+ WHERE NOT EXISTS (SELECT 1 FROM BC_SPORTS_SYS_ROLE_MENU WHERE ROLE_ID = '1' AND MENU_ID = 'MONITOR_FINEOPS');
+
+COMMIT;
+EXIT;

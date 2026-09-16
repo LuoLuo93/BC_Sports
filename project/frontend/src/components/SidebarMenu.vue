@@ -157,6 +157,12 @@ function autoExpandForRoute() {
 
 function navigate(path) {
   if (!path || path === '#') return
+  // 外链菜单(PATH以http开头): 新窗口打开,不走路由不进标签页。
+  // Jenkins/FineOPS等第三方控制台跨站,内嵌iframe会被X-Frame-Options拒绝或因SameSite丢登录态,新窗口跳转是唯一稳妥方式
+  if (/^https?:\/\//i.test(path)) {
+    window.open(path, '_blank', 'noopener')
+    return
+  }
   if (path !== route.path) {
     router.push(path)
   }

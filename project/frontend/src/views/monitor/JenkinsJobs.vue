@@ -29,8 +29,8 @@
             <el-tag size="small" effect="plain">最近同步: {{ info.lastSyncTime || '-' }}</el-tag>
           </div>
           <div>
-            <el-button size="small" :loading="syncing" :icon="Refresh" @click="onSync">立即同步</el-button>
-            <el-button v-if="info.baseUrl" size="small" type="primary" plain :icon="Position" @click="openConsole">打开Jenkins控制台</el-button>
+            <el-button v-if="info.baseUrl" size="small" :icon="Position" @click="openConsole">打开Jenkins控制台</el-button>
+            <el-button type="primary" size="small" :loading="syncing" :icon="Refresh" @click="onSync">立即同步</el-button>
           </div>
         </div>
       </template>
@@ -190,30 +190,15 @@ function healthStyle(score) {
 </script>
 
 <style scoped>
-.card-header-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-}
+/* 分页(.pagination-wrapper)、卡片头(.card-header-row/.card-header-title)均为全局样式(styles/index.css),此处只留页面私有部分 */
 .stat-row {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
 }
-.card-header-title {
-  font-weight: 700;
-  margin-right: 4px;
-}
 .mono {
   font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace;
   font-weight: 600;
-}
-.pagination-wrapper {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 12px;
 }
 </style>

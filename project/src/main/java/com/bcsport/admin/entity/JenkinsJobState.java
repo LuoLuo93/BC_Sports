@@ -28,6 +28,36 @@ public class JenkinsJobState implements Serializable {
     /** 上次看到的构建结果(SUCCESS/FAILURE/UNSTABLE/ABORTED/NOT_BUILT) */
     private String lastResult;
 
+    /** 最近完成构建提交时间 */
+    private Date lastBuildTime;
+
+    /** 最近完成构建耗时(毫秒) */
+    private Long lastDurationMs;
+
+    /** 最近成功构建号 */
+    private Long lastSuccessBuild;
+
+    /** 最近成功构建时间 */
+    private Date lastSuccessTime;
+
+    /** 下一构建号 */
+    private Long nextBuildNumber;
+
+    /** 健康分0-100 */
+    private Integer healthScore;
+
+    /** Jenkins状态色(blue/red/yellow/disabled/grey,带_anime后缀=构建中) */
+    private String color;
+
+    /** 是否启用(1启用/0停用),页面默认只显示启用 */
+    private Integer buildable;
+
+    /** 是否排队中(1是/0否) */
+    private Integer inQueue;
+
+    /** 任务链接 */
+    private String jobUrl;
+
     /** 上次更新时间 */
     private Date updateTime;
 }

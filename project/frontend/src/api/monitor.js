@@ -33,3 +33,18 @@ export function setLoggerLevel(name, level) {
 export function getEnv() {
   return actuator.get('/actuator/env').then(r => r.data)
 }
+
+// ===== Jenkins任务状态监控（明细页）=====
+import request from './request'
+
+export function getJenkinsJobPage(params) {
+  return request.get('/api/monitor/jenkins/page', { params })
+}
+
+export function getJenkinsInfo() {
+  return request.get('/api/monitor/jenkins/info')
+}
+
+export function syncJenkinsNow() {
+  return request.post('/api/monitor/jenkins/sync', null, { timeout: 30000 })
+}

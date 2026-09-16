@@ -77,8 +77,10 @@ public class WechatChannel implements NotifyChannel {
             String[] lines = content.split("\n");
             for (String line : lines) {
                 if (line.startsWith("执行状态：")) {
-                    // 状态行特殊处理
-                    if (line.contains("成功")) {
+                    // NotifyManager 产出的状态行已带 ✅/❌ 前缀，直接透传避免二次替换出现 "✅ ✅ 成功"
+                    if (line.contains("✅ 成功") || line.contains("❌ 失败")) {
+                        sb.append("> ").append(line).append("\n");
+                    } else if (line.contains("成功")) {
                         sb.append("> ").append(line.replace("成功", "<font color=\"warning\">✅ 成功</font>")).append("\n");
                     } else if (line.contains("失败")) {
                         sb.append("> ").append(line.replace("失败", "<font color=\"warning\">❌ 失败</font>")).append("\n");

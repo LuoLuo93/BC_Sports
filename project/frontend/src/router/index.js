@@ -71,6 +71,7 @@ const routes = [
       // Monitor
       { path: 'monitor/schedule', name: 'Schedule', component: () => import('@/views/monitor/Schedule.vue'), meta: { pageTitle: '定时任务' } },
       { path: 'monitor/system', name: 'SystemMonitor', component: () => import('@/views/monitor/SystemMonitor.vue'), meta: { pageTitle: '系统监控' } },
+      { path: 'monitor/jenkins', name: 'JenkinsJobs', component: () => import('@/views/monitor/JenkinsJobs.vue'), meta: { pageTitle: 'Jenkins监控' } },
       // Statistics
       { path: 'statistics', name: 'Statistics', component: () => import('@/views/statistics/Statistics.vue'), meta: { pageTitle: '数据统计' } },
       { path: 'report', name: 'Report', component: () => import('@/views/statistics/Report.vue'), meta: { pageTitle: '报表中心' } },

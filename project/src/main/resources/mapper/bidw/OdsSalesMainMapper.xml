@@ -30,6 +30,8 @@
             RETAIL_PRICE         AS "retailPrice",
             RETAIL_AMOUNT        AS "retailAmount",
             TRANSACTION_AMOUNT   AS "transactionAmount",
+            TOT_AMT_ACTUAL       AS "totAmtActual",
+            AMT_RECEIVABLE       AS "amtReceivable",
             REVENUE              AS "revenue",
             RECALC_REVENUE       AS "recalcRevenue",
             NEW_OLD_NAME_ADJUST  AS "newOldNameAdjust",
@@ -49,7 +51,9 @@
                 AND BILL_TIME &lt; #{q.billTimeEnd} + 1
             </if>
         </where>
-        ORDER BY BILL_TIME DESC, ITEM_ID DESC
+        <!-- 排序必须与 IDX_ODS_SALES_MAIN_TIME(BILL_TIME, BILL_NO) 完全一致: ROWNUM 分页才能走索引倒序+STOPKEY
+             只取前N行即停(实测1~13ms); 若按 ITEM_ID 排序则索引无法消除排序, 800万行表退化为全表扫+排序(秒级) -->
+        ORDER BY BILL_TIME DESC, BILL_NO DESC
     </select>
 
     <!-- 编辑(仅店铺/营业员/数量金额)：行唯一身份 = BILL_ID + ITEM_ID 定位(单据号+货号+尺码不唯一) -->
@@ -63,6 +67,8 @@
                RETAIL_PRICE      = #{e.retailPrice},
                RETAIL_AMOUNT     = #{e.retailAmount},
                TRANSACTION_AMOUNT = #{e.transactionAmount},
+               TOT_AMT_ACTUAL     = #{e.totAmtActual},
+               AMT_RECEIVABLE     = #{e.amtReceivable},
                REVENUE           = #{e.revenue},
                RECALC_REVENUE    = #{e.recalcRevenue}
          WHERE BILL_ID = #{e.billId}

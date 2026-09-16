@@ -43,8 +43,14 @@ public class OdsSalesMainUpdateDTO {
     /** 零售金额 */
     private BigDecimal retailAmount;
 
-    /** 成交金额 */
+    /** 实收金额 */
     private BigDecimal transactionAmount;
+
+    /** 成交金额 */
+    private BigDecimal totAmtActual;
+
+    /** 应收金额 */
+    private BigDecimal amtReceivable;
 
     /** 业绩金额 */
     private BigDecimal revenue;

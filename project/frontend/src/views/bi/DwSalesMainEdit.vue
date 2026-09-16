@@ -128,7 +128,7 @@
         </div>
       </div>
 
-      <!-- 数量与金额(可编辑，六列单行) -->
+      <!-- 数量与金额(可编辑，八列单行) -->
       <div class="info-section">
         <div class="section-title">
           <el-icon><Coin /></el-icon> 数量与金额
@@ -148,8 +148,16 @@
             <el-input-number v-model="form.retailAmount" :controls="false" size="small" style="width:100%" />
           </div>
           <div class="info-card editable">
-            <span class="info-card-label">成交金额</span>
+            <span class="info-card-label">实收金额</span>
             <el-input-number v-model="form.transactionAmount" :controls="false" size="small" style="width:100%" />
+          </div>
+          <div class="info-card editable">
+            <span class="info-card-label">成交金额</span>
+            <el-input-number v-model="form.totAmtActual" :controls="false" size="small" style="width:100%" />
+          </div>
+          <div class="info-card editable">
+            <span class="info-card-label">应收金额</span>
+            <el-input-number v-model="form.amtReceivable" :controls="false" size="small" style="width:100%" />
           </div>
           <div class="info-card editable">
             <span class="info-card-label">业绩金额</span>
@@ -186,7 +194,8 @@ const form = reactive({
   vipCode: '', vipMobile: '', anchorSummaryid: '', anchorSummaryname: '',
   storeCode: '', storeName: '', billPosCode: '', billPosName: '',
   qty: null, retailPrice: null, retailAmount: null,
-  transactionAmount: null, revenue: null, recalcRevenue: null
+  transactionAmount: null, totAmtActual: null, amtReceivable: null,
+  revenue: null, recalcRevenue: null
 })
 
 const saving = ref(false)
@@ -278,12 +287,12 @@ async function handleSave() {
   grid-template-columns: repeat(4, 1fr);
   gap: 10px;
 }
-/* 金额区：六列单行放满；窄屏退化为三列两行 */
+/* 金额区：八列单行放满；窄屏退化为四列两行 */
 .amount-grid {
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(8, 1fr);
 }
 @media (max-width: 1100px) {
-  .amount-grid { grid-template-columns: repeat(3, 1fr); }
+  .amount-grid { grid-template-columns: repeat(4, 1fr); }
 }
 .info-card {
   display: flex;

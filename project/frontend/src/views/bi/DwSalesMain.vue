@@ -53,8 +53,14 @@
               <el-table-column label="零售金额" width="110" align="right">
                 <template #default="{ row }">{{ formatAmount(row.retailAmount) }}</template>
               </el-table-column>
-              <el-table-column label="成交金额" width="110" align="right">
+              <el-table-column label="实收金额" width="110" align="right">
                 <template #default="{ row }">{{ formatAmount(row.transactionAmount) }}</template>
+              </el-table-column>
+              <el-table-column label="成交金额" width="110" align="right">
+                <template #default="{ row }">{{ formatAmount(row.totAmtActual) }}</template>
+              </el-table-column>
+              <el-table-column label="应收金额" width="110" align="right">
+                <template #default="{ row }">{{ formatAmount(row.amtReceivable) }}</template>
               </el-table-column>
               <el-table-column label="业绩金额" width="110" align="right">
                 <template #default="{ row }">{{ formatAmount(row.revenue) }}</template>

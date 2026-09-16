@@ -175,7 +175,7 @@
 
 <script setup>
 defineOptions({ name: 'DwSalesMainEdit' })
-import { reactive, ref } from 'vue'
+import { reactive, ref, onActivated } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { ArrowLeft, Document, Goods, User, Shop, Coin } from '@element-plus/icons-vue'
@@ -201,13 +201,21 @@ const form = reactive({
 const saving = ref(false)
 
 // 列表页 router.push 的 state 携带整行数据(纯对象)；sessionStorage 兜底刷新/丢state场景
-const stateRow = window.history.state?.row || JSON.parse(sessionStorage.getItem('dwSalesEditRow') || 'null')
-if (stateRow) {
-  Object.assign(form, stateRow)
-} else {
-  ElMessage.warning('缺少行数据，请从列表页进入')
-  router.replace('/bi/dw-sales')
+// 本页路径固定(/bi/dw-sales/edit)，被 keep-alive 缓存后再次进入不会重跑 setup，
+// 行数据必须在 onActivated 里重新读，否则表单停留在上一编辑行(首次挂载 onActivated 同样触发，幂等)
+function loadRowFromNavigation() {
+  const stateRow = window.history.state?.row || JSON.parse(sessionStorage.getItem('dwSalesEditRow') || 'null')
+  if (stateRow) {
+    // 先清残留再赋值：防上一行字段串到本行(新行可能缺可选列)
+    Object.keys(form).forEach(k => { form[k] = null })
+    Object.assign(form, stateRow)
+  } else {
+    ElMessage.warning('缺少行数据，请从列表页进入')
+    router.replace('/bi/dw-sales')
+  }
 }
+loadRowFromNavigation()
+onActivated(loadRowFromNavigation)
 
 // BILL_DATE 为 NUMBER(8) YYYYMMDD
 function formatBillDate(v) {

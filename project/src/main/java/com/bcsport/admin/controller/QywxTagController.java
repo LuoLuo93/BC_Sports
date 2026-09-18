@@ -1,5 +1,6 @@
 package com.bcsport.admin.controller;
 
+import com.bcsport.admin.annotation.OperLog;
 import cn.hutool.poi.excel.ExcelReader;
 import cn.hutool.poi.excel.ExcelUtil;
 import cn.hutool.poi.excel.ExcelWriter;
@@ -94,6 +95,7 @@ public class QywxTagController {
 
     @PostMapping("/sync")
     @ApiOperation("同步企业标签库")
+    @OperLog(module = "企微标签", operation = "同步企业标签库")
     @RequiresPermissions("qywx:tag:sync")
     public Result<String> syncCorpTags() {
         if (QywxCustomerTagTask.isSyncing()) {
@@ -121,6 +123,7 @@ public class QywxTagController {
 
     @PostMapping("/add-corp-tag")
     @ApiOperation("添加标签组")
+    @OperLog(module = "企微标签", operation = "添加标签组")
     @RequiresPermissions("qywx:tag:sync")
     public Result<?> addCorpTag(@RequestBody Map<String, Object> params) {
         String groupName = (String) params.get("groupName");
@@ -145,6 +148,7 @@ public class QywxTagController {
 
     @PostMapping("/edit-corp-tag")
     @ApiOperation("编辑标签组")
+    @OperLog(module = "企微标签", operation = "编辑标签组")
     @RequiresPermissions("qywx:tag:sync")
     public Result<?> editCorpTagGroup(@RequestBody Map<String, Object> params) {
         String groupId = (String) params.get("groupId");
@@ -195,6 +199,7 @@ public class QywxTagController {
 
     @PostMapping("/delete-corp-tag")
     @ApiOperation("删除标签组")
+    @OperLog(module = "企微标签", operation = "删除标签组")
     @RequiresPermissions("qywx:tag:sync")
     public Result<?> deleteCorpTagGroup(@RequestBody Map<String, Object> params) {
         String groupId = (String) params.get("groupId");
@@ -246,6 +251,7 @@ public class QywxTagController {
 
     @PostMapping("/upload")
     @ApiOperation("上传Excel批量打标")
+    @OperLog(module = "企微标签", operation = "Excel批量打标", saveParams = false)
     @RequiresPermissions("qywx:tag:batch")
     public Result<String> uploadTagExcel(@RequestParam("file") MultipartFile file) {
         if (file.isEmpty()) {

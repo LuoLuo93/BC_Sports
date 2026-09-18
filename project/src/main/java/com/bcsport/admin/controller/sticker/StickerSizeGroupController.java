@@ -2,6 +2,7 @@ package com.bcsport.admin.controller.sticker;
 
 import cn.hutool.poi.excel.ExcelUtil;
 import cn.hutool.poi.excel.ExcelWriter;
+import com.bcsport.admin.annotation.OperLog;
 import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.common.Result;
@@ -71,6 +72,7 @@ public class StickerSizeGroupController {
 
     @PostMapping
     @ApiOperation("新增")
+    @OperLog(module = "贴纸打印", operation = "新增尺码组")
     @RequiresPermissions("sticker:size-group:add")
     public Result<?> create(@RequestBody StickerSizeGroup entity) {
         service.create(entity);
@@ -79,6 +81,7 @@ public class StickerSizeGroupController {
 
     @PutMapping("/{id}")
     @ApiOperation("修改")
+    @OperLog(module = "贴纸打印", operation = "修改尺码组")
     @RequiresPermissions("sticker:size-group:edit")
     public Result<?> update(@PathVariable String id, @RequestBody StickerSizeGroup entity) {
         service.update(id, entity);
@@ -87,6 +90,7 @@ public class StickerSizeGroupController {
 
     @DeleteMapping("/{id}")
     @ApiOperation("删除")
+    @OperLog(module = "贴纸打印", operation = "删除尺码组")
     @RequiresPermissions("sticker:size-group:delete")
     public Result<?> delete(@PathVariable String id) {
         service.delete(id);
@@ -95,6 +99,7 @@ public class StickerSizeGroupController {
 
     @PostMapping("/import")
     @ApiOperation("Excel 批量导入尺码组")
+    @OperLog(module = "贴纸打印", operation = "批量导入尺码组", saveParams = false)
     @RequiresPermissions("sticker:size-group:import")
     public Result<Map<String, Object>> importExcel(@RequestParam("file") MultipartFile file) {
         if (file == null || file.isEmpty()) {

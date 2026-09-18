@@ -1,5 +1,6 @@
 package com.bcsport.admin.controller.nxcrm;
 
+import com.bcsport.admin.annotation.OperLog;
 import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.common.Result;
@@ -56,6 +57,7 @@ public class NxcrmTagController {
 
     @PostMapping("/tasks")
     @ApiOperation("创建标签任务")
+    @OperLog(module = "牛信CRM", operation = "创建标签任务")
     @RequiresPermissions("nxcrm:tag:add")
     public Result<?> createTask(@RequestBody NxcrmTagTask task) {
         return Result.success(tagTaskService.createTask(task));
@@ -63,6 +65,7 @@ public class NxcrmTagController {
 
     @PostMapping("/tasks/{taskId}/execute")
     @ApiOperation("执行标签任务")
+    @OperLog(module = "牛信CRM", operation = "执行标签任务")
     @RequiresPermissions("nxcrm:tag:execute")
     public Result<?> executeTask(@PathVariable String taskId) {
         return tagTaskService.executeTask(taskId);
@@ -84,6 +87,7 @@ public class NxcrmTagController {
 
     @PostMapping("/member-tags/fill-shop")
     @ApiOperation("填充会员店铺信息")
+    @OperLog(module = "牛信CRM", operation = "填充会员店铺信息")
     @RequiresPermissions("nxcrm:tag:execute")
     public Result<?> fillShopId(@RequestParam String batchNo) {
         tagTaskService.fillShopId(batchNo);

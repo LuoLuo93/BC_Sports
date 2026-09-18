@@ -1,6 +1,7 @@
 
 package com.bcsport.admin.controller;
 
+import com.bcsport.admin.annotation.OperLog;
 import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.common.Result;
@@ -50,6 +51,7 @@ public class IhrEmployeeExclusionController {
 
     @PostMapping
     @ApiOperation("新增排除记录")
+    @OperLog(module = "人事排除名单", operation = "新增排除记录")
     @RequiresPermissions("ihr:exclusion:add")
     public Result<?> add(@Valid @RequestBody IhrEmployeeExclusionDTO dto) {
         log.info("新增IHR排除记录, staffName={}, staffNo={}", dto.getStaffName(), dto.getStaffNo());
@@ -59,6 +61,7 @@ public class IhrEmployeeExclusionController {
 
     @PutMapping("/{id}")
     @ApiOperation("修改排除记录")
+    @OperLog(module = "人事排除名单", operation = "修改排除记录")
     @RequiresPermissions("ihr:exclusion:edit")
     public Result<?> update(@PathVariable String id, @Valid @RequestBody IhrEmployeeExclusionDTO dto) {
         log.info("更新IHR排除记录, id={}", id);
@@ -69,6 +72,7 @@ public class IhrEmployeeExclusionController {
 
     @DeleteMapping("/{id}")
     @ApiOperation("删除排除记录")
+    @OperLog(module = "人事排除名单", operation = "删除排除记录")
     @RequiresPermissions("ihr:exclusion:delete")
     public Result<?> delete(@PathVariable String id) {
         log.info("删除IHR排除记录, id={}", id);
@@ -78,6 +82,7 @@ public class IhrEmployeeExclusionController {
 
     @DeleteMapping("/batch")
     @ApiOperation("批量删除排除记录")
+    @OperLog(module = "人事排除名单", operation = "批量删除排除记录")
     @RequiresPermissions("ihr:exclusion:delete")
     public Result<?> batchDelete(@Valid @RequestBody IhrExclusionBatchDTO dto) {
         log.info("批量删除IHR排除记录, count={}", dto.getIds().size());
@@ -87,6 +92,7 @@ public class IhrEmployeeExclusionController {
 
     @PutMapping("/batch/status")
     @ApiOperation("批量更新状态")
+    @OperLog(module = "人事排除名单", operation = "批量更新排除状态")
     @RequiresPermissions("ihr:exclusion:edit")
     public Result<?> batchUpdateStatus(@Valid @RequestBody IhrExclusionBatchDTO dto) {
         log.info("批量更新IHR排除记录状态, count={}, targetStatus={}", dto.getIds().size(), dto.getTargetStatus());

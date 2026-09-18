@@ -7,10 +7,14 @@ import com.bcsport.admin.entity.SysLog;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.util.List;
+
 @Mapper
 public interface SysLogMapper extends BaseMapper<SysLog> {
 
     IPage<SysLog> selectLogPage(IPage<SysLog> page, @Param("query") SysLogQueryDTO query);
 
     int deleteBeforeDays(@Param("days") int days);
+
+    List<String> selectDistinctModules();
 }

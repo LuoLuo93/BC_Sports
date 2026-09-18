@@ -1,6 +1,7 @@
 package com.bcsport.admin.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.bcsport.admin.annotation.OperLog;
 import com.bcsport.admin.common.Result;
 import com.bcsport.admin.entity.User;
 import com.bcsport.admin.service.AuthCacheService;
@@ -91,6 +92,7 @@ public class OnlineUserController {
      * 强制下线指定用户
      */
     @PostMapping("/kick/{username}")
+    @OperLog(module = "在线用户", operation = "强制下线用户")
     @RequiresPermissions("system:online:kick")
     public Result<?> kick(@PathVariable String username) {
         String sessionId = authCacheService.getActiveSessionId(username);

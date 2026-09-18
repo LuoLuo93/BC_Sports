@@ -1,5 +1,6 @@
 package com.bcsport.admin.controller;
 
+import com.bcsport.admin.annotation.OperLog;
 import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.common.Result;
@@ -70,6 +71,7 @@ public class BrandController {
      */
     @PostMapping
     @ApiOperation("新增品牌")
+    @OperLog(module = "品牌管理", operation = "新增品牌")
     @RequiresPermissions("bi:brand:add")
     public Result<?> add(@Valid @RequestBody BrandDTO brandDTO) {
         // 使用 Oracle 序列生成递增 ID（序列 NEXTVAL 原子递增，并发安全，不会拿到重复值）
@@ -85,6 +87,7 @@ public class BrandController {
      */
     @PutMapping("/{id}")
     @ApiOperation("修改品牌")
+    @OperLog(module = "品牌管理", operation = "修改品牌")
     @RequiresPermissions("bi:brand:edit")
     public Result<?> update(@PathVariable String id, @Valid @RequestBody BrandDTO brandDTO) {
         brandDTO.setId(id);
@@ -97,6 +100,7 @@ public class BrandController {
      */
     @DeleteMapping("/{id}")
     @ApiOperation("删除品牌")
+    @OperLog(module = "品牌管理", operation = "删除品牌")
     @RequiresPermissions("bi:brand:delete")
     public Result<?> delete(@PathVariable String id) {
         // 使用 MyBatis-Plus 的逻辑删除

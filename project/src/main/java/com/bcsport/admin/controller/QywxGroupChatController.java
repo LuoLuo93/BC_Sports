@@ -1,5 +1,6 @@
 package com.bcsport.admin.controller;
 
+import com.bcsport.admin.annotation.OperLog;
 import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.Result;
 import com.bcsport.admin.dto.QywxGroupChatQueryDTO;
@@ -66,6 +67,7 @@ public class QywxGroupChatController {
 
     @PostMapping("/sync")
     @ApiOperation("同步群聊数据")
+    @OperLog(module = "企微客户", operation = "同步群聊数据")
     @RequiresPermissions("qywx:groupchat:query")
     public Result<String> sync() {
         if (QywxGroupChatTask.isSyncing()) {

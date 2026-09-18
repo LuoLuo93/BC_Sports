@@ -1,5 +1,6 @@
 package com.bcsport.admin.controller.nxcrm;
 
+import com.bcsport.admin.annotation.OperLog;
 import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.common.Result;
@@ -55,6 +56,7 @@ public class NxcrmMemberTagController {
 
     @PostMapping("/sync-tags")
     @ApiOperation("同步标签数据")
+    @OperLog(module = "牛信CRM", operation = "同步南讯标签数据")
     @RequiresPermissions("nxcrm:member:tag:sync")
     public Result<?> syncTags() {
         if (NxcrmTagIncrementSyncTask.isSyncing()) {
@@ -66,6 +68,7 @@ public class NxcrmMemberTagController {
 
     @PostMapping("/sync-member-tags")
     @ApiOperation("同步会员标签")
+    @OperLog(module = "牛信CRM", operation = "同步会员标签")
     @RequiresPermissions("nxcrm:member:tag:sync")
     public Result<?> syncMemberTags() {
         if (NxcrmMemberTagPushTask.isSyncing()) {

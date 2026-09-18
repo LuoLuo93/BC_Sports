@@ -1,5 +1,6 @@
 package com.bcsport.admin.controller;
 
+import com.bcsport.admin.annotation.OperLog;
 import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.common.Result;
@@ -74,6 +75,7 @@ public class ScheduleController {
 
     @PostMapping("/job")
     @ApiOperation("新增定时任务")
+    @OperLog(module = "定时任务", operation = "新增定时任务")
     @RequiresPermissions("monitor:schedule:add")
     public Result<?> addJob(@Valid @RequestBody ScheduleJobDTO dto) {
         boolean success = scheduleJobService.addJob(dto);
@@ -82,6 +84,7 @@ public class ScheduleController {
 
     @PutMapping("/job/{id}")
     @ApiOperation("修改定时任务")
+    @OperLog(module = "定时任务", operation = "修改定时任务")
     @RequiresPermissions("monitor:schedule:edit")
     public Result<?> updateJob(@PathVariable String id, @Valid @RequestBody ScheduleJobDTO dto) {
         dto.setId(id);
@@ -91,6 +94,7 @@ public class ScheduleController {
 
     @DeleteMapping("/job/{id}")
     @ApiOperation("删除定时任务")
+    @OperLog(module = "定时任务", operation = "删除定时任务")
     @RequiresPermissions("monitor:schedule:delete")
     public Result<?> deleteJob(@PathVariable String id) {
         boolean success = scheduleJobService.deleteJob(id);
@@ -99,6 +103,7 @@ public class ScheduleController {
 
     @PutMapping("/job/{id}/pause")
     @ApiOperation("暂停任务")
+    @OperLog(module = "定时任务", operation = "暂停任务")
     @RequiresPermissions("monitor:schedule:edit")
     public Result<?> pauseJob(@PathVariable String id) {
         scheduleJobService.pauseJob(id);
@@ -107,6 +112,7 @@ public class ScheduleController {
 
     @PutMapping("/job/{id}/resume")
     @ApiOperation("恢复任务")
+    @OperLog(module = "定时任务", operation = "恢复任务")
     @RequiresPermissions("monitor:schedule:edit")
     public Result<?> resumeJob(@PathVariable String id) {
         scheduleJobService.resumeJob(id);
@@ -115,6 +121,7 @@ public class ScheduleController {
 
     @PostMapping("/job/{id}/run")
     @ApiOperation("手动执行一次")
+    @OperLog(module = "定时任务", operation = "手动执行任务")
     @RequiresPermissions("monitor:schedule:edit")
     public Result<?> runOnce(@PathVariable String id, @RequestBody(required = false) Map<String, String> params) {
         // 防止同一任务重复触发
@@ -162,6 +169,7 @@ public class ScheduleController {
 
     @DeleteMapping("/log/clean")
     @ApiOperation("清理历史日志")
+    @OperLog(module = "定时任务", operation = "清理任务日志")
     @RequiresPermissions("monitor:schedule:delete")
     public Result<?> cleanLogs(@RequestParam(defaultValue = "30") int keepDays) {
         if (keepDays < 7) {

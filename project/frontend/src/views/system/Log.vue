@@ -3,9 +3,17 @@
     <el-card shadow="never" class="search-card">
       <el-form :inline="true" :model="query">
         <el-form-item label="模块">
-          <el-select v-model="query.module" placeholder="全部" clearable style="min-width: 120px; max-width: 140px">
-            <el-option v-for="m in modules" :key="m" :label="m" :value="m" />
-          </el-select>
+          <el-tree-select
+            v-model="query.module"
+            :data="moduleTree"
+            :props="{ label: 'label', children: 'children', disabled: 'disabled', value: 'value' }"
+            node-key="value"
+            placeholder="全部"
+            clearable
+            filterable
+            :render-after-expand="false"
+            style="min-width: 120px; max-width: 160px"
+          />
         </el-form-item>
         <el-form-item label="操作人">
           <el-input v-model="query.username" placeholder="用户名" clearable style="min-width: 100px; max-width: 120px" />
@@ -116,7 +124,7 @@ defineOptions({ name: 'LogManagement' })
 import { ref, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
-import { getLogPage, cleanLogs } from '@/api/log'
+import { getLogPage, getLogModules, cleanLogs } from '@/api/log'
 import { usePermission } from '@/composables/usePermission'
 import { formatTime } from '@/utils/format'
 import { PAGE_SIZES, defaultPageSize } from '@/utils/appConfig'
@@ -129,7 +137,29 @@ const dateRange = ref(null)
 const detailVisible = ref(false)
 const currentLog = ref(null)
 
-const modules = ['用户管理', '角色管理', '菜单管理', '部门管理', '字典管理', '实体渠道', '系统认证']
+// 兜底列表：接口不可用时下拉仍有选项；正常情况 onMounted 用库里实际模块树覆盖
+const FALLBACK_MODULES = [
+  '系统认证', '用户管理', '角色管理', '菜单管理', '部门管理', '字典管理',
+  '实体渠道', '数仓销售', '系统设置', '系统维护', '在线用户', '定时任务',
+  'Jenkins监控', '运动积分', '品牌管理', '仓库管理', '渠道类型', '渠道性质',
+  '地区管理', '达人店铺', '预估成本', '店铺日预算', '新旧品管理', '首次添加记录',
+  '揽众客户', '人事同步', '人事排除名单', '企微标签', '企微客户', '通知管理',
+  '牛信CRM', '贴纸打印'
+]
+const moduleTree = ref([
+  { label: '全部模块', value: 'group:全部模块', disabled: true, children: FALLBACK_MODULES.map(m => ({ label: m, value: m })) }
+])
+
+async function loadModules() {
+  try {
+    const res = await getLogModules()
+    if (res.code === 200 && Array.isArray(res.data) && res.data.length > 0) {
+      moduleTree.value = res.data
+    }
+  } catch (e) {
+    console.warn('加载日志模块列表失败，使用兜底列表', e)
+  }
+}
 
 const query = ref({
   pageNum: 1,
@@ -208,6 +238,7 @@ async function handleClean() {
 
 onMounted(() => {
   loadData()
+  loadModules()
 })
 </script>
 

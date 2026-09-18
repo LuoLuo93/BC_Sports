@@ -1,5 +1,6 @@
 package com.bcsport.admin.controller.sticker;
 
+import com.bcsport.admin.annotation.OperLog;
 import com.bcsport.admin.common.FieldLabelUtils;
 import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
@@ -34,6 +35,7 @@ public class PrintFieldMappingController {
 
     @PostMapping
     @ApiOperation("新增")
+    @OperLog(module = "贴纸打印", operation = "新增字段映射")
     @RequiresPermissions("sticker:field-mapping:add")
     public Result<?> create(@RequestBody PrintFieldMapping entity) {
         service.create(entity);
@@ -42,6 +44,7 @@ public class PrintFieldMappingController {
 
     @PutMapping("/{id}")
     @ApiOperation("修改")
+    @OperLog(module = "贴纸打印", operation = "修改字段映射")
     @RequiresPermissions("sticker:field-mapping:edit")
     public Result<?> update(@PathVariable String id, @RequestBody PrintFieldMapping entity) {
         service.update(id, entity);
@@ -50,6 +53,7 @@ public class PrintFieldMappingController {
 
     @DeleteMapping("/{id}")
     @ApiOperation("删除")
+    @OperLog(module = "贴纸打印", operation = "删除字段映射")
     @RequiresPermissions("sticker:field-mapping:delete")
     public Result<?> delete(@PathVariable String id) {
         service.delete(id);

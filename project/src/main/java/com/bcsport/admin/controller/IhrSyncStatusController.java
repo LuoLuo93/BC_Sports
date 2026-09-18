@@ -1,5 +1,6 @@
 package com.bcsport.admin.controller;
 
+import com.bcsport.admin.annotation.OperLog;
 import com.bcsport.admin.common.Result;
 import com.bcsport.admin.config.TaskThreadPoolConfig;
 import com.bcsport.admin.task.ihr.IhrEmployeeTask;
@@ -60,6 +61,7 @@ public class IhrSyncStatusController {
 
     @PostMapping("/qywx-full-sync")
     @ApiOperation("一键同步企微信息")
+    @OperLog(module = "人事同步", operation = "一键同步企微信息")
     @RequiresPermissions("ihr:onboarding:sync")
     public Result<?> qywxFullSync() {
         if (QywxFullSyncTask.isSyncing()) {

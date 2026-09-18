@@ -1,5 +1,6 @@
 package com.bcsport.admin.controller;
 
+import com.bcsport.admin.annotation.OperLog;
 import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.common.Result;
@@ -107,6 +108,7 @@ public class ErpStoreController {
      */
     @PutMapping("/attrib")
     @ApiOperation("编辑店仓品牌/督导及扩展属性")
+    @OperLog(module = "ERP店仓管理", operation = "编辑店仓品牌督导")
     @RequiresPermissions("bi:erpStore:edit")
     public Result<?> updateAttrib(@RequestBody Map<String, Object> body) {
         String storeId = body.get("storeId") == null ? null : body.get("storeId").toString();
@@ -152,6 +154,7 @@ public class ErpStoreController {
      */
     @PutMapping("/supervisor-inherit")
     @ApiOperation("零售主管继承-批量修改")
+    @OperLog(module = "ERP店仓管理", operation = "零售主管继承批量修改")
     @RequiresPermissions("bi:erpStore:edit")
     public Result<?> executeSupervisorInherit(@RequestBody Map<String, Object> body) {
         String fromSupervisorId = body.get("fromSupervisorId") == null ? null : body.get("fromSupervisorId").toString();

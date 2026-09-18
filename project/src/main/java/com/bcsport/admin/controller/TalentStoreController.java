@@ -1,5 +1,6 @@
 package com.bcsport.admin.controller;
 
+import com.bcsport.admin.annotation.OperLog;
 import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.common.Result;
@@ -41,6 +42,7 @@ public class TalentStoreController {
      */
     @PostMapping
     @ApiOperation("新增达人店铺")
+    @OperLog(module = "达人店铺", operation = "新增达人店铺")
     @RequiresPermissions("bi:talent-store:add")
     public Result<Void> add(@RequestBody TalentStore body) {
         talentStoreService.add(body.getTalentName(), body.getStoreCode(), body.getStoreName());
@@ -53,6 +55,7 @@ public class TalentStoreController {
      */
     @PutMapping("/{id}")
     @ApiOperation("编辑达人店铺")
+    @OperLog(module = "达人店铺", operation = "编辑达人店铺")
     @RequiresPermissions("bi:talent-store:edit")
     public Result<Void> update(@PathVariable Long id, @RequestBody TalentStore body) {
         talentStoreService.update(id, body.getTalentName(), body.getStoreCode(), body.getStoreName());
@@ -64,6 +67,7 @@ public class TalentStoreController {
      */
     @DeleteMapping("/{id}")
     @ApiOperation("删除达人店铺")
+    @OperLog(module = "达人店铺", operation = "删除达人店铺")
     @RequiresPermissions("bi:talent-store:delete")
     public Result<Void> delete(@PathVariable Long id) {
         talentStoreService.delete(id);

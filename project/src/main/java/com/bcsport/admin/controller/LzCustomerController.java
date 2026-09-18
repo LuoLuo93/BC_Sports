@@ -2,6 +2,7 @@ package com.bcsport.admin.controller;
 
 import cn.hutool.poi.excel.ExcelUtil;
 import cn.hutool.poi.excel.ExcelWriter;
+import com.bcsport.admin.annotation.OperLog;
 import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.common.Result;
@@ -83,6 +84,7 @@ public class LzCustomerController {
      */
     @PostMapping
     @ApiOperation("新增揽众客户押金资料")
+    @OperLog(module = "揽众客户", operation = "新增揽众客户")
     @RequiresPermissions("erp:lzCustomer:add")
     public Result<Void> create(@RequestBody Map<String, Object> body) {
         Map<String, Object> map = new HashMap<>();
@@ -100,6 +102,7 @@ public class LzCustomerController {
      */
     @PutMapping("/{id}")
     @ApiOperation("修改揽众客户押金资料")
+    @OperLog(module = "揽众客户", operation = "修改揽众客户")
     @RequiresPermissions("erp:lzCustomer:edit")
     public Result<Void> update(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         Map<String, Object> map = new HashMap<>();
@@ -118,6 +121,7 @@ public class LzCustomerController {
      */
     @DeleteMapping("/{id}")
     @ApiOperation("删除揽众客户押金资料")
+    @OperLog(module = "揽众客户", operation = "删除揽众客户")
     @RequiresPermissions("erp:lzCustomer:delete")
     public Result<Void> delete(@PathVariable Long id) {
         lzCustomerMapper.deleteLzCustomer(id);
@@ -130,6 +134,7 @@ public class LzCustomerController {
      */
     @PostMapping("/import")
     @ApiOperation("Excel批量导入揽众客户资料")
+    @OperLog(module = "揽众客户", operation = "批量导入揽众客户", saveParams = false)
     @RequiresPermissions("erp:lzCustomer:import")
     public Result<Map<String, Object>> importExcel(@RequestParam("file") MultipartFile file) {
         try {

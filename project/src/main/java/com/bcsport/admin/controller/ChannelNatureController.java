@@ -2,6 +2,7 @@ package com.bcsport.admin.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 
+import com.bcsport.admin.annotation.OperLog;
 import com.bcsport.admin.common.Result;
 import com.bcsport.admin.dto.ChannelNatureDTO;
 import com.bcsport.admin.dto.ChannelNatureQueryDTO;
@@ -68,6 +69,7 @@ public class ChannelNatureController {
      */
     @PostMapping
     @ApiOperation("新增渠道性质")
+    @OperLog(module = "渠道性质", operation = "新增渠道性质")
     @RequiresPermissions("bi:channelNature:add")
     public Result<String> add(@Valid @RequestBody ChannelNatureDTO channelNatureDTO) {
         channelNatureService.addChannelNature(channelNatureDTO);
@@ -79,6 +81,7 @@ public class ChannelNatureController {
      */
     @PutMapping("/{id}")
     @ApiOperation("修改渠道性质")
+    @OperLog(module = "渠道性质", operation = "修改渠道性质")
     @RequiresPermissions("bi:channelNature:edit")
     public Result<String> update(@PathVariable String id, @Valid @RequestBody ChannelNatureDTO channelNatureDTO) {
         channelNatureDTO.setId(id);
@@ -91,6 +94,7 @@ public class ChannelNatureController {
      */
     @DeleteMapping("/{id}")
     @ApiOperation("删除渠道性质")
+    @OperLog(module = "渠道性质", operation = "删除渠道性质")
     @RequiresPermissions("bi:channelNature:delete")
     public Result<String> delete(@PathVariable String id) {
         channelNatureService.deleteChannelNature(id);

@@ -1,6 +1,7 @@
 package com.bcsport.admin.controller;
 
 import com.alibaba.druid.pool.DruidDataSource;
+import com.bcsport.admin.annotation.OperLog;
 import com.bcsport.admin.common.Result;
 import com.bcsport.admin.service.AuthCacheService;
 import com.bcsport.admin.service.ConfigService;
@@ -63,6 +64,7 @@ public class MaintenanceController {
      * 清除系统缓存（Redis + 内存配置缓存）
      */
     @PostMapping("/clear-cache")
+    @OperLog(module = "系统维护", operation = "清除系统缓存")
     @RequiresPermissions("system:config:edit")
     public Result<Void> clearCache() {
         try {
@@ -84,6 +86,7 @@ public class MaintenanceController {
      * 清理操作日志
      */
     @PostMapping("/clean-logs")
+    @OperLog(module = "系统维护", operation = "清理操作日志")
     @RequiresPermissions("system:log:remove")
     public Result<Integer> cleanLogs(@RequestParam(defaultValue = "30") int days) {
         int count = sysLogService.cleanLogs(days);
@@ -172,6 +175,7 @@ public class MaintenanceController {
      * 重启已关闭的连接池
      */
     @PostMapping("/restart-pool")
+    @OperLog(module = "系统维护", operation = "重启连接池")
     @RequiresPermissions("system:config:edit")
     public Result<Void> restartPool(@RequestParam String name) {
         DruidDataSource ds = resolveDataSource(name);

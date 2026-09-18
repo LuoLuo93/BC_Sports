@@ -1,5 +1,6 @@
 package com.bcsport.admin.controller;
 
+import com.bcsport.admin.annotation.OperLog;
 import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.Result;
 import com.bcsport.admin.dto.QywxMomentQueryDTO;
@@ -58,6 +59,7 @@ public class QywxMomentController {
 
     @PostMapping("/sync")
     @ApiOperation("同步朋友圈数据")
+    @OperLog(module = "企微客户", operation = "同步朋友圈数据")
     @RequiresPermissions("qywx:moment:query")
     public Result<String> sync() {
         if (QywxMomentTask.isSyncing()) {

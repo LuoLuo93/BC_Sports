@@ -1,5 +1,6 @@
 package com.bcsport.admin.controller;
 
+import com.bcsport.admin.annotation.OperLog;
 import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.common.Result;
@@ -47,6 +48,7 @@ public class IhrEmployeeUpdateController {
 
     @PostMapping("/sync-ihr")
     @ApiOperation("手动触发IHR员工同步")
+    @OperLog(module = "人事同步", operation = "同步IHR调整员工")
     @RequiresPermissions("ihr:update:sync")
     public Result<?> syncIhr() {
         log.info("手动触发IHR员工同步(调整管理)");
@@ -73,6 +75,7 @@ public class IhrEmployeeUpdateController {
 
     @PostMapping("/sync-qywx/{staffId}")
     @ApiOperation("同步单个调整员工到企微")
+    @OperLog(module = "人事同步", operation = "同步单个调整员工到企微")
     @RequiresPermissions("ihr:update:sync")
     public Result<?> syncSingleQywx(@PathVariable String staffId) {
         log.info("手动同步单个调整员工到企微, staffId={}", staffId);

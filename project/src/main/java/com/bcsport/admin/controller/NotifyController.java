@@ -1,5 +1,6 @@
 package com.bcsport.admin.controller;
 
+import com.bcsport.admin.annotation.OperLog;
 import com.bcsport.admin.common.Result;
 import com.bcsport.admin.service.SysConfigService;
 import com.bcsport.admin.service.notify.NotifyManager;
@@ -35,6 +36,7 @@ public class NotifyController {
      */
     @PostMapping("/test-webhook")
     @ApiOperation("测试企微群机器人Webhook")
+    @OperLog(module = "通知管理", operation = "测试企微机器人Webhook", saveParams = false)
     public Result<Void> testWebhook(@RequestBody Map<String, String> body) {
         String webhookUrl = body.get("webhookUrl");
         if (webhookUrl == null || webhookUrl.isBlank()) {

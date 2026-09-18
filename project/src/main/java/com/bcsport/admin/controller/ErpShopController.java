@@ -1,5 +1,6 @@
 package com.bcsport.admin.controller;
 
+import com.bcsport.admin.annotation.OperLog;
 import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.common.Result;
@@ -62,6 +63,7 @@ public class ErpShopController {
      */
     @PostMapping
     @ApiOperation("新增店铺")
+    @OperLog(module = "ERP店铺管理", operation = "新增店铺")
     @RequiresPermissions("bi:erpShop:add")
     public Result<?> add(@Valid @RequestBody ErpShopDTO dto) {
         // 使用数据库序列生成递增 ID
@@ -77,6 +79,7 @@ public class ErpShopController {
      */
     @PutMapping("/{id}")
     @ApiOperation("修改店铺")
+    @OperLog(module = "ERP店铺管理", operation = "修改店铺")
     @RequiresPermissions("bi:erpShop:edit")
     public Result<?> update(@PathVariable String id, @Valid @RequestBody ErpShopDTO dto) {
         dto.setId(id);
@@ -89,6 +92,7 @@ public class ErpShopController {
      */
     @DeleteMapping("/{id}")
     @ApiOperation("删除店铺")
+    @OperLog(module = "ERP店铺管理", operation = "删除店铺")
     @RequiresPermissions("bi:erpShop:delete")
     public Result<?> delete(@PathVariable String id) {
         // 使用 MyBatis-Plus 的逻辑删除

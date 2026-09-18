@@ -1,5 +1,6 @@
 package com.bcsport.admin.controller;
 
+import com.bcsport.admin.annotation.OperLog;
 import com.bcsport.admin.common.Result;
 import com.bcsport.admin.dto.WarehouseDTO;
 import com.bcsport.admin.service.WarehouseService;
@@ -72,6 +73,7 @@ public class WarehouseController {
      */
     @PostMapping
     @ApiOperation("新增仓库")
+    @OperLog(module = "仓库管理", operation = "新增仓库")
     @RequiresPermissions("warehouse:add")
     public Result<?> add(@Validated @RequestBody WarehouseDTO warehouseDTO) {
         log.info("新增仓库请求，仓库名称：{}，编码：{}", warehouseDTO.getWarehouseName(), warehouseDTO.getWarehouseCode());
@@ -84,6 +86,7 @@ public class WarehouseController {
      */
     @PutMapping("/{id}")
     @ApiOperation("更新仓库")
+    @OperLog(module = "仓库管理", operation = "更新仓库")
     @RequiresPermissions("warehouse:edit")
     public Result<?> update(@PathVariable String id, @Validated @RequestBody WarehouseDTO warehouseDTO) {
         log.info("更新仓库请求，ID：{}，仓库名称：{}", id, warehouseDTO.getWarehouseName());
@@ -97,6 +100,7 @@ public class WarehouseController {
      */
     @DeleteMapping("/{id}")
     @ApiOperation("删除仓库")
+    @OperLog(module = "仓库管理", operation = "删除仓库")
     @RequiresPermissions("warehouse:delete")
     public Result<?> delete(@PathVariable String id) {
         log.info("删除仓库请求，ID：{}", id);

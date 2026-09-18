@@ -3,6 +3,7 @@ package com.bcsport.admin.controller.sticker;
 import cn.hutool.poi.excel.ExcelReader;
 import cn.hutool.poi.excel.ExcelUtil;
 import cn.hutool.poi.excel.ExcelWriter;
+import com.bcsport.admin.annotation.OperLog;
 import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.common.Result;
@@ -79,6 +80,7 @@ public class BrandTemplateMatchController {
 
     @PostMapping
     @ApiOperation("新增")
+    @OperLog(module = "贴纸打印", operation = "新增品牌模板匹配")
     @RequiresPermissions("sticker:brand-template:add")
     public Result<?> create(@Valid @RequestBody BrandTemplateMatch entity) {
         service.create(entity);
@@ -87,6 +89,7 @@ public class BrandTemplateMatchController {
 
     @PutMapping("/{id}")
     @ApiOperation("修改")
+    @OperLog(module = "贴纸打印", operation = "修改品牌模板匹配")
     @RequiresPermissions("sticker:brand-template:edit")
     public Result<?> update(@PathVariable String id, @Valid @RequestBody BrandTemplateMatch entity) {
         service.update(id, entity);
@@ -95,6 +98,7 @@ public class BrandTemplateMatchController {
 
     @DeleteMapping("/{id}")
     @ApiOperation("删除")
+    @OperLog(module = "贴纸打印", operation = "删除品牌模板匹配")
     @RequiresPermissions("sticker:brand-template:delete")
     public Result<?> delete(@PathVariable String id) {
         service.delete(id);
@@ -103,6 +107,7 @@ public class BrandTemplateMatchController {
 
     @PostMapping("/import")
     @ApiOperation("Excel 批量导入（upsert）")
+    @OperLog(module = "贴纸打印", operation = "批量导入品牌模板匹配", saveParams = false)
     @RequiresPermissions("sticker:brand-template:import")
     public Result<Map<String, Object>> importExcel(@RequestParam("file") MultipartFile file) {
         if (file == null || file.isEmpty()) {

@@ -2,6 +2,7 @@ package com.bcsport.admin.controller;
 
 import cn.hutool.poi.excel.ExcelUtil;
 import cn.hutool.poi.excel.ExcelWriter;
+import com.bcsport.admin.annotation.OperLog;
 import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.common.Result;
@@ -55,6 +56,7 @@ public class EstimatedCostController {
 
     @PutMapping("/precost")
     @ApiOperation("编辑预估成本")
+    @OperLog(module = "预估成本", operation = "编辑预估成本")
     @RequiresPermissions("erp:estimatedCost:edit")
     public Result<?> updatePrecost(@RequestBody Map<String, Object> body) {
         String materialNumber = body.get("materialNumber") == null ? null : body.get("materialNumber").toString();
@@ -65,6 +67,7 @@ public class EstimatedCostController {
 
     @PostMapping("/import")
     @ApiOperation("上传Excel批量导入预估成本")
+    @OperLog(module = "预估成本", operation = "批量导入预估成本", saveParams = false)
     @RequiresPermissions("erp:estimatedCost:import")
     public Result<Map<String, Object>> importExcel(@RequestParam("file") MultipartFile file) {
         if (file.isEmpty()) {

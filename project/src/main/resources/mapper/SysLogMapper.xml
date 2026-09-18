@@ -32,4 +32,11 @@
         WHERE operation_time &lt; SYSTIMESTAMP - #{days}
     </delete>
 
+    <select id="selectDistinctModules" resultType="java.lang.String">
+        SELECT DISTINCT module
+        FROM bc_sports_sys_log
+        WHERE module IS NOT NULL
+        ORDER BY module
+    </select>
+
 </mapper>

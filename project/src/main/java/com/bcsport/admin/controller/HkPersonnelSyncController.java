@@ -1,5 +1,6 @@
 package com.bcsport.admin.controller;
 
+import com.bcsport.admin.annotation.OperLog;
 import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.common.Result;
@@ -79,6 +80,7 @@ public class HkPersonnelSyncController {
 
     @PostMapping("/sync-onboarding")
     @ApiOperation("手动触发HK ERP入职同步")
+    @OperLog(module = "人事同步", operation = "手动触发HK入职同步")
     @RequiresPermissions("hk:personnel:sync")
     public Result<?> syncOnboarding() {
         log.info("手动触发HKERP新员工入职同步");
@@ -97,6 +99,7 @@ public class HkPersonnelSyncController {
 
     @PostMapping("/sync-update")
     @ApiOperation("手动触发HK ERP变更与离职同步")
+    @OperLog(module = "人事同步", operation = "手动触发HK变更离职同步")
     @RequiresPermissions("hk:personnel:sync")
     public Result<?> syncUpdate() {
         log.info("手动触发HKERP员工变更与离职同步");
@@ -115,6 +118,7 @@ public class HkPersonnelSyncController {
 
     @PostMapping("/sync-erp/{syncType}/{employeeId}")
     @ApiOperation("同步单个员工到HK ERP")
+    @OperLog(module = "人事同步", operation = "同步单个员工到HK ERP")
     @RequiresPermissions("hk:personnel:sync")
     public Result<?> syncSingleErp(@PathVariable String syncType, @PathVariable String employeeId) {
         if (!VALID_SYNC_TYPES.contains(syncType)) {

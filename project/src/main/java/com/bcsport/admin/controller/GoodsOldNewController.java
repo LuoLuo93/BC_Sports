@@ -2,6 +2,7 @@ package com.bcsport.admin.controller;
 
 import cn.hutool.poi.excel.ExcelUtil;
 import cn.hutool.poi.excel.ExcelWriter;
+import com.bcsport.admin.annotation.OperLog;
 import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.common.Result;
@@ -52,6 +53,7 @@ public class GoodsOldNewController {
 
     @PostMapping("/import")
     @ApiOperation("上传Excel批量导入")
+    @OperLog(module = "新旧品管理", operation = "批量导入新旧品", saveParams = false)
     @RequiresPermissions("bi:goods-data:import")
     public Result<Map<String, Object>> importExcel(@RequestParam("file") MultipartFile file) {
         if (file.isEmpty()) {

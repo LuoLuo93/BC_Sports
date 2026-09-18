@@ -1,5 +1,6 @@
 package com.bcsport.admin.controller;
 
+import com.bcsport.admin.annotation.OperLog;
 import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.Result;
 import com.bcsport.admin.dto.QywxCustomerQueryDTO;
@@ -161,6 +162,7 @@ public class QywxFollowUserController {
 
     @PostMapping("/sync")
     @ApiOperation("同步客户联系成员")
+    @OperLog(module = "企微客户", operation = "同步客户联系成员")
     @RequiresPermissions("qywx:follow:query")
     public Result<String> sync() {
         if (QywxFollowUserTask.isSyncing()) {

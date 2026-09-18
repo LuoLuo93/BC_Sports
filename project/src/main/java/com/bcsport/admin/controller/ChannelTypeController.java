@@ -2,6 +2,7 @@ package com.bcsport.admin.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 
+import com.bcsport.admin.annotation.OperLog;
 import com.bcsport.admin.common.Result;
 import com.bcsport.admin.dto.ChannelTypeDTO;
 import com.bcsport.admin.dto.ChannelTypeQueryDTO;
@@ -68,6 +69,7 @@ public class ChannelTypeController {
      */
     @PostMapping
     @ApiOperation("新增渠道类型")
+    @OperLog(module = "渠道类型", operation = "新增渠道类型")
     @RequiresPermissions("bi:channelType:add")
     public Result<String> add(@Valid @RequestBody ChannelTypeDTO channelTypeDTO) {
         channelTypeService.addChannelType(channelTypeDTO);
@@ -79,6 +81,7 @@ public class ChannelTypeController {
      */
     @PutMapping("/{id}")
     @ApiOperation("修改渠道类型")
+    @OperLog(module = "渠道类型", operation = "修改渠道类型")
     @RequiresPermissions("bi:channelType:edit")
     public Result<String> update(@PathVariable String id, @Valid @RequestBody ChannelTypeDTO channelTypeDTO) {
         channelTypeDTO.setId(id);
@@ -91,6 +94,7 @@ public class ChannelTypeController {
      */
     @DeleteMapping("/{id}")
     @ApiOperation("删除渠道类型")
+    @OperLog(module = "渠道类型", operation = "删除渠道类型")
     @RequiresPermissions("bi:channelType:delete")
     public Result<String> delete(@PathVariable String id) {
         channelTypeService.deleteChannelType(id);

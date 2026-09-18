@@ -2,6 +2,7 @@ package com.bcsport.admin.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 
+import com.bcsport.admin.annotation.OperLog;
 import com.bcsport.admin.common.Result;
 import com.bcsport.admin.dto.RegionDTO;
 import com.bcsport.admin.dto.RegionQueryDTO;
@@ -46,6 +47,7 @@ public class RegionController {
     }
 
     @PostMapping
+    @OperLog(module = "地区管理", operation = "新增地区")
     @RequiresPermissions("bi:region:add")
     public Result<String> add(@Valid @RequestBody RegionDTO regionDTO) {
         regionService.addRegion(regionDTO);
@@ -53,6 +55,7 @@ public class RegionController {
     }
 
     @PutMapping("/{id}")
+    @OperLog(module = "地区管理", operation = "修改地区")
     @RequiresPermissions("bi:region:edit")
     public Result<String> update(@PathVariable String id, @Valid @RequestBody RegionDTO regionDTO) {
         regionDTO.setId(id);
@@ -61,6 +64,7 @@ public class RegionController {
     }
 
     @DeleteMapping("/{id}")
+    @OperLog(module = "地区管理", operation = "删除地区")
     @RequiresPermissions("bi:region:delete")
     public Result<String> delete(@PathVariable String id) {
         regionService.deleteRegion(id);

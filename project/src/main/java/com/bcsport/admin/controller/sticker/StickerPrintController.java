@@ -1,5 +1,6 @@
 package com.bcsport.admin.controller.sticker;
 
+import com.bcsport.admin.annotation.OperLog;
 import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.common.Result;
@@ -42,6 +43,7 @@ public class StickerPrintController {
 
     @PostMapping
     @ApiOperation("创建打印单")
+    @OperLog(module = "贴纸打印", operation = "创建打印单", saveParams = false)
     @RequiresPermissions("sticker:print:add")
     public Result<?> create(@RequestBody StickerPrintOrder order) {
         String id = stickerPrintService.createOrder(order);
@@ -50,6 +52,7 @@ public class StickerPrintController {
 
     @PutMapping("/{orderId}")
     @ApiOperation("更新打印单")
+    @OperLog(module = "贴纸打印", operation = "更新打印单", saveParams = false)
     @RequiresPermissions("sticker:print:edit")
     public Result<?> update(@PathVariable String orderId, @RequestBody StickerPrintOrder order) {
         stickerPrintService.updateOrder(orderId, order);
@@ -58,6 +61,7 @@ public class StickerPrintController {
 
     @PostMapping("/{orderId}/submit")
     @ApiOperation("提交打印单")
+    @OperLog(module = "贴纸打印", operation = "提交打印单")
     @RequiresPermissions("sticker:print:edit")
     public Result<?> submit(@PathVariable String orderId) {
         stickerPrintService.submitOrder(orderId);
@@ -66,6 +70,7 @@ public class StickerPrintController {
 
     @PostMapping("/{orderId}/review")
     @ApiOperation("审核打印单")
+    @OperLog(module = "贴纸打印", operation = "审核打印单")
     @RequiresPermissions("sticker:print:review")
     public Result<?> review(@PathVariable String orderId, @RequestBody Map<String, String> body) {
         String statusStr = body.get("status");
@@ -88,6 +93,7 @@ public class StickerPrintController {
 
     @DeleteMapping("/{orderId}")
     @ApiOperation("删除打印单")
+    @OperLog(module = "贴纸打印", operation = "删除打印单")
     @RequiresPermissions("sticker:print:delete")
     public Result<?> delete(@PathVariable String orderId) {
         stickerPrintService.deleteOrder(orderId);

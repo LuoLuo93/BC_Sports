@@ -1,5 +1,6 @@
 package com.bcsport.admin.controller.agent;
 
+import com.bcsport.admin.annotation.OperLog;
 import com.bcsport.admin.common.Result;
 import com.bcsport.admin.entity.agent.PrintTask;
 import com.bcsport.admin.service.agent.PrintTaskService;
@@ -55,6 +56,7 @@ public class PrintController {
     // 其余为用户侧接口，全部收口权限：查询复用 Agent 监控页权限，下发/取消/补打独立按钮权限。
     @PostMapping("/create-tasks/{orderId}")
     @ApiOperation("根据申请单创建打印任务")
+    @OperLog(module = "贴纸打印", operation = "下发打印任务")
     @RequiresPermissions("agent:print:dispatch")
     public Result<?> createTasks(@PathVariable String orderId, @RequestParam String agentId,
                                  @RequestParam(value = "force", required = false, defaultValue = "false") boolean force) {
@@ -81,6 +83,7 @@ public class PrintController {
 
     @PostMapping("/cancel")
     @ApiOperation("手动取消单个打印任务(仅待打印/打印中/已暂停)")
+    @OperLog(module = "贴纸打印", operation = "取消打印任务")
     @RequiresPermissions("agent:print:dispatch")
     public Result<?> cancelTask(@RequestBody Map<String, Object> body) {
         String taskId = (String) body.get("taskId");
@@ -94,6 +97,7 @@ public class PrintController {
 
     @PostMapping("/reprint")
     @ApiOperation("补打单个打印任务")
+    @OperLog(module = "贴纸打印", operation = "补打打印任务")
     @RequiresPermissions("agent:print:dispatch")
     public Result<?> reprint(@RequestBody Map<String, Object> body) {
         String taskId = (String) body.get("taskId");

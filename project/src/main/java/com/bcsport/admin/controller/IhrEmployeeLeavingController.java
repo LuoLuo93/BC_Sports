@@ -1,5 +1,6 @@
 package com.bcsport.admin.controller;
 
+import com.bcsport.admin.annotation.OperLog;
 import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.common.Result;
@@ -47,6 +48,7 @@ public class IhrEmployeeLeavingController {
 
     @PostMapping("/sync-ihr")
     @ApiOperation("手动触发IHR员工同步")
+    @OperLog(module = "人事同步", operation = "同步IHR离职员工")
     @RequiresPermissions("ihr:leaving:sync")
     public Result<?> syncIhr() {
         log.info("手动触发IHR员工同步(离职管理)");
@@ -73,6 +75,7 @@ public class IhrEmployeeLeavingController {
 
     @PostMapping("/sync-qywx/{employeeId}")
     @ApiOperation("同步单个离职员工到企微")
+    @OperLog(module = "人事同步", operation = "同步单个离职员工到企微")
     @RequiresPermissions("ihr:leaving:sync")
     public Result<?> syncSingleQywx(@PathVariable String employeeId) {
         log.info("手动同步单个离职员工到企微, employeeId={}", employeeId);

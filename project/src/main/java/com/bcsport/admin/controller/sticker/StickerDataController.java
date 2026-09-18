@@ -2,6 +2,7 @@ package com.bcsport.admin.controller.sticker;
 
 import cn.hutool.poi.excel.ExcelUtil;
 import cn.hutool.poi.excel.ExcelWriter;
+import com.bcsport.admin.annotation.OperLog;
 import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.common.Result;
@@ -92,6 +93,7 @@ public class StickerDataController {
      * body: { materialNumber, executionStandard, ean13, fabCode, fabElement, acCode, accElement, sizeGroupId, safetyCategory }
      */
     @PutMapping("/material")
+    @OperLog(module = "贴纸打印", operation = "编辑货品材质字段")
     @RequiresPermissions("sticker:data:edit")
     public Result<?> updateMaterial(@RequestBody Map<String, Object> body) {
         String materialNumber = body.get("materialNumber") == null ? null : body.get("materialNumber").toString();
@@ -114,6 +116,7 @@ public class StickerDataController {
      * Excel 留空的字段不更新（保留库内原值），不写 NULL 清空。
      */
     @PostMapping("/import")
+    @OperLog(module = "贴纸打印", operation = "批量导入货品材质", saveParams = false)
     @RequiresPermissions("sticker:data:import")
     public Result<Map<String, Object>> importExcel(@RequestParam("file") MultipartFile file) {
         if (file.isEmpty()) {

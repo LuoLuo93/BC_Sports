@@ -2,6 +2,7 @@ package com.bcsport.admin.controller;
 
 import cn.hutool.poi.excel.ExcelUtil;
 import cn.hutool.poi.excel.ExcelWriter;
+import com.bcsport.admin.annotation.OperLog;
 import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.common.Result;
@@ -62,6 +63,7 @@ public class BcpSportPointsController {
 
     @PostMapping("/import")
     @ApiOperation("上传Excel批量导入")
+    @OperLog(module = "运动积分", operation = "批量导入运动积分", saveParams = false)
     @RequiresPermissions("bcp:sport-points:import")
     public Result<Map<String, Object>> importExcel(@RequestParam("file") MultipartFile file) {
         if (file.isEmpty()) {
@@ -89,6 +91,7 @@ public class BcpSportPointsController {
 
     @PutMapping("/{id}")
     @ApiOperation("编辑一条运动积分")
+    @OperLog(module = "运动积分", operation = "编辑运动积分")
     @RequiresPermissions("bcp:sport-points:edit")
     public Result<Void> update(@PathVariable Long id, @RequestBody BcpSportPoints body) {
         bcpSportPointsService.updateSportPoints(id, body.getSporter(), body.getPoints());

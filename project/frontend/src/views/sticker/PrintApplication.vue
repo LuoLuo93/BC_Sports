@@ -204,6 +204,9 @@
               <el-table-column prop="EAN13" label="EAN13" width="150">
                 <template #default="{ row }">{{ row.EAN13 || '-' }}</template>
               </el-table-column>
+              <el-table-column prop="ORIGIN" label="产地" width="110" show-overflow-tooltip>
+                <template #default="{ row }">{{ row.ORIGIN || '-' }}</template>
+              </el-table-column>
               <el-table-column prop="SIZE_GROUP_NAME" label="矫正尺码组" width="150" show-overflow-tooltip>
                 <template #default="{ row }">
                   <el-tag v-if="row.SIZE_GROUP_NAME" size="small" type="success" effect="plain">{{ row.SIZE_GROUP_NAME }}</el-tag>
@@ -248,6 +251,9 @@
               </el-table-column>
               <el-table-column prop="ean13" label="EAN13" width="150">
                 <template #default="{ row }">{{ row.ean13 || '-' }}</template>
+              </el-table-column>
+              <el-table-column prop="origin" label="产地" width="110" show-overflow-tooltip>
+                <template #default="{ row }">{{ row.origin || '-' }}</template>
               </el-table-column>
               <el-table-column label="面料/辅料成分" width="240" show-overflow-tooltip>
                 <template #default="{ row }">

@@ -87,10 +87,10 @@ public class StickerDataController {
     }
 
     /**
-     * 保存货品可编辑字段（执行标准/EAN13/面料编码/面料成分/辅料编码/辅料成分/矫正尺码组ID/安全类别），写回 ERP M_PRODUCT。
+     * 保存货品可编辑字段（执行标准/EAN13/面料编码/面料成分/辅料编码/辅料成分/矫正尺码组ID/安全类别/产地MADEIN），写回 ERP M_PRODUCT。
      * 基本信息（货号/品名/品牌/价格等）不更新，避免侵入 ERP 主数据。
      * 矫正尺码组ID 复用 M_PRODUCT.BOX_QTY_NEW 列存储。
-     * body: { materialNumber, executionStandard, ean13, fabCode, fabElement, acCode, accElement, sizeGroupId, safetyCategory }
+     * body: { materialNumber, executionStandard, ean13, fabCode, fabElement, acCode, accElement, sizeGroupId, safetyCategory, madein }
      */
     @PutMapping("/material")
     @OperLog(module = "贴纸打印", operation = "编辑货品材质字段")
@@ -105,14 +105,15 @@ public class StickerDataController {
         String accElement = body.get("accElement") == null ? null : body.get("accElement").toString();
         String sizeGroupId = body.get("sizeGroupId") == null ? null : body.get("sizeGroupId").toString();
         String safetyCategory = body.get("safetyCategory") == null ? null : body.get("safetyCategory").toString();
+        String madein = body.get("madein") == null ? null : body.get("madein").toString();
 
         stickerPrintService.updateEditableFields(materialNumber, executionStandard, ean13,
-                fabCode, fabElement, acCode, accElement, sizeGroupId, safetyCategory);
+                fabCode, fabElement, acCode, accElement, sizeGroupId, safetyCategory, madein);
         return Result.success("保存成功");
     }
 
     /**
-     * Excel 批量导入：按货号更新执行标准/EAN13/安全类别/4个材质字段，写回 ERP M_PRODUCT。
+     * Excel 批量导入：按货号更新执行标准/EAN13/安全类别/产地MADEIN/4个材质字段，写回 ERP M_PRODUCT。
      * Excel 留空的字段不更新（保留库内原值），不写 NULL 清空。
      */
     @PostMapping("/import")
@@ -161,6 +162,7 @@ public class StickerDataController {
             writer.addHeaderAlias("货号", "货号");
             writer.addHeaderAlias("执行标准", "执行标准");
             writer.addHeaderAlias("EAN13", "EAN13");
+            writer.addHeaderAlias("产地", "产地");
             writer.addHeaderAlias("安全类别", "安全类别");
             writer.addHeaderAlias("面料成分1", "面料成分1");
             writer.addHeaderAlias("面料成分2", "面料成分2");
@@ -171,6 +173,7 @@ public class StickerDataController {
             sample.put("货号", "NLM25001");
             sample.put("执行标准", "GB/T 22853-2019");
             sample.put("EAN13", "123456789012");
+            sample.put("产地", "中国");
             sample.put("安全类别", "GB 31701-2015 B类");
             sample.put("面料成分1", "100%聚酯纤维");
             sample.put("面料成分2", "");

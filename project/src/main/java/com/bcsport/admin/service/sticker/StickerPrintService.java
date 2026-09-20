@@ -128,17 +128,17 @@ public class StickerPrintService {
     }
 
     /**
-     * 按货号更新 ERP M_PRODUCT 的可编辑字段（执行标准/EAN13/4个材质字段/矫正尺码组ID/安全类别）。
+     * 按货号更新 ERP M_PRODUCT 的可编辑字段（执行标准/EAN13/4个材质字段/矫正尺码组ID/安全类别/产地MADEIN）。
      * 基本信息不更新，避免侵入 ERP 主数据。
      */
     public int updateEditableFields(String materialNumber, String executionStandard, String ean13,
                                     String fabCode, String fabElement, String acCode, String accElement,
-                                    String sizeGroupId, String safetyCategory) {
+                                    String sizeGroupId, String safetyCategory, String madein) {
         if (materialNumber == null || materialNumber.isBlank()) {
             throw new BusinessException("货号不能为空");
         }
         int rows = bjerpProductMapper.updateEditableFields(materialNumber, executionStandard, ean13,
-                fabCode, fabElement, acCode, accElement, sizeGroupId, safetyCategory);
+                fabCode, fabElement, acCode, accElement, sizeGroupId, safetyCategory, madein);
         if (rows == 0) {
             throw new BusinessException("货号不存在，更新失败: " + materialNumber);
         }
@@ -302,8 +302,8 @@ public class StickerPrintService {
             d.setOrderId(orderId);
             d.setSort(i);
             d.setCreateTime(LocalDateTime.now());
-            // 产地/制造商/制造商地址/联系电话 不入库（当前 ERP 返回的是占位常量，无业务价值）
-            d.setOrigin(null);
+            // 产地(origin)来自 ERP M_PRODUCT.MADEIN，随明细入库供打印模板取用；
+            // 制造商/制造商地址/联系电话仍是 ERP 占位常量（无业务价值）不入库
             d.setManufacturer(null);
             d.setManufacturerAddress(null);
             d.setContactPhone(null);

@@ -51,7 +51,7 @@
                 product.PRICELIST AS PRICE,
                 product.THEME_NAME AS EXECUTION_STANDARD,
                 product.INTSCODE AS EAN13,
-                '中国' AS ORIGIN,
+                product.MADEIN AS ORIGIN,
                 'B.C.SPORTS' AS MANUFACTURER,
                 '福建省厦门市思明区体育路88号' AS MANUFACTURER_ADDRESS,
                 '0592-8888888' AS CONTACT_PHONE,
@@ -60,6 +60,7 @@
                 product.ACCODE AS AC_CODE,
                 product.ACCELEMENT AS ACC_ELEMENT,
                 product.SAFETY_CATEGORY AS SAFETY_CATEGORY,
+                product.MADEIN AS MADEIN,
                 product.M_SIZEGROUP_ID AS SIZEGROUP_ID,
                 product.BOX_QTY_NEW AS SIZE_GROUP_ID
                 FROM M_PRODUCT product
@@ -110,6 +111,7 @@
                product.ACCODE AS AC_CODE,
                product.ACCELEMENT AS ACC_ELEMENT,
                product.SAFETY_CATEGORY AS SAFETY_CATEGORY,
+               product.MADEIN AS MADEIN,
                product.M_SIZEGROUP_ID AS SIZEGROUP_ID,
                product.BOX_QTY_NEW AS SIZE_GROUP_ID,
                (SELECT LISTAGG(c.VALUE2_CODE, ',') WITHIN GROUP (ORDER BY c.VALUE2_CODE)
@@ -146,7 +148,7 @@
           AND barcode.NO IS NOT NULL
     </select>
 
-    <!-- 按货号(name)更新可编辑字段(执行标准/EAN13/4材质/矫正尺码组/安全类别); 空串转NULL避免ERP残留空白; 基本信息不更新 -->
+    <!-- 按货号(name)更新可编辑字段(执行标准/EAN13/4材质/产地MADEIN/矫正尺码组/安全类别); 空串转NULL避免ERP残留空白; 基本信息不更新 -->
     <update id="updateEditableFields">
         UPDATE M_PRODUCT
         SET THEME_NAME = NULLIF(TRIM(#{executionStandard}), ''),
@@ -156,7 +158,8 @@
             ACCODE     = NULLIF(TRIM(#{acCode}), ''),
             ACCELEMENT = NULLIF(TRIM(#{accElement}), ''),
             BOX_QTY_NEW = NULLIF(TRIM(#{sizeGroupId}), ''),
-            SAFETY_CATEGORY = NULLIF(TRIM(#{safetyCategory}), '')
+            SAFETY_CATEGORY = NULLIF(TRIM(#{safetyCategory}), ''),
+            MADEIN = NULLIF(TRIM(#{madein}), '')
         WHERE name = #{materialNumber}
     </update>
 
@@ -171,6 +174,7 @@
                        #{row.executionStandard, jdbcType=VARCHAR} AS theme_name,
                        #{row.ean13, jdbcType=VARCHAR} AS intscode,
                        #{row.safetyCategory, jdbcType=VARCHAR} AS safety_category,
+                       #{row.madein, jdbcType=VARCHAR} AS madein,
                        #{row.fabCode, jdbcType=VARCHAR} AS fabcode,
                        #{row.fabElement, jdbcType=VARCHAR} AS fabelement,
                        #{row.acCode, jdbcType=VARCHAR} AS accode,
@@ -183,6 +187,7 @@
             t.THEME_NAME = CASE WHEN src.theme_name IS NOT NULL THEN src.theme_name ELSE t.THEME_NAME END,
             t.INTSCODE = CASE WHEN src.intscode IS NOT NULL THEN src.intscode ELSE t.INTSCODE END,
             t.SAFETY_CATEGORY = CASE WHEN src.safety_category IS NOT NULL THEN src.safety_category ELSE t.SAFETY_CATEGORY END,
+            t.MADEIN = CASE WHEN src.madein IS NOT NULL THEN src.madein ELSE t.MADEIN END,
             t.FABCODE = CASE WHEN src.fabcode IS NOT NULL THEN src.fabcode ELSE t.FABCODE END,
             t.FABELEMENT = CASE WHEN src.fabelement IS NOT NULL THEN src.fabelement ELSE t.FABELEMENT END,
             t.ACCODE = CASE WHEN src.accode IS NOT NULL THEN src.accode ELSE t.ACCODE END,

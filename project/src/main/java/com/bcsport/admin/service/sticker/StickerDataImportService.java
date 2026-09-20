@@ -23,7 +23,7 @@ import java.math.BigDecimal;
 import java.util.*;
 
 /**
- * 贴纸资料批量导入：按货号(name)更新 ERP M_PRODUCT 的执行标准/EAN13/安全类别/4个材质字段。
+ * 贴纸资料批量导入：按货号(name)更新 ERP M_PRODUCT 的执行标准/EAN13/安全类别/产地MADEIN/4个材质字段。
  * <p>
  * 数据写伯俊 ERP M_PRODUCT（跨库直写），导入日志存统一日志表（R01）。
  * 语义与详情页手工编辑的差别：Excel 留空的字段不更新（保留库内原值），不写 NULL 清空，避免模板漏填误清 ERP 主数据。
@@ -44,7 +44,7 @@ public class StickerDataImportService {
 
     /** 可更新字段标识（除 materialNumber 外） */
     private static final String[] VALUE_FIELDS = {
-            "executionStandard", "ean13", "safetyCategory",
+            "executionStandard", "ean13", "safetyCategory", "madein",
             "fabCode", "fabElement", "acCode", "accElement"
     };
 
@@ -61,6 +61,8 @@ public class StickerDataImportService {
         HEADER_ALIAS.put("安全类别", "safetyCategory");
         HEADER_ALIAS.put("安全技术类别", "safetyCategory");
         HEADER_ALIAS.put("safetyCategory", "safetyCategory");
+        HEADER_ALIAS.put("产地", "madein");
+        HEADER_ALIAS.put("madein", "madein");
         HEADER_ALIAS.put("面料成分1", "fabCode");
         HEADER_ALIAS.put("面料1", "fabCode");
         HEADER_ALIAS.put("fabCode", "fabCode");
@@ -162,9 +164,9 @@ public class StickerDataImportService {
                 if (errors.size() < MAX_ERRORS) errors.add("第" + rowNum + "行：EAN13 必须为 12 位纯数字（当前值：" + ean13 + "）");
                 return;
             }
-            // 7 个可更新字段全为空 → 该行无事可做，跳过
+            // 8 个可更新字段全为空 → 该行无事可做，跳过
             if (values.values().stream().allMatch(v -> !StringUtils.hasText(v))) {
-                if (errors.size() < MAX_ERRORS) errors.add("第" + rowNum + "行：执行标准/EAN13/安全类别/材质均为空，已跳过");
+                if (errors.size() < MAX_ERRORS) errors.add("第" + rowNum + "行：执行标准/EAN13/安全类别/产地/材质均为空，已跳过");
                 return;
             }
 
@@ -196,7 +198,7 @@ public class StickerDataImportService {
             if (allColumns.contains(field)) { hasAnyValueColumn = true; break; }
         }
         if (!hasAnyValueColumn) {
-            return failFast(file, "Excel缺少可更新列（执行标准/EAN13/安全类别/面料成分/辅料成分），请检查表头或下载导入模板");
+            return failFast(file, "Excel缺少可更新列（执行标准/EAN13/安全类别/产地/面料成分/辅料成分），请检查表头或下载导入模板");
         }
 
         // 2.5 重复行提示（按字段合并，告知用户哪些货号出现多次）

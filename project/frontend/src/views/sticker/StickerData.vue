@@ -73,6 +73,9 @@
           <el-table-column prop="EAN13" label="EAN13" width="150">
             <template #default="{ row }">{{ row.EAN13 || '-' }}</template>
           </el-table-column>
+          <el-table-column prop="MADEIN" label="产地" width="110" show-overflow-tooltip>
+            <template #default="{ row }">{{ row.MADEIN || '-' }}</template>
+          </el-table-column>
           <el-table-column prop="SIZE_GROUP_NAME" label="矫正尺码组" width="150" show-overflow-tooltip>
             <template #default="{ row }">
               <el-tag v-if="row.SIZE_GROUP_NAME" size="small" type="success" effect="plain">{{ row.SIZE_GROUP_NAME }}</el-tag>
@@ -114,7 +117,7 @@
           <el-icon :size="40" style="color:var(--el-text-color-placeholder)"><Upload /></el-icon>
           <div style="margin-top:8px">将 Excel 文件拖到此处，或 <em>点击上传</em></div>
           <template #tip>
-            <div class="upload-hint">仅支持 .xlsx / .xls 格式，按货号更新执行标准 / EAN13 / 安全类别 / 材质；<b>单元格留空 = 不更新该字段</b>（保留系统原值，不会清空）</div>
+            <div class="upload-hint">仅支持 .xlsx / .xls 格式，按货号更新执行标准 / EAN13 / 安全类别 / 产地 / 材质；<b>单元格留空 = 不更新该字段</b>（保留系统原值，不会清空）</div>
           </template>
         </el-upload>
         <div style="margin-top:12px;text-align:center">

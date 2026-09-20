@@ -119,6 +119,9 @@
           <el-table-column prop="ean13" label="EAN13" width="150">
             <template #default="{ row }">{{ row.ean13 || '-' }}</template>
           </el-table-column>
+          <el-table-column prop="origin" label="产地" width="110" show-overflow-tooltip>
+            <template #default="{ row }">{{ row.origin || '-' }}</template>
+          </el-table-column>
           <el-table-column prop="barcode" label="条码" width="170" show-overflow-tooltip>
             <template #default="{ row }">{{ row.barcode || '-' }}</template>
           </el-table-column>

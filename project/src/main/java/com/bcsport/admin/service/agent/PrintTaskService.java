@@ -745,8 +745,8 @@ public class PrintTaskService {
                 value = mapping.getDefaultValue();
             } else {
                 value = getFieldValue(detail, dbField);
-                // 货品资料取不到值时，回退到默认值
-                if (value == null && mapping.getDefaultValue() != null && !mapping.getDefaultValue().isBlank()) {
+                // 货品资料取不到值（null 或空串，如产地未维护）时，回退到默认值
+                if ((value == null || value.isBlank()) && mapping.getDefaultValue() != null && !mapping.getDefaultValue().isBlank()) {
                     value = mapping.getDefaultValue();
                 }
             }

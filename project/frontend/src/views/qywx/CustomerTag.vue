@@ -73,10 +73,9 @@
         </el-card>
       </el-tab-pane>
 
-      <!-- 打标签日志 -->
+      <!-- 打标签日志：默认只显示批次汇总，选中批次后展开明细 -->
       <el-tab-pane label="打标签日志" name="records" lazy>
-        <!-- 批次汇总 -->
-        <el-card shadow="never" class="search-card">
+        <el-card shadow="never">
           <template #header>
             <div class="card-header-row">
               <span class="card-header-title">打标批次汇总</span>
@@ -84,129 +83,56 @@
             </div>
           </template>
           <div class="table-responsive">
-            <el-table v-loading="batchLoading" :data="batchData" border stripe empty-text="暂无打标批次">
-              <el-table-column prop="batchNo" label="批次号" min-width="160" show-overflow-tooltip>
+            <el-table v-loading="batchLoading" :data="batchData" border stripe empty-text="暂无打标批次，请先在「打标签」页上传Excel">
+              <el-table-column prop="batchNo" label="批次号" min-width="150" show-overflow-tooltip>
                 <template #default="{ row }">
                   <el-button link type="primary" @click="viewBatchDetail(row)">{{ row.batchNo }}</el-button>
                 </template>
               </el-table-column>
-              <el-table-column prop="fileName" label="文件名" min-width="140" show-overflow-tooltip>
+              <el-table-column prop="fileName" label="文件名" min-width="110" show-overflow-tooltip>
                 <template #default="{ row }">{{ row.fileName || '-' }}</template>
               </el-table-column>
-              <el-table-column label="状态" width="90" align="center">
+              <el-table-column label="状态" width="80" align="center">
                 <template #default="{ row }">
                   <el-tag :type="row.status === 'DONE' ? 'success' : row.status === 'RUNNING' ? 'warning' : 'danger'" size="small">
                     {{ row.status === 'DONE' ? '完成' : row.status === 'RUNNING' ? '进行中' : '失败' }}
                   </el-tag>
                 </template>
               </el-table-column>
-              <el-table-column prop="totalRows" label="总行数" width="80" align="center" />
-              <el-table-column prop="successCnt" label="成功" width="70" align="center">
+              <el-table-column prop="totalRows" label="总行数" width="70" align="center" />
+              <el-table-column prop="successCnt" label="成功" width="65" align="center">
                 <template #default="{ row }">
-                  <span :style="row.status === 'RUNNING' ? '' : 'color:#67C23A'">{{ row.successCnt }}</span>
+                  <span :style="row.successCnt > 0 && row.status !== 'RUNNING' ? 'color:#67C23A' : ''">{{ row.successCnt }}</span>
                 </template>
               </el-table-column>
-              <el-table-column prop="failCnt" label="失败" width="70" align="center">
+              <el-table-column prop="failCnt" label="失败" width="65" align="center">
                 <template #default="{ row }">
                   <span :style="row.failCnt > 0 ? 'color:#F56C6C' : ''">{{ row.failCnt }}</span>
                 </template>
               </el-table-column>
-              <el-table-column prop="unmatchedTagRows" label="未匹配标签" width="100" align="center">
+              <el-table-column prop="unmatchedTagRows" label="未匹配标签" width="90" align="center">
                 <template #default="{ row }">
                   <span :style="row.unmatchedTagRows > 0 ? 'color:#E6A23C' : ''">{{ row.unmatchedTagRows }}</span>
                 </template>
               </el-table-column>
-              <el-table-column prop="unmatchedCustomerRows" label="未匹配客户" width="100" align="center">
+              <el-table-column prop="unmatchedCustomerRows" label="未匹配客户" width="90" align="center">
                 <template #default="{ row }">
                   <span :style="row.unmatchedCustomerRows > 0 ? 'color:#E6A23C' : ''">{{ row.unmatchedCustomerRows }}</span>
                 </template>
               </el-table-column>
-              <el-table-column label="开始时间" width="160" align="center">
-                <template #default="{ row }">{{ formatTime(row.startTime) }}</template>
+              <el-table-column label="时间" width="150" align="center">
+                <template #default="{ row }">
+                  <div class="batch-time">{{ formatTime(row.startTime) || '-' }}</div>
+                  <div class="batch-time" v-if="row.endTime">→ {{ formatTime(row.endTime).slice(5) }}</div>
+                </template>
               </el-table-column>
-              <el-table-column label="结束时间" width="160" align="center">
-                <template #default="{ row }">{{ formatTime(row.endTime) || '-' }}</template>
-              </el-table-column>
-              <el-table-column label="失败原因" min-width="140" show-overflow-tooltip>
+              <el-table-column label="失败原因" min-width="110" show-overflow-tooltip>
                 <template #default="{ row }">{{ row.errmsg || '-' }}</template>
               </el-table-column>
             </el-table>
           </div>
           <div class="pagination-wrapper--sm">
-            <el-pagination v-model:current-page="batchQuery.pageNum" v-model:page-size="batchQuery.pageSize" :total="batchTotal" :page-sizes="PAGE_SIZES" layout="total, sizes, prev, pager, next" @size-change="loadBatchData" @current-change="loadBatchData" />
-          </div>
-        </el-card>
-
-        <!-- 打标明细 -->
-        <el-card shadow="never" class="search-card">
-          <el-form :model="recordQuery" inline>
-            <el-form-item label="客户ID">
-              <el-input v-model="recordQuery.externalUserid" placeholder="请输入客户ID" clearable @keyup.enter="handleRecordSearch" />
-            </el-form-item>
-            <el-form-item label="标签名称">
-              <el-input v-model="recordQuery.tagName" placeholder="请输入标签名称" clearable @keyup.enter="handleRecordSearch" />
-            </el-form-item>
-            <el-form-item label="批次号">
-              <el-input v-model="recordQuery.batchNo" placeholder="请输入批次号" clearable @keyup.enter="handleRecordSearch" />
-            </el-form-item>
-            <el-form-item label="状态">
-              <el-select v-model="recordQuery.status" placeholder="全部" clearable style="width:130px" @change="handleRecordSearch">
-                <el-option label="成功" :value="1" />
-                <el-option label="接口失败" :value="0" />
-                <el-option label="标签未匹配" :value="2" />
-                <el-option label="客户未匹配" :value="3" />
-              </el-select>
-            </el-form-item>
-            <el-form-item>
-              <el-button type="primary" :icon="Search" @click="handleRecordSearch">搜索</el-button>
-              <el-button :icon="RefreshRight" @click="resetRecordQuery">重置</el-button>
-            </el-form-item>
-          </el-form>
-        </el-card>
-
-        <el-card shadow="never">
-          <template #header>
-            <div class="card-header-row">
-              <span class="card-header-title">打标签日志</span>
-            </div>
-          </template>
-          <div class="table-responsive">
-            <el-table v-loading="recordLoading" :data="recordData" border stripe empty-text="暂无数据">
-              <el-table-column type="index" label="#" width="50" align="center" />
-              <el-table-column prop="externalUserid" label="客户ID" min-width="140" show-overflow-tooltip />
-              <el-table-column prop="userid" label="跟进员工" min-width="110" show-overflow-tooltip>
-                <template #default="{ row }">{{ row.userid || '-' }}</template>
-              </el-table-column>
-              <el-table-column prop="tagName" label="标签名称" min-width="110" />
-              <el-table-column label="动作" width="70" align="center">
-                <template #default="{ row }">
-                  <el-tag :type="row.tagAction === 'REMOVE' ? 'danger' : 'info'" size="small" effect="plain">{{ row.tagAction === 'REMOVE' ? '移除' : '打标' }}</el-tag>
-                </template>
-              </el-table-column>
-              <el-table-column label="状态" width="100" align="center">
-                <template #default="{ row }">
-                  <el-tag :type="statusTagType(row.status)" size="small">{{ statusLabel(row.status) }}</el-tag>
-                </template>
-              </el-table-column>
-              <el-table-column label="说明" min-width="150" show-overflow-tooltip>
-                <template #default="{ row }">{{ row.errmsg || '-' }}</template>
-              </el-table-column>
-              <el-table-column label="来源" width="110" align="center">
-                <template #default="{ row }">
-                  <el-tag :type="row.source === 'IMPORT' ? 'primary' : 'info'" size="small">{{ row.source === 'IMPORT' ? 'Excel导入' : row.source }}</el-tag>
-                </template>
-              </el-table-column>
-              <el-table-column prop="batchNo" label="批次号" min-width="140" show-overflow-tooltip>
-                <template #default="{ row }">{{ row.batchNo || '-' }}</template>
-              </el-table-column>
-              <el-table-column label="打标时间" width="170" align="center">
-                <template #default="{ row }">{{ formatTime(row.createTime) }}</template>
-              </el-table-column>
-            </el-table>
-          </div>
-
-          <div class="pagination-wrapper--sm">
-            <el-pagination v-model:current-page="recordQuery.pageNum" v-model:page-size="recordQuery.pageSize" :total="recordTotal" :page-sizes="PAGE_SIZES" layout="total, sizes, prev, pager, next" @size-change="handleRecordSearch" @current-change="loadRecordData" />
+            <el-pagination v-model:current-page="batchQuery.pageNum" v-model:page-size="batchQuery.pageSize" :total="batchTotal" :page-sizes="PAGE_SIZES" layout="total, sizes, prev, pager, next" @size-change="() => { batchQuery.pageNum = 1; loadBatchData() }" @current-change="loadBatchData" />
           </div>
         </el-card>
       </el-tab-pane>
@@ -271,6 +197,64 @@
         </div>
       </template>
     </el-dialog>
+
+    <!-- 批次明细弹窗 -->
+    <el-dialog v-model="recordDialogVisible" :title="selectedBatch ? `批次明细：${selectedBatch.batchNo}（${selectedBatch.fileName || '-'}）` : '批次明细'" width="1100px" destroy-on-close>
+      <el-form :model="recordQuery" inline style="margin-bottom:4px">
+        <el-form-item label="客户ID">
+          <el-input v-model="recordQuery.externalUserid" placeholder="请输入客户ID" clearable @keyup.enter="handleRecordSearch" />
+        </el-form-item>
+        <el-form-item label="标签名称">
+          <el-input v-model="recordQuery.tagName" placeholder="请输入标签名称" clearable @keyup.enter="handleRecordSearch" />
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-select v-model="recordQuery.status" placeholder="全部" clearable style="width:130px" @change="handleRecordSearch">
+            <el-option label="成功" :value="1" />
+            <el-option label="接口失败" :value="0" />
+            <el-option label="标签未匹配" :value="2" />
+            <el-option label="客户未匹配" :value="3" />
+          </el-select>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" :icon="Search" @click="handleRecordSearch">搜索</el-button>
+          <el-button :icon="RefreshRight" @click="resetRecordQuery">重置</el-button>
+        </el-form-item>
+      </el-form>
+
+      <el-table v-loading="recordLoading" :data="recordData" border stripe empty-text="该批次暂无记录" :max-height="420">
+        <el-table-column type="index" label="#" width="50" align="center" />
+        <el-table-column prop="externalUserid" label="客户ID" min-width="150" show-overflow-tooltip />
+        <el-table-column prop="userid" label="跟进员工" min-width="110" show-overflow-tooltip>
+          <template #default="{ row }">{{ row.userid || '-' }}</template>
+        </el-table-column>
+        <el-table-column prop="tagName" label="标签名称" min-width="110" />
+        <el-table-column label="动作" width="70" align="center">
+          <template #default="{ row }">
+            <el-tag :type="row.tagAction === 'REMOVE' ? 'danger' : 'info'" size="small" effect="plain">{{ row.tagAction === 'REMOVE' ? '移除' : '打标' }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="状态" width="100" align="center">
+          <template #default="{ row }">
+            <el-tag :type="statusTagType(row.status)" size="small">{{ statusLabel(row.status) }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="说明" min-width="150" show-overflow-tooltip>
+          <template #default="{ row }">{{ row.errmsg || '-' }}</template>
+        </el-table-column>
+        <el-table-column label="来源" width="110" align="center">
+          <template #default="{ row }">
+            <el-tag :type="row.source === 'IMPORT' ? 'primary' : 'info'" size="small">{{ row.source === 'IMPORT' ? 'Excel导入' : row.source }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="打标时间" width="170" align="center">
+          <template #default="{ row }">{{ formatTime(row.createTime) }}</template>
+        </el-table-column>
+      </el-table>
+
+      <div class="pagination-wrapper--sm">
+        <el-pagination v-model:current-page="recordQuery.pageNum" v-model:page-size="recordQuery.pageSize" :total="recordTotal" :page-sizes="PAGE_SIZES" layout="total, sizes, prev, pager, next" @size-change="handleRecordSearch" @current-change="loadRecordData" />
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -311,10 +295,13 @@ function startBatchTagPolling() {
       if (!res.data?.batchTagging) {
         stopBatchTagPolling()
         batchTagLoading.value = false
-        loadRecordData()
-        loadBatchData()
+        await loadBatchData()
+        // 自动弹出最新批次的明细
+        if (batchData.value.length && !selectedBatch.value) {
+          viewBatchDetail(batchData.value[0])
+        }
         activeTab.value = 'records'
-        ElMessage.success('打标任务已完成，结果见打标批次汇总')
+        ElMessage.success('打标任务已完成，结果见批次汇总')
       }
     } catch {
       // keep polling on transient errors
@@ -487,6 +474,8 @@ const batchLoading = ref(false)
 const batchData = ref([])
 const batchTotal = ref(0)
 const batchQuery = reactive({ pageNum: 1, pageSize: 10 })
+const selectedBatch = ref(null)
+const recordDialogVisible = ref(false)
 
 async function loadBatchData() {
   batchLoading.value = true
@@ -494,9 +483,13 @@ async function loadBatchData() {
 }
 
 function viewBatchDetail(row) {
-  recordQuery.batchNo = row.batchNo
+  selectedBatch.value = row
+  recordQuery.externalUserid = ''
+  recordQuery.tagName = ''
   recordQuery.status = undefined
+  recordQuery.batchNo = row.batchNo
   recordQuery.pageNum = 1
+  recordDialogVisible.value = true
   loadRecordData()
 }
 
@@ -520,11 +513,11 @@ async function loadRecordData() {
   try { const res = await getTagRecords(recordQuery); recordData.value = res.data?.records || []; recordTotal.value = res.data?.total || 0 } finally { recordLoading.value = false }
 }
 function handleRecordSearch() { recordQuery.pageNum = 1; loadRecordData() }
-function resetRecordQuery() { recordQuery.externalUserid = ''; recordQuery.tagName = ''; recordQuery.batchNo = ''; recordQuery.status = undefined; recordQuery.pageNum = 1; loadRecordData() }
+function resetRecordQuery() { recordQuery.externalUserid = ''; recordQuery.tagName = ''; recordQuery.status = undefined; recordQuery.pageNum = 1; loadRecordData() }
 
 watch(activeTab, (val) => {
   if (val === 'tags') loadTagData()
-  else if (val === 'records') { loadRecordData(); loadBatchData() }
+  else if (val === 'records') loadBatchData()
 })
 
 onMounted(() => {
@@ -556,5 +549,10 @@ onUnmounted(() => {
   overflow-y: auto;
   color: #909399;
   font-size: 12px;
+}
+.batch-time {
+  font-size: 12px;
+  line-height: 18px;
+  color: #606266;
 }
 </style>

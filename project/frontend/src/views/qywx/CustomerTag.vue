@@ -473,7 +473,9 @@ async function handleDeleteTagGroup(row) {
 const batchLoading = ref(false)
 const batchData = ref([])
 const batchTotal = ref(0)
-const batchQuery = reactive({ pageNum: 1, pageSize: 10 })
+const batchQuery = reactive({ pageNum: 1, pageSize: defaultPageSize.value })
+// 全局 sys.pageSize 在 MainLayout 挂载后才异步写入 defaultPageSize，加载完成后同步一次
+watch(defaultPageSize, (v) => { batchQuery.pageSize = v; recordQuery.pageSize = v })
 const selectedBatch = ref(null)
 const recordDialogVisible = ref(false)
 

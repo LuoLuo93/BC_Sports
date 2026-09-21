@@ -2,30 +2,28 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.bcsport.admin.qywxmapper.VxCustomerTagMapper">
 
+    <!-- 打标流水：成功ADD按(externalUserid,userid,tagId)防重(重复导入不重复记成功)；
+         失败/未匹配/移除行始终落库，作为事件流水保留 -->
     <insert id="insertBatch">
-        INSERT INTO VX_CustomerTag (id, externalUserid, userid, tagId, tagName, source, batchNo, createTime)
-        SELECT item.id, item.externalUserid, item.userid, item.tagId, item.tagName, item.source, item.batchNo, GETDATE()
+        INSERT INTO VX_CustomerTag (id, externalUserid, userid, tagId, tagName, source, batchNo, status, errmsg, tagAction, createTime)
+        SELECT item.id, item.externalUserid, item.userid, item.tagId, item.tagName, item.source, item.batchNo,
+               ISNULL(item.status, 1), item.errmsg, ISNULL(item.tagAction, 'ADD'), GETDATE()
         FROM (
             VALUES
             <foreach collection="list" item="item" separator=",">
                 (#{item.id}, #{item.externalUserid}, #{item.userid}, #{item.tagId}, #{item.tagName},
-                 #{item.source}, #{item.batchNo})
+                 #{item.source}, #{item.batchNo}, #{item.status}, #{item.errmsg}, #{item.tagAction})
             </foreach>
-        ) AS item(id, externalUserid, userid, tagId, tagName, source, batchNo)
-        WHERE NOT EXISTS (
+        ) AS item(id, externalUserid, userid, tagId, tagName, source, batchNo, status, errmsg, tagAction)
+        WHERE ISNULL(item.status, 1) &lt;&gt; 1 OR ISNULL(item.tagAction, 'ADD') &lt;&gt; 'ADD'
+           OR NOT EXISTS (
             SELECT 1 FROM VX_CustomerTag t
             WHERE t.externalUserid = item.externalUserid
             AND t.userid = item.userid
             AND t.tagId = item.tagId
+            AND t.status = 1
+            AND t.tagAction = 'ADD'
         )
     </insert>
-
-    <select id="selectByExternalUserid" resultType="com.bcsport.admin.entity.qywx.VxCustomerTag">
-        SELECT * FROM VX_CustomerTag WHERE externalUserid = #{externalUserid} ORDER BY createTime DESC
-    </select>
-
-    <select id="selectExistingTags" resultType="java.lang.String">
-        SELECT tagId FROM VX_CustomerTag WHERE externalUserid = #{externalUserid} AND userid = #{userid}
-    </select>
 
 </mapper>

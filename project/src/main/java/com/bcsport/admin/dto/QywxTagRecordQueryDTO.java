@@ -15,4 +15,7 @@ public class QywxTagRecordQueryDTO {
     private String tagName;
 
     private String batchNo;
+
+    /** 1=成功 0=接口失败 2=标签未匹配 3=客户未匹配 */
+    private Integer status;
 }

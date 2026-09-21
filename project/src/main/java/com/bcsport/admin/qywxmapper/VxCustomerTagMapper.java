@@ -11,8 +11,4 @@ import java.util.List;
 public interface VxCustomerTagMapper extends BaseMapper<VxCustomerTag> {
 
     void insertBatch(@Param("list") List<VxCustomerTag> list);
-
-    List<VxCustomerTag> selectByExternalUserid(@Param("externalUserid") String externalUserid);
-
-    List<String> selectExistingTags(@Param("externalUserid") String externalUserid, @Param("userid") String userid);
 }

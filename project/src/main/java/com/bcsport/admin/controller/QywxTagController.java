@@ -13,8 +13,10 @@ import com.bcsport.admin.dto.QywxTagQueryDTO;
 import com.bcsport.admin.dto.QywxTagRecordQueryDTO;
 import com.bcsport.admin.entity.qywx.VxCorpTag;
 import com.bcsport.admin.entity.qywx.VxCustomerTag;
+import com.bcsport.admin.entity.qywx.VxTagBatch;
 import com.bcsport.admin.qywxmapper.VxCorpTagMapper;
 import com.bcsport.admin.qywxmapper.VxCustomerTagMapper;
+import com.bcsport.admin.qywxmapper.VxTagBatchMapper;
 import com.bcsport.admin.task.qywx.QywxCustomerTagTask;
 import com.bcsport.admin.task.qywx.QywxApiClient;
 import io.swagger.annotations.Api;
@@ -29,6 +31,8 @@ import org.springframework.web.multipart.MultipartFile;
 import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.io.InputStream;
+import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -41,6 +45,9 @@ import java.util.stream.Collectors;
 @Api(tags = "企微客户标签管理")
 public class QywxTagController {
 
+    /** 单次上传数据行上限，防止超大文件撑爆内存 */
+    private static final int MAX_UPLOAD_ROWS = 50000;
+
     @Autowired
     private QywxCustomerTagTask customerTagTask;
 
@@ -49,6 +56,9 @@ public class QywxTagController {
 
     @Autowired
     private VxCustomerTagMapper customerTagMapper;
+
+    @Autowired
+    private VxTagBatchMapper tagBatchMapper;
 
     @Autowired
     private QywxApiClient qywxApiClient;
@@ -62,7 +72,8 @@ public class QywxTagController {
     @RequiresPermissions("qywx:tag:query")
     public Result<Map<String, Object>> getCorpTags(@Valid PageQuery pageQuery, QywxTagQueryDTO queryDTO) {
         String tagName = queryDTO.getTagName();
-        int pageSize = Math.max(Math.min(pageQuery.getPageSize(), 100), 1);
+        // 标签库数据量小(企微上限100组)，放宽页大小上限支持前端一次拉全量(受PageQuery全局@Max(500)约束)
+        int pageSize = Math.max(Math.min(pageQuery.getPageSize(), 500), 1);
         int pageNum = Math.max(pageQuery.getPageNum(), 1);
         int offset = (pageNum - 1) * pageSize;
 
@@ -98,6 +109,9 @@ public class QywxTagController {
     @OperLog(module = "企微标签", operation = "同步企业标签库")
     @RequiresPermissions("qywx:tag:sync")
     public Result<String> syncCorpTags() {
+        if (QywxCustomerTagTask.isBatchTagging()) {
+            return Result.error("批量打标进行中，请稍后再试");
+        }
         if (QywxCustomerTagTask.isSyncing()) {
             return Result.error("标签库同步正在进行中，请稍后再试");
         }
@@ -126,6 +140,9 @@ public class QywxTagController {
     @OperLog(module = "企微标签", operation = "添加标签组")
     @RequiresPermissions("qywx:tag:sync")
     public Result<?> addCorpTag(@RequestBody Map<String, Object> params) {
+        if (QywxCustomerTagTask.isBatchTagging()) {
+            return Result.error("批量打标进行中，请稍后再操作标签库");
+        }
         String groupName = (String) params.get("groupName");
         List<String> tags = (List<String>) params.get("tags");
         if (groupName == null || groupName.trim().isEmpty()) {
@@ -151,6 +168,9 @@ public class QywxTagController {
     @OperLog(module = "企微标签", operation = "编辑标签组")
     @RequiresPermissions("qywx:tag:sync")
     public Result<?> editCorpTagGroup(@RequestBody Map<String, Object> params) {
+        if (QywxCustomerTagTask.isBatchTagging()) {
+            return Result.error("批量打标进行中，请稍后再操作标签库");
+        }
         String groupId = (String) params.get("groupId");
         String groupName = (String) params.get("groupName");
         List<Map<String, String>> tags = (List<Map<String, String>>) params.get("tags");
@@ -202,14 +222,16 @@ public class QywxTagController {
     @OperLog(module = "企微标签", operation = "删除标签组")
     @RequiresPermissions("qywx:tag:sync")
     public Result<?> deleteCorpTagGroup(@RequestBody Map<String, Object> params) {
+        if (QywxCustomerTagTask.isBatchTagging()) {
+            return Result.error("批量打标进行中，请稍后再操作标签库");
+        }
         String groupId = (String) params.get("groupId");
-        List<String> tagIds = (List<String>) params.get("tagIds");
         if (groupId == null || groupId.isEmpty()) {
             return Result.paramError("标签组ID不能为空");
         }
         try {
-            List<String> groupIds = Collections.singletonList(groupId);
-            qywxApiClient.delCorpTag(tagIds, groupIds);
+            // 官方语义：传 group_id 即删除整个标签组及其下所有标签，无需同时传 tag_id
+            qywxApiClient.delCorpTag(null, Collections.singletonList(groupId));
             customerTagTask.syncTags();
             return Result.success("标签组删除成功");
         } catch (Exception e) {
@@ -238,7 +260,7 @@ public class QywxTagController {
             Map<String, Object> sample = new LinkedHashMap<>();
             sample.put("externalUserid", "示例: wmABC123...");
             sample.put("tag1", "VIP客户");
-            sample.put("tag2", "高活跃");
+            sample.put("tag2", "-已流失");
             sample.put("tag3", "");
             sample.put("tag4", "");
             sample.put("tag5", "");
@@ -249,11 +271,95 @@ public class QywxTagController {
         }
     }
 
+    /**
+     * 解析批量打标Excel。第1列 externalUserid，后续列标签名；标签名前加 - 表示移除该标签。
+     * 行内 (客户ID, 动作, 标签名) 去重；限制单次数据行数。
+     */
+    private List<Map<String, String>> parseTagExcel(MultipartFile file) throws IOException {
+        try (InputStream in = file.getInputStream(); ExcelReader reader = ExcelUtil.getReader(in)) {
+            List<List<Object>> data = reader.read();
+            List<Map<String, String>> rows = new ArrayList<>();
+            Set<String> seen = new LinkedHashSet<>();
+            int dataRows = 0;
+            for (int i = 1; i < data.size(); i++) {
+                List<Object> row = data.get(i);
+                if (row == null || row.isEmpty() || row.get(0) == null) {
+                    continue;
+                }
+                String externalUserid = cellToString(row.get(0));
+                if (externalUserid.isEmpty()) {
+                    continue;
+                }
+                boolean hasTag = false;
+                for (int col = 1; col < row.size(); col++) {
+                    String tagName = cellToString(row.get(col));
+                    if (tagName.isEmpty()) continue;
+                    hasTag = true;
+                    String action = QywxCustomerTagTask.ACTION_ADD;
+                    if (tagName.startsWith("-")) {
+                        tagName = tagName.substring(1).trim();
+                        if (tagName.isEmpty()) continue;
+                        action = QywxCustomerTagTask.ACTION_REMOVE;
+                    }
+                    if (seen.add(externalUserid + "\u0001" + action + "\u0001" + tagName)) {
+                        Map<String, String> item = new HashMap<>();
+                        item.put("externalUserid", externalUserid);
+                        item.put("tagName", tagName);
+                        item.put("action", action);
+                        rows.add(item);
+                    }
+                }
+                if (hasTag) {
+                    dataRows++;
+                    if (dataRows > MAX_UPLOAD_ROWS) {
+                        throw new IllegalArgumentException("数据行数超过单次上限" + MAX_UPLOAD_ROWS + "行，请拆分文件后分批上传");
+                    }
+                }
+            }
+            if (rows.isEmpty()) {
+                throw new IllegalArgumentException("Excel中没有有效数据");
+            }
+            return rows;
+        }
+    }
+
+    /** 数字单元格取字符串：去掉 1.0 / 科学计数法尾巴，其余按字符串 trim */
+    private String cellToString(Object v) {
+        if (v == null) return "";
+        if (v instanceof Number) {
+            return new BigDecimal(String.valueOf(v)).stripTrailingZeros().toPlainString();
+        }
+        return String.valueOf(v).trim();
+    }
+
+    @PostMapping("/upload-preview")
+    @ApiOperation("上传Excel预检（dry-run，只校验不执行）")
+    @RequiresPermissions("qywx:tag:batch")
+    public Result<Map<String, Object>> uploadTagExcelPreview(@RequestParam("file") MultipartFile file) {
+        if (file.isEmpty()) {
+            return Result.paramError("请上传Excel文件");
+        }
+        String originalFilename = file.getOriginalFilename();
+        if (originalFilename == null || (!originalFilename.endsWith(".xlsx") && !originalFilename.endsWith(".xls"))) {
+            return Result.paramError("仅支持.xlsx或.xls格式的Excel文件");
+        }
+        try {
+            List<Map<String, String>> rows = parseTagExcel(file);
+            return Result.success(customerTagTask.previewTag(rows));
+        } catch (IllegalArgumentException e) {
+            return Result.paramError(e.getMessage());
+        } catch (Exception e) {
+            log.error("Excel预检解析失败: {}", e.getMessage(), e);
+            return Result.error("Excel解析失败，请检查文件格式");
+        }
+    }
+
     @PostMapping("/upload")
     @ApiOperation("上传Excel批量打标")
     @OperLog(module = "企微标签", operation = "Excel批量打标", saveParams = false)
     @RequiresPermissions("qywx:tag:batch")
-    public Result<String> uploadTagExcel(@RequestParam("file") MultipartFile file) {
+    public Result<String> uploadTagExcel(@RequestParam("file") MultipartFile file,
+                                         @RequestParam(value = "autoCreateTags", required = false, defaultValue = "false") boolean autoCreateTags) {
         if (file.isEmpty()) {
             return Result.paramError("请上传Excel文件");
         }
@@ -266,44 +372,35 @@ public class QywxTagController {
         }
 
         try {
-            ExcelReader reader = ExcelUtil.getReader(file.getInputStream());
-            try {
-                List<Map<String, String>> rows = new ArrayList<>();
-                List<List<Object>> data = reader.read();
-                for (int i = 1; i < data.size(); i++) {
-                    List<Object> row = data.get(i);
-                    if (row == null || row.isEmpty() || row.get(0) == null) {
-                        continue;
-                    }
-                    String externalUserid = String.valueOf(row.get(0)).trim();
-                    if (externalUserid.isEmpty()) {
-                        continue;
-                    }
-                    for (int col = 1; col < row.size(); col++) {
-                        Object val = row.get(col);
-                        if (val == null) continue;
-                        String tagName = String.valueOf(val).trim();
-                        if (tagName.isEmpty()) continue;
-                        Map<String, String> item = new HashMap<>();
-                        item.put("externalUserid", externalUserid);
-                        item.put("tagName", tagName);
-                        rows.add(item);
-                    }
-                }
-
-                if (rows.isEmpty()) {
-                    return Result.paramError("Excel中没有有效数据");
-                }
-
-                taskThreadPool.execute(() -> customerTagTask.batchTagAsync(rows));
-                return Result.success("打标任务已触发，请稍后查看打标签日志");
-            } finally {
-                reader.close();
-            }
+            List<Map<String, String>> rows = parseTagExcel(file);
+            String fileName = originalFilename;
+            taskThreadPool.execute(() -> customerTagTask.batchTagAsync(rows, fileName, autoCreateTags));
+            return Result.success("打标任务已触发，请稍后查看打标签日志");
+        } catch (IllegalArgumentException e) {
+            return Result.paramError(e.getMessage());
         } catch (Exception e) {
             log.error("Excel解析失败: {}", e.getMessage(), e);
             return Result.error("Excel解析失败，请检查文件格式");
         }
+    }
+
+    @GetMapping("/batches")
+    @ApiOperation("查询批量打标批次汇总（分页）")
+    @RequiresPermissions("qywx:tag:query")
+    public Result<Map<String, Object>> getTagBatches(@Valid PageQuery pageQuery) {
+        Page<VxTagBatch> pageParam = pageQuery.toPage();
+        QueryWrapper<VxTagBatch> wrapper = new QueryWrapper<>();
+        wrapper.orderByDesc("startTime");
+
+        IPage<VxTagBatch> pageResult = tagBatchMapper.selectPage(pageParam, wrapper);
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("records", pageResult.getRecords());
+        result.put("total", pageResult.getTotal());
+        result.put("current", pageResult.getCurrent());
+        result.put("size", pageResult.getSize());
+        result.put("pages", pageResult.getPages());
+        return Result.success(result);
     }
 
     @GetMapping("/records")
@@ -323,6 +420,9 @@ public class QywxTagController {
         }
         if (queryDTO.getBatchNo() != null && !queryDTO.getBatchNo().isEmpty()) {
             wrapper.eq("batchNo", queryDTO.getBatchNo());
+        }
+        if (queryDTO.getStatus() != null) {
+            wrapper.eq("status", queryDTO.getStatus());
         }
         wrapper.orderByDesc("createTime");
 

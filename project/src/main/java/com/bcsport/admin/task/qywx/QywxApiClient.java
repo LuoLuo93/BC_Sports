@@ -919,6 +919,10 @@ public class QywxApiClient {
                 JSONObject body = JSONUtil.parseObj(response.getBody());
                 Integer errcode = body.getInt("errcode");
                 if (errcode != null && errcode != 0) {
+                    // token失效类错误抛出，交由 executeWithRetry 刷新token后重试（与其他API一致）
+                    if (errcode == 40014 || errcode == 42001) {
+                        throw new RuntimeException("Failed to mark tag, errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
+                    }
                     log.warn("markTag failed for externalUserid: {}, errcode: {}, errmsg: {}",
                             externalUserid, errcode, body.getStr("errmsg"));
                     return body;

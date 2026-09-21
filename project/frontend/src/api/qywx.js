@@ -20,6 +20,14 @@ export function uploadTagData(data) {
   return request.post('/api/qywx/tag/upload', data)
 }
 
+export function previewTagUpload(data) {
+  return request.post('/api/qywx/tag/upload-preview', data)
+}
+
+export function getTagBatches(params) {
+  return request.get('/api/qywx/tag/batches', { params })
+}
+
 export function getTagRecords(params) {
   return request.get('/api/qywx/tag/records', { params })
 }

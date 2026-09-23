@@ -119,8 +119,7 @@ public class BcpSportPointsServiceImpl implements BcpSportPointsService {
             public BcpSportPoints mapRow(RowCtx ctx) {
                 String sporter = ctx.str("sporter", 0);
                 if (!StringUtils.hasText(sporter)) throw new IllegalArgumentException("运动员不能为空");
-                // 积分支持小数（业务数据带小数位）：默认保留两位小数四舍五入，再去掉无意义尾随0
-                // （stripTrailingZeros 后 100 会变 1E+2，scale<0 时回 setScale(0) 归一成普通整数）
+                // 积分只保留整数：Excel 可带小数，入库前四舍五入取整
                 String rawPoints = ctx.str("points", 1);
                 if (rawPoints == null) throw new IllegalArgumentException("积分不能为空");
                 BigDecimal parsed;
@@ -129,8 +128,7 @@ public class BcpSportPointsServiceImpl implements BcpSportPointsService {
                 } catch (NumberFormatException e) {
                     throw new IllegalArgumentException("积分必须是数字（当前值: " + rawPoints + "）");
                 }
-                parsed = parsed.setScale(2, RoundingMode.HALF_UP).stripTrailingZeros();
-                if (parsed.scale() < 0) parsed = parsed.setScale(0);
+                parsed = parsed.setScale(0, RoundingMode.HALF_UP);
                 // Oracle NUMBER 最多 38 位有效数字，超了入库必报错，提前拦成行级错误
                 if (parsed.precision() > 38) {
                     throw new IllegalArgumentException("积分数值超出可导入范围（当前值: " + rawPoints + "）");
@@ -220,9 +218,8 @@ public class BcpSportPointsServiceImpl implements BcpSportPointsService {
         if (points == null) {
             throw new BusinessException("积分不能为空");
         }
-        // 与导入同口径：默认保留两位小数（四舍五入），去掉尾随0避免 1E+2 形式
-        points = points.setScale(2, RoundingMode.HALF_UP).stripTrailingZeros();
-        if (points.scale() < 0) points = points.setScale(0);
+        // 与导入同口径：只保留整数，四舍五入取整
+        points = points.setScale(0, RoundingMode.HALF_UP);
         sporter = sporter.trim();
         BcpSportPoints exists = bcpSportPointsMapper.selectById(id);
         if (exists == null) {

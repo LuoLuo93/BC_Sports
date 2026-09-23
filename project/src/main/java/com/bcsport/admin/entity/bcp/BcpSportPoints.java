@@ -22,7 +22,7 @@ public class BcpSportPoints implements Serializable {
     /** 运动员/玩家名（导入去重键，未删除记录内唯一） */
     private String sporter;
 
-    /** 积分（NUMBER，支持小数） */
+    /** 积分（整数，导入/编辑小数自动四舍五入取整） */
     private BigDecimal points;
 
     @TableField(fill = FieldFill.INSERT)

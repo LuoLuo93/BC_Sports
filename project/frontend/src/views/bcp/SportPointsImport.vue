@@ -96,7 +96,7 @@
           <el-input v-model="editForm.sporter" maxlength="100" placeholder="运动员姓名" />
         </el-form-item>
         <el-form-item label="积分" prop="points">
-          <el-input v-model="editForm.points" placeholder="数字，可为负，最多保留两位小数" />
+          <el-input v-model="editForm.points" placeholder="整数，可为负，小数自动取整" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -112,7 +112,7 @@
           <el-icon :size="40" style="color:var(--el-text-color-placeholder)"><Upload /></el-icon>
           <div style="margin-top:8px">将 Excel 文件拖到此处，或 <em>点击上传</em></div>
           <template #tip>
-            <div class="upload-hint">仅支持 .xlsx / .xls 格式，文件大小不超过 100MB；列为「运动员 + 积分」，同一运动员重复出现时只保留最后一行积分；积分支持小数，默认保留两位（超出自动四舍五入）</div>
+            <div class="upload-hint">仅支持 .xlsx / .xls 格式，文件大小不超过 100MB；列为「运动员 + 积分」，同一运动员重复出现时只保留最后一行积分；积分带小数时自动四舍五入取整数入库</div>
           </template>
         </el-upload>
         <div style="margin-top:12px;text-align:center">
@@ -196,7 +196,7 @@ const editRules = {
   sporter: [{ required: true, message: '运动员不能为空', trigger: 'blur' }],
   points: [
     { required: true, message: '积分不能为空', trigger: 'blur' },
-    { pattern: /^[+-]?\d+(\.\d+)?$/, message: '积分必须是数字，超出两位小数将自动四舍五入', trigger: 'blur' }
+    { pattern: /^[+-]?\d+(\.\d+)?$/, message: '积分必须是数字，小数将自动四舍五入取整', trigger: 'blur' }
   ]
 }
 

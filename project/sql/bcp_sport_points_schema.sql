@@ -64,5 +64,5 @@ END;
 
 COMMENT ON TABLE  BC_SPORTS_BCP_SPORT_POINTS IS 'BC好玩家运动积分（Excel 导入，走统一导入骨架）';
 COMMENT ON COLUMN BC_SPORTS_BCP_SPORT_POINTS.sporter IS '运动员/玩家名，导入去重键';
-COMMENT ON COLUMN BC_SPORTS_BCP_SPORT_POINTS.points IS '积分，支持小数（NUMBER 无精度限制，导入/编辑均校验数字与38位整数位上限）';
+COMMENT ON COLUMN BC_SPORTS_BCP_SPORT_POINTS.points IS '积分，整数（导入/编辑带小数自动四舍五入取整）';
 COMMENT ON COLUMN BC_SPORTS_BCP_SPORT_POINTS.deleted IS '逻辑删除：0 正常 1 已删除';

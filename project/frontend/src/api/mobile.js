@@ -77,8 +77,8 @@ export async function fetchRankSummary(params) {
       data: {
         participants,
         totalPoints,
-        // 人均积分保留两位小数（积分本身支持小数，取整会掩盖差异）
-        avgPoints: participants ? Math.round((totalPoints / participants) * 100) / 100 : 0,
+        // 头部指标展示口径取整（个人积分仍保留两位小数）
+        avgPoints: participants ? Math.round(totalPoints / participants) : 0,
         // 领奖台永远用全榜前三(board.top3),搜索时不变
         top3: board.top3 || board.list.slice(0, 3),
         date: todayLabel(),

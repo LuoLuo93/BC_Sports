@@ -19,7 +19,7 @@
         </div>
         <i class="m-stat-divider"></i>
         <div class="m-stat">
-          <b>{{ fmtNum(summary.totalPoints) }}</b>
+          <b>{{ fmtNum(Math.round(summary.totalPoints || 0)) }}</b>
           <span>累计积分</span>
         </div>
         <i class="m-stat-divider"></i>

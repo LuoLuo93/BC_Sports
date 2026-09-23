@@ -11,6 +11,7 @@ import com.bcsport.admin.entity.SysImportLog;
 import com.bcsport.admin.importer.ImportLogRecorder;
 import com.bcsport.admin.importer.ImportOutcome;
 import com.bcsport.admin.importer.ImportType;
+import com.bcsport.admin.service.sticker.StickerDataExportService;
 import com.bcsport.admin.service.sticker.StickerDataImportService;
 import com.bcsport.admin.service.sticker.StickerPrintService;
 
@@ -25,6 +26,8 @@ import jakarta.validation.Valid;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -39,6 +42,9 @@ public class StickerDataController {
 
     @Autowired
     private StickerDataImportService stickerDataImportService;
+
+    @Autowired
+    private StickerDataExportService stickerDataExportService;
 
     @Autowired
     private ImportLogRecorder importLogRecorder;
@@ -184,6 +190,24 @@ public class StickerDataController {
         } finally {
             writer.close();
         }
+    }
+
+    /**
+     * Excel 导出货品资料：查询条件与列表页共用，全部为空 = 全量导出。
+     * 列与列表页一致，可编辑列列名与导入模板对齐（删掉只读列改完可直接再导入）。
+     * 全量约5.8w行，流式分批生成，前端 timeout 已放宽。
+     */
+    @GetMapping("/export")
+    @OperLog(module = "贴纸打印", operation = "导出贴纸资料Excel")
+    @RequiresPermissions("sticker:data:export")
+    public void export(StickerDataQueryDTO queryDTO, HttpServletResponse response) throws IOException {
+        String fileName = "贴纸资料导出_"
+                + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
+                + ".xlsx";
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        response.setHeader("Content-Disposition",
+                "attachment; filename=" + URLEncoder.encode(fileName, StandardCharsets.UTF_8.name()));
+        stickerDataExportService.exportTo(queryDTO, response.getOutputStream());
     }
 
     /**

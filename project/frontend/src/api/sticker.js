@@ -76,6 +76,11 @@ export function downloadStickerDataTemplate() {
   return request.get('/api/sticker/data/template', { responseType: 'blob' })
 }
 
+// 导出贴纸资料（blob）：条件与列表页共用，全部为空 = 全量；全量约5.8w行，超时放宽到 10 分钟
+export function exportStickerData(params) {
+  return request.get('/api/sticker/data/export', { params, responseType: 'blob', timeout: 600000 })
+}
+
 // 导入日志分页
 export function getStickerDataImportLogPage(params) {
   return request.get('/api/sticker/data/import-log/page', { params })

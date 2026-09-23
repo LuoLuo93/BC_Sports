@@ -106,6 +106,26 @@ public class StickerPrintService {
         return bjerpProductMapper.getBrands();
     }
 
+    /**
+     * 导出用计数：与列表页同一查询口径（条件全空 = 全量），供 ExcelExportRunner 熔断与进度。
+     */
+    public long countProductsForExport(String materialNumber, String kindId, String materialName, String brandId) {
+        return bjerpProductMapper.countProducts(escapeLike(materialNumber), null, escapeLike(materialName), brandId, kindId);
+    }
+
+    /**
+     * 导出用分批取数：复用列表页 searchProducts（ROW_NUMBER 分页，批间稳定），
+     * 每批返回前同样跨库回填矫正尺码组名，保证导出列与列表页一致。
+     */
+    public List<Map<String, Object>> fetchProductsForExport(String materialNumber, String kindId,
+                                                            String materialName, String brandId,
+                                                            long offset, int limit) {
+        List<Map<String, Object>> records = bjerpProductMapper.searchProducts(
+                escapeLike(materialNumber), null, escapeLike(materialName), brandId, kindId, offset, limit);
+        fillSizeGroupName(records);
+        return records;
+    }
+
     public List<Map<String, Object>> getKinds() {
         return bjerpProductMapper.getKinds();
     }

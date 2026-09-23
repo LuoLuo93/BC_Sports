@@ -32,6 +32,7 @@
         <div class="card-header-row">
           <span class="card-header-title">贴纸资料维护</span>
           <div class="header-actions">
+            <ExportButton v-if="hasPermission('sticker:data:export')" :fetch="doExportFetch" :filename="exportFileName" />
             <el-button v-if="hasPermission('sticker:data:import')" type="warning" size="small" :icon="Upload" @click="showImportDialog = true">批量导入</el-button>
           </div>
         </div>
@@ -146,15 +147,16 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onActivated } from 'vue'
+import { ref, reactive, computed, onMounted, onActivated } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Search, RefreshRight, Upload } from '@element-plus/icons-vue'
 import { usePageQuery } from '@/composables/usePageQuery'
 import { usePermission } from '@/composables/usePermission'
 import { PAGE_SIZES, defaultPageSize } from '@/utils/appConfig'
-import { getStickerDataPage, importStickerData, downloadStickerDataTemplate, getStickerDataImportLogPage } from '@/api/sticker'
+import { getStickerDataPage, importStickerData, downloadStickerDataTemplate, getStickerDataImportLogPage, exportStickerData } from '@/api/sticker'
 import ImportLogPanel from '@/components/ImportLogPanel.vue'
+import ExportButton from '@/components/ExportButton.vue'
 
 const logPanel = ref(null)
 import { getCommonBrands, getCommonKinds } from '@/api/common'
@@ -327,6 +329,25 @@ async function handleDownloadTemplate() {
     templateLoading.value = false
   }
 }
+
+// ─── 导出 Excel（与列表同条件，条件全空 = 全量） ─────────────
+function doExportFetch() {
+  // 空条件不传参（后端空=全量），与列表页查询条件保持同一口径
+  const params = {}
+  if (query.materialNumber) params.materialNumber = query.materialNumber
+  if (query.materialName) params.materialName = query.materialName
+  if (query.brandId) params.brandId = query.brandId
+  if (query.kindId) params.kindId = query.kindId
+  return exportStickerData(params)
+}
+
+const exportFileName = computed(() => {
+  const now = new Date()
+  const pad = n => String(n).padStart(2, '0')
+  const ts = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`
+  const hasCond = query.materialNumber || query.materialName || query.brandId || query.kindId
+  return `贴纸资料${hasCond ? '' : '(全量)'}_${ts}.xlsx`
+})
 
 // ─── Tab + 导入日志 ─────────────────────────────────────────
 const activeTab = ref('data')

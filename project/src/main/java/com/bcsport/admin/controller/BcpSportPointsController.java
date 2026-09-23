@@ -113,7 +113,7 @@ public class BcpSportPointsController {
 
             Map<String, Object> sample = new LinkedHashMap<>();
             sample.put("运动员", "张三");
-            sample.put("积分", "100");
+            sample.put("积分", "12.5");
             writer.write(Collections.singletonList(sample), true);
             writer.flush(response.getOutputStream());
         } finally {

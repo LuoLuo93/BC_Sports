@@ -7,6 +7,7 @@ import com.bcsport.admin.entity.SysImportLog;
 import com.bcsport.admin.vo.SportPointsBoardVO;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.math.BigDecimal;
 import java.util.Map;
 
 public interface BcpSportPointsService {
@@ -29,7 +30,7 @@ public interface BcpSportPointsService {
     /**
      * 手工编辑一条运动积分（改名需不与现有运动员重名）
      */
-    void updateSportPoints(Long id, String sporter, Long points);
+    void updateSportPoints(Long id, String sporter, BigDecimal points);
 
     /**
      * 移动端榜单：无关键字=前 limit 名 + 全表统计；有关键字=姓名模糊匹配（带绝对名次）

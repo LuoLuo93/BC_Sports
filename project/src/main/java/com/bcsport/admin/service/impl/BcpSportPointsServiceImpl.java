@@ -27,6 +27,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -41,7 +42,7 @@ public class BcpSportPointsServiceImpl implements BcpSportPointsService {
     private static final long STATS_TTL_MS = 60_000L;
 
     /** 全表统计快照（participants / totalPoints / 缓存时刻），volatile 整体换引用保证可见性 */
-    private record StatsSnapshot(long participants, long totalPoints, long cachedAt) {}
+    private record StatsSnapshot(long participants, BigDecimal totalPoints, long cachedAt) {}
 
     private volatile StatsSnapshot statsCache;
 
@@ -118,27 +119,25 @@ public class BcpSportPointsServiceImpl implements BcpSportPointsService {
             public BcpSportPoints mapRow(RowCtx ctx) {
                 String sporter = ctx.str("sporter", 0);
                 if (!StringUtils.hasText(sporter)) throw new IllegalArgumentException("运动员不能为空");
-                // 不用 longOrNull：BigDecimal.longValue() 会把 12.7 静默截成 12，这里按"值必须是整数"严格校验
+                // 积分支持小数（业务数据带小数位）：默认保留两位小数四舍五入，再去掉无意义尾随0
+                // （stripTrailingZeros 后 100 会变 1E+2，scale<0 时回 setScale(0) 归一成普通整数）
                 String rawPoints = ctx.str("points", 1);
                 if (rawPoints == null) throw new IllegalArgumentException("积分不能为空");
                 BigDecimal parsed;
                 try {
-                    parsed = new BigDecimal(rawPoints).stripTrailingZeros();
+                    parsed = new BigDecimal(rawPoints);
                 } catch (NumberFormatException e) {
                     throw new IllegalArgumentException("积分必须是数字（当前值: " + rawPoints + "）");
                 }
-                if (parsed.scale() > 0) {
-                    throw new IllegalArgumentException("积分必须是整数（当前值: " + rawPoints + "）");
-                }
-                Long points;
-                try {
-                    points = parsed.longValueExact();
-                } catch (ArithmeticException e) {
+                parsed = parsed.setScale(2, RoundingMode.HALF_UP).stripTrailingZeros();
+                if (parsed.scale() < 0) parsed = parsed.setScale(0);
+                // Oracle NUMBER 最多 38 位有效数字，超了入库必报错，提前拦成行级错误
+                if (parsed.precision() > 38) {
                     throw new IllegalArgumentException("积分数值超出可导入范围（当前值: " + rawPoints + "）");
                 }
                 BcpSportPoints e = new BcpSportPoints();
                 e.setSporter(sporter);
-                e.setPoints(points);
+                e.setPoints(parsed);
                 return e;
             }
 
@@ -181,9 +180,12 @@ public class BcpSportPointsServiceImpl implements BcpSportPointsService {
         long now = System.currentTimeMillis();
         if (snapshot == null || now - snapshot.cachedAt() > STATS_TTL_MS) {
             Map<String, Object> stats = bcpSportPointsMapper.selectRankStats();
+            Object totalVal = stats.get("totalPoints");
+            BigDecimal totalPoints = totalVal instanceof BigDecimal bd
+                    ? bd : new BigDecimal(String.valueOf(totalVal));
             snapshot = new StatsSnapshot(
                     ((Number) stats.get("participants")).longValue(),
-                    ((Number) stats.get("totalPoints")).longValue(), now);
+                    totalPoints, now);
             statsCache = snapshot;
         }
         board.setParticipants(snapshot.participants());
@@ -211,13 +213,16 @@ public class BcpSportPointsServiceImpl implements BcpSportPointsService {
     }
 
     @Override
-    public void updateSportPoints(Long id, String sporter, Long points) {
+    public void updateSportPoints(Long id, String sporter, BigDecimal points) {
         if (sporter == null || sporter.trim().isEmpty()) {
             throw new BusinessException("运动员不能为空");
         }
         if (points == null) {
             throw new BusinessException("积分不能为空");
         }
+        // 与导入同口径：默认保留两位小数（四舍五入），去掉尾随0避免 1E+2 形式
+        points = points.setScale(2, RoundingMode.HALF_UP).stripTrailingZeros();
+        if (points.scale() < 0) points = points.setScale(0);
         sporter = sporter.trim();
         BcpSportPoints exists = bcpSportPointsMapper.selectById(id);
         if (exists == null) {

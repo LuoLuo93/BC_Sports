@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
@@ -21,8 +22,8 @@ public class BcpSportPoints implements Serializable {
     /** 运动员/玩家名（导入去重键，未删除记录内唯一） */
     private String sporter;
 
-    /** 积分 */
-    private Long points;
+    /** 积分（NUMBER，支持小数） */
+    private BigDecimal points;
 
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;

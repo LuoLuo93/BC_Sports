@@ -2,6 +2,7 @@ package com.bcsport.admin.vo;
 
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -19,6 +20,6 @@ public class SportPointsBoardVO {
     /** 参与人数（无关键字=全表真实人数；有关键字=匹配条数） */
     private Long participants;
 
-    /** 累计积分（与 participants 同口径） */
-    private Long totalPoints;
+    /** 累计积分（与 participants 同口径，支持小数） */
+    private BigDecimal totalPoints;
 }

@@ -40,7 +40,7 @@
       >
         <span class="m-crown" v-if="p.place === 1">👑</span>
         <div class="m-pod-avatar" :class="'is-' + p.place">
-          {{ p.item.name.slice(-1) }}
+          {{ avatarOf(p.item.name).emoji }}
           <i class="m-medal" :class="'is-' + p.place">{{ p.place }}</i>
         </div>
         <b class="m-pod-name">{{ p.item.name }}</b>
@@ -86,8 +86,8 @@
         >
           <div class="m-row" v-for="item in list" :key="item.id">
             <span class="m-rank-num">{{ item.rank }}</span>
-            <span class="m-row-avatar" :style="{ background: avatarBg(item.name) }">
-              {{ item.name.slice(-1) }}
+            <span class="m-row-avatar" :style="{ background: avatarOf(item.name).bg }">
+              {{ avatarOf(item.name).emoji }}
             </span>
             <div class="m-row-info">
               <b>{{ item.name }}</b>
@@ -141,19 +141,28 @@ function fmtNum(n) {
   return (n || 0).toLocaleString('zh-CN')
 }
 
-// 头像底色按姓名字符散列,同一人永远同色
-function avatarBg(name) {
-  const grads = [
-    'linear-gradient(135deg,#3b82f6,#6366f1)',
-    'linear-gradient(135deg,#10b981,#059669)',
-    'linear-gradient(135deg,#f59e0b,#f97316)',
-    'linear-gradient(135deg,#8b5cf6,#6366f1)',
-    'linear-gradient(135deg,#ec4899,#f43f5e)',
-    'linear-gradient(135deg,#06b6d4,#3b82f6)'
-  ]
+// 头像:名字实际多为手机号,显示数字难看,按姓名散列出稳定的"随机"卡通头像
+// (确定性散列:同一人每次刷新、每处出现都是同一头像,不是真随机)
+const AVATAR_GRADS = [
+  'linear-gradient(135deg,#3b82f6,#6366f1)',
+  'linear-gradient(135deg,#10b981,#059669)',
+  'linear-gradient(135deg,#f59e0b,#f97316)',
+  'linear-gradient(135deg,#8b5cf6,#6366f1)',
+  'linear-gradient(135deg,#ec4899,#f43f5e)',
+  'linear-gradient(135deg,#06b6d4,#3b82f6)'
+]
+const AVATAR_EMOJIS = [
+  '🐯', '🦁', '🐻', '🐨', '🦊', '🐸', '🐵', '🐰', '🦄', '🐙', '🦉', '🐳',
+  '🐢', '🦋', '🐝', '🦖', '🐧', '🦌', '🐼', '🐮', '🦅', '🐴', '🦦', '🐷'
+]
+
+function avatarOf(name) {
   let h = 0
-  for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) % 997
-  return grads[h % grads.length]
+  for (const ch of String(name ?? '')) h = (h * 33 + ch.charCodeAt(0)) % 100003
+  return {
+    bg: AVATAR_GRADS[h % AVATAR_GRADS.length],
+    emoji: AVATAR_EMOJIS[Math.floor(h / AVATAR_GRADS.length) % AVATAR_EMOJIS.length]
+  }
 }
 
 async function loadPage(targetPage) {
@@ -360,7 +369,8 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: 27px;
+  line-height: 1;
   font-weight: 800;
   color: #fff;
   background: linear-gradient(135deg, #94a3b8, #64748b);
@@ -371,7 +381,7 @@ onMounted(() => {
 .m-pod-1 .m-pod-avatar {
   width: 64px;
   height: 64px;
-  font-size: 24px;
+  font-size: 33px;
   background: linear-gradient(135deg, #f59e0b, #f97316);
   border-color: #fde68a;
 }
@@ -520,7 +530,8 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 17px;
+  font-size: 22px;
+  line-height: 1;
   font-weight: 800;
   color: #fff;
 }

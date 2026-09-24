@@ -1,8 +1,5 @@
 <template>
   <div class="page-container">
-    <el-alert type="info" :closable="false" show-icon class="semantics-alert"
-      title="白名单内店铺的订单：小程序跑批时不改写店仓编码/名称，仅更新单据类型/会员手机号/营业员；未在名单内的店铺按原逻辑全量更新" />
-
     <el-card shadow="never" class="search-card">
       <el-form :model="query" inline>
         <el-form-item label="店仓编码">
@@ -21,7 +18,10 @@
     <el-card shadow="never">
       <template #header>
         <div class="card-header-row">
-          <span class="card-header-title">店铺白名单列表</span>
+          <div class="card-header-left">
+            <span class="card-header-title">店铺白名单列表</span>
+            <span class="semantics-tip">白名单内店铺的订单：小程序跑批时不改写店仓编码/名称，仅更新单据类型/会员手机号/营业员；未在名单内的店铺按原逻辑全量更新</span>
+          </div>
           <el-button v-if="canAdd" type="primary" size="small" :icon="Plus" @click="openAdd">新增白名单店铺</el-button>
         </div>
       </template>
@@ -228,9 +228,6 @@ onActivated(() => loadData())
 </script>
 
 <style scoped>
-.semantics-alert {
-  margin-bottom: 12px;
-}
 .search-card {
   margin-bottom: 12px;
 }
@@ -239,9 +236,23 @@ onActivated(() => loadData())
   justify-content: space-between;
   align-items: center;
 }
+.card-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
 .card-header-title {
   font-size: 16px;
   font-weight: 600;
+  flex-shrink: 0;
+}
+.semantics-tip {
+  color: var(--el-color-danger);
+  font-weight: 700;
+  font-size: 13px;
+  line-height: 1.5;
 }
 .pagination-wrapper {
   margin-top: 12px;

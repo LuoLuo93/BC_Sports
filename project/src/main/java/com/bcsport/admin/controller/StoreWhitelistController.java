@@ -13,12 +13,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * 店铺白名单管理（伯俊ERP店仓编码/名称，手工维护）
+ * 自提店铺白名单管理（伯俊ERP店仓编码/名称，手工维护）
  * 反向白名单：数仓 SP_FILL_ODS_SALES_MAIN ④小程序更新时，订单店铺命中本表则不改写店铺两列
  */
 @RestController
 @RequestMapping("/api/bi/store-whitelist")
-@Api(tags = "店铺白名单管理")
+@Api(tags = "自提店铺白名单管理")
 public class StoreWhitelistController {
 
     @Autowired
@@ -28,7 +28,7 @@ public class StoreWhitelistController {
      * 分页查询白名单店铺列表
      */
     @GetMapping("/page")
-    @ApiOperation("分页查询店铺白名单")
+    @ApiOperation("分页查询自提店铺白名单")
     @RequiresPermissions("bi:store-whitelist:query")
     public Result<PageResult<StoreWhitelist>> page(PageQuery pageQuery,
                                                    @RequestParam(required = false) String storeCode,
@@ -41,8 +41,8 @@ public class StoreWhitelistController {
      * body: { storeCode, storeName }
      */
     @PostMapping
-    @ApiOperation("新增白名单店铺")
-    @OperLog(module = "店铺白名单", operation = "新增白名单店铺")
+    @ApiOperation("新增自提店铺")
+    @OperLog(module = "自提店铺白名单", operation = "新增自提店铺")
     @RequiresPermissions("bi:store-whitelist:add")
     public Result<Void> add(@RequestBody StoreWhitelist body) {
         storeWhitelistService.add(body.getStoreCode(), body.getStoreName());
@@ -54,8 +54,8 @@ public class StoreWhitelistController {
      * body: { storeCode, storeName }
      */
     @PutMapping("/{id}")
-    @ApiOperation("编辑白名单店铺")
-    @OperLog(module = "店铺白名单", operation = "编辑白名单店铺")
+    @ApiOperation("编辑自提店铺")
+    @OperLog(module = "自提店铺白名单", operation = "编辑自提店铺")
     @RequiresPermissions("bi:store-whitelist:edit")
     public Result<Void> update(@PathVariable Long id, @RequestBody StoreWhitelist body) {
         storeWhitelistService.update(id, body.getStoreCode(), body.getStoreName());
@@ -66,8 +66,8 @@ public class StoreWhitelistController {
      * 删除白名单店铺（逻辑删除）
      */
     @DeleteMapping("/{id}")
-    @ApiOperation("删除白名单店铺")
-    @OperLog(module = "店铺白名单", operation = "删除白名单店铺")
+    @ApiOperation("删除自提店铺")
+    @OperLog(module = "自提店铺白名单", operation = "删除自提店铺")
     @RequiresPermissions("bi:store-whitelist:delete")
     public Result<Void> delete(@PathVariable Long id) {
         storeWhitelistService.delete(id);

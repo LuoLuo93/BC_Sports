@@ -19,10 +19,10 @@
       <template #header>
         <div class="card-header-row">
           <div class="card-header-left">
-            <span class="card-header-title">店铺白名单列表</span>
+            <span class="card-header-title">自提店铺白名单列表</span>
             <span class="semantics-tip">白名单内店铺的订单：小程序跑批时不改写店仓编码/名称，仅更新单据类型/会员手机号/营业员；未在名单内的店铺按原逻辑全量更新</span>
           </div>
-          <el-button v-if="canAdd" type="primary" size="small" :icon="Plus" @click="openAdd">新增白名单店铺</el-button>
+          <el-button v-if="canAdd" type="primary" size="small" :icon="Plus" @click="openAdd">新增自提店铺</el-button>
         </div>
       </template>
 
@@ -60,7 +60,7 @@
     </el-card>
 
     <!-- 新增/编辑弹窗 -->
-    <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑白名单店铺' : '新增白名单店铺'" width="480px" destroy-on-close @open="onDialogOpen">
+    <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑自提店铺' : '新增自提店铺'" width="480px" destroy-on-close @open="onDialogOpen">
       <el-form ref="formRef" :model="form" :rules="formRules" label-width="90px">
         <el-form-item label="店仓" prop="storeCode">
           <el-select

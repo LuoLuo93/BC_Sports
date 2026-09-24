@@ -12,6 +12,8 @@ import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 /**
  * 自提店铺白名单管理（伯俊ERP店仓编码/名称，手工维护）
  * 反向白名单：数仓 SP_FILL_ODS_SALES_MAIN ④小程序更新时，订单店铺命中本表则不改写店铺两列
@@ -72,5 +74,16 @@ public class StoreWhitelistController {
     public Result<Void> delete(@PathVariable Long id) {
         storeWhitelistService.delete(id);
         return Result.success(null);
+    }
+
+    /**
+     * 立即从伯俊ERP同步自提店铺（定时任务同一套逻辑，属性值走系统配置默认7582）
+     */
+    @PostMapping("/sync")
+    @ApiOperation("立即同步自提店铺(从伯俊ERP)")
+    @OperLog(module = "自提店铺白名单", operation = "立即同步自提店铺")
+    @RequiresPermissions("bi:store-whitelist:edit")
+    public Result<Map<String, Object>> sync() {
+        return Result.success(storeWhitelistService.syncFromErp(null));
     }
 }

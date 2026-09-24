@@ -1,17 +1,31 @@
 package com.bcsport.admin.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
 import com.bcsport.admin.common.exception.BusinessException;
 import com.bcsport.admin.entity.bi.StoreWhitelist;
+import com.bcsport.admin.erpmapper.BjerpStoreMapper;
 import com.bcsport.admin.mapper.StoreWhitelistMapper;
+import com.bcsport.admin.service.ConfigService;
 import com.bcsport.admin.service.StoreWhitelistService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class StoreWhitelistServiceImpl implements StoreWhitelistService {
@@ -22,8 +36,18 @@ public class StoreWhitelistServiceImpl implements StoreWhitelistService {
     /** 店仓名称长度上限（与表列 VARCHAR2(255 CHAR) 对齐） */
     private static final int STORE_NAME_MAX = 255;
 
+    /** 自提店铺属性值(C_STORE.C_STOREATTRIB8_ID)的系统配置键与默认值 */
+    private static final String ATTRIB8_CONFIG_KEY = "store.whitelist.attrib8Id";
+    private static final String ATTRIB8_DEFAULT = "7582";
+
     @Autowired
     private StoreWhitelistMapper storeWhitelistMapper;
+
+    @Autowired
+    private BjerpStoreMapper bjerpStoreMapper;
+
+    @Autowired
+    private ConfigService configService;
 
     @Override
     public PageResult<StoreWhitelist> page(PageQuery pageQuery, String storeCode, String storeName) {
@@ -108,5 +132,73 @@ public class StoreWhitelistServiceImpl implements StoreWhitelistService {
         if (cnt != null && cnt > 0) {
             throw new BusinessException("店仓「" + storeCode + "」已在白名单中");
         }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> syncFromErp(String attribValue) {
+        String attrib = StringUtils.hasText(attribValue) ? attribValue.trim()
+                : configService.getString(ATTRIB8_CONFIG_KEY, ATTRIB8_DEFAULT);
+
+        // ① 伯俊ERP拉自提店铺(编码+名称)
+        List<Map<String, Object>> erpStores = bjerpStoreMapper.listStoresByAttrib8(attrib);
+
+        // ② 现存白名单(逻辑删除自动过滤)按编码索引
+        List<StoreWhitelist> current = storeWhitelistMapper.selectList(null);
+        Map<String, StoreWhitelist> byCode = current.stream()
+                .collect(Collectors.toMap(StoreWhitelist::getStoreCode, Function.identity(), (a, b) -> a));
+
+        // ③ ERP侧: 没有→新增AUTO; MANUAL→跳过(手工行归用户管); AUTO→名称变化才更新
+        Set<String> erpCodes = new HashSet<>();
+        int inserted = 0, updated = 0, unchanged = 0, manualSkip = 0;
+        for (Map<String, Object> s : erpStores) {
+            String code = s.get("CODE") == null ? "" : String.valueOf(s.get("CODE")).trim();
+            String name = s.get("NAME") == null ? "" : String.valueOf(s.get("NAME")).trim();
+            if (code.isEmpty()) {
+                continue;
+            }
+            erpCodes.add(code);
+            StoreWhitelist row = byCode.get(code);
+            if (row == null) {
+                StoreWhitelist entity = new StoreWhitelist();
+                entity.setStoreCode(code);
+                entity.setStoreName(name);
+                entity.setSource(StoreWhitelist.SOURCE_AUTO);
+                entity.setCreateBy("system");
+                entity.setUpdateBy("system");
+                storeWhitelistMapper.insert(entity);
+                inserted++;
+            } else if (StoreWhitelist.SOURCE_MANUAL.equals(row.getSource())) {
+                manualSkip++;
+            } else if (!Objects.equals(row.getStoreName(), name)) {
+                storeWhitelistMapper.update(null, new LambdaUpdateWrapper<StoreWhitelist>()
+                        .eq(StoreWhitelist::getId, row.getId())
+                        .set(StoreWhitelist::getStoreName, name)
+                        .set(StoreWhitelist::getUpdateBy, "system")
+                        .set(StoreWhitelist::getUpdateTime, LocalDateTime.now()));
+                updated++;
+            } else {
+                unchanged++;
+            }
+        }
+
+        // ④ ERP侧已无自提属性的AUTO行 → 软删移出白名单(MANUAL行不动)
+        int removed = 0;
+        for (StoreWhitelist row : current) {
+            if (StoreWhitelist.SOURCE_AUTO.equals(row.getSource()) && !erpCodes.contains(row.getStoreCode())) {
+                storeWhitelistMapper.deleteById(row.getId());
+                removed++;
+            }
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("attrib", attrib);
+        result.put("total", erpStores.size());
+        result.put("inserted", inserted);
+        result.put("updated", updated);
+        result.put("unchanged", unchanged);
+        result.put("manualSkip", manualSkip);
+        result.put("removed", removed);
+        return result;
     }
 }

@@ -23,6 +23,9 @@ public interface BjerpStoreMapper {
 
     List<Map<String, Object>> listAllStores();
 
+    /** 按扩展属性8(自提店铺)查店仓，自提店铺白名单定时同步用 */
+    List<Map<String, Object>> listStoresByAttrib8(@Param("attribValue") String attribValue);
+
     /** 店仓主品牌下拉（C_STOREATTRIBVALUE DIM5） */
     List<Map<String, Object>> listBrands();
 

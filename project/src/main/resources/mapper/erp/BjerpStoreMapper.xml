@@ -77,6 +77,14 @@
         SELECT CODE, NAME FROM C_STORE ORDER BY CODE
     </select>
 
+    <!-- 自提店铺白名单定时同步: 按扩展属性8(自提店铺)拉店仓 -->
+    <select id="listStoresByAttrib8" resultType="java.util.Map">
+        SELECT STORE.CODE AS CODE, STORE.NAME AS NAME
+          FROM C_STORE STORE
+         WHERE STORE.C_STOREATTRIB8_ID = #{attribValue}
+         ORDER BY STORE.CODE
+    </select>
+
     <!-- 品牌下拉：C_STOREATTRIBVALUE DIM5 -->
     <select id="listBrands" resultType="java.util.Map">
         SELECT ID, NAME FROM C_STOREATTRIBVALUE WHERE DIMFLAG = 'DIM5' ORDER BY NAME

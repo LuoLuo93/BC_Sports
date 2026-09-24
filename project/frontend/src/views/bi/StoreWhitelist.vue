@@ -22,7 +22,10 @@
             <span class="card-header-title">自提店铺白名单列表</span>
             <span class="semantics-tip">白名单内店铺的订单：小程序跑批时不改写店仓编码/名称，仅更新单据类型/会员手机号/营业员；未在名单内的店铺按原逻辑全量更新</span>
           </div>
-          <el-button v-if="canAdd" type="primary" size="small" :icon="Plus" @click="openAdd">新增自提店铺</el-button>
+          <div class="header-btns">
+            <el-button v-if="canEdit" size="small" :icon="Refresh" :loading="syncLoading" @click="handleSync">从ERP同步</el-button>
+            <el-button v-if="canAdd" type="primary" size="small" :icon="Plus" @click="openAdd">新增自提店铺</el-button>
+          </div>
         </div>
       </template>
 
@@ -33,14 +36,19 @@
           </el-table-column>
           <el-table-column prop="storeCode" label="店仓编码" min-width="130" show-overflow-tooltip />
           <el-table-column prop="storeName" label="店仓名称" min-width="220" show-overflow-tooltip />
+          <el-table-column label="来源" width="100" align="center">
+            <template #default="{ row }">
+              <el-tag :type="row.source === 'AUTO' ? 'success' : 'info'" size="small">{{ row.source === 'AUTO' ? '自动同步' : '手工录入' }}</el-tag>
+            </template>
+          </el-table-column>
           <el-table-column prop="updateBy" label="修改人" min-width="110" show-overflow-tooltip />
           <el-table-column label="修改时间" min-width="170">
             <template #default="{ row }">{{ formatTime(row.updateTime) }}</template>
           </el-table-column>
           <el-table-column v-if="canEdit || canDelete" label="操作" width="130" align="center" fixed="right">
             <template #default="{ row }">
-              <el-button v-if="canEdit" type="primary" plain size="small" @click="openEdit(row)">编辑</el-button>
-              <el-button v-if="canDelete" type="danger" plain size="small" @click="handleDelete(row)">删除</el-button>
+              <el-button v-if="canEdit && row.source !== 'AUTO'" type="primary" plain size="small" @click="openEdit(row)">编辑</el-button>
+              <el-button v-if="canDelete && row.source !== 'AUTO'" type="danger" plain size="small" @click="handleDelete(row)">删除</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -91,8 +99,8 @@
 defineOptions({ name: 'StoreWhitelist' })
 import { ref, reactive, computed, onMounted, onActivated } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, RefreshRight, Plus } from '@element-plus/icons-vue'
-import { getStoreWhitelistPage, addStoreWhitelist, updateStoreWhitelist, deleteStoreWhitelist } from '@/api/bi'
+import { Search, RefreshRight, Plus, Refresh } from '@element-plus/icons-vue'
+import { getStoreWhitelistPage, addStoreWhitelist, updateStoreWhitelist, deleteStoreWhitelist, syncStoreWhitelist } from '@/api/bi'
 import { getErpStoreSimplePage } from '@/api/erp'
 import { usePermission } from '@/composables/usePermission'
 import { PAGE_SIZES, defaultPageSize } from '@/utils/appConfig'
@@ -187,6 +195,23 @@ async function submitForm() {
   }
 }
 
+// ===== 从ERP立即同步(定时任务同一套逻辑) =====
+const syncLoading = ref(false)
+
+async function handleSync() {
+  syncLoading.value = true
+  try {
+    const res = await syncStoreWhitelist()
+    const d = res.data || {}
+    ElMessage.success(`同步完成：ERP共 ${d.total} 家，新增 ${d.inserted} 家，改名 ${d.updated} 家，移出 ${d.removed} 家(手工行 ${d.manualSkip} 家不动)`)
+    loadData()
+  } catch (e) {
+    ElMessage.error(e.message || '同步失败')
+  } finally {
+    syncLoading.value = false
+  }
+}
+
 async function handleDelete(row) {
   try {
     await ElMessageBox.confirm(`确定将店仓「${row.storeCode} ${row.storeName}」移出白名单吗？移出后其订单恢复小程序改写店铺逻辑`, '删除确认', { type: 'warning' })
@@ -235,6 +260,12 @@ onActivated(() => loadData())
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+.header-btns {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 .card-header-left {
   display: flex;

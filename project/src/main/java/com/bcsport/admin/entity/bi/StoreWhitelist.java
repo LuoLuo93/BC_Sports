@@ -27,6 +27,12 @@ public class StoreWhitelist implements Serializable {
     /** 伯俊ERP店仓名称（C_STORE.NAME） */
     private String storeName;
 
+    /** 数据来源：MANUAL 手工录入 / AUTO 伯俊定时同步(C_STORE自提属性) */
+    public static final String SOURCE_MANUAL = "MANUAL";
+    public static final String SOURCE_AUTO = "AUTO";
+
+    private String source;
+
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 

@@ -80,3 +80,8 @@ export function updateStoreWhitelist(id, data) {
 export function deleteStoreWhitelist(id) {
   return request.delete(`/api/bi/store-whitelist/${id}`)
 }
+
+// 自提店铺白名单-立即从ERP同步(定时任务同一套逻辑)
+export function syncStoreWhitelist() {
+  return request.post('/api/bi/store-whitelist/sync')
+}

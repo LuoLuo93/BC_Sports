@@ -71,7 +71,7 @@ COMMENT ON COLUMN BC_SPORTS_BI_STORE_WHITELIST.deleted IS '逻辑删除：0 正�
 INSERT INTO BC_SPORTS_SYS_MENU
   (ID, PARENT_ID, MENU_NAME, ICON, MENU_TYPE, PATH, PERMISSION, SORT, STATUS, VISIBLE,
    DESCRIPTION, ICON_COLOR, CREATE_TIME, UPDATE_TIME, CREATE_BY, UPDATE_BY, DELETED)
-SELECT 'BI_STORE_WHITELIST', 'BI_DIR', '店铺白名单', 'bi-shield-lock', 1,
+SELECT 'BI_STORE_WHITELIST', 'BI_DIR', '自提店铺白名单', 'bi-shield-lock', 1,
        '/bi/store-whitelist', 'bi:store-whitelist:query', 51, 1, 1,
        '维护小程序订单不改写店铺的白名单(伯俊ERP店仓,反向:命中不改写店铺两列)', NULL, SYSTIMESTAMP, SYSTIMESTAMP, 'admin', 'admin', 0
   FROM DUAL

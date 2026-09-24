@@ -40,7 +40,7 @@ public class BcpSportPointsController {
     private BcpSportPointsService bcpSportPointsService;
 
     @GetMapping("/rank")
-    @ApiOperation("移动端榜单（免登录，Shiro 已放行 anon；keyword 可选=按姓名搜前30名，30名以外不展示）")
+    @ApiOperation("移动端榜单（免登录，Shiro 已放行 anon；无关键字=前30名，keyword=全库按姓名搜索带绝对名次）")
     public Result<SportPointsBoardVO> rank(@RequestParam(required = false) String keyword) {
         String kw = keyword != null && keyword.length() > 50 ? keyword.substring(0, 50) : keyword;
         return Result.success(bcpSportPointsService.rankBoard(kw, RANK_TOP_LIMIT));

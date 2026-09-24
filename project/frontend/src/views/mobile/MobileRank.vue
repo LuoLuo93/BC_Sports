@@ -1,7 +1,7 @@
 <template>
   <div class="m-page">
     <!-- 顶部区:默认蓝色渐变;管理员设置头图后换背景图(叠暗色渐变保证白字可读) + 汇总指标 -->
-    <header class="m-hero" :style="heroStyle">
+    <header class="m-hero" :class="{ 'm-hero--img': summary.heroUrl }" :style="heroStyle">
       <div class="m-hero-top">
         <div>
           <h1 class="m-hero-title">徒步值排名</h1>
@@ -14,16 +14,19 @@
 
       <div class="m-stats" v-if="summary.participants">
         <div class="m-stat">
+          <i class="m-stat-ico">🥾</i>
           <b>{{ fmtNum(summary.participants) }}</b>
           <span>参与人数</span>
         </div>
         <i class="m-stat-divider"></i>
         <div class="m-stat">
+          <i class="m-stat-ico">👣</i>
           <b>{{ fmtNum(Math.round(summary.totalPoints || 0)) }}</b>
           <span>累计积分</span>
         </div>
         <i class="m-stat-divider"></i>
         <div class="m-stat">
+          <i class="m-stat-ico">🧭</i>
           <b>{{ fmtNum(summary.avgPoints) }}</b>
           <span>人均积分</span>
         </div>
@@ -47,7 +50,7 @@
             @error="markImgFailed(p.item.id)"
           />
           <template v-else>{{ avatarOf(p.item.name).emoji }}</template>
-          <i class="m-medal" :class="'is-' + p.place">{{ p.place }}</i>
+          <i class="m-medal" :class="'is-' + p.place">{{ ['🥇', '🥈', '🥉'][p.place - 1] }}</i>
         </div>
         <b class="m-pod-name">{{ p.item.name }}</b>
         <b class="m-pod-points" :class="'is-' + p.place">{{ fmtNum(p.item.points) }}</b>
@@ -59,7 +62,7 @@
       <van-search
         v-model="keyword"
         class="m-search"
-        placeholder="搜索姓名"
+        placeholder="搜索队员"
         shape="round"
         @search="onSearchNow"
         @clear="onSearchNow"
@@ -70,7 +73,7 @@
     <van-pull-refresh
       v-model="refreshing"
       class="m-refresh"
-      success-text="刷新成功"
+      success-text="补给完毕，继续出发"
       @refresh="onRefresh"
     >
       <div class="m-list-card">
@@ -87,11 +90,11 @@
           v-else
           v-model:loading="loading"
           :finished="finished"
-          finished-text="— 没有更多了 —"
+          finished-text="— 已到达本段终点 🏕️ —"
           @load="onLoad"
         >
           <div class="m-row" v-for="item in list" :key="item.id">
-            <span class="m-rank-num">{{ item.rank }}</span>
+            <span class="m-rank-num" :class="{ 'is-top': item.rank >= 4 && item.rank <= 10 }">{{ item.rank }}</span>
             <span class="m-row-avatar" :style="{ background: avatarOf(item.name).bg }">
               <img
                 v-if="item.avatarUrl && !imgFailed.has(item.id)"
@@ -112,7 +115,7 @@
           <van-empty
             v-if="finished && !list.length"
             image="search"
-            description="没有找到相关成员"
+            description="没有找到这位队员"
           />
         </van-list>
       </div>
@@ -188,11 +191,12 @@ function avatarImg(url) {
   return url.startsWith('/bcsports') ? url : '/bcsports' + url
 }
 
-// 顶部头图：管理员代传后整块换背景图，叠一层深蓝半透明渐变压住图片，白字/统计条才稳
+// 顶部头图：管理员代传后整块换背景图。渐变蒙版只压上下两端（保标题/统计条可读），
+// 中段近乎透出让人物/风景露出来；配合 .m-hero--img 拉高成横幅、标题压顶统计沉底
 const heroStyle = computed(() => {
   if (!summary.value.heroUrl) return {}
   return {
-    backgroundImage: `linear-gradient(rgba(23,37,84,0.62), rgba(30,64,175,0.5)), url(${avatarImg(summary.value.heroUrl)})`,
+    backgroundImage: `linear-gradient(180deg, rgba(15,23,42,0.52) 0%, rgba(15,23,42,0.06) 42%, rgba(15,23,42,0.08) 62%, rgba(15,23,42,0.44) 100%), url(${avatarImg(summary.value.heroUrl)})`,
     backgroundSize: 'cover',
     backgroundPosition: 'center'
   }
@@ -268,7 +272,9 @@ onMounted(() => {
   margin: 0 auto;
   box-shadow: 0 0 40px rgba(0, 0, 0, 0.25);
   min-height: 100vh;
-  background: #f4f6fb;
+  /* 户外主题:极淡的等高线地形纹(地图感),白色卡片压在上面;线条色比底色只深一档,远看不吵近看有细节 */
+  background-color: #f4f6fb;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='280' height='280' viewBox='0 0 280 280'%3E%3Cg fill='none' stroke='%23dde6f4' stroke-width='1.3'%3E%3Cpath d='M20 200 Q80 120 150 160 T270 120'/%3E%3Cpath d='M10 160 Q70 90 140 130 T260 90'/%3E%3Cpath d='M0 120 Q60 50 130 90 T250 50'/%3E%3Cpath d='M30 230 Q90 150 160 190 T280 150'/%3E%3Cpath d='M40 90 Q100 20 170 60 T290 20'/%3E%3C/g%3E%3C/svg%3E");
   padding-bottom: calc(24px + env(safe-area-inset-bottom));
   -webkit-tap-highlight-color: transparent;
 }
@@ -286,6 +292,31 @@ onMounted(() => {
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 20px;
+}
+
+/* ===== 头图模式：拉高成横幅 =====
+   默认渐变模式标题+统计条挤在 ~225px 里没问题；换成照片后被文字/蒙版/领奖台遮得死死的。
+   头图模式改为：最小高 340px 的横幅，标题压顶(文字阴影替代重蒙版)，统计条 margin-top:auto 沉底，
+   中间整段让给图片；渐变蒙版也只压两端(见 heroStyle)。不设头图时样式与原版完全一致 */
+.m-hero--img {
+  min-height: 340px;
+  display: flex;
+  flex-direction: column;
+}
+.m-hero--img .m-hero-top {
+  margin-bottom: 0;
+}
+.m-hero--img .m-stats {
+  margin-top: auto;
+}
+.m-hero--img .m-hero-title {
+  text-shadow: 0 2px 10px rgba(15, 23, 42, 0.65);
+}
+.m-hero--img .m-hero-sub {
+  text-shadow: 0 1px 6px rgba(15, 23, 42, 0.65);
+}
+.m-hero--img .m-live-dot {
+  box-shadow: none;
 }
 
 .m-hero-title {
@@ -323,8 +354,9 @@ onMounted(() => {
   align-items: center;
   padding: 16px 4px;
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.14);
-  border: 1px solid rgba(255, 255, 255, 0.22);
+  /* 头图模式下统计条压在照片上，0.18 白底+磨砂保证亮色照片上数字也清晰 */
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.24);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
@@ -333,6 +365,15 @@ onMounted(() => {
   flex: 1;
   text-align: center;
   min-width: 0;
+}
+
+/* 户外主题小图标(🥾👣🧭),压在数字上方 */
+.m-stat-ico {
+  display: block;
+  font-style: normal;
+  font-size: 15px;
+  line-height: 1;
+  margin-bottom: 4px;
 }
 
 .m-stat b {
@@ -409,7 +450,7 @@ onMounted(() => {
   background: linear-gradient(135deg, #94a3b8, #64748b);
   border: 3px solid #e2e8f0;
   box-shadow: 0 4px 12px rgba(28, 25, 23, 0.12);
-  overflow: hidden;
+  /* 注意不能加 overflow:hidden：奖牌要挂在圆框外沿 */
 }
 
 .m-pod-1 .m-pod-avatar {
@@ -447,26 +488,22 @@ onMounted(() => {
   50% { transform: translateY(-3px) rotate(6deg); }
 }
 
+/* 名次改金银铜奖牌emoji挂在头像右下外沿(原数字小圆徽在照片模式下会被裁且太小看不清) */
 .m-medal {
   position: absolute;
-  right: -4px;
-  bottom: -2px;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
+  right: -5px;
+  bottom: -5px;
+  font-size: 20px;
   font-style: normal;
-  font-weight: 800;
-  color: #fff;
-  border: 2px solid #fff;
+  line-height: 1;
+  filter: drop-shadow(0 2px 3px rgba(28, 25, 23, 0.35));
 }
 
-.m-medal.is-1 { background: #f59e0b; }
-.m-medal.is-2 { background: #94a3b8; }
-.m-medal.is-3 { background: #b45309; }
+.m-pod-1 .m-medal {
+  font-size: 24px;
+  right: -6px;
+  bottom: -6px;
+}
 
 .m-pod-name {
   margin-top: 8px;
@@ -493,6 +530,17 @@ onMounted(() => {
   background: #eff6ff;
 }
 
+/* 亚军/季军积分胶囊配色与奖牌呼应（冠军金色在下方覆盖） */
+.m-pod-2 .m-pod-points {
+  color: #475569;
+  background: #f1f5f9;
+}
+
+.m-pod-3 .m-pod-points {
+  color: #9a3412;
+  background: #fff3e8;
+}
+
 .m-pod-1 .m-pod-points {
   color: #b45309;
   background: #fffbeb;
@@ -504,7 +552,8 @@ onMounted(() => {
   top: 0;
   z-index: 20;
   background: #f4f6fb;
-  box-shadow: 0 6px 16px -12px rgba(29, 78, 216, 0.25);
+  /* 中性灰投影：头图模式下顶部已是照片，蓝调投影会显得突兀 */
+  box-shadow: 0 6px 16px -12px rgba(28, 25, 23, 0.22);
 }
 
 .m-search {
@@ -556,6 +605,19 @@ onMounted(() => {
   color: #a8a29e;
 }
 
+/* 领奖台(1-3)之下、前 10 名：淡蓝圆徽标延续领奖台的荣誉层级；11 名起保持灰色斜体数字 */
+.m-rank-num.is-top {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 26px;
+  border-radius: 50%;
+  background: #eef4ff;
+  color: #1d4ed8;
+  font-style: normal;
+  font-size: 13px;
+}
+
 .m-row-avatar {
   flex-shrink: 0;
   width: 42px;
@@ -569,6 +631,9 @@ onMounted(() => {
   font-weight: 800;
   color: #fff;
   overflow: hidden;
+  /* 白描边+浅投影与领奖台头像同一语言；照片/emoji 通用 */
+  border: 2px solid #fff;
+  box-shadow: 0 2px 8px rgba(28, 25, 23, 0.14);
 }
 
 /* 自定义头像图片：铺满圆框；渐变底在图片加载完成前露出来当占位 */

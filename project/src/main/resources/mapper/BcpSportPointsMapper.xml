@@ -28,7 +28,8 @@
                     SYSTIMESTAMP, SYSTIMESTAMP, source.create_by, source.update_by, 0)
     </insert>
 
-    <!-- 移动端榜单：只保留前N名（无关键字=前N名全量；有关键字=在前N名内按姓名模糊匹配，N名以外不展示） -->
+    <!-- 移动端榜单：无关键字=只展示前N名；有关键字=全库按姓名模糊搜索（带绝对名次，
+         可搜到N名以外的人），命中过多时截前500条防止整表打爆移动端 -->
     <resultMap id="SportPointsRankVoMap" type="com.bcsport.admin.vo.SportPointsRankVO">
         <id property="id" column="id"/>
         <result property="name" column="name"/>
@@ -48,12 +49,19 @@
             WHERE t.deleted = 0
         )
         <where>
-            rank_no &lt;= #{limit}
-            <if test="keyword != null and keyword != ''">
-                AND name LIKE '%' || #{keyword} || '%' ESCAPE '\'
-            </if>
+            <choose>
+                <when test="keyword != null and keyword != ''">
+                    name LIKE '%' || #{keyword} || '%' ESCAPE '\'
+                </when>
+                <otherwise>
+                    rank_no &lt;= #{limit}
+                </otherwise>
+            </choose>
         </where>
         ORDER BY rank_no
+        <if test="keyword != null and keyword != ''">
+            FETCH FIRST 500 ROWS ONLY
+        </if>
     </select>
 
     <!-- 全表统计（头部参与人数/累计积分用，不受前100截断影响）。

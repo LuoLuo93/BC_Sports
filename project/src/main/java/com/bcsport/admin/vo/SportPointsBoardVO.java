@@ -22,4 +22,7 @@ public class SportPointsBoardVO {
 
     /** 累计积分（与 participants 同口径，支持小数） */
     private BigDecimal totalPoints;
+
+    /** 移动端顶部头图URL（管理员代传，sys_config mobile.rankHeroUrl；空=默认蓝色渐变） */
+    private String heroUrl;
 }

@@ -79,9 +79,11 @@ export async function fetchRankSummary(params) {
         totalPoints,
         // 头部指标展示口径取整（个人积分仍保留两位小数）
         avgPoints: participants ? Math.round(totalPoints / participants) : 0,
-        // 领奖台永远用全榜前三(board.top3),搜索时不变
-        top3: board.top3 || board.list.slice(0, 3),
-        date: todayLabel(),
+      // 领奖台永远用全榜前三(board.top3),搜索时不变
+      top3: board.top3 || board.list.slice(0, 3),
+      // 顶部头图(管理员代传,空=默认蓝色渐变)
+      heroUrl: board.heroUrl || '',
+      date: todayLabel(),
         weekNo: weekNo()
       }
     }

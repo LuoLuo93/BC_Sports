@@ -201,6 +201,8 @@ public class BcpSportPointsServiceImpl implements BcpSportPointsService {
         }
         board.setParticipants(snapshot.participants());
         board.setTotalPoints(snapshot.totalPoints());
+        // 顶部头图：全局配置，空=前端回退默认蓝色渐变
+        board.setHeroUrl(configService.getString(HERO_CONFIG_KEY, ""));
         if (kw == null) {
             // 无关键字：top3 直接从榜单结果切，零额外查询
             board.setTop3(new ArrayList<>(board.getList().subList(0, Math.min(3, board.getList().size()))));
@@ -267,8 +269,21 @@ public class BcpSportPointsServiceImpl implements BcpSportPointsService {
     private static final long AVATAR_MAX_BYTES = 5 * 1024 * 1024;
     private static final Set<String> AVATAR_EXTS = Set.of("jpg", "jpeg", "png", "webp");
 
+    // ===== 移动端顶部头图（管理员代传，全局一张，存 sys_config mobile.rankHeroUrl） =====
+    private static final String HERO_CONFIG_KEY = "mobile.rankHeroUrl";
+    private static final String HERO_DIR = "hero";
+    private static final String HERO_URL_PREFIX = "/images/hero/";
+    private static final long HERO_MAX_BYTES = 10 * 1024 * 1024;
+    private static final Set<String> HERO_EXTS = Set.of("jpg", "jpeg", "png", "webp");
+
     @Value("${bc.upload.path:E:/work/BC_Sport/uploads}")
     private String uploadBasePath;
+
+    @Autowired
+    private com.bcsport.admin.service.ConfigService configService;
+
+    @Autowired
+    private com.bcsport.admin.service.SysConfigService sysConfigService;
 
     @Override
     public String saveAvatar(Long id, MultipartFile file) {
@@ -349,5 +364,68 @@ public class BcpSportPointsServiceImpl implements BcpSportPointsService {
         if (filename == null) return "";
         int i = filename.lastIndexOf('.');
         return i < 0 ? "" : filename.substring(i + 1).toLowerCase();
+    }
+
+    @Override
+    public String saveHeroImage(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new BusinessException("请选择图片文件");
+        }
+        if (file.getSize() > HERO_MAX_BYTES) {
+            throw new BusinessException("图片不能超过 10MB");
+        }
+        String ext = extOf(file.getOriginalFilename());
+        if (!HERO_EXTS.contains(ext)) {
+            throw new BusinessException("仅支持 jpg/jpeg/png/webp 格式图片");
+        }
+        if (!"webp".equals(ext)) {
+            try (InputStream in = file.getInputStream()) {
+                if (ImageIO.read(in) == null) {
+                    throw new BusinessException("图片内容无法解析，请换一张");
+                }
+            } catch (IOException e) {
+                throw new BusinessException("读取图片失败，请重试");
+            }
+        }
+        String oldUrl = configService.getString(HERO_CONFIG_KEY, "");
+        String filename = "rank_hero_" + System.currentTimeMillis() + "." + ext;
+        Path dir = Paths.get(uploadBasePath, HERO_DIR);
+        try {
+            Files.createDirectories(dir);
+            file.transferTo(dir.resolve(filename).toAbsolutePath().toFile());
+        } catch (IOException e) {
+            log.error("[SportPoints] 头图文件写入失败", e);
+            throw new BusinessException("头图保存失败，请重试");
+        }
+        String url = HERO_URL_PREFIX + filename;
+        sysConfigService.updateConfigs(Map.of(HERO_CONFIG_KEY, url)); // 内部自动 reload 配置缓存
+        deleteFileQuietly(HERO_DIR, HERO_URL_PREFIX, oldUrl);
+        return url;
+    }
+
+    @Override
+    public void clearHeroImage() {
+        String oldUrl = configService.getString(HERO_CONFIG_KEY, "");
+        if (!StringUtils.hasText(oldUrl)) {
+            return; // 本来就没设头图，幂等成功
+        }
+        sysConfigService.updateConfigs(Map.of(HERO_CONFIG_KEY, ""));
+        deleteFileQuietly(HERO_DIR, HERO_URL_PREFIX, oldUrl);
+    }
+
+    @Override
+    public String getHeroUrl() {
+        return configService.getString(HERO_CONFIG_KEY, "");
+    }
+
+    /** 删除上传目录子目录里的旧文件（固定前缀校验防目录穿越，失败只记日志） */
+    private void deleteFileQuietly(String subDir, String urlPrefix, String url) {
+        if (!StringUtils.hasText(url)) return;
+        if (!url.startsWith(urlPrefix) || url.contains("..")) return;
+        try {
+            Files.deleteIfExists(Paths.get(uploadBasePath, subDir, url.substring(urlPrefix.length())));
+        } catch (IOException e) {
+            log.warn("[SportPoints] 旧文件删除失败: {}", url);
+        }
     }
 }

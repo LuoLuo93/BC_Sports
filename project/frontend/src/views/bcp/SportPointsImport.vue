@@ -78,7 +78,19 @@
           <template #header>
             <div class="card-header-row">
               <span class="card-header-title">移动端排名预览</span>
-              <div>
+              <div class="hero-manage">
+                <img v-if="heroUrl" :src="fullImgUrl(heroUrl)" class="hero-thumb" title="当前头图" />
+                <el-upload
+                  v-if="hasPermission('bcp:sport-points:edit')"
+                  ref="heroUploadRef"
+                  :show-file-list="false"
+                  :auto-upload="false"
+                  accept="image/jpeg,image/png,image/webp"
+                  :on-change="onHeroFileChange"
+                >
+                  <el-button size="small" :loading="heroUploading">{{ heroUrl ? '更换头图' : '设置头图' }}</el-button>
+                </el-upload>
+                <el-button v-if="heroUrl && hasPermission('bcp:sport-points:edit')" size="small" type="danger" plain :loading="heroClearing" @click="doClearHero">恢复默认</el-button>
                 <el-button size="small" :icon="RefreshRight" @click="refreshPreview">刷新</el-button>
                 <el-button size="small" :icon="View" tag="a" href="/bcsports/points" target="_blank">新窗口打开</el-button>
               </div>
@@ -94,7 +106,7 @@
                 title="徒步值排名移动端预览"
               />
             </div>
-            <p class="preview-hint">展示内容与手机外链完全一致（只保留前 30 名）；导入或编辑成功后自动刷新，无需进手机查看。</p>
+            <p class="preview-hint">展示内容与手机外链完全一致（只保留前 30 名）；头图建议 960×540 横图（等比压缩居中裁铺）；导入或编辑成功后自动刷新，无需进手机查看。</p>
           </div>
         </el-card>
       </el-tab-pane>
@@ -180,7 +192,7 @@ defineOptions({ name: 'BcpSportPointsImport' })
 import { ref, reactive, onMounted, onActivated } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Search, RefreshRight, Upload, View, User } from '@element-plus/icons-vue'
-import { getSportPointsPage, importSportPoints, getSportPointsTemplate, getSportPointsImportLogPage, updateSportPoints, uploadSportPointsAvatar, clearSportPointsAvatar } from '@/api/bcp'
+import { getSportPointsPage, importSportPoints, getSportPointsTemplate, getSportPointsImportLogPage, updateSportPoints, uploadSportPointsAvatar, clearSportPointsAvatar, getSportPointsHero, uploadSportPointsHero, clearSportPointsHero } from '@/api/bcp'
 import { usePermission } from '@/composables/usePermission'
 import { PAGE_SIZES, defaultPageSize } from '@/utils/appConfig'
 import { formatTime } from '@/utils/format'
@@ -217,6 +229,78 @@ function resetQuery() { query.sporter = ''; handleSearch() }
 // 每次变化重挂 iframe（key + 时间戳双保险），导入/编辑成功后自动刷新预览
 const previewKey = ref(Date.now())
 function refreshPreview() { previewKey.value = Date.now() }
+
+// ===== 顶部头图（全局一张，管理员代传，移动端 /points 顶部背景） =====
+const heroUrl = ref('')
+const heroUploading = ref(false)
+const heroClearing = ref(false)
+const heroUploadRef = ref(null)
+
+async function loadHero() {
+  try {
+    const res = await getSportPointsHero()
+    heroUrl.value = res.data || ''
+  } catch { /* 查询失败按未设置处理 */ }
+}
+
+// 横图压缩：等比缩到最宽 1280px 转 jpeg，不裁剪（hero 区域用 cover 自适应填充）
+function compressHeroWide(file) {
+  return new Promise((resolve, reject) => {
+    if (!/^image\/(jpeg|png|webp)$/.test(file.type)) {
+      reject(new Error('仅支持 jpg/png/webp 图片'))
+      return
+    }
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      const maxW = 1280
+      const scale = Math.min(1, maxW / img.width)
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.max(1, Math.round(img.width * scale))
+      canvas.height = Math.max(1, Math.round(img.height * scale))
+      const ctx = canvas.getContext('2d')
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+      canvas.toBlob(b => (b ? resolve(new File([b], 'hero.jpg', { type: 'image/jpeg' })) : reject(new Error('图片处理失败'))), 'image/jpeg', 0.85)
+    }
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('图片读取失败')) }
+    img.src = url
+  })
+}
+
+async function onHeroFileChange(uploadFile) {
+  const raw = uploadFile.raw
+  heroUploadRef.value?.clearFiles()
+  if (!raw || heroUploading.value) return
+  heroUploading.value = true
+  try {
+    const blob = await compressHeroWide(raw)
+    const fd = new FormData()
+    fd.append('file', blob, 'hero.jpg')
+    const res = await uploadSportPointsHero(fd)
+    heroUrl.value = res.data
+    ElMessage.success('头图已更新')
+    refreshPreview()
+  } catch (e) {
+    ElMessage.error(e.message || '头图上传失败')
+  } finally {
+    heroUploading.value = false
+  }
+}
+
+async function doClearHero() {
+  heroClearing.value = true
+  try {
+    await clearSportPointsHero()
+    heroUrl.value = ''
+    ElMessage.success('已恢复默认蓝色渐变')
+    refreshPreview()
+  } catch (e) {
+    ElMessage.error(e.message || '恢复失败')
+  } finally {
+    heroClearing.value = false
+  }
+}
 
 // ===== 编辑 =====
 const editDialogVisible = ref(false)
@@ -423,8 +507,8 @@ async function submitImport() {
   }
 }
 
-onMounted(() => loadData())
-onActivated(() => loadData())
+onMounted(() => { loadData(); loadHero() })
+onActivated(() => { loadData(); loadHero() })
 </script>
 
 <style scoped>
@@ -488,6 +572,22 @@ onActivated(() => loadData())
   font-size: 12px;
   color: var(--el-text-color-secondary);
   line-height: 1.5;
+}
+
+/* ===== 头图管理（预览 tab 卡片头） ===== */
+.hero-manage {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.hero-thumb {
+  width: 72px;
+  height: 40px;
+  border-radius: 6px;
+  object-fit: cover;
+  border: 1px solid var(--el-border-color-lighter);
 }
 .pagination-wrapper {
   margin-top: 12px;

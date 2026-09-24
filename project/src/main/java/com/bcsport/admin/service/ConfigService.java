@@ -31,9 +31,15 @@ public class ConfigService {
     public void reload() {
         try {
             cache.clear();
+            // Oracle 空串即 NULL（如 mobile.rankHeroUrl 未设置时）；ConcurrentHashMap 不收 null 值，
+            // 有 NULL 值的行必须跳过，否则整表加载 NPE → 缓存被清空 → 全部配置回落默认值
             sysConfigMapper.selectList(new LambdaQueryWrapper<SysConfig>()
                     .select(SysConfig::getConfigKey, SysConfig::getConfigValue))
-                    .forEach(c -> cache.put(c.getConfigKey(), c.getConfigValue()));
+                    .forEach(c -> {
+                        if (c.getConfigKey() != null && c.getConfigValue() != null) {
+                            cache.put(c.getConfigKey(), c.getConfigValue());
+                        }
+                    });
             log.info("[Config] 配置缓存已加载, 项数={}", cache.size());
         } catch (Exception e) {
             log.warn("[Config] 配置缓存加载失败(表可能未创建), 使用默认值: {}", e.getMessage());

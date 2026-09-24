@@ -1,7 +1,7 @@
 <template>
   <div class="m-page">
-    <!-- 顶部渐变区:标题 + 汇总指标 -->
-    <header class="m-hero">
+    <!-- 顶部区:默认蓝色渐变;管理员设置头图后换背景图(叠暗色渐变保证白字可读) + 汇总指标 -->
+    <header class="m-hero" :style="heroStyle">
       <div class="m-hero-top">
         <div>
           <h1 class="m-hero-title">徒步值排名</h1>
@@ -187,6 +187,16 @@ function avatarImg(url) {
   if (url.startsWith('http') || url.startsWith('data:')) return url
   return url.startsWith('/bcsports') ? url : '/bcsports' + url
 }
+
+// 顶部头图：管理员代传后整块换背景图，叠一层深蓝半透明渐变压住图片，白字/统计条才稳
+const heroStyle = computed(() => {
+  if (!summary.value.heroUrl) return {}
+  return {
+    backgroundImage: `linear-gradient(rgba(23,37,84,0.62), rgba(30,64,175,0.5)), url(${avatarImg(summary.value.heroUrl)})`,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center'
+  }
+})
 
 async function loadPage(targetPage) {
   const res = await fetchRankList({

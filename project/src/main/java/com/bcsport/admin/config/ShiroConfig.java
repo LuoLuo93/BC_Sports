@@ -162,9 +162,10 @@ public class ShiroConfig {
         filterChainDefinitionMap.put("/static/**", "anon");
         filterChainDefinitionMap.put("/css/**", "anon");
         filterChainDefinitionMap.put("/js/**", "anon");
-        // 徒步值排名自定义头像：管理员代传的公开展示图，免登录页 <img> 直接取。
-        // 只放行 avatar 子目录（放在 /images/** 之前，Shiro 首个匹配生效），其余业务上传文件仍需登录
+        // 徒步值排名自定义头像/顶部头图：管理员代传的公开展示图，免登录页 <img>/背景直接取。
+        // 只放行 avatar、hero 两个子目录（放在 /images/** 之前，Shiro 首个匹配生效），其余业务上传文件仍需登录
         filterChainDefinitionMap.put("/images/avatar/**", "anon");
+        filterChainDefinitionMap.put("/images/hero/**", "anon");
         // /images/** 映射的是用户上传的业务文件(导入Excel/打印物料)，不是构建产物：
         // 匿名可达等于按 URL 猜取业务数据，改为需登录(同源 <img> 会自动带会话Cookie，页面展示不受影响)
         filterChainDefinitionMap.put("/images/**", "spaAuth");

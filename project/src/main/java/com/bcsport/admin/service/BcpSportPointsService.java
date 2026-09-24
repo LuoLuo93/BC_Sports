@@ -46,4 +46,19 @@ public interface BcpSportPointsService {
      * 清除自定义头像（同时删磁盘文件，移动端回退动物emoji）
      */
     void clearAvatar(Long id);
+
+    /**
+     * 管理员代传移动端顶部头图（存 uploads/hero，写 sys_config mobile.rankHeroUrl，返回访问地址）
+     */
+    String saveHeroImage(MultipartFile file);
+
+    /**
+     * 清除头图恢复默认蓝色渐变（同时删磁盘文件）
+     */
+    void clearHeroImage();
+
+    /**
+     * 当前头图URL（空=未设置，移动端回退默认蓝色渐变）
+     */
+    String getHeroUrl();
 }

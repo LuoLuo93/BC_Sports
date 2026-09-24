@@ -115,6 +115,30 @@ public class BcpSportPointsController {
         return Result.success(null);
     }
 
+    @GetMapping("/hero")
+    @ApiOperation("查询移动端顶部头图URL（空=默认蓝色渐变）")
+    @RequiresPermissions("bcp:sport-points:query")
+    public Result<String> getHero() {
+        return Result.success(bcpSportPointsService.getHeroUrl());
+    }
+
+    @PostMapping("/hero")
+    @ApiOperation("管理员代传移动端顶部头图（jpg/jpeg/png/webp，≤10MB，建议960×540横图）")
+    @OperLog(module = "运动积分", operation = "上传排名头图", saveParams = false)
+    @RequiresPermissions("bcp:sport-points:edit")
+    public Result<String> uploadHero(@RequestParam("file") MultipartFile file) {
+        return Result.success(bcpSportPointsService.saveHeroImage(file));
+    }
+
+    @DeleteMapping("/hero")
+    @ApiOperation("清除头图恢复默认蓝色渐变")
+    @OperLog(module = "运动积分", operation = "清除排名头图")
+    @RequiresPermissions("bcp:sport-points:edit")
+    public Result<Void> clearHero() {
+        bcpSportPointsService.clearHeroImage();
+        return Result.success(null);
+    }
+
     @GetMapping("/template")
     @ApiOperation("下载导入模板")
     @RequiresPermissions("bcp:sport-points:import")

@@ -30,3 +30,16 @@ export function uploadSportPointsAvatar(id, data) {
 export function clearSportPointsAvatar(id) {
   return request.delete(`/api/bcp/sport-points/${id}/avatar`)
 }
+
+// 移动端顶部头图（全局一张，存 sys_config mobile.rankHeroUrl）
+export function getSportPointsHero() {
+  return request.get('/api/bcp/sport-points/hero')
+}
+
+export function uploadSportPointsHero(data) {
+  return request.post('/api/bcp/sport-points/hero', data, { timeout: 60000 })
+}
+
+export function clearSportPointsHero() {
+  return request.delete('/api/bcp/sport-points/hero')
+}

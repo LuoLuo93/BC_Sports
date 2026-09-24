@@ -137,6 +137,13 @@ SELECT RAWTOHEX(SYS_GUID()), '1', 'BI_TALENT_STORE_DELETE', SYSTIMESTAMP, 'admin
   FROM DUAL
  WHERE NOT EXISTS (SELECT 1 FROM BC_SPORTS_SYS_ROLE_MENU WHERE ROLE_ID = '1' AND MENU_ID = 'BI_TALENT_STORE_DELETE');
 
+-- ==========================================================
+-- 4. 数仓授权: bi_dw 的 SP_FILL_ODS_SALES_MAIN 存储过程③要读本表做主播店铺改写。
+--    两用户同实例(192.168.5.177:orcl), 直接跨schema授权即可, 无需DB link;
+--    过程是定义者权限, 必须直接授权(走角色无效)。GRANT 幂等, 重复执行不报错。
+-- ==========================================================
+GRANT SELECT ON BC_SPORTS.BC_SPORTS_BI_TALENT_STORE TO BI_DW;
+
 COMMIT;
 
 EXIT;

@@ -63,3 +63,20 @@ export function updateTalentStore(id, data) {
 export function deleteTalentStore(id) {
   return request.delete(`/api/bi/talent-store/${id}`)
 }
+
+// 店铺白名单管理
+export function getStoreWhitelistPage(params) {
+  return request.get('/api/bi/store-whitelist/page', { params })
+}
+
+export function addStoreWhitelist(data) {
+  return request.post('/api/bi/store-whitelist', data)
+}
+
+export function updateStoreWhitelist(id, data) {
+  return request.put(`/api/bi/store-whitelist/${id}`, data)
+}
+
+export function deleteStoreWhitelist(id) {
+  return request.delete(`/api/bi/store-whitelist/${id}`)
+}

@@ -20,3 +20,13 @@ export function getSportPointsImportLogPage(params) {
 export function updateSportPoints(id, data) {
   return request.put(`/api/bcp/sport-points/${id}`, data)
 }
+
+// 管理员代传自定义头像（FormData，multipart）
+export function uploadSportPointsAvatar(id, data) {
+  return request.post(`/api/bcp/sport-points/${id}/avatar`, data, { timeout: 60000 })
+}
+
+// 清除自定义头像（回退移动端默认动物emoji）
+export function clearSportPointsAvatar(id) {
+  return request.delete(`/api/bcp/sport-points/${id}/avatar`)
+}

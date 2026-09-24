@@ -25,6 +25,9 @@ public class BcpSportPoints implements Serializable {
     /** 积分（整数，导入/编辑小数自动四舍五入取整） */
     private BigDecimal points;
 
+    /** 自定义头像URL（管理员代传，/images/avatar/xxx；空则移动端回退动物emoji。Excel 重导入不覆盖） */
+    private String avatarUrl;
+
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 

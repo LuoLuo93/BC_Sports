@@ -1,6 +1,7 @@
 package com.bcsport.admin.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bcsport.admin.common.PageQuery;
 import com.bcsport.admin.common.PageResult;
@@ -18,7 +19,9 @@ import com.bcsport.admin.service.ImportLogService;
 import com.bcsport.admin.util.ShiroSecurityUtils;
 import com.bcsport.admin.vo.SportPointsBoardVO;
 import com.bcsport.admin.vo.SportPointsRankVO;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -26,15 +29,24 @@ import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.imageio.ImageIO;
+import java.io.IOException;
+import java.io.InputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;/**
+import java.util.Map;
+import java.util.Set;/**
  * BC好玩家运动积分导入实现
  * 流程骨架由 ExcelImportRunner 承担（R01），本类只声明表头别名、行映射与 MERGE 入库策略
  */
+@Slf4j
 @Service
 public class BcpSportPointsServiceImpl implements BcpSportPointsService {
 
@@ -243,5 +255,98 @@ public class BcpSportPointsServiceImpl implements BcpSportPointsService {
         } catch (DuplicateKeyException e) {
             throw new BusinessException("运动员「" + sporter + "」已存在，不能改为重名");
         }
+    }
+
+    // ===== 自定义头像（管理员代传） =====
+    // 存 uploads/avatar 子目录（/images/avatar/** 已在 Shiro 单独放行 anon，其余 /images/** 业务文件仍需登录）
+    // 换头像/清除时旧文件删除，文件名带时间戳天然破缓存；Excel 重导入走 MERGE 只更新积分，不碰头像
+
+    private static final String AVATAR_DIR = "avatar";
+    private static final String AVATAR_URL_PREFIX = "/images/avatar/";
+    private static final long AVATAR_MAX_BYTES = 5 * 1024 * 1024;
+    private static final Set<String> AVATAR_EXTS = Set.of("jpg", "jpeg", "png", "webp");
+
+    @Value("${bc.upload.path:E:/work/BC_Sport/uploads}")
+    private String uploadBasePath;
+
+    @Override
+    public String saveAvatar(Long id, MultipartFile file) {
+        BcpSportPoints row = bcpSportPointsMapper.selectById(id);
+        if (row == null) {
+            throw new BusinessException("记录不存在或已删除，请刷新列表");
+        }
+        if (file == null || file.isEmpty()) {
+            throw new BusinessException("请选择图片文件");
+        }
+        if (file.getSize() > AVATAR_MAX_BYTES) {
+            throw new BusinessException("图片不能超过 5MB");
+        }
+        String ext = extOf(file.getOriginalFilename());
+        if (!AVATAR_EXTS.contains(ext)) {
+            throw new BusinessException("仅支持 jpg/jpeg/png/webp 格式图片");
+        }
+        // 内容校验：必须能解码成真图片（webp Java 标准库不解码，只做扩展名/大小限制）
+        if (!"webp".equals(ext)) {
+            try (InputStream in = file.getInputStream()) {
+                if (ImageIO.read(in) == null) {
+                    throw new BusinessException("图片内容无法解析，请换一张");
+                }
+            } catch (IOException e) {
+                throw new BusinessException("读取图片失败，请重试");
+            }
+        }
+        String filename = "avatar_" + id + "_" + System.currentTimeMillis() + "." + ext;
+        Path dir = Paths.get(uploadBasePath, AVATAR_DIR);
+        try {
+            Files.createDirectories(dir);
+            file.transferTo(dir.resolve(filename).toAbsolutePath().toFile());
+        } catch (IOException e) {
+            log.error("[SportPoints] 头像文件写入失败: id={}", id, e);
+            throw new BusinessException("头像保存失败，请重试");
+        }
+        String url = AVATAR_URL_PREFIX + filename;
+        BcpSportPoints update = new BcpSportPoints();
+        update.setId(id);
+        update.setAvatarUrl(url);
+        bcpSportPointsMapper.updateById(update); // updateFill 自动带 update_time/update_by
+        deleteAvatarFileQuietly(row.getAvatarUrl());
+        return url;
+    }
+
+    @Override
+    public void clearAvatar(Long id) {
+        BcpSportPoints row = bcpSportPointsMapper.selectById(id);
+        if (row == null) {
+            throw new BusinessException("记录不存在或已删除，请刷新列表");
+        }
+        if (!StringUtils.hasText(row.getAvatarUrl())) {
+            return; // 本来就没有头像，幂等成功
+        }
+        // 置 NULL 需走 UpdateWrapper 显式 set（updateById 的 null 字段默认不参与更新）
+        bcpSportPointsMapper.update(null, new LambdaUpdateWrapper<BcpSportPoints>()
+                .eq(BcpSportPoints::getId, id)
+                .set(BcpSportPoints::getAvatarUrl, null)
+                .set(BcpSportPoints::getUpdateTime, LocalDateTime.now())
+                .set(BcpSportPoints::getUpdateBy,
+                        ShiroSecurityUtils.getCurrentUsername() != null ? ShiroSecurityUtils.getCurrentUsername() : "unknown"));
+        deleteAvatarFileQuietly(row.getAvatarUrl());
+    }
+
+    /** 删除磁盘上的旧头像文件（尽力而为，失败只记日志不影响主流程） */
+    private void deleteAvatarFileQuietly(String url) {
+        if (!StringUtils.hasText(url)) return;
+        // 只认本功能自己的固定前缀，且拒绝路径穿越，避免任意文件删除
+        if (!url.startsWith(AVATAR_URL_PREFIX) || url.contains("..")) return;
+        try {
+            Files.deleteIfExists(Paths.get(uploadBasePath, AVATAR_DIR, url.substring(AVATAR_URL_PREFIX.length())));
+        } catch (IOException e) {
+            log.warn("[SportPoints] 旧头像文件删除失败: {}", url);
+        }
+    }
+
+    private static String extOf(String filename) {
+        if (filename == null) return "";
+        int i = filename.lastIndexOf('.');
+        return i < 0 ? "" : filename.substring(i + 1).toLowerCase();
     }
 }

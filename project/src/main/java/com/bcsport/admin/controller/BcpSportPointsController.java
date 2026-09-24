@@ -98,6 +98,23 @@ public class BcpSportPointsController {
         return Result.success(null);
     }
 
+    @PostMapping("/{id}/avatar")
+    @ApiOperation("管理员代传自定义头像（jpg/jpeg/png/webp，≤5MB）")
+    @OperLog(module = "运动积分", operation = "上传自定义头像", saveParams = false)
+    @RequiresPermissions("bcp:sport-points:edit")
+    public Result<String> uploadAvatar(@PathVariable Long id, @RequestParam("file") MultipartFile file) {
+        return Result.success(bcpSportPointsService.saveAvatar(id, file));
+    }
+
+    @DeleteMapping("/{id}/avatar")
+    @ApiOperation("清除自定义头像（回移动端默认动物emoji）")
+    @OperLog(module = "运动积分", operation = "清除自定义头像")
+    @RequiresPermissions("bcp:sport-points:edit")
+    public Result<Void> clearAvatar(@PathVariable Long id) {
+        bcpSportPointsService.clearAvatar(id);
+        return Result.success(null);
+    }
+
     @GetMapping("/template")
     @ApiOperation("下载导入模板")
     @RequiresPermissions("bcp:sport-points:import")

@@ -28,6 +28,17 @@
               <el-table-column label="#" width="60" align="center">
                 <template #default="{ $index }">{{ (query.pageNum - 1) * query.pageSize + $index + 1 }}</template>
               </el-table-column>
+              <el-table-column label="头像" width="64" align="center">
+                <template #default="{ row }">
+                  <img
+                    v-if="row.avatarUrl && !failedAvatars.has(row.id)"
+                    :src="fullImgUrl(row.avatarUrl)"
+                    class="cell-avatar"
+                    @error="markAvatarFailed(row.id)"
+                  />
+                  <el-icon v-else :size="24" class="cell-avatar-empty"><User /></el-icon>
+                </template>
+              </el-table-column>
               <el-table-column prop="sporter" label="运动员" min-width="160" show-overflow-tooltip />
               <el-table-column prop="points" label="积分" min-width="120" align="right" />
               <el-table-column prop="updateBy" label="修改人" min-width="120" show-overflow-tooltip />
@@ -92,6 +103,26 @@
     <!-- 编辑弹窗 -->
     <el-dialog v-model="editDialogVisible" title="编辑运动积分" width="440px" destroy-on-close>
       <el-form ref="editFormRef" :model="editForm" :rules="editRules" label-width="80px">
+        <el-form-item v-if="hasPermission('bcp:sport-points:edit')" label="头像">
+          <div class="avatar-edit-row">
+            <img v-if="editForm.avatarUrl" :src="fullImgUrl(editForm.avatarUrl)" class="avatar-preview" />
+            <div v-else class="avatar-preview avatar-preview-empty"><el-icon :size="24"><User /></el-icon></div>
+            <div class="avatar-edit-btns">
+              <div>
+                <el-upload
+                  :show-file-list="false"
+                  :auto-upload="false"
+                  accept="image/jpeg,image/png,image/webp"
+                  :on-change="onAvatarFileChange"
+                >
+                  <el-button size="small" :loading="avatarUploading">{{ editForm.avatarUrl ? '更换头像' : '上传头像' }}</el-button>
+                </el-upload>
+              </div>
+              <el-button v-if="editForm.avatarUrl" size="small" type="danger" plain :loading="avatarClearing" @click="doClearAvatar">清除头像</el-button>
+              <div class="avatar-edit-hint">jpg/png/webp ≤5MB，自动居中裁方压缩；无头像时移动端显示默认动物头像</div>
+            </div>
+          </div>
+        </el-form-item>
         <el-form-item label="运动员" prop="sporter">
           <el-input v-model="editForm.sporter" maxlength="100" placeholder="运动员姓名" />
         </el-form-item>
@@ -147,8 +178,8 @@
 defineOptions({ name: 'BcpSportPointsImport' })
 import { ref, reactive, onMounted, onActivated } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Search, RefreshRight, Upload, View } from '@element-plus/icons-vue'
-import { getSportPointsPage, importSportPoints, getSportPointsTemplate, getSportPointsImportLogPage, updateSportPoints } from '@/api/bcp'
+import { Search, RefreshRight, Upload, View, User } from '@element-plus/icons-vue'
+import { getSportPointsPage, importSportPoints, getSportPointsTemplate, getSportPointsImportLogPage, updateSportPoints, uploadSportPointsAvatar, clearSportPointsAvatar } from '@/api/bcp'
 import { usePermission } from '@/composables/usePermission'
 import { PAGE_SIZES, defaultPageSize } from '@/utils/appConfig'
 import { formatTime } from '@/utils/format'
@@ -190,7 +221,88 @@ function refreshPreview() { previewKey.value = Date.now() }
 const editDialogVisible = ref(false)
 const editLoading = ref(false)
 const editFormRef = ref(null)
-const editForm = reactive({ id: null, sporter: '', points: '' })
+const editForm = reactive({ id: null, sporter: '', points: '', avatarUrl: '' })
+
+// ===== 自定义头像（管理员代传，即时生效不随"保存"提交） =====
+const avatarUploading = ref(false)
+const avatarClearing = ref(false)
+// 加载失败的头像URL标记（文件被清理/未同步时回退占位图标）；换引用触发重渲染
+const failedAvatars = ref(new Set())
+
+function markAvatarFailed(id) { failedAvatars.value = new Set(failedAvatars.value).add(id) }
+
+// 后端存的是应用内路径 /images/xxx，浏览器实际要带 context-path 前缀（与 Logo 同一拼法）
+function fullImgUrl(url) {
+  if (!url) return ''
+  if (url.startsWith('http') || url.startsWith('data:')) return url
+  return url.startsWith('/bcsports') ? url : '/bcsports' + url
+}
+
+function syncRowAvatar(id, url) {
+  const row = tableData.value.find(r => r.id === id)
+  if (row) row.avatarUrl = url
+}
+
+// 前端预处理：居中裁正方形 + 压到 256px jpeg，控制落盘体积与移动端流量
+function compressAvatarToSquare(file) {
+  return new Promise((resolve, reject) => {
+    if (!/^image\/(jpeg|png|webp)$/.test(file.type)) {
+      reject(new Error('仅支持 jpg/png/webp 图片'))
+      return
+    }
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      const size = 256
+      const canvas = document.createElement('canvas')
+      canvas.width = canvas.height = size
+      const ctx = canvas.getContext('2d')
+      const side = Math.min(img.width, img.height)
+      ctx.drawImage(img, Math.round((img.width - side) / 2), Math.round((img.height - side) / 2), side, side, 0, 0, size, size)
+      canvas.toBlob(b => (b ? resolve(new File([b], 'avatar.jpg', { type: 'image/jpeg' })) : reject(new Error('图片处理失败'))), 'image/jpeg', 0.9)
+    }
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('图片读取失败')) }
+    img.src = url
+  })
+}
+
+async function onAvatarFileChange(uploadFile) {
+  const raw = uploadFile.raw
+  if (!raw || !editForm.id || avatarUploading.value) return
+  avatarUploading.value = true
+  try {
+    const blob = await compressAvatarToSquare(raw)
+    const fd = new FormData()
+    fd.append('file', blob, 'avatar.jpg')
+    const res = await uploadSportPointsAvatar(editForm.id, fd)
+    editForm.avatarUrl = res.data
+    syncRowAvatar(editForm.id, res.data)
+    failedAvatars.value = new Set()
+    ElMessage.success('头像已更新')
+    refreshPreview()
+  } catch (e) {
+    ElMessage.error(e.message || '头像上传失败')
+  } finally {
+    avatarUploading.value = false
+  }
+}
+
+async function doClearAvatar() {
+  if (!editForm.id) return
+  avatarClearing.value = true
+  try {
+    await clearSportPointsAvatar(editForm.id)
+    editForm.avatarUrl = ''
+    syncRowAvatar(editForm.id, '')
+    ElMessage.success('头像已清除')
+    refreshPreview()
+  } catch (e) {
+    ElMessage.error(e.message || '清除失败')
+  } finally {
+    avatarClearing.value = false
+  }
+}
 
 const editRules = {
   sporter: [{ required: true, message: '运动员不能为空', trigger: 'blur' }],
@@ -204,6 +316,7 @@ function openEdit(row) {
   editForm.id = row.id
   editForm.sporter = row.sporter
   editForm.points = String(row.points)
+  editForm.avatarUrl = row.avatarUrl || ''
   editDialogVisible.value = true
 }
 
@@ -327,6 +440,50 @@ onActivated(() => loadData())
   font-size: 12px;
   color: var(--el-text-color-secondary);
   margin-top: 4px;
+}
+
+/* ===== 自定义头像 ===== */
+.cell-avatar {
+  display: block;
+  margin: 0 auto;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.cell-avatar-empty {
+  color: var(--el-text-color-placeholder);
+}
+.avatar-edit-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.avatar-preview {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--el-border-color-lighter);
+  flex-shrink: 0;
+}
+.avatar-preview-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--el-fill-color-light);
+  color: var(--el-text-color-placeholder);
+}
+.avatar-edit-btns {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+.avatar-edit-hint {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  line-height: 1.5;
 }
 .pagination-wrapper {
   margin-top: 12px;

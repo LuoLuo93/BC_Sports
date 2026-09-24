@@ -40,7 +40,13 @@
       >
         <span class="m-crown" v-if="p.place === 1">👑</span>
         <div class="m-pod-avatar" :class="'is-' + p.place">
-          {{ avatarOf(p.item.name).emoji }}
+          <img
+            v-if="p.item.avatarUrl && !imgFailed.has(p.item.id)"
+            :src="avatarImg(p.item.avatarUrl)"
+            alt=""
+            @error="markImgFailed(p.item.id)"
+          />
+          <template v-else>{{ avatarOf(p.item.name).emoji }}</template>
           <i class="m-medal" :class="'is-' + p.place">{{ p.place }}</i>
         </div>
         <b class="m-pod-name">{{ p.item.name }}</b>
@@ -87,7 +93,13 @@
           <div class="m-row" v-for="item in list" :key="item.id">
             <span class="m-rank-num">{{ item.rank }}</span>
             <span class="m-row-avatar" :style="{ background: avatarOf(item.name).bg }">
-              {{ avatarOf(item.name).emoji }}
+              <img
+                v-if="item.avatarUrl && !imgFailed.has(item.id)"
+                :src="avatarImg(item.avatarUrl)"
+                alt=""
+                @error="markImgFailed(item.id)"
+              />
+              <template v-else>{{ avatarOf(item.name).emoji }}</template>
             </span>
             <div class="m-row-info">
               <b>{{ item.name }}</b>
@@ -163,6 +175,17 @@ function avatarOf(name) {
     bg: AVATAR_GRADS[h % AVATAR_GRADS.length],
     emoji: AVATAR_EMOJIS[Math.floor(h / AVATAR_GRADS.length) % AVATAR_EMOJIS.length]
   }
+}
+
+// 自定义头像（管理员代传）：优先显示图片，无头像或加载失败(文件被清理)回退动物emoji。
+// 换引用触发重渲染；后端文件名带时间戳，换头像天然破缓存
+const imgFailed = ref(new Set())
+function markImgFailed(id) { imgFailed.value = new Set(imgFailed.value).add(id) }
+
+// 后端存应用内路径 /images/avatar/xxx，页面部署在 /bcsports 下需补 context-path（与后台 Logo 同一拼法）
+function avatarImg(url) {
+  if (url.startsWith('http') || url.startsWith('data:')) return url
+  return url.startsWith('/bcsports') ? url : '/bcsports' + url
 }
 
 async function loadPage(targetPage) {
@@ -376,6 +399,7 @@ onMounted(() => {
   background: linear-gradient(135deg, #94a3b8, #64748b);
   border: 3px solid #e2e8f0;
   box-shadow: 0 4px 12px rgba(28, 25, 23, 0.12);
+  overflow: hidden;
 }
 
 .m-pod-1 .m-pod-avatar {
@@ -534,6 +558,16 @@ onMounted(() => {
   line-height: 1;
   font-weight: 800;
   color: #fff;
+  overflow: hidden;
+}
+
+/* 自定义头像图片：铺满圆框；渐变底在图片加载完成前露出来当占位 */
+.m-row-avatar img,
+.m-pod-avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
 }
 
 .m-row-info {

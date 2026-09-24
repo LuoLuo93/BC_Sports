@@ -36,4 +36,14 @@ public interface BcpSportPointsService {
      * 移动端榜单：无关键字=前 limit 名 + 全表统计；有关键字=姓名模糊匹配（带绝对名次）
      */
     SportPointsBoardVO rankBoard(String keyword, int limit);
+
+    /**
+     * 管理员代传自定义头像（存 uploads/avatar 子目录，返回 /images/avatar/xxx 访问地址）
+     */
+    String saveAvatar(Long id, MultipartFile file);
+
+    /**
+     * 清除自定义头像（同时删磁盘文件，移动端回退动物emoji）
+     */
+    void clearAvatar(Long id);
 }

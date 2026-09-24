@@ -19,4 +19,7 @@ public class SportPointsRankVO {
 
     /** 全榜绝对名次（积分降序、同分按姓名稳定排序后的位次） */
     private Long rank;
+
+    /** 自定义头像URL（管理员代传；空则前端回退确定性动物emoji） */
+    private String avatarUrl;
 }

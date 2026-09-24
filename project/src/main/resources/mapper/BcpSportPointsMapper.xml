@@ -34,13 +34,15 @@
         <result property="name" column="name"/>
         <result property="points" column="points"/>
         <result property="rank" column="rank_no"/>
+        <result property="avatarUrl" column="avatar_url"/>
     </resultMap>
     <select id="selectRank" resultMap="SportPointsRankVoMap">
-        SELECT id, name, points, rank_no
+        SELECT id, name, points, rank_no, avatar_url
         FROM (
             SELECT t.id AS id,
                    t.sporter AS name,
                    t.points AS points,
+                   t.avatar_url AS avatar_url,
                    ROW_NUMBER() OVER (ORDER BY t.points DESC, t.sporter ASC) AS rank_no
             FROM BC_SPORTS_BCP_SPORT_POINTS t
             WHERE t.deleted = 0

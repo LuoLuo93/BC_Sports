@@ -1,10 +1,10 @@
 /**
- * 移动端「运动积分排名」数据源
+ * 移动端「徒步值排名」数据源
  *
  * 数据来自后台导入的 BC_SPORTS_BCP_SPORT_POINTS 表（BC好玩家 → 运动积分导入），
  * 后端 GET /api/bcp/sport-points/rank 已在 Shiro 放行 anon（免登录外链可直接打开）。
- * 无关键字返回前 100 名 + 全表真实统计；带关键字后端全表按姓名模糊搜索（可搜到
- * 100 名以外的人，名次为全榜绝对名次）。领奖台切片与触底分页在前端完成。
+ * 榜单只保留前 30 名 + 全表真实统计；搜索也只在前 30 名内按姓名模糊匹配，
+ * 30 名以外的人搜不到、不展示。领奖台切片与触底分页在前端完成。
  */
 import request from './request'
 
@@ -42,7 +42,7 @@ function weekNo() {
 /**
  * 分页查询排名列表。
  * 无关键字:领奖台(全榜前三)占用榜单前三名,列表从第 4 名起;
- * 搜索时:领奖台保持全榜前三不变,列表显示全部命中(从第 1 名起,含前三名)。
+ * 搜索时:领奖台保持全榜前三不变,列表显示前30名内的全部命中(从第 1 名起,含前三名)。
  * @param {{ page: number, pageSize: number, keyword?: string }} params
  * @returns {Promise<{code: number, data: {list: Array, total: number}}>}
  *   list 元素: { id, name, points, rank }  rank 为全榜绝对名次

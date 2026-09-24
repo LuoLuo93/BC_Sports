@@ -80,10 +80,10 @@
                 :key="previewKey"
                 :src="`/bcsports/points?_pv=${previewKey}`"
                 class="phone-screen"
-                title="运动积分排名移动端预览"
+                title="徒步值排名移动端预览"
               />
             </div>
-            <p class="preview-hint">展示内容与手机外链完全一致（前 100 名）；导入或编辑成功后自动刷新，无需进手机查看。</p>
+            <p class="preview-hint">展示内容与手机外链完全一致（只保留前 30 名）；导入或编辑成功后自动刷新，无需进手机查看。</p>
           </div>
         </el-card>
       </el-tab-pane>

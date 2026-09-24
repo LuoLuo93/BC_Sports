@@ -33,14 +33,14 @@ import java.util.*;
 @Api(tags = "BC好玩家运动积分")
 public class BcpSportPointsController {
 
-    /** 移动端榜单展示上限（业务口径：领奖台 3 人 + 列表最多 97 人） */
-    static final int RANK_TOP_LIMIT = 100;
+    /** 移动端榜单展示上限（业务口径：只保留前 30 名 = 领奖台 3 人 + 列表最多 27 人） */
+    static final int RANK_TOP_LIMIT = 30;
 
     @Autowired
     private BcpSportPointsService bcpSportPointsService;
 
     @GetMapping("/rank")
-    @ApiOperation("移动端榜单（免登录，Shiro 已放行 anon；keyword 可选=按姓名搜全表）")
+    @ApiOperation("移动端榜单（免登录，Shiro 已放行 anon；keyword 可选=按姓名搜前30名，30名以外不展示）")
     public Result<SportPointsBoardVO> rank(@RequestParam(required = false) String keyword) {
         String kw = keyword != null && keyword.length() > 50 ? keyword.substring(0, 50) : keyword;
         return Result.success(bcpSportPointsService.rankBoard(kw, RANK_TOP_LIMIT));

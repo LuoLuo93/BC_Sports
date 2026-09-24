@@ -4,7 +4,7 @@
     <header class="m-hero">
       <div class="m-hero-top">
         <div>
-          <h1 class="m-hero-title">运动积分排名</h1>
+          <h1 class="m-hero-title">徒步值排名</h1>
           <p class="m-hero-sub">
             <span class="m-live-dot"></span>
             {{ summary.date }} · 第{{ summary.weekNo }}周

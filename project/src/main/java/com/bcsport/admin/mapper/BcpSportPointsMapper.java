@@ -18,7 +18,7 @@ public interface BcpSportPointsMapper extends BaseMapper<BcpSportPoints> {
     void mergeBatch(@Param("list") List<BcpSportPoints> list);
 
     /**
-     * 移动端榜单：无关键字返回前 N 名；有关键字按姓名模糊匹配全表（均带 ROW_NUMBER 绝对名次）
+     * 移动端榜单：只返回前 N 名（有关键字时在前 N 名内按姓名模糊匹配，N 名以外不展示；带 ROW_NUMBER 绝对名次）
      */
     List<SportPointsRankVO> selectRank(@Param("limit") int limit, @Param("keyword") String keyword);
 

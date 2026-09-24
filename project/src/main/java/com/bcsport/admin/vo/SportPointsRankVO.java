@@ -5,7 +5,7 @@ import lombok.Data;
 import java.math.BigDecimal;
 
 /**
- * 运动积分排名视图对象（移动端免登录榜单页专用，只暴露展示必需字段）
+ * 徒步值排名视图对象（移动端免登录榜单页专用，只暴露展示必需字段）
  */
 @Data
 public class SportPointsRankVO {

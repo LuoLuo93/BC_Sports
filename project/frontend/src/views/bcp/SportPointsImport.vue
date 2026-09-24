@@ -110,6 +110,7 @@
             <div class="avatar-edit-btns">
               <div>
                 <el-upload
+                  ref="avatarUploadRef"
                   :show-file-list="false"
                   :auto-upload="false"
                   accept="image/jpeg,image/png,image/webp"
@@ -226,6 +227,7 @@ const editForm = reactive({ id: null, sporter: '', points: '', avatarUrl: '' })
 // ===== 自定义头像（管理员代传，即时生效不随"保存"提交） =====
 const avatarUploading = ref(false)
 const avatarClearing = ref(false)
+const avatarUploadRef = ref(null)
 // 加载失败的头像URL标记（文件被清理/未同步时回退占位图标）；换引用触发重渲染
 const failedAvatars = ref(new Set())
 
@@ -269,6 +271,8 @@ function compressAvatarToSquare(file) {
 
 async function onAvatarFileChange(uploadFile) {
   const raw = uploadFile.raw
+  // 清空内部文件列表：否则第二次选同一张图不触发 on-change
+  avatarUploadRef.value?.clearFiles()
   if (!raw || !editForm.id || avatarUploading.value) return
   avatarUploading.value = true
   try {

@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
@@ -109,6 +110,17 @@ public class GlobalExceptionHandler {
     public void handleClientAbortException(ClientAbortException e) {
         log.debug("客户端断连: {}", e.getMessage());
         // 不返回任何内容，连接已断开
+    }
+
+    /**
+     * 静态资源不存在（Spring Boot 3 缺失文件抛 NoResourceFoundException，
+     * 不接住会被下面的兜底 handler 转成 500；头像等公开图片缺文件应回 404，
+     * 浏览器 <img> 才能走 onerror 回退）
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public Result<?> handleNoResourceFound(NoResourceFoundException e) {
+        return Result.error(404, "资源不存在: " + e.getResourcePath());
     }
 
     /**

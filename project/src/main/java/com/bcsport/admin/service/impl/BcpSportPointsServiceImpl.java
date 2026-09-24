@@ -94,7 +94,8 @@ public class BcpSportPointsServiceImpl implements BcpSportPointsService {
         if (StringUtils.hasText(sporter)) {
             wrapper.like(BcpSportPoints::getSporter, sporter);
         }
-        wrapper.orderByDesc(BcpSportPoints::getId);
+        // 默认积分降序（与移动端榜单口径一致），同分按 id 升序稳定分页
+        wrapper.orderByDesc(BcpSportPoints::getPoints).orderByAsc(BcpSportPoints::getId);
         Page<BcpSportPoints> result = bcpSportPointsMapper.selectPage(page, wrapper);
         return PageResult.of(result);
     }

@@ -51,6 +51,12 @@ public class DwdStockDaily implements Serializable {
     /** 批次/色码属性实例ID(商品汇总模式下不返回) */
     private Long attrInstanceId;
 
+    /** 颜色(属性实例 VALUE1_CODE,明细模式返回) */
+    private String colorName;
+
+    /** 尺码(属性实例 VALUE2_CODE,明细模式返回) */
+    private String sizeName;
+
     /** 吊牌价 */
     private BigDecimal pricelist;
 

@@ -51,7 +51,9 @@
                 ORDER BY SUM(d.TOTAL) DESC, d.C_STORE_ID, d.M_PRODUCT_ID
             </when>
             <otherwise>
-                <!-- 批次明细粒度(默认):粒度=店仓×商品×属性实例,与结果表事实主键一致 -->
+                <!-- 批次明细粒度(默认):粒度=店仓×商品×属性实例,与结果表事实主键一致
+                     颜色/尺码:LEFT JOIN 属性实例维表(ERP M_ATTRIBUTESETINSTANCE 的 VALUE1/VALUE2_CODE 冗余列,
+                     实例表 append-only 随新品增长,维表未同步到的新实例颜色/尺码显示为空,重灌即可补齐) -->
                 SELECT
                     d.BILLDATE                    AS "billdate",
                     d.C_STORE_ID                  AS "storeId",
@@ -65,10 +67,13 @@
                     mp.SEX_NAME                   AS "sexName",
                     mp.YEAR_NO                    AS "yearNo",
                     d.M_ATTRIBUTESETINSTANCE_ID   AS "attrInstanceId",
+                    asi.VALUE1_CODE               AS "colorName",
+                    asi.VALUE2_CODE               AS "sizeName",
                     d.PRICELIST                   AS "pricelist",
                     d.TOTAL                       AS "total",
                     d.AMT_LIST                    AS "amtList"
                 <include refid="fromClause"/>
+                LEFT JOIN ODS_M_ATTRIBUTESETINSTANCE asi ON asi.ID = d.M_ATTRIBUTESETINSTANCE_ID
                 <include refid="whereClause"/>
                 ORDER BY d.TOTAL DESC, d.C_STORE_ID, d.M_PRODUCT_ID, NVL(d.M_ATTRIBUTESETINSTANCE_ID, -1)
             </otherwise>

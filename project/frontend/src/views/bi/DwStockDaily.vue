@@ -54,7 +54,12 @@
           <el-table-column prop="seasonName" label="季节" width="80" show-overflow-tooltip />
           <el-table-column prop="sexName" label="性别" width="80" show-overflow-tooltip />
           <el-table-column prop="yearNo" label="年份" width="70" align="center" />
-          <el-table-column v-if="!query.groupByProduct" prop="attrInstanceId" label="批次实例ID" width="110" align="center" show-overflow-tooltip />
+          <el-table-column v-if="!query.groupByProduct" prop="colorName" label="颜色" width="90" show-overflow-tooltip>
+            <template #default="{ row }">{{ row.colorName || '-' }}</template>
+          </el-table-column>
+          <el-table-column v-if="!query.groupByProduct" prop="sizeName" label="尺码" width="70" align="center">
+            <template #default="{ row }">{{ row.sizeName || '-' }}</template>
+          </el-table-column>
           <el-table-column label="库存数量" width="100" align="right" sortable sort-by="total">
             <template #default="{ row }">{{ formatQty(row.total) }}</template>
           </el-table-column>

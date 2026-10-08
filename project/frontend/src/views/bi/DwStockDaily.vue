@@ -1,7 +1,9 @@
 <template>
   <div class="page-container">
     <el-card shadow="never" class="search-card">
-      <el-form :model="query" inline>
+      <!-- wrapper 占满 body 宽度:绕开全局 .search-card .el-card__body 的 flex 行布局,让表单/提示各自独占一行 -->
+      <div class="search-wrap">
+        <el-form :model="query" inline>
         <el-form-item label="业务日期" required>
           <el-date-picker v-model="query.billdate" type="date" placeholder="选择日期" value-format="YYYYMMDD" :clearable="false" style="width:160px" />
         </el-form-item>
@@ -20,12 +22,11 @@
           <el-button type="primary" :icon="Search" @click="onSearch">搜索</el-button>
           <el-button :icon="RefreshRight" @click="onReset">重置</el-button>
         </el-form-item>
-      </el-form>
+        </el-form>
+        <!-- 口径提示:红色小字,搜索行下方单独一行,右对齐可换行 -->
+        <div class="calc-tip">每日库存 = 最近月结期末 + 月结后出入库流水累加(数仓 T+1 跑批,可查到昨日);正推数据自 2026-08-01 起,历史补录(7月末)不在本页口径</div>
+      </div>
     </el-card>
-
-    <!-- 提示条不放搜索卡内:全局样式 .search-card .el-card__body 是 flex 行布局,卡内会与表单并排抢宽度 -->
-    <el-alert type="info" :closable="false" show-icon class="data-scope-tip"
-      title="每日库存 = 最近月结期末 + 月结后出入库流水累加(数仓 T+1 跑批,可查到昨日);正推数据自 2026-08-01 起,历史补录(7月末)不在本页口径" />
 
     <el-card shadow="never">
       <template #header>
@@ -63,11 +64,16 @@
           <el-table-column label="库存数量" width="100" align="right" sortable sort-by="total">
             <template #default="{ row }">{{ formatQty(row.total) }}</template>
           </el-table-column>
-          <el-table-column label="吊牌价" width="100" align="right">
+          <el-table-column v-if="query.groupByProduct" label="吊牌价" width="100" align="right">
             <template #default="{ row }">{{ formatAmount(row.pricelist) }}</template>
           </el-table-column>
-          <el-table-column label="吊牌金额" width="120" align="right">
+          <el-table-column v-if="query.groupByProduct" label="吊牌金额" width="120" align="right">
             <template #default="{ row }">{{ formatAmount(row.amtList) }}</template>
+          </el-table-column>
+          <el-table-column v-if="!query.groupByProduct" label="操作" width="80" align="center" fixed="right">
+            <template #default="{ row }">
+              <el-button type="primary" plain size="small" @click="openFlowDetail(row)">明细</el-button>
+            </template>
           </el-table-column>
         </el-table>
       </div>
@@ -84,6 +90,32 @@
         />
       </div>
     </el-card>
+
+    <!-- 库存构成明细:月结期末 + 构成流水 = 当前库存(与跑批正推口径一致,可对账) -->
+    <el-dialog v-model="flowDialogVisible" :title="flowDialogTitle" width="880px" destroy-on-close>
+      <div v-loading="flowLoading" class="flow-body">
+        <el-descriptions v-if="flowDetail" :column="2" border size="small" class="flow-summary">
+          <el-descriptions-item label="月结期间">{{ flowDetail.yearmonth }}</el-descriptions-item>
+          <el-descriptions-item label="月结期末数量">{{ formatQty(flowDetail.monthQty) }}</el-descriptions-item>
+          <el-descriptions-item label="流水合计">{{ formatQty(flowDetail.flowSum) }}</el-descriptions-item>
+          <el-descriptions-item label="月结+流水=库存">{{ formatQty(flowDetail.stockQty) }}</el-descriptions-item>
+        </el-descriptions>
+        <el-table v-if="flowDetail" :data="flowDetail.flows" border stripe size="small" max-height="420">
+          <el-table-column label="业务日期" width="105">
+            <template #default="{ row }">{{ formatBillDate(row.changedate) }}</template>
+          </el-table-column>
+          <el-table-column prop="docno" label="单据号" min-width="150" show-overflow-tooltip />
+          <el-table-column prop="doctype" label="单据类型" min-width="110" show-overflow-tooltip />
+          <el-table-column prop="billtype" label="业务类型" min-width="110" show-overflow-tooltip />
+          <el-table-column label="变动数量" width="100" align="right">
+            <template #default="{ row }">
+              <span :class="Number(row.qtychange) >= 0 ? 'qty-in' : 'qty-out'">{{ Number(row.qtychange) > 0 ? '+' : '' }}{{ formatQty(row.qtychange) }}</span>
+            </template>
+          </el-table-column>
+          <template #empty>月结后无流水,当前库存 = 月结期末数量</template>
+        </el-table>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -91,7 +123,7 @@
 defineOptions({ name: 'DwStockDaily' })
 import { ref, onMounted, onActivated } from 'vue'
 import { Search, RefreshRight } from '@element-plus/icons-vue'
-import { getDwStockPage, getDwStockStores } from '@/api/bi'
+import { getDwStockPage, getDwStockStores, getDwStockFlowDetail } from '@/api/bi'
 import { PAGE_SIZES } from '@/utils/appConfig'
 import { usePageQuery } from '@/composables/usePageQuery'
 
@@ -141,6 +173,32 @@ async function loadStores() {
   }
 }
 
+// ===== 库存构成明细弹窗 =====
+const flowDialogVisible = ref(false)
+const flowLoading = ref(false)
+const flowDetail = ref(null)
+const flowDialogTitle = ref('')
+
+async function openFlowDetail(row) {
+  flowDialogVisible.value = true
+  flowLoading.value = true
+  flowDetail.value = null
+  flowDialogTitle.value = `库存构成 - ${row.storeName} ${row.productCode}${row.colorName ? ' ' + row.colorName : ''}${row.sizeName ? ' ' + row.sizeName : ''}`
+  try {
+    const res = await getDwStockFlowDetail({
+      billdate: query.billdate,
+      storeId: row.storeId,
+      productId: row.productId,
+      attrInstanceId: row.attrInstanceId == null ? '' : row.attrInstanceId
+    })
+    flowDetail.value = res.data
+  } catch {
+    // 拦截器已统一 toast
+  } finally {
+    flowLoading.value = false
+  }
+}
+
 // BILLDATE 为 NUMBER(8) YYYYMMDD
 function formatBillDate(v) {
   if (v === null || v === undefined || v === '') return '-'
@@ -172,8 +230,28 @@ onActivated(() => {
 .search-card {
   margin-bottom: 12px;
 }
-.data-scope-tip {
-  margin-bottom: 12px;
+.search-wrap {
+  width: 100%;
+}
+/* 口径提示:红色小字,搜索行下方单独一行右对齐,窄屏可自然换行 */
+.calc-tip {
+  font-size: 12px;
+  color: var(--el-color-danger);
+  text-align: right;
+  line-height: 1.6;
+  margin-top: 4px;
+}
+/* 构成流水数量:+绿 -红 */
+.qty-in {
+  color: var(--el-color-success);
+  font-weight: 600;
+}
+.qty-out {
+  color: var(--el-color-danger);
+  font-weight: 600;
+}
+.flow-summary {
+  margin-bottom: 10px;
 }
 .card-header-row {
   display: flex;

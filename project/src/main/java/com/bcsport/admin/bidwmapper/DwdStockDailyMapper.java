@@ -1,12 +1,15 @@
 package com.bcsport.admin.bidwmapper;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.bcsport.admin.dto.DwdStockFlowQueryDTO;
 import com.bcsport.admin.dto.DwdStockQueryDTO;
 import com.bcsport.admin.entity.bi.DwStoreOption;
 import com.bcsport.admin.entity.bi.DwdStockDaily;
+import com.bcsport.admin.entity.bi.DwdStockFlowDetail;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -26,4 +29,22 @@ public interface DwdStockDailyMapper {
      * 店仓下拉选项（主客户 c_customer_id=1 全部店仓）
      */
     List<DwStoreOption> selectStores();
+
+    /**
+     * 明细追溯-定位锚点月结期间（与存储过程 last_period 同口径：
+     * 主客户1、双Y、dateend < 查询日所在月1号，取最近一个）
+     */
+    DwdStockFlowDetail selectAnchorPeriod(@Param("q") DwdStockFlowQueryDTO q);
+
+    /**
+     * 明细追溯-锚点月结期末数量（monthstore 定位该组合的 qtyend，无行=0）
+     */
+    BigDecimal selectMonthQty(@Param("q") DwdStockFlowQueryDTO q, @Param("cPeriodId") Long cPeriodId,
+                              @Param("yearmonth") Integer yearmonth);
+
+    /**
+     * 明细追溯-构成流水明细（月结末日 < changedate <= 业务日，qtychange<>0，按业务日升序）
+     */
+    List<DwdStockFlowDetail.FlowItem> selectFlowItems(@Param("q") DwdStockFlowQueryDTO q,
+                                                      @Param("periodDateend") Integer periodDateend);
 }

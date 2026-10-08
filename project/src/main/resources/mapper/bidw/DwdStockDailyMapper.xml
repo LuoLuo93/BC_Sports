@@ -89,4 +89,51 @@
         ORDER BY CODE
     </select>
 
+    <!-- ===== 明细追溯:库存构成 = 月结期末 + 构成流水(与 dw_rp_stock_daily 正推口径一致) ===== -->
+
+    <!-- 锚点期间 = 最近已月结月(主客户1、双Y、dateend < 查询日所在月1号),与存储过程 last_period 同口径
+         ★ DATEEND 是 NUMBER(8),比较前把月首日期转成同型数字,不能与 DATE 隐式混比 -->
+    <select id="selectAnchorPeriod" resultType="com.bcsport.admin.entity.bi.DwdStockFlowDetail">
+        SELECT yearmonth       AS "yearmonth",
+               c_period_id     AS "cPeriodId",
+               period_dateend  AS "periodDateend"
+        FROM (
+            SELECT p.yearmonth, p.id AS c_period_id, p.dateend AS period_dateend,
+                   ROW_NUMBER() OVER (ORDER BY p.yearmonth DESC) AS rn
+            FROM ods_c_period p
+            WHERE p.ismonthsum   = 'Y'
+              AND p.isendaccount = 'Y'
+              AND p.c_customer_id = 1
+              AND p.dateend &lt; TO_NUMBER(TO_CHAR(TRUNC(TO_DATE(#{q.billdate}, 'YYYYMMDD'), 'MM'), 'YYYYMMDD'))
+        ) WHERE rn = 1
+    </select>
+
+    <!-- 锚点月结期末数量:组合定位,无行按0参与(新店/新货场景) -->
+    <select id="selectMonthQty" resultType="java.math.BigDecimal">
+        SELECT NVL(SUM(ms.qtyend), 0)
+        FROM ods_fa_monthstore ms
+        WHERE ms.c_period_id = #{cPeriodId}
+          AND ms.yearmonth   = #{yearmonth}
+          AND ms.c_store_id     = #{q.storeId}
+          AND ms.m_product_id   = #{q.productId}
+          AND NVL(ms.m_attributesetinstance_id, -1) = NVL(#{q.attrInstanceId}, -1)
+    </select>
+
+    <!-- 构成流水:月结末日 < changedate <= 业务日(精确边界对齐存储过程 ftp CTE) -->
+    <select id="selectFlowItems" resultType="com.bcsport.admin.entity.bi.DwdStockFlowDetail$FlowItem">
+        SELECT f.changedate  AS "changedate",
+               f.docno       AS "docno",
+               f.doctype     AS "doctype",
+               f.billtype    AS "billtype",
+               f.qtychange   AS "qtychange"
+        FROM ods_fa_storage_ftp f
+        WHERE f.c_store_id   = #{q.storeId}
+          AND f.m_product_id = #{q.productId}
+          AND NVL(f.m_attributesetinstance_id, -1) = NVL(#{q.attrInstanceId}, -1)
+          AND f.qtychange &lt;&gt; 0
+          AND f.changedate &gt; #{periodDateend}
+          AND f.changedate &lt;= #{q.billdate}
+        ORDER BY f.changedate, f.docno
+    </select>
+
 </mapper>

@@ -56,6 +56,10 @@ export function getDwStockStores() {
   return request.get('/api/bi/dw-stock/stores')
 }
 
+export function getDwStockFlowDetail(params) {
+  return request.get('/api/bi/dw-stock/flow-detail', { params })
+}
+
 // 达人店铺管理
 export function getTalentStorePage(params) {
   return request.get('/api/bi/talent-store/page', { params })

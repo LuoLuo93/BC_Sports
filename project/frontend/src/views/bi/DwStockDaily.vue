@@ -61,7 +61,7 @@
           <el-table-column v-if="!query.groupByProduct" prop="sizeName" label="尺码" width="70" align="center">
             <template #default="{ row }">{{ row.sizeName || '-' }}</template>
           </el-table-column>
-          <el-table-column label="库存数量" width="100" align="right" sortable sort-by="total">
+          <el-table-column label="库存数量" width="120" align="right" sortable sort-by="total">
             <template #default="{ row }">{{ formatQty(row.total) }}</template>
           </el-table-column>
           <el-table-column v-if="query.groupByProduct" label="吊牌价" width="100" align="right">
@@ -92,7 +92,14 @@
     </el-card>
 
     <!-- 库存构成明细:月结期末 + 构成流水 = 当前库存(与跑批正推口径一致,可对账) -->
-    <el-dialog v-model="flowDialogVisible" :title="flowDialogTitle" width="880px" destroy-on-close>
+    <el-dialog v-model="flowDialogVisible" width="880px" destroy-on-close>
+      <template #header>
+        <!-- 查询日期=库存快照日(红色加粗强调),不是流水日期 -->
+        <span class="flow-dlg-title">
+          <span class="flow-dlg-date">{{ formatBillDate(query.billdate) }}</span>
+          库存构成 - {{ flowDialogTitle }}
+        </span>
+      </template>
       <div v-loading="flowLoading" class="flow-body">
         <el-descriptions v-if="flowDetail" :column="2" border size="small" class="flow-summary">
           <el-descriptions-item label="月结期间">{{ flowDetail.yearmonth }}</el-descriptions-item>
@@ -100,6 +107,11 @@
           <el-descriptions-item label="流水合计">{{ formatQty(flowDetail.flowSum) }}</el-descriptions-item>
           <el-descriptions-item label="月结+流水=库存">{{ formatQty(flowDetail.stockQty) }}</el-descriptions-item>
         </el-descriptions>
+        <div v-if="flowDetail && flowDetail.flows.length" class="flow-filter">
+          <el-input v-model="flowFilter.docno" placeholder="单据号" clearable size="small" style="width:200px" />
+          <el-date-picker v-model="flowFilter.date" type="date" placeholder="业务日期" value-format="YYYYMMDD" clearable size="small" style="width:150px" />
+          <span class="flow-filter-count">匹配 {{ flowFiltered.length }} / {{ flowDetail.flows.length }} 笔</span>
+        </div>
         <el-table v-if="flowDetail" :data="flowPagedData" border stripe size="small" max-height="420">
           <el-table-column label="业务日期" width="105">
             <template #default="{ row }">{{ formatBillDate(row.changedate) }}</template>
@@ -118,11 +130,11 @@
           </el-table-column>
           <template #empty>月结后无流水,当前库存 = 月结期末数量</template>
         </el-table>
-        <div v-if="flowDetail && flowDetail.flows.length > flowPage.pageSize" class="flow-pagination">
+        <div v-if="flowDetail && flowFiltered.length > flowPage.pageSize" class="flow-pagination">
           <el-pagination
             v-model:current-page="flowPage.pageNum"
             :page-size="flowPage.pageSize"
-            :total="flowDetail.flows.length"
+            :total="flowFiltered.length"
             layout="total, prev, pager, next"
             small
           />
@@ -134,7 +146,7 @@
 
 <script setup>
 defineOptions({ name: 'DwStockDaily' })
-import { ref, reactive, computed, onMounted, onActivated } from 'vue'
+import { ref, reactive, computed, watch, onMounted, onActivated } from 'vue'
 import { Search, RefreshRight } from '@element-plus/icons-vue'
 import { getDwStockPage, getDwStockStores, getDwStockFlowDetail } from '@/api/bi'
 import { PAGE_SIZES } from '@/utils/appConfig'
@@ -220,13 +232,28 @@ function billtypeText(code) {
   return BILLTYPE_MAP[code] || code
 }
 
-// 流水本地分页(高频组合月结后可达上千笔,全量渲染会卡)
+// 流水本地分页(高频组合月结后可达上千笔,全量渲染会卡)+ 弹窗内过滤(单据号/业务日期)
 const flowPage = reactive({ pageNum: 1, pageSize: 20 })
-const flowPagedData = computed(() => {
+const flowFilter = reactive({ docno: '', date: null })
+
+const flowFiltered = computed(() => {
   const list = flowDetail.value?.flows || []
+  const kw = flowFilter.docno.trim().toLowerCase()
+  return list.filter(f => {
+    if (kw && !(f.docno || '').toLowerCase().includes(kw)) return false
+    if (flowFilter.date && String(f.changedate) !== flowFilter.date) return false
+    return true
+  })
+})
+
+const flowPagedData = computed(() => {
+  const list = flowFiltered.value
   const start = (flowPage.pageNum - 1) * flowPage.pageSize
   return list.slice(start, start + flowPage.pageSize)
 })
+
+// 过滤条件变化回到第 1 页
+watch([() => flowFilter.docno, () => flowFilter.date], () => { flowPage.pageNum = 1 })
 
 const flowDialogVisible = ref(false)
 const flowLoading = ref(false)
@@ -238,7 +265,9 @@ async function openFlowDetail(row) {
   flowLoading.value = true
   flowDetail.value = null
   flowPage.pageNum = 1
-  flowDialogTitle.value = `库存构成 - ${row.storeName} ${row.productCode}${row.colorName ? ' ' + row.colorName : ''}${row.sizeName ? ' ' + row.sizeName : ''}`
+  flowFilter.docno = ''
+  flowFilter.date = null
+  flowDialogTitle.value = `${row.storeName} ${row.productCode}${row.colorName ? ' ' + row.colorName : ''}${row.sizeName ? ' ' + row.sizeName : ''}`
   try {
     const res = await getDwStockFlowDetail({
       billdate: query.billdate,
@@ -307,6 +336,31 @@ onActivated(() => {
 }
 .flow-summary {
   margin-bottom: 10px;
+}
+/* 弹窗标题:查询日期(库存快照日)红色加粗 */
+.flow-dlg-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+.flow-dlg-date {
+  color: var(--el-color-danger);
+  font-weight: 700;
+  margin-right: 4px;
+}
+/* 弹窗流水过滤行 */
+.flow-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.flow-filter-count {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+/* 表头单元格不换行:sortable 列的"库存数量"+排序箭头挤在同一行 */
+:deep(.el-table .el-table__header th .cell) {
+  white-space: nowrap;
 }
 .flow-pagination {
   margin-top: 8px;

@@ -23,7 +23,7 @@
           <el-button :icon="RefreshRight" @click="onReset">重置</el-button>
         </el-form-item>
         </el-form>
-        <!-- 口径提示:红色小字,搜索行下方单独一行,右对齐可换行 -->
+        <!-- 口径提示:红色小字,搜索行下方单独一行,左对齐可换行 -->
         <div class="calc-tip">每日库存 = 最近月结期末 + 月结后出入库流水累加(数仓 T+1 跑批,可查到昨日);正推数据自 2026-08-01 起,历史补录(7月末)不在本页口径</div>
       </div>
     </el-card>
@@ -100,13 +100,17 @@
           <el-descriptions-item label="流水合计">{{ formatQty(flowDetail.flowSum) }}</el-descriptions-item>
           <el-descriptions-item label="月结+流水=库存">{{ formatQty(flowDetail.stockQty) }}</el-descriptions-item>
         </el-descriptions>
-        <el-table v-if="flowDetail" :data="flowDetail.flows" border stripe size="small" max-height="420">
+        <el-table v-if="flowDetail" :data="flowPagedData" border stripe size="small" max-height="420">
           <el-table-column label="业务日期" width="105">
             <template #default="{ row }">{{ formatBillDate(row.changedate) }}</template>
           </el-table-column>
           <el-table-column prop="docno" label="单据号" min-width="150" show-overflow-tooltip />
           <el-table-column prop="doctype" label="单据类型" min-width="110" show-overflow-tooltip />
-          <el-table-column prop="billtype" label="业务类型" min-width="110" show-overflow-tooltip />
+          <el-table-column label="业务类型" min-width="120" show-overflow-tooltip>
+            <template #default="{ row }">
+              <span :title="row.billtype">{{ billtypeText(row.billtype) }}</span>
+            </template>
+          </el-table-column>
           <el-table-column label="变动数量" width="100" align="right">
             <template #default="{ row }">
               <span :class="Number(row.qtychange) >= 0 ? 'qty-in' : 'qty-out'">{{ Number(row.qtychange) > 0 ? '+' : '' }}{{ formatQty(row.qtychange) }}</span>
@@ -114,6 +118,15 @@
           </el-table-column>
           <template #empty>月结后无流水,当前库存 = 月结期末数量</template>
         </el-table>
+        <div v-if="flowDetail && flowDetail.flows.length > flowPage.pageSize" class="flow-pagination">
+          <el-pagination
+            v-model:current-page="flowPage.pageNum"
+            :page-size="flowPage.pageSize"
+            :total="flowDetail.flows.length"
+            layout="total, prev, pager, next"
+            small
+          />
+        </div>
       </div>
     </el-dialog>
   </div>
@@ -121,7 +134,7 @@
 
 <script setup>
 defineOptions({ name: 'DwStockDaily' })
-import { ref, onMounted, onActivated } from 'vue'
+import { ref, reactive, computed, onMounted, onActivated } from 'vue'
 import { Search, RefreshRight } from '@element-plus/icons-vue'
 import { getDwStockPage, getDwStockStores, getDwStockFlowDetail } from '@/api/bi'
 import { PAGE_SIZES } from '@/utils/appConfig'
@@ -174,6 +187,47 @@ async function loadStores() {
 }
 
 // ===== 库存构成明细弹窗 =====
+// 伯俊业务类型代码 → 中文(用户提供的对应关系;未收录代码原样显示)
+const BILLTYPE_MAP = {
+  M_SALEOUT: '销售出库',
+  M_RET_SALEOUT: '销售退货出库',
+  M_TRANSFEROUT: '调拨出库',
+  M_RET_PUROUT: '采购退货出库',
+  M_SALEIN: '销售入库',
+  M_RET_SALEIN: '销售退货入库',
+  M_TRANSFERIN: '调拨入库',
+  M_PURCHASEIN: '采购入库',
+  M_OTHER_INOUT: '其他出入库',
+  M_RETAIL: '零售',
+  M_INVENTORY: '盘点损益',
+  M_AGTPURIN: '代销采购入库',
+  M_AGTRET_PUROUT: '代销采购退货出库',
+  O2O_SOOUT: '云仓发货单',
+  CRO_SALEOUT: '跨级销售出库',
+  CRO_RETSALEIN: '跨级销售退货入库',
+  CRO_SALEIN: '跨级销售入库',
+  CRO_RETSALEOUT: '跨级销售退货出库',
+  M_AGTSALEIN: '代销销售入库',
+  M_AGTSALEOUT: '代销销售出库',
+  M_AGTRET_SALEOUT: '代销销售退货出库',
+  M_AGTRET_SALEIN: '代销销售退货入库',
+  M_JITOUT: 'JIT出库',
+  M_OUT_BATCHES: '分批出库',
+  M_IN_BATCHES: '分批入库'
+}
+function billtypeText(code) {
+  if (!code) return '-'
+  return BILLTYPE_MAP[code] || code
+}
+
+// 流水本地分页(高频组合月结后可达上千笔,全量渲染会卡)
+const flowPage = reactive({ pageNum: 1, pageSize: 20 })
+const flowPagedData = computed(() => {
+  const list = flowDetail.value?.flows || []
+  const start = (flowPage.pageNum - 1) * flowPage.pageSize
+  return list.slice(start, start + flowPage.pageSize)
+})
+
 const flowDialogVisible = ref(false)
 const flowLoading = ref(false)
 const flowDetail = ref(null)
@@ -183,6 +237,7 @@ async function openFlowDetail(row) {
   flowDialogVisible.value = true
   flowLoading.value = true
   flowDetail.value = null
+  flowPage.pageNum = 1
   flowDialogTitle.value = `库存构成 - ${row.storeName} ${row.productCode}${row.colorName ? ' ' + row.colorName : ''}${row.sizeName ? ' ' + row.sizeName : ''}`
   try {
     const res = await getDwStockFlowDetail({
@@ -233,11 +288,11 @@ onActivated(() => {
 .search-wrap {
   width: 100%;
 }
-/* 口径提示:红色小字,搜索行下方单独一行右对齐,窄屏可自然换行 */
+/* 口径提示:红色小字,搜索行下方单独一行左对齐,窄屏可自然换行 */
 .calc-tip {
   font-size: 12px;
   color: var(--el-color-danger);
-  text-align: right;
+  text-align: left;
   line-height: 1.6;
   margin-top: 4px;
 }
@@ -252,6 +307,11 @@ onActivated(() => {
 }
 .flow-summary {
   margin-bottom: 10px;
+}
+.flow-pagination {
+  margin-top: 8px;
+  display: flex;
+  justify-content: flex-end;
 }
 .card-header-row {
   display: flex;

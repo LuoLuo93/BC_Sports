@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bcsport.admin.bidwmapper.DwdStockDailyMapper">
+
+    <!-- 公共过滤:billdate 等值走 uk_dwd_stock_daily 前缀(单日约33万行),只取正推权威数据
+         (ad_pi_id IS NULL;倒推补录 -1 仅 2026-07-26~31 历史,不进查询页面) -->
+    <sql id="whereClause">
+        WHERE d.BILLDATE = #{q.billdate}
+          AND d.AD_PI_ID IS NULL
+        <if test="q.storeId != null">
+            AND d.C_STORE_ID = #{q.storeId}
+        </if>
+        <if test="q.productCode != null and q.productCode != ''">
+            AND mp.NAME LIKE '%' || #{q.productCode} || '%'
+        </if>
+        <if test="q.productName != null and q.productName != ''">
+            AND mp.GOODSNAME LIKE '%' || #{q.productName} || '%'
+        </if>
+    </sql>
+
+    <!-- 维表关联:店仓 INNER(计算口径本就只含主客户1的店,必命中);商品 LEFT(维度同步滞后不丢库存行) -->
+    <sql id="fromClause">
+        FROM DWD_STOCK_DAILY d
+        JOIN ODS_C_STORE cs ON cs.ID = d.C_STORE_ID
+        LEFT JOIN ODS_M_PRODUCT mp ON mp.ID = d.M_PRODUCT_ID
+    </sql>
+
+    <select id="selectPage" resultType="com.bcsport.admin.entity.bi.DwdStockDaily">
+        <choose>
+            <!-- 商品汇总粒度:店仓×商品 合并批次,数量/金额求和,吊牌价取MAX(同商品批次间一致) -->
+            <when test="q != null and q.groupByProduct != null and q.groupByProduct">
+                SELECT
+                    d.BILLDATE                    AS "billdate",
+                    d.C_STORE_ID                  AS "storeId",
+                    cs.CODE                       AS "storeCode",
+                    cs.NAME                       AS "storeName",
+                    d.M_PRODUCT_ID                AS "productId",
+                    mp.NAME                       AS "productCode",
+                    mp.GOODSNAME                  AS "productName",
+                    mp.CARD_NAME                  AS "cardName",
+                    mp.SEASON_NAME                AS "seasonName",
+                    mp.SEX_NAME                   AS "sexName",
+                    mp.YEAR_NO                    AS "yearNo",
+                    MAX(d.PRICELIST)              AS "pricelist",
+                    SUM(d.TOTAL)                  AS "total",
+                    SUM(d.AMT_LIST)               AS "amtList"
+                <include refid="fromClause"/>
+                <include refid="whereClause"/>
+                GROUP BY d.BILLDATE, d.C_STORE_ID, cs.CODE, cs.NAME, d.M_PRODUCT_ID,
+                         mp.NAME, mp.GOODSNAME, mp.CARD_NAME, mp.SEASON_NAME, mp.SEX_NAME, mp.YEAR_NO
+                ORDER BY SUM(d.TOTAL) DESC, d.C_STORE_ID, d.M_PRODUCT_ID
+            </when>
+            <otherwise>
+                <!-- 批次明细粒度(默认):粒度=店仓×商品×属性实例,与结果表事实主键一致 -->
+                SELECT
+                    d.BILLDATE                    AS "billdate",
+                    d.C_STORE_ID                  AS "storeId",
+                    cs.CODE                       AS "storeCode",
+                    cs.NAME                       AS "storeName",
+                    d.M_PRODUCT_ID                AS "productId",
+                    mp.NAME                       AS "productCode",
+                    mp.GOODSNAME                  AS "productName",
+                    mp.CARD_NAME                  AS "cardName",
+                    mp.SEASON_NAME                AS "seasonName",
+                    mp.SEX_NAME                   AS "sexName",
+                    mp.YEAR_NO                    AS "yearNo",
+                    d.M_ATTRIBUTESETINSTANCE_ID   AS "attrInstanceId",
+                    d.PRICELIST                   AS "pricelist",
+                    d.TOTAL                       AS "total",
+                    d.AMT_LIST                    AS "amtList"
+                <include refid="fromClause"/>
+                <include refid="whereClause"/>
+                ORDER BY d.TOTAL DESC, d.C_STORE_ID, d.M_PRODUCT_ID, NVL(d.M_ATTRIBUTESETINSTANCE_ID, -1)
+            </otherwise>
+        </choose>
+    </select>
+
+    <select id="selectStores" resultType="com.bcsport.admin.entity.bi.DwStoreOption">
+        SELECT ID   AS "storeId",
+               CODE AS "storeCode",
+               NAME AS "storeName"
+        FROM ODS_C_STORE
+        WHERE C_CUSTOMER_ID = 1
+        ORDER BY CODE
+    </select>
+
+</mapper>

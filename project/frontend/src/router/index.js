@@ -43,6 +43,7 @@ const routes = [
       { path: 'bi/shop-daily-budget', name: 'ShopDailyBudget', component: () => import('@/views/bi/ShopDailyBudget.vue'), meta: { pageTitle: '店铺日预算' } },
       { path: 'bi/dw-sales', name: 'DwSalesMain', component: () => import('@/views/bi/DwSalesMain.vue'), meta: { pageTitle: '数仓销售查看' } },
       { path: 'bi/dw-sales/edit', name: 'DwSalesMainEdit', component: () => import('@/views/bi/DwSalesMainEdit.vue'), meta: { pageTitle: '编辑销售明细' } },
+      { path: 'bi/dw-stock', name: 'DwStockDaily', component: () => import('@/views/bi/DwStockDaily.vue'), meta: { pageTitle: '数仓库存查询' } },
       { path: 'bi/talent-store', name: 'TalentStore', component: () => import('@/views/bi/TalentStore.vue'), meta: { pageTitle: '达人店铺管理' } },
       { path: 'bi/store-whitelist', name: 'StoreWhitelist', component: () => import('@/views/bi/StoreWhitelist.vue'), meta: { pageTitle: '自提店铺白名单' } },
       // IHR

@@ -47,6 +47,15 @@ export function getDwSalesImportLogPage(params) {
   return request.get('/api/bi/dw-sales/import-log/page', { params })
 }
 
+// 数仓库存查询（DWD_STOCK_DAILY，月结期末+流水累加口径，T+1 更新到昨日）
+export function getDwStockPage(params) {
+  return request.get('/api/bi/dw-stock/page', { params })
+}
+
+export function getDwStockStores() {
+  return request.get('/api/bi/dw-stock/stores')
+}
+
 // 达人店铺管理
 export function getTalentStorePage(params) {
   return request.get('/api/bi/talent-store/page', { params })

@@ -36,4 +36,10 @@
         OFFSET #{offset} ROWS FETCH NEXT #{limit} ROWS ONLY
     </update>
 
+    <!-- 容忍切换前清理孤儿: 失败批的contact其follow_info已被批次重跑机制删除，正常批次每个contact必有follow_info引用 -->
+    <delete id="deleteOrphanStgContacts">
+        DELETE c FROM VX_CustomerListDetails_external_contact_STG c
+        WHERE NOT EXISTS (SELECT 1 FROM VX_CustomerListDetails_follow_info_STG f WHERE f.externalUserid = c.externalUserid)
+    </delete>
+
 </mapper>

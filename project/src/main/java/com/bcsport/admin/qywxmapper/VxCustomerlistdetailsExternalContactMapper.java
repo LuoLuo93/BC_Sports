@@ -34,4 +34,10 @@ public interface VxCustomerlistdetailsExternalContactMapper {
      */
     int copyFromStgPage(@Param("offset") long offset, @Param("limit") int limit);
 
+    /**
+     * 删除影子表孤儿contact：无任何follow_info引用的行(失败批半截数据)，容忍切换前在同一事务内调用，
+     * 不清会以"幽灵客户"进入主表(返回删除行数)
+     */
+    int deleteOrphanStgContacts();
+
 }

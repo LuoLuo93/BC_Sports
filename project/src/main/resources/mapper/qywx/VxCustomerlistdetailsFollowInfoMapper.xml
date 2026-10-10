@@ -27,6 +27,14 @@
         </foreach>
     </insert>
 
+    <!-- 批次重跑前清半截数据: 只删follow_info，contact行保留(全局去重集合保证重跑不重复)，残留孤儿由切换前deleteOrphanStgContacts兜底 -->
+    <delete id="deleteStgByUserIds">
+        DELETE FROM VX_CustomerListDetails_follow_info_STG WHERE userid IN
+        <foreach collection="userIds" item="uid" open="(" separator="," close=")">
+            #{uid}
+        </foreach>
+    </delete>
+
     <!-- 分批回填(由QywxCustomerDetailTask在同一事务内循环调用): 表无唯一键按全列排序,
          完全重复的行彼此等价, 分页边界不会丢行/重行 -->
     <update id="copyFromStgPage">

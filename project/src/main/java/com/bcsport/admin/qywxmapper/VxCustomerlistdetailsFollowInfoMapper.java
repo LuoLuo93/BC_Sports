@@ -30,6 +30,11 @@ public interface VxCustomerlistdetailsFollowInfoMapper {
     void insertBatchStg(@Param("list") List<VxCustomerlistdetailsFollowInfo> list);
 
     /**
+     * 删除影子表中指定成员的follow_info(批次重跑前清掉半截数据，重跑整批全量重写不会重复)
+     */
+    void deleteStgByUserIds(@Param("userIds") List<String> userIds);
+
+    /**
      * 分批回填 STG → 主表（返回本批行数）：表无唯一键，按全列稳定排序分页，
      * 完全重复的行彼此等价不会因分页边界丢失，每批一条语句秒级返回避免 Read timed out
      */

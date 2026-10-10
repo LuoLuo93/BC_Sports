@@ -37,6 +37,9 @@ public class QywxCustomerDetailTask {
     private static final int MAX_CONSECUTIVE_EMPTY_PAGES = 10;
     /** 切换时分批回填每批行数：单条 INSERT...SELECT 秒级完成，避免整表回填长时间占住 socket 读触发 Read timed out */
     private static final int COPY_CHUNK_SIZE = 50_000;
+    /** API失败批次整批重跑次数/间隔：API层已有-1退避重试(最长13s)，这里是第二道兜底，覆盖更长的服务端抖动 */
+    private static final int BATCH_RETRY_TIMES = 2;
+    private static final long BATCH_RETRY_INTERVAL_MS = 30_000;
 
     @Autowired
     private QywxApiClient apiClient;
@@ -108,7 +111,13 @@ public class QywxCustomerDetailTask {
             }
 
             // 5. 原子切换：主表清空+影子表分批回填+清影子表，同一事务，任一步失败整体回滚
+            final int failedBatchCount = failedBatches;
             new TransactionTemplate(transactionManager).execute(status -> {
+                if (failedBatchCount > 0) {
+                    // 容忍切换：失败批的半截contact已无任何follow_info引用，不清会以"幽灵客户"进入主表
+                    int orphans = externalContactMapper.deleteOrphanStgContacts();
+                    log.warn("本轮失败{}个批次, 切换前清理影子表孤儿contact {} 行", failedBatchCount, orphans);
+                }
                 externalContactMapper.deleteAll();
                 copyStgInChunks("external_contact", externalContactMapper::copyFromStgPage);
                 externalContactMapper.clearStg();
@@ -159,10 +168,12 @@ public class QywxCustomerDetailTask {
                 try {
                     semaphore.acquire();
                     try {
-                        fetchPageAndWrite(batchUserIds, txTemplate,
-                                globalProcessedExternalUserIds, totalContacts, totalFollowInfos);
-
-                        successCount.incrementAndGet();
+                        if (fetchPageAndWriteWithRetry(batchUserIds, txTemplate,
+                                globalProcessedExternalUserIds, totalContacts, totalFollowInfos)) {
+                            successCount.incrementAndGet();
+                        } else {
+                            failCount.incrementAndGet();
+                        }
                     } finally {
                         semaphore.release();
                     }
@@ -199,6 +210,43 @@ public class QywxCustomerDetailTask {
                 successCount.get(), failCount.get(), truncatedCount.get(), totalContacts.get(), totalFollowInfos.get(),
                 System.currentTimeMillis() - startTime);
         return new int[]{successCount.get(), failCount.get(), truncatedCount.get()};
+    }
+
+    /**
+     * API失败的批次整批重跑兜底(API层已有-1退避重试，这里覆盖更长抖动)：
+     * 每次尝试失败后先删该批已写入影子表的半截follow_info——重跑会整批从头翻页全量重写，不删会重复；
+     * contact行不删也不重拉重复——全局去重集合仍在，重跑跳过已写入的、补拉之前没拉到的，两条都不会重复。
+     * 游标熔断(CursorLoopException)是数据异常非瞬时故障，不重跑直接上抛。
+     */
+    private boolean fetchPageAndWriteWithRetry(List<String> userIds, TransactionTemplate txTemplate,
+                                                Set<String> globalProcessedExternalUserIds,
+                                                AtomicInteger totalContacts, AtomicInteger totalFollowInfos) {
+        for (int attempt = 0; ; attempt++) {
+            try {
+                fetchPageAndWrite(userIds, txTemplate, globalProcessedExternalUserIds, totalContacts, totalFollowInfos);
+                return true;
+            } catch (CursorLoopException e) {
+                throw e;
+            } catch (Exception e) {
+                // 本轮已写入的半截follow_info清掉：重跑前清场，最终放弃时也不留截断数据
+                txTemplate.execute(status -> {
+                    followInfoMapper.deleteStgByUserIds(userIds);
+                    return null;
+                });
+                if (attempt >= BATCH_RETRY_TIMES) {
+                    log.error("批次连续{}次尝试均失败, 放弃该批(该批影子表follow_info已清理): {}",
+                            attempt + 1, e.getMessage());
+                    return false;
+                }
+                log.warn("批次第{}次尝试失败, {}ms后整批重跑: {}", attempt + 1, BATCH_RETRY_INTERVAL_MS, e.getMessage());
+                try {
+                    Thread.sleep(BATCH_RETRY_INTERVAL_MS);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    return false;
+                }
+            }
+        }
     }
 
     /**

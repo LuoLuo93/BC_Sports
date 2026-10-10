@@ -32,6 +32,8 @@ public class QywxApiClient {
 
     private static final int MAX_RETRY = 3;
     private static final long RETRY_DELAY_MS = 1000;
+    /** errcode -1(系统繁忙)退避基数：1s→3s→9s，覆盖秒级~十几秒的服务端抖动 */
+    private static final long BUSY_RETRY_BASE_MS = 1000;
 
     @Value("${qywx.corp-id}")
     private String corpId;
@@ -129,7 +131,7 @@ public class QywxApiClient {
                 JSONObject body = JSONUtil.parseObj(response.getBody());
                 Integer errcode = body.getInt("errcode");
                 if (errcode != null && errcode != 0) {
-                    throw new RuntimeException("Failed to get token, errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
+                    throw new QywxApiException(errcode, "Failed to get token, errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
                 }
 
                 String newToken = body.getStr("access_token");
@@ -208,7 +210,7 @@ public class QywxApiClient {
                 JSONObject body = JSONUtil.parseObj(response.getBody());
                 Integer errcode = body.getInt("errcode");
                 if (errcode != null && errcode != 0) {
-                    throw new RuntimeException("Failed to get contacts token, errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
+                    throw new QywxApiException(errcode, "Failed to get contacts token, errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
                 }
 
                 String newToken = body.getStr("access_token");
@@ -224,11 +226,6 @@ public class QywxApiClient {
         }, () -> {});
     }
 
-    private boolean isTokenExpiredException(Exception e) {
-        String message = e.getMessage();
-        return message != null && (message.contains("40014") || message.contains("42001") ||
-                message.contains("expired") || message.contains("invalid"));
-    }
 
     private String doGet(String url) {
         HttpHeaders headers = new HttpHeaders();
@@ -242,19 +239,48 @@ public class QywxApiClient {
         return executeWithRetry(callback, this::refreshToken);
     }
 
+    /**
+     * 非幂等写接口专用(当前仅addCorpTag)：-1时服务端可能已实际执行过，重试会建出重复资源，失败直接抛出
+     */
+    private <T> T executeWithRetryNoBusyRetry(QywxApiCallback<T> callback) {
+        return executeWithRetry(callback, this::refreshToken, false);
+    }
+
     private <T> T executeWithRetry(QywxApiCallback<T> callback, Runnable tokenRefresher) {
+        return executeWithRetry(callback, tokenRefresher, true);
+    }
+
+    /**
+     * 按errcode决定重试(不用异常消息字符串匹配，业务errmsg含"invalid"会被误判成token失效)：
+     * 40014/42001 → 刷新token重试；-1系统繁忙 → 退避1s/3s/9s后重试(官方对-1的建议就是稍后重试)；
+     * 其余错误码不可重试直接抛；ResourceAccessException网络异常 → 固定1s重试
+     */
+    private <T> T executeWithRetry(QywxApiCallback<T> callback, Runnable tokenRefresher, boolean retryOnSystemBusy) {
         int retryCount = 0;
         while (true) {
             try {
                 return callback.execute();
-            } catch (RuntimeException e) {
-                if (isTokenExpiredException(e) && retryCount < MAX_RETRY) {
+            } catch (QywxApiException e) {
+                if ((e.getErrcode() == 40014 || e.getErrcode() == 42001) && retryCount < MAX_RETRY) {
                     log.warn("Token may be expired, refreshing... (retry {}/{})", retryCount + 1, MAX_RETRY);
                     tokenRefresher.run();
                     retryCount++;
                     continue;
                 }
-                if (e instanceof ResourceAccessException && retryCount < MAX_RETRY) {
+                if (e.getErrcode() == -1 && retryOnSystemBusy && retryCount < MAX_RETRY) {
+                    long delay = BUSY_RETRY_BASE_MS * (long) Math.pow(3, retryCount);
+                    log.warn("QYWX system busy, waiting {} ms before retry (retry {}/{})...", delay, retryCount + 1, MAX_RETRY);
+                    retryCount++;
+                    try {
+                        Thread.sleep(delay);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                    }
+                    continue;
+                }
+                throw e;
+            } catch (ResourceAccessException e) {
+                if (retryCount < MAX_RETRY) {
                     log.warn("Network error, waiting {} ms before retry (retry {}/{})...", RETRY_DELAY_MS, retryCount + 1, MAX_RETRY);
                     retryCount++;
                     try {
@@ -264,6 +290,8 @@ public class QywxApiClient {
                     }
                     continue;
                 }
+                throw e;
+            } catch (RuntimeException e) {
                 throw e;
             } catch (Exception e) {
                 throw new RuntimeException(e);
@@ -282,7 +310,7 @@ public class QywxApiClient {
                 JSONObject body = JSONUtil.parseObj(responseBody);
                 Integer errcode = body.getInt("errcode");
                 if (errcode != null && errcode != 0) {
-                    throw new RuntimeException("Failed to get department list, errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
+                    throw new QywxApiException(errcode, "Failed to get department list, errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
                 }
 
                 JSONArray deptArray = body.getJSONArray("department");
@@ -320,7 +348,7 @@ public class QywxApiClient {
                 JSONObject body = JSONUtil.parseObj(responseBody);
                 Integer errcode = body.getInt("errcode");
                 if (errcode != null && errcode != 0) {
-                    throw new RuntimeException("Failed to get department member list, errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
+                    throw new QywxApiException(errcode, "Failed to get department member list, errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
                 }
 
                 JSONArray userArray = body.getJSONArray("userlist");
@@ -363,7 +391,7 @@ public class QywxApiClient {
                 JSONObject body = JSONUtil.parseObj(responseBody);
                 Integer errcode = body.getInt("errcode");
                 if (errcode != null && errcode != 0) {
-                    throw new RuntimeException("Failed to get follow user list, errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
+                    throw new QywxApiException(errcode, "Failed to get follow user list, errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
                 }
 
                 JSONArray userArray = body.getJSONArray("follow_user");
@@ -446,7 +474,7 @@ public class QywxApiClient {
                 JSONObject body = JSONUtil.parseObj(response.getBody());
                 Integer errcode = body.getInt("errcode");
                 if (errcode != null && errcode != 0) {
-                    throw new RuntimeException("Failed to batch get customer details, errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
+                    throw new QywxApiException(errcode, "Failed to batch get customer details, errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
                 }
                 return body;
             } else {
@@ -485,7 +513,7 @@ public class QywxApiClient {
                 JSONObject body = JSONUtil.parseObj(response.getBody());
                 Integer errcode = body.getInt("errcode");
                 if (errcode != null && errcode != 0) {
-                    throw new RuntimeException("Failed to get group chat list, errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
+                    throw new QywxApiException(errcode, "Failed to get group chat list, errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
                 }
                 return body;
             } else {
@@ -558,7 +586,7 @@ public class QywxApiClient {
                 JSONObject body = JSONUtil.parseObj(response.getBody());
                 Integer errcode = body.getInt("errcode");
                 if (errcode != null && errcode != 0) {
-                    throw new RuntimeException("Failed to get group chat statistic, errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
+                    throw new QywxApiException(errcode, "Failed to get group chat statistic, errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
                 }
                 return body;
             } else {
@@ -593,7 +621,7 @@ public class QywxApiClient {
                 JSONObject body = JSONUtil.parseObj(response.getBody());
                 Integer errcode = body.getInt("errcode");
                 if (errcode != null && errcode != 0) {
-                    throw new RuntimeException("Failed to get mass message list, errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
+                    throw new QywxApiException(errcode, "Failed to get mass message list, errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
                 }
                 return body;
             } else {
@@ -627,7 +655,7 @@ public class QywxApiClient {
                 JSONObject body = JSONUtil.parseObj(response.getBody());
                 Integer errcode = body.getInt("errcode");
                 if (errcode != null && errcode != 0) {
-                    throw new RuntimeException("Failed to get moment list, errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
+                    throw new QywxApiException(errcode, "Failed to get moment list, errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
                 }
                 return body;
             } else {
@@ -660,7 +688,7 @@ public class QywxApiClient {
                     if (errcode == 60111 || errcode == 46004) {
                         return null;
                     }
-                    throw new RuntimeException("Failed to get userid by mobile, errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
+                    throw new QywxApiException(errcode, "Failed to get userid by mobile, errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
                 }
                 return body.getStr("userid");
             } else {
@@ -686,7 +714,7 @@ public class QywxApiClient {
                 JSONObject body = JSONUtil.parseObj(response.getBody());
                 Integer errcode = body.getInt("errcode");
                 if (errcode != null && errcode != 0 && errcode != 60102) {
-                    throw new RuntimeException("Failed to create user, errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
+                    throw new QywxApiException(errcode, "Failed to create user, errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
                 }
                 return body;
             } else {
@@ -708,7 +736,7 @@ public class QywxApiClient {
                 JSONObject body = JSONUtil.parseObj(responseBody);
                 Integer errcode = body.getInt("errcode");
                 if (errcode != null && errcode != 0 && errcode != 60111) {
-                    throw new RuntimeException("Failed to delete user " + userid + ", errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
+                    throw new QywxApiException(errcode, "Failed to delete user " + userid + ", errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
                 }
                 return body;
             } else {
@@ -734,7 +762,7 @@ public class QywxApiClient {
                 JSONObject body = JSONUtil.parseObj(response.getBody());
                 Integer errcode = body.getInt("errcode");
                 if (errcode != null && errcode != 0) {
-                    throw new RuntimeException("Failed to update user, errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
+                    throw new QywxApiException(errcode, "Failed to update user, errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
                 }
                 return body;
             } else {
@@ -771,7 +799,7 @@ public class QywxApiClient {
                 JSONObject body = JSONUtil.parseObj(response.getBody());
                 Integer errcode = body.getInt("errcode");
                 if (errcode != null && errcode != 0) {
-                    throw new RuntimeException("Failed to get corp tag list, errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
+                    throw new QywxApiException(errcode, "Failed to get corp tag list, errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
                 }
                 return body;
             } else {
@@ -784,7 +812,8 @@ public class QywxApiClient {
      * 添加企业客户标签
      */
     public JSONObject addCorpTag(String groupId, String groupName, List<String> tagNames) {
-        return executeWithRetry(() -> {
+        // 唯一非幂等写接口：-1时服务端可能已建标签，重试会建出重名标签，走不重试-1的通道
+        return executeWithRetryNoBusyRetry(() -> {
             String url = apiBaseUrl + "/cgi-bin/externalcontact/add_corp_tag?access_token=" + getAccessToken();
 
             JSONObject requestBody = new JSONObject();
@@ -814,7 +843,7 @@ public class QywxApiClient {
                 JSONObject body = JSONUtil.parseObj(response.getBody());
                 Integer errcode = body.getInt("errcode");
                 if (errcode != null && errcode != 0) {
-                    throw new RuntimeException("Failed to add corp tag, errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
+                    throw new QywxApiException(errcode, "Failed to add corp tag, errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
                 }
                 return body;
             } else {
@@ -845,7 +874,7 @@ public class QywxApiClient {
                 JSONObject body = JSONUtil.parseObj(response.getBody());
                 Integer errcode = body.getInt("errcode");
                 if (errcode != null && errcode != 0) {
-                    throw new RuntimeException("Failed to edit corp tag, errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
+                    throw new QywxApiException(errcode, "Failed to edit corp tag, errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
                 }
                 return body;
             } else {
@@ -880,7 +909,7 @@ public class QywxApiClient {
                 JSONObject body = JSONUtil.parseObj(response.getBody());
                 Integer errcode = body.getInt("errcode");
                 if (errcode != null && errcode != 0) {
-                    throw new RuntimeException("Failed to del corp tag, errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
+                    throw new QywxApiException(errcode, "Failed to del corp tag, errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
                 }
                 return body;
             } else {
@@ -921,7 +950,7 @@ public class QywxApiClient {
                 if (errcode != null && errcode != 0) {
                     // token失效类错误抛出，交由 executeWithRetry 刷新token后重试（与其他API一致）
                     if (errcode == 40014 || errcode == 42001) {
-                        throw new RuntimeException("Failed to mark tag, errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
+                        throw new QywxApiException(errcode, "Failed to mark tag, errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
                     }
                     log.warn("markTag failed for externalUserid: {}, errcode: {}, errmsg: {}",
                             externalUserid, errcode, body.getStr("errmsg"));
@@ -956,7 +985,7 @@ public class QywxApiClient {
                 JSONObject body = JSONUtil.parseObj(response.getBody());
                 Integer errcode = body.getInt("errcode");
                 if (errcode != null && errcode != 0) {
-                    throw new RuntimeException("Failed to get user behavior data, errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
+                    throw new QywxApiException(errcode, "Failed to get user behavior data, errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
                 }
                 return body;
             } else {
@@ -989,7 +1018,7 @@ public class QywxApiClient {
                 JSONObject body = JSONUtil.parseObj(response.getBody());
                 Integer errcode = body.getInt("errcode");
                 if (errcode != null && errcode != 0) {
-                    throw new RuntimeException("Failed to get user behavior data(batch), errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
+                    throw new QywxApiException(errcode, "Failed to get user behavior data(batch), errcode: " + errcode + ", errmsg: " + body.getStr("errmsg"));
                 }
                 return body;
             } else {

@@ -21,12 +21,17 @@ import java.util.stream.Collectors;
 /**
  * 企微员工离职同步任务
  *
- * 从 IHR employee_information 表查询最近离职的员工，
+ * 从 IHR employee_information 表按状态捞取所有未同步成功的离职员工
+ * (从未同步/上次失败/同步早于离职日期/跳过满7天复检,不设日期窗口——
+ *  IHR 补录离职常晚于官方离职日数天,日期窗口会导致永久漏删),
  * 通过姓名 + 工号双重校验后在企微通讯录中删除。
  */
 @Slf4j
 @Component("qywxEmployeeLeaveSyncTask")
 public class QywxEmployeeLeaveSyncTask {
+
+    /** IN 查询分片大小：SQL Server 单请求最多 2100 个参数,按状态全量捞取后工号/userid 可达数千 */
+    private static final int IN_CHUNK_SIZE = 500;
 
     @Autowired
     private IhrEmployeeDetailMapper employeeDetailMapper;
@@ -54,18 +59,10 @@ public class QywxEmployeeLeaveSyncTask {
         long startTime = System.currentTimeMillis();
 
         try {
-            // 查询最近离职的员工（leaveDate 在前天~今天范围内，覆盖周末/假期）
-            Calendar cal = Calendar.getInstance();
-            cal.set(Calendar.HOUR_OF_DAY, 0);
-            cal.set(Calendar.MINUTE, 0);
-            cal.set(Calendar.SECOND, 0);
-            cal.set(Calendar.MILLISECOND, 0);
-            Date today = cal.getTime();
-
-            cal.add(Calendar.DAY_OF_MONTH, -3);
-            Date startDate = cal.getTime();
-
-            List<IhrEmployeeDetail> leavedEmployees = employeeDetailMapper.selectRecentLeaved(startDate, today);
+            // 按状态捞取所有未同步成功的离职者(从未同步/失败/过期/跳过满7天复检),不限日期。
+            // 旧版 leave_date 近 3 天窗口在 IHR 补录晚到时永久漏人(2026-08-31 批次 16 人实证),
+            // 状态口径与离职管理页 effectiveSyncStatus 一致,补录多晚都会被下一班兜住。
+            List<IhrEmployeeDetail> leavedEmployees = employeeDetailMapper.selectUnsyncedLeaved();
 
             if (leavedEmployees == null || leavedEmployees.isEmpty()) {
                 log.info("没有离职员工，跳过");
@@ -90,10 +87,13 @@ public class QywxEmployeeLeaveSyncTask {
 
             Map<String, String> staffNoToUserid = new HashMap<>();
             if (!allStaffNos.isEmpty()) {
-                List<QywxAttrsBase> attrsList = attrsBaseMapper.selectUseridByStaffNos(allStaffNos);
-                for (QywxAttrsBase attr : attrsList) {
-                    if (attr.getEnrollInDate() != null && attr.getUserid() != null) {
-                        staffNoToUserid.put(attr.getEnrollInDate(), attr.getUserid());
+                for (int i = 0; i < allStaffNos.size(); i += IN_CHUNK_SIZE) {
+                    List<String> chunk = allStaffNos.subList(i, Math.min(i + IN_CHUNK_SIZE, allStaffNos.size()));
+                    List<QywxAttrsBase> attrsList = attrsBaseMapper.selectUseridByStaffNos(chunk);
+                    for (QywxAttrsBase attr : attrsList) {
+                        if (attr.getEnrollInDate() != null && attr.getUserid() != null) {
+                            staffNoToUserid.put(attr.getEnrollInDate(), attr.getUserid());
+                        }
                     }
                 }
             }
@@ -102,10 +102,13 @@ public class QywxEmployeeLeaveSyncTask {
             List<String> userids = new ArrayList<>(staffNoToUserid.values());
             Map<String, String> useridToName = new HashMap<>();
             if (!userids.isEmpty()) {
-                List<QywxDepartmentMemberDetail> members = memberDetailMapper.selectNameByUserids(userids);
-                for (QywxDepartmentMemberDetail m : members) {
-                    if (m.getUserid() != null && m.getName() != null) {
-                        useridToName.put(m.getUserid(), m.getName());
+                for (int i = 0; i < userids.size(); i += IN_CHUNK_SIZE) {
+                    List<String> chunk = userids.subList(i, Math.min(i + IN_CHUNK_SIZE, userids.size()));
+                    List<QywxDepartmentMemberDetail> members = memberDetailMapper.selectNameByUserids(chunk);
+                    for (QywxDepartmentMemberDetail m : members) {
+                        if (m.getUserid() != null && m.getName() != null) {
+                            useridToName.put(m.getUserid(), m.getName());
+                        }
                     }
                 }
             }

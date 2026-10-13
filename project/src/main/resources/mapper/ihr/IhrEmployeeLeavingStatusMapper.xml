@@ -61,7 +61,7 @@
     </select>
 
     <insert id="upsertByEmployeeId">
-        MERGE ihr_employee_leaving_status AS target
+        MERGE INTO ihr_employee_leaving_status AS target
         USING (SELECT #{entity.employeeId} AS employee_id) AS source
         ON target.employee_id = source.employee_id
         WHEN MATCHED THEN

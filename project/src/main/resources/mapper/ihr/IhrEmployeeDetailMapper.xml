@@ -135,13 +135,28 @@
     </update>
 
     <!-- 只取调用方(QywxEmployeeLeaveSyncTask)实际使用的列，不再 SELECT * 拖全表 88 列 PII
-         (id_card_no/spouse_name/living_address 等)；日期过滤 sargable 不在列上包 CONVERT -->
-    <select id="selectRecentLeaved" resultType="com.bcsport.admin.entity.ihr.IhrEmployeeDetail">
-        SELECT id, staff_no, staff_name, mobile_no, email, leave_date, enroll_in_date
-        FROM employee_information
-        WHERE leave_date IS NOT NULL
-        AND leave_date &gt;= CAST(#{startDate} AS DATETIME)
-        AND leave_date &lt; DATEADD(DAY, 1, CAST(#{endDate} AS DATETIME))
+         (id_card_no/spouse_name/living_address 等)。
+         按状态捞取而非日期窗口：IHR 人事常在官方离职日之后数天才补录离职，
+         旧版 leave_date 近 3 天窗口在数据到达前就已关闭,补录者永久漏删。
+         口径与离职管理页 effectiveSyncStatus 一致：
+           1. 从未同步(sync_time IS NULL, LEFT JOIN 无行也算) —— 含历史积压与晚到补录
+           2. 上次同步失败(sync_status=2) —— 每班重试
+           3. 同步时间早于离职日期 —— leave_date 被改过需重核(页面同口径判定为过期)
+           4. 跳过(sync_status=3)满 7 天复检一次 —— 自愈瞬时故障
+             (当时企微属性/成员视图未就绪被误跳,实测有 6 人因此漏删;
+              排除名单的人在任务里先于 API 调用被拦,复检无副作用) -->
+    <select id="selectUnsyncedLeaved" resultType="com.bcsport.admin.entity.ihr.IhrEmployeeDetail">
+        SELECT ei.id, ei.staff_no, ei.staff_name, ei.mobile_no, ei.email, ei.leave_date, ei.enroll_in_date
+        FROM employee_information ei
+        LEFT JOIN ihr_employee_leaving_status ls ON ei.id = ls.employee_id
+        WHERE ei.leave_date IS NOT NULL
+        AND (
+            ls.sync_time IS NULL
+            OR ls.sync_status = 2
+            OR CONVERT(DATE, ls.sync_time) &lt; CONVERT(DATE, ei.leave_date)
+            OR (ls.sync_status = 3 AND ls.sync_time &lt; DATEADD(DAY, -7, GETDATE()))
+        )
+        ORDER BY ei.leave_date DESC
     </select>
 
     <select id="selectByStaffIds" resultType="com.bcsport.admin.entity.ihr.IhrEmployeeDetail">

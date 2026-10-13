@@ -309,7 +309,7 @@
     <!-- ==================== Upsert ==================== -->
 
     <insert id="upsertByEmployeeIdAndType">
-        MERGE hk_erp_sync_status AS target
+        MERGE INTO hk_erp_sync_status AS target
         USING (SELECT #{entity.employeeId} AS employee_id, #{entity.syncType} AS sync_type) AS source
         ON target.employee_id = source.employee_id AND target.sync_type = source.sync_type
         WHEN MATCHED THEN

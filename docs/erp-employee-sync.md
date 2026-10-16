@@ -101,7 +101,7 @@ syncOne("ONBOARDING", employeeId, staffName, staffNo)
 
 ---
 
-## 变更同步 `UPDATE`（REST v3：id 定位 + partial_update 最小化发送）
+## 变更同步 `UPDATE`（REST v3：id 定位 + 全字段 IHR 最新覆盖）
 
 > **协议变更史（2026-10-16 排查定案）**：伯俊 2026-08-18 11:12 升级 REST v3，`ObjectModify` 的 `ak` 定位参数废弃（AD_TABLE.AK_COLUMN_ID 同期从工号列 25983 改为姓名列 25982，备份表 AD_TABLE_BK 可证），官方现行以 `id`(记录数字主键, Number) 定位并新增 `partial_update`(Boolean, 必传 true，否则未传字段被 ERP 清空——实测验证)。ak 自 8-19 起对所有人报"未找到对象"，旧逻辑降级 ObjectCreate 撞工号唯一索引报"已存在"被标跳过(3)静默丢失，8-19~10-16 共 451 人变动未落 ERP。官方文档接口（免登录）：`http://bos.bc-sports.com.cn:8876/bos/p/doc/v3/restapi/table?tableId=14630&operation=Modify`
 
@@ -111,25 +111,23 @@ syncOne("UPDATE", employeeId, staffName, staffNo)
 ├─ 查 employee_information 详情 (selectById)
 │   └─ 查不到 → markSyncSkipped(3) ⭐ 受状态不降级保护
 ├─ syncUpdate(detail):
-│   ├─ bjerpEmployeeMapper.selectByStaffNo(工号) → HR_EMPLOYEE 现值快照(ID/姓名/店仓/状态/手机/营业员/店长)
-│   ├─ 查到 → doModify: ObjectModify {table, id=记录ID, partial_update:true} + 只发差异字段
-│   │    · NAME: 姓名不同才发
-│   │    · C_STORE_ID__NAME: 仅调店时发（先校验目标店名在 C_STORE 精确存在，
-│   │      不存在→失败(2)提示"IHR部门名[x]在ERP店仓不存在(疑似店名漂移或新店未建)"等人工核正；
-│   │      店名未变不发 → 淮南/济南类漂移不阻塞手机号/状态等其他变动）
-│   │    · INCUMBENCY_STS: 仅 ERP=D(离职) 而 IHR 在职/试用时拉回（ERP 罕见码 E 保守不动）
-│   │    · ISSALER: 现值非 Y 时拉齐为 Y
-│   │    · ISSTOREMAN: 职位=店长→Y 否则空串，与现值不同才发
-│   │    · HANDSET: IHR 非空且不同才发；IHR 为空不碰 ERP 已有手机号
-│   │    · 全部无差异 → 不调 ERP 直接成功，日志请求体记"(无差异,未调用ERP)"
+│   ├─ bjerpEmployeeMapper.selectIdByStaffNo(工号) → HR_EMPLOYEE 记录 ID（只定位，不做字段差异比对）
+│   ├─ 查到 → doModify: ObjectModify {table, id=记录ID, partial_update:true} + 全字段 IHR 最新覆盖
+│   │    · NAME / C_CUSTOMER_ID__NAME=边城体育 / C_STORE_ID__NAME=IHR部门名 /
+│   │      INCUMBENCY_STS=状态映射 / ISSALER=Y / ISSTOREMAN=职位精确"店长"→Y否则空串
+│   │    · HANDSET: IHR 非空(非纯空格)才传——IHR 缺数不清空 ERP 已有手机号；
+│   │      未传的其他字段（入职日期/邮箱等）由 partial_update:true 保护不动
+│   │    · 发送前校验 IHR 部门名在 C_STORE 精确存在，不存在→失败(2)提示
+│   │      "IHR部门名[x]在ERP店仓不存在(疑似店名漂移或新店未建)"等人工核正
 │   └─ 查不到（ERP 无此工号）→ 兜底：降级 syncOnboarding 用 ObjectCreate 创建；
-│       创建报"已存在"→重查一次现值，查到转走修改；仍查不到→失败上抛(2)
-├─ 成功 → markSyncSuccess(1, erpId) ✅（修改响应无 objectid，用现值查询的 ID 回填 erp_object_id）
+│       创建报"已存在"→重查一次 ID，查到转走修改；仍查不到→失败上抛(2)
+├─ 成功 → markSyncSuccess(1, erpId) ✅（修改响应无 objectid，用工号定位查询的 ID 回填 erp_object_id）
 ├─ 报"已存在"且为入职(ONBOARDING) → markSyncSkipped(3) ⭐ 幂等防重（变更不再走跳过，防静默丢失）
 └─ 其他异常 → markSyncFailed(2, 错误信息)
 ```
 
-> 入职用 `ObjectCreate`（协议未变，NO=工号）；变更用 `ObjectModify`（id 定位 + partial_update=true 只更新差异字段）。变更不传部门字段 `C_DEPARTMENT_ID__NAME`（伯俊 C_DEPARTMENT 表为空，传了会报"部门不存在"）。
+> 入职用 `ObjectCreate`（协议未变，NO=工号）；变更用 `ObjectModify`（id 定位 + partial_update=true，全字段以 IHR 最新数据覆盖——语义即"以 IHR 为准"，IHR 改名/调店/升卸店长/手机号变化都会直接同步）。变更不传部门字段 `C_DEPARTMENT_ID__NAME`（伯俊 C_DEPARTMENT 表为空，传了会报"部门不存在"）。
+> 曾短暂采用"字段级差异比对只发差异字段"方案，后按用户口径改为全字段覆盖（差异比对曾因 ERP 把非店长规范存为 N 而空串比对误判，产生大量无意义 ISSTOREMAN:"" 报文——全字段覆盖从根上消除此类口径问题）。
 
 ### 变更兜底：工号在 ERP 不存在时自动创建
 

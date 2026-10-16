@@ -2,7 +2,6 @@ package com.bcsport.admin.task.erp;
 
 import cn.hutool.json.JSONObject;
 import com.bcsport.admin.entity.ihr.IhrEmployeeDetail;
-import com.bcsport.admin.vo.ErpEmployeeCurrent;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -13,6 +12,10 @@ import java.time.format.DateTimeFormatter;
  * 2026-08-18 伯俊升级 REST v3：ObjectModify 定位参数 ak 废弃，改为
  * id(记录数字主键, Number) + partial_update=true(只更新传入字段, 不传则未传字段清空)。
  * 新增(ObjectCreate)协议未变，仍以 NO=工号 走唯一索引。
+ * <p>
+ * 变更报文策略（用户口径）：不做字段级差异比对，**全字段以 IHR 最新数据覆盖**——
+ * partial_update=true 保证未传字段(入职日期/邮箱等)不受影响；
+ * 手机号 IHR 为空时不传，避免 IHR 缺数清掉 ERP 已有手机号。
  */
 public class IhrToBjErpConverter {
 
@@ -38,7 +41,7 @@ public class IhrToBjErpConverter {
         data.set("INCUMBENCY_STS", mapStaffStatus(detail.getStaffStatus()));
         // ISSALER - 是否营业员（Y=营业员）。同步的终端店铺员工均为营业员
         data.set("ISSALER", "Y");
-        // ISSTOREMAN - 是否店长（Y=店长）。职位精确匹配"店长"时为Y，否则留空
+        // ISSTOREMAN - 是否店长（Y=店长）。职位精确匹配"店长"时为Y，否则留空（ERP 侧规范存为 N）
         data.set("ISSTOREMAN", "店长".equals(detail.getPositionName()) ? "Y" : "");
 
         // BEGIN_DATE - 入职日期
@@ -55,62 +58,30 @@ public class IhrToBjErpConverter {
     }
 
     /**
-     * 将IHR员工详情转为伯俊ERP员工修改参数（REST v3：id 定位 + partial_update 最小化发送）
+     * 将IHR员工详情转为伯俊ERP员工修改参数（REST v3：id 定位 + 全字段 IHR 最新覆盖）
      * <p>
-     * 只发与 ERP 现值有差异的字段：
-     * <ul>
-     *   <li>店仓未变化不传 → IHR部门名与ERP店名漂移(如淮南/济南)不再阻塞手机号、状态等其他变动</li>
-     *   <li>店仓变化(storeChanged=true)时才传 C_STORE_ID__NAME，调用方须先校验目标店名在ERP店仓存在</li>
-     *   <li>手机号 IHR 为空不传（不清空 ERP 已有手机号，与旧口径一致）</li>
-     *   <li>在职状况只在 ERP=离职(D) 而 IHR 在职时拉回，ERP 罕见码(E)保守不动</li>
-     * </ul>
+     * 变更同步以 IHR 为准全字段覆盖（NAME/经销商/店仓/在职状况/营业员/店长/手机号），
+     * 调用方须先校验 IHR 部门名在 ERP 店仓精确存在（漂移如淮南/济南时明确失败等人工核正）。
      *
-     * @param detail       IHR员工详情
-     * @param erpId        ERP记录数字ID（HR_EMPLOYEE.ID）
-     * @param current      ERP现值快照
-     * @param storeChanged 是否调店（IHR部门名≠ERP现店名 且 目标店名已在ERP校验存在）
-     * @return params；除 table/id/partial_update 外无业务字段 = 无差异（调用方可不发请求直接标记成功）
+     * @param detail IHR员工详情（最新）
+     * @param erpId  ERP记录数字ID（HR_EMPLOYEE.ID，工号定位）
      */
-    public static JSONObject toModifyParams(IhrEmployeeDetail detail, Long erpId,
-                                            ErpEmployeeCurrent current, boolean storeChanged) {
+    public static JSONObject toModifyParams(IhrEmployeeDetail detail, Long erpId) {
         JSONObject data = new JSONObject();
         data.set("table", "14630");
         // REST v3: id 数字定位 + partial_update 必须为 true，否则未传字段会被清空（实测验证）
         data.set("id", erpId);
         data.set("partial_update", true);
 
-        // 姓名
-        if (!eq(detail.getStaffName(), current.getName())) {
-            data.set("NAME", detail.getStaffName());
-        }
+        data.set("NAME", detail.getStaffName());
+        data.set("C_CUSTOMER_ID__NAME", "边城体育");
+        data.set("C_STORE_ID__NAME", detail.getDepartmentName());
+        data.set("INCUMBENCY_STS", mapStaffStatus(detail.getStaffStatus()));
+        data.set("ISSALER", "Y");
+        data.set("ISSTOREMAN", "店长".equals(detail.getPositionName()) ? "Y" : "");
 
-        // 店仓：只在调店时发送
-        if (storeChanged) {
-            data.set("C_STORE_ID__NAME", detail.getDepartmentName());
-        }
-
-        // 在职状况：ERP=D(离职) 而 IHR 在职/试用 → 拉回；其余码不主动覆盖
-        String erpSts = current.getIncumbencySts();
-        if ("D".equals(erpSts) && ("IN_SERVICE".equals(detail.getStaffStatus())
-                || "PROBATION".equals(detail.getStaffStatus()))) {
-            data.set("INCUMBENCY_STS", mapStaffStatus(detail.getStaffStatus()));
-        }
-
-        // 营业员标识：同步人群固定Y，现值非Y时拉齐
-        if (!"Y".equals(nullToEmpty(current.getIssaler()))) {
-            data.set("ISSALER", "Y");
-        }
-
-        // 店长标识：职位精确匹配"店长"为Y，否则空串；与现值不同才发
-        String wantStoreMan = "店长".equals(detail.getPositionName()) ? "Y" : "";
-        if (!eq(wantStoreMan, nullToEmpty(current.getIsstoreman()))) {
-            data.set("ISSTOREMAN", wantStoreMan);
-        }
-
-        // 手机号：IHR非空且与现值不同才发；IHR为空不碰ERP已有手机号
-        if (notBlank(detail.getMobileNo()) && !eq(detail.getMobileNo(), current.getHandset())) {
-            data.set("HANDSET", detail.getMobileNo());
-        }
+        // 手机号：IHR 非空才传（IHR 缺数不清空 ERP 已有值）；其余未传字段由 partial_update 保护
+        putIfNotBlank(data, "HANDSET", detail.getMobileNo());
 
         return data;
     }
@@ -170,21 +141,15 @@ public class IhrToBjErpConverter {
         }
     }
 
+    /** 空白(null/空串/纯空格)不传，防止 IHR 缺数清掉 ERP 已有手机号 */
+    private static void putIfNotBlank(JSONObject data, String key, String value) {
+        if (value != null && !value.trim().isEmpty()) {
+            data.set(key, value);
+        }
+    }
+
     private static String firstNonNull(String a, String b) {
         if (a != null && !a.isEmpty()) return a;
         return b;
-    }
-
-    /** 空安全等值比较（两侧 null/空白视为相等，两侧 trim 后比较，兼容历史数据尾随空格） */
-    private static boolean eq(String a, String b) {
-        return nullToEmpty(a).trim().equals(nullToEmpty(b).trim());
-    }
-
-    private static boolean notBlank(String s) {
-        return s != null && !s.trim().isEmpty();
-    }
-
-    private static String nullToEmpty(String s) {
-        return s == null ? "" : s;
     }
 }

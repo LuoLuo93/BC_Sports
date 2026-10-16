@@ -137,7 +137,9 @@ public class ErpEmployeeSyncTask {
             IhrEmployeeDetail detail = employeeDetailMapper.selectById(employeeId);
             if (detail == null) {
                 log.warn("员工详情未找到, employeeId={}, staffName={}, 跳过", employeeId, staffName);
+                String msg = "员工详情未找到, 跳过同步";
                 erpSyncService.markSyncSkipped(syncType, employeeId, staffName, staffNo);
+                erpSyncService.recordLog(syncType, employeeId, staffName, staffNo, 3, null, null, msg);
                 return new int[]{0, 0, 1};
             }
 
@@ -209,17 +211,19 @@ public class ErpEmployeeSyncTask {
             if (detail == null) {
                 String err = "员工详情未找到: " + employeeId;
                 erpSyncService.markSyncFailed(syncType, employeeId, "", "", err);
+                erpSyncService.recordLog(syncType, employeeId, "", "", 2, null, null, err);
                 return err;
             }
 
             String staffName = detail.getStaffName();
             String staffNo = detail.getStaffNo();
 
-            // 离职状态(LEAVED/QUIT)不同步到ERP
+            // 离职状态(LEAVED/QUIT)不同步到ERP（同步状态标跳过并留日志，页面可追溯原因）
             String staffStatus = detail.getStaffStatus();
             if ("LEAVED".equals(staffStatus) || "QUIT".equals(staffStatus)) {
                 String msg = "员工已离职(" + staffStatus + "), 跳过同步";
                 erpSyncService.markSyncSkipped(syncType, employeeId, staffName, staffNo);
+                erpSyncService.recordLog(syncType, employeeId, staffName, staffNo, 3, null, null, msg);
                 return msg;
             }
 
@@ -323,14 +327,17 @@ public class ErpEmployeeSyncTask {
      * 全字段覆盖修改：以 IHR 最新数据为准，partial_update=true 保护未传字段
      */
     private SyncResult doModify(IhrEmployeeDetail detail, Long erpId) {
-        // 报文必含店仓字段，IHR 部门名在 ERP 店仓不存在时明确失败等人工核正（店名漂移/新店未建），不静默跳过
+        JSONObject data = IhrToBjErpConverter.toModifyParams(detail, erpId);
+
+        // 报文必含店仓字段，IHR 部门名在 ERP 店仓不存在时明确失败等人工核正（店名漂移/新店未建），不静默跳过；
+        // 异常携带"本要发送的参数"落日志，保证日志入参完整可排查
         String ihrDept = detail.getDepartmentName() == null ? "" : detail.getDepartmentName().trim();
         if (!ihrDept.isEmpty() && bjerpEmployeeMapper.countActiveStoreByName(ihrDept) == 0) {
             throw new BjErpApiClient.BusinessCallException(
-                    "IHR部门名[" + ihrDept + "]在ERP店仓不存在(疑似店名漂移或新店未建), 请人工核正后重试", null, null);
+                    "IHR部门名[" + ihrDept + "]在ERP店仓不存在(疑似店名漂移或新店未建), 请人工核正后重试",
+                    data.toString(), null);
         }
 
-        JSONObject data = IhrToBjErpConverter.toModifyParams(detail, erpId);
         log.debug("变更同步: staffNo={}, staffName={}, erpId={}, params={}",
                 detail.getStaffNo(), detail.getStaffName(), erpId, data);
         BjErpApiClient.CallRecord record = bjErpApiClient.call(buildTransactions("ObjectModify", data));

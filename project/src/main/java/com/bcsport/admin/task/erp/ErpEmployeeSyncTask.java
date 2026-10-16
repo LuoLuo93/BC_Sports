@@ -3,9 +3,11 @@ package com.bcsport.admin.task.erp;
 import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import com.bcsport.admin.entity.ihr.IhrEmployeeDetail;
+import com.bcsport.admin.erpmapper.BjerpEmployeeMapper;
 import com.bcsport.admin.ihrmapper.ErpEmployeeSyncStatusMapper;
 import com.bcsport.admin.ihrmapper.IhrEmployeeDetailMapper;
 import com.bcsport.admin.service.ErpEmployeeSyncService;
+import com.bcsport.admin.vo.ErpEmployeeCurrent;
 import com.bcsport.admin.vo.ErpEmployeeVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,10 +22,13 @@ import java.util.List;
  * ERP员工同步任务
  * <p>
  * 数据流: IHR员工数据 → 伯俊ERP(表14630)
+ * <p>
+ * 2026-08-18 伯俊升级 REST v3：ObjectModify 的 ak(工号)定位废弃，
+ * 改为 HR_EMPLOYEE 按工号查记录ID → ObjectModify(id + partial_update=true) 只更新差异字段。
  * <ul>
- *   <li>入职(ObjectCreate): 新增员工到ERP</li>
- *   <li>变更(ObjectModify): 增量更新ERP员工</li>
- *   <li>离职(ObjectModify): 更新ERP员工为离职状态</li>
+ *   <li>入职(ObjectCreate): 新增员工到ERP（协议未变，NO=工号）</li>
+ *   <li>变更(ObjectModify): 查现值→比对→只发差异字段；ERP无此工号降级入职创建</li>
+ *   <li>离职(ObjectModify): 更新ERP员工为离职状态（已同步迁移id协议，功能暂禁用）</li>
  * </ul>
  */
 @Slf4j
@@ -43,6 +48,9 @@ public class ErpEmployeeSyncTask {
 
     @Autowired
     private BjErpApiClient bjErpApiClient;
+
+    @Autowired
+    private BjerpEmployeeMapper bjerpEmployeeMapper;
 
     public static boolean isSyncing() {
         return syncing;
@@ -163,8 +171,9 @@ public class ErpEmployeeSyncTask {
             // 从异常中提取请求/响应体（业务错误或同步方法抛出）
             String reqBody = extractReqBody(e);
             String respBody = extractRespBody(e);
-            // 入职报"编号已存在" → 标记已跳过(3)，而非失败(2)
-            if (BjErpApiClient.isAlreadyExists(errMsg)) {
+            // 入职报"编号已存在" → 幂等防重，标记已跳过(3)；
+            // 变更走到的"已存在"（工号在ERP但按工号查不到现值）属异常态 → 按失败(2)上抛重试，不静默跳过
+            if (BjErpApiClient.isAlreadyExists(errMsg) && "ONBOARDING".equals(syncType)) {
                 log.info("同步跳过(数据已存在): syncType={}, staffNo={}, staffName={}, employeeId={}",
                         syncType, staffNo, staffName, employeeId);
                 erpSyncService.markSyncSkipped(syncType, employeeId, staffName, staffNo);
@@ -245,8 +254,8 @@ public class ErpEmployeeSyncTask {
                 IhrEmployeeDetail detail = employeeDetailMapper.selectById(employeeId);
                 String staffName = detail != null ? detail.getStaffName() : "";
                 String staffNo = detail != null ? detail.getStaffNo() : "";
-                // 入职报"编号已存在" → 标记已跳过(3)，而非失败(2)
-                if (BjErpApiClient.isAlreadyExists(errMsg)) {
+                // 入职报"编号已存在" → 幂等防重标记跳过(3)；变更报"已存在"按失败返回（不再静默跳过）
+                if (BjErpApiClient.isAlreadyExists(errMsg) && "ONBOARDING".equals(syncType)) {
                     log.info("单人同步跳过(数据已存在): syncType={}, employeeId={}", syncType, employeeId);
                     erpSyncService.markSyncSkipped(syncType, employeeId, staffName, staffNo);
                     erpSyncService.recordLog(syncType, employeeId, staffName, staffNo, 3, reqBody, respBody, errMsg);
@@ -277,49 +286,87 @@ public class ErpEmployeeSyncTask {
     }
 
     /**
-     * 变更同步 - ObjectModify 增量更新伯俊ERP员工
-     * 伯俊框架通过params中的ak（员工工号）自动定位记录
-     * 兜底：工号在ERP定位不到（报"未找到对象"）时降级走入职创建，与企微变动同步的自动入职行为对齐
+     * 变更同步 - REST v3 ObjectModify（id 数字定位 + partial_update 最小化更新）
+     * <p>
+     * 2026-08-18 伯俊升级后 ak(工号) 定位废弃，流程改为：
+     * <ol>
+     *   <li>HR_EMPLOYEE 按工号查现值 → 拿到记录 ID</li>
+     *   <li>查到：与 ERP 现值比对只发差异字段；调店时先校验目标店名在 ERP 店仓存在，
+     *       漂移(如淮南/济南)则明确失败提示人工核正</li>
+     *   <li>查不到：工号在 ERP 无记录 → 降级走入职创建（真新人场景，与企微自动入职对齐）；
+     *       创建又报"已存在"则重查一次补修改，仍查不到按失败上抛（不再静默跳过）</li>
+     * </ol>
      */
     private SyncResult syncUpdate(IhrEmployeeDetail detail) {
-        try {
-            return doModify(detail);
-        } catch (BjErpApiClient.BusinessCallException e) {
-            if (!BjErpApiClient.isRecordNotFound(e.getMessage())) {
-                throw e;
-            }
-            log.info("员工 {}({}) 在伯俊ERP未找到对象，降级走入职创建", detail.getStaffName(), detail.getStaffNo());
+        ErpEmployeeCurrent current = bjerpEmployeeMapper.selectByStaffNo(detail.getStaffNo());
+        if (current == null) {
+            log.info("员工 {}({}) 在伯俊ERP无记录，降级走入职创建", detail.getStaffName(), detail.getStaffNo());
             try {
                 return syncOnboarding(detail);
             } catch (BjErpApiClient.BusinessCallException createEx) {
-                // 携带创建的请求/响应体，并保留原变更错误，便于日志排查
-                throw new BjErpApiClient.BusinessCallException(
-                        "自动入职失败[原变更错误: " + e.getMessage() + "]: " + createEx.getMessage(),
-                        createEx.getRequestBody(), createEx.getResponseBody());
+                if (!BjErpApiClient.isAlreadyExists(createEx.getMessage())) {
+                    throw createEx;
+                }
+                // 创建报"已存在"但按工号又查不到（NO 带空格/竞态等）→ 重查一次，查到即走修改
+                ErpEmployeeCurrent retry = bjerpEmployeeMapper.selectByStaffNo(detail.getStaffNo());
+                if (retry != null) {
+                    log.info("员工 {}({}) 创建报已存在但重查命中(ID={})，转走修改",
+                            detail.getStaffName(), detail.getStaffNo(), retry.getId());
+                    return doModify(detail, retry);
+                }
+                throw createEx;
             }
         }
-    }
-
-    private SyncResult doModify(IhrEmployeeDetail detail) {
-        JSONObject data = IhrToBjErpConverter.toModifyParams(detail);
-        log.debug("变更同步: staffNo={}, staffName={}, params={}", detail.getStaffNo(), detail.getStaffName(), data);
-        BjErpApiClient.CallRecord record = bjErpApiClient.call(buildTransactions("ObjectModify", data));
-        Long objectId = BjErpApiClient.extractObjectId(record.getResponse());
-        log.info("变更同步成功: staffNo={}, staffName={}, erpObjectId={}", detail.getStaffNo(), detail.getStaffName(), objectId);
-        return new SyncResult(objectId, record.getRequestBody(), record.getResponseBody());
+        return doModify(detail, current);
     }
 
     /**
-     * 离职同步 - ObjectModify 更新伯俊ERP员工为离职状态
-     * 伯俊框架通过params中的ak（员工工号）自动定位记录
+     * 按现值比对执行修改：无差异直接成功（不调 ERP），有差异只发差异字段
+     */
+    private SyncResult doModify(IhrEmployeeDetail detail, ErpEmployeeCurrent current) {
+        String ihrDept = detail.getDepartmentName() == null ? "" : detail.getDepartmentName().trim();
+        String erpStore = current.getStoreName() == null ? "" : current.getStoreName().trim();
+        boolean storeChanged = !ihrDept.equals(erpStore);
+        if (storeChanged && bjerpEmployeeMapper.countActiveStoreByName(ihrDept) == 0) {
+            // IHR 部门名在 ERP 店仓不存在：真调店进不来 / 店名漂移，明确失败等人工核正，
+            // 不静默跳过（旧逻辑此处会以"店仓不存在"失败，语义不变但消息更可行动）
+            throw new BjErpApiClient.BusinessCallException(
+                    "IHR部门名[" + ihrDept + "]在ERP店仓不存在(疑似店名漂移或新店未建), 请人工核正后重试", null, null);
+        }
+
+        JSONObject data = IhrToBjErpConverter.toModifyParams(detail, current.getId(), current, storeChanged);
+        if (data.size() == 3) {  // 仅 table/id/partial_update = 与ERP现状无差异
+            log.info("变更同步无差异跳过API调用: staffNo={}, staffName={}, erpId={}",
+                    detail.getStaffNo(), detail.getStaffName(), current.getId());
+            return new SyncResult(current.getId(), "(无差异,未调用ERP)", "(无差异)");
+        }
+        log.debug("变更同步: staffNo={}, staffName={}, erpId={}, params={}",
+                detail.getStaffNo(), detail.getStaffName(), current.getId(), data);
+        BjErpApiClient.CallRecord record = bjErpApiClient.call(buildTransactions("ObjectModify", data));
+        // 修改响应不含 objectid，用现值查询拿到的 ID 回填 erp_object_id
+        Long objectId = BjErpApiClient.extractObjectId(record.getResponse());
+        log.info("变更同步成功: staffNo={}, staffName={}, erpId={}",
+                detail.getStaffNo(), detail.getStaffName(), objectId != null ? objectId : current.getId());
+        return new SyncResult(objectId != null ? objectId : current.getId(),
+                record.getRequestBody(), record.getResponseBody());
+    }
+
+    /**
+     * 离职同步 - ObjectModify 更新伯俊ERP员工为离职状态（REST v3 id 协议，功能仍禁用）
      */
     private SyncResult syncLeaving(IhrEmployeeDetail detail) {
-        JSONObject data = IhrToBjErpConverter.toLeavingParams(detail);
-        log.debug("离职同步: staffNo={}, staffName={}, params={}", detail.getStaffNo(), detail.getStaffName(), data);
+        ErpEmployeeCurrent current = bjerpEmployeeMapper.selectByStaffNo(detail.getStaffNo());
+        if (current == null) {
+            throw new BjErpApiClient.BusinessCallException(
+                    "员工 " + detail.getStaffName() + "(" + detail.getStaffNo() + ") 在伯俊ERP无记录, 无法置离职", null, null);
+        }
+        JSONObject data = IhrToBjErpConverter.toLeavingParams(detail, current.getId());
+        log.debug("离职同步: staffNo={}, staffName={}, erpId={}, params={}",
+                detail.getStaffNo(), detail.getStaffName(), current.getId(), data);
         BjErpApiClient.CallRecord record = bjErpApiClient.call(buildTransactions("ObjectModify", data));
-        Long objectId = BjErpApiClient.extractObjectId(record.getResponse());
-        log.info("离职同步成功: staffNo={}, staffName={}, erpObjectId={}", detail.getStaffNo(), detail.getStaffName(), objectId);
-        return new SyncResult(objectId, record.getRequestBody(), record.getResponseBody());
+        log.info("离职同步成功: staffNo={}, staffName={}, erpId={}",
+                detail.getStaffNo(), detail.getStaffName(), current.getId());
+        return new SyncResult(current.getId(), record.getRequestBody(), record.getResponseBody());
     }
 
     /**

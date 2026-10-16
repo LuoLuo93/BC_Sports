@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bcsport.admin.erpmapper.BjerpEmployeeMapper">
+
+    <!-- 员工现值快照：REST v3 ObjectModify 以 id 定位 + partial_update=true 最小化发送，
+         未变化字段不传，故需先取 ERP 现值做比对 -->
+    <select id="selectByStaffNo" resultType="com.bcsport.admin.vo.ErpEmployeeCurrent">
+        SELECT e.ID              AS id,
+               e.NAME            AS name,
+               s.NAME            AS storeName,
+               e.INCUMBENCY_STS  AS incumbencySts,
+               e.HANDSET         AS handset,
+               e.ISSALER         AS issaler,
+               e.ISSTOREMAN      AS isstoreman
+        FROM HR_EMPLOYEE e
+                 LEFT JOIN C_STORE s ON e.C_STORE_ID = s.ID
+        WHERE TRIM(e.NO) = TRIM(#{staffNo})
+          AND ROWNUM = 1
+    </select>
+
+    <!-- 调店目标店名校验：IHR 部门名必须在 ERP 店仓精确存在，否则视为店名漂移 -->
+    <select id="countActiveStoreByName" resultType="int">
+        SELECT COUNT(*)
+        FROM C_STORE
+        WHERE NAME = #{storeName}
+          AND ISACTIVE = 'Y'
+    </select>
+
+</mapper>

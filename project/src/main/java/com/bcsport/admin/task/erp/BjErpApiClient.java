@@ -204,24 +204,14 @@ public class BjErpApiClient {
 
     /**
      * 判断错误信息是否为"数据已存在"（如"输入的数据已存在:编号"）。
-     * 用于入职同步时把"已存在"识别为已跳过而非失败。
+     * 入职同步(ObjectCreate)时把"已存在"识别为幂等跳过而非失败；
+     * 变更同步(REST v3 id 协议)下按工号查现值先行，正常不应再走到此错误。
      *
      * @param errMsg 错误信息
      * @return true 表示是"已存在"类错误
      */
     public static boolean isAlreadyExists(String errMsg) {
         return errMsg != null && errMsg.contains("已存在");
-    }
-
-    /**
-     * 判断错误信息是否为"未找到对象"（ObjectModify 按工号 ak 定位不到记录）。
-     * 用于变更同步时识别"该人员不在伯俊ERP"，触发降级创建。
-     *
-     * @param errMsg 错误信息
-     * @return true 表示是"未找到对象"类错误
-     */
-    public static boolean isRecordNotFound(String errMsg) {
-        return errMsg != null && errMsg.contains("未找到对象");
     }
 
     // ==================== 工具 ====================

@@ -12,7 +12,7 @@
 | 操作 | sync_type | 伯俊命令 | 说明 | 启用 |
 |---|---|---|---|---|
 | 入职 | `ONBOARDING` | `ObjectCreate` | 新增员工到 ERP | ✅ |
-| 变更 | `UPDATE` | `ObjectModify` | 用工号 ak 定位记录，增量更新字段 | ✅ |
+| 变更 | `UPDATE` | `ObjectModify` | REST v3：按工号查现值得记录 ID，`id`+`partial_update=true` 只更新差异字段 | ✅ |
 | 离职 | `LEAVING` | `ObjectModify` | 同变更，参数带离职状态 | ⚠️ 已注释（后期改库） |
 
 ```
@@ -101,7 +101,9 @@ syncOne("ONBOARDING", employeeId, staffName, staffNo)
 
 ---
 
-## 变更同步 `UPDATE`
+## 变更同步 `UPDATE`（REST v3：id 定位 + partial_update 最小化发送）
+
+> **协议变更史（2026-10-16 排查定案）**：伯俊 2026-08-18 11:12 升级 REST v3，`ObjectModify` 的 `ak` 定位参数废弃（AD_TABLE.AK_COLUMN_ID 同期从工号列 25983 改为姓名列 25982，备份表 AD_TABLE_BK 可证），官方现行以 `id`(记录数字主键, Number) 定位并新增 `partial_update`(Boolean, 必传 true，否则未传字段被 ERP 清空——实测验证)。ak 自 8-19 起对所有人报"未找到对象"，旧逻辑降级 ObjectCreate 撞工号唯一索引报"已存在"被标跳过(3)静默丢失，8-19~10-16 共 451 人变动未落 ERP。官方文档接口（免登录）：`http://bos.bc-sports.com.cn:8876/bos/p/doc/v3/restapi/table?tableId=14630&operation=Modify`
 
 ### 逐员工处理流程
 ```
@@ -109,29 +111,36 @@ syncOne("UPDATE", employeeId, staffName, staffNo)
 ├─ 查 employee_information 详情 (selectById)
 │   └─ 查不到 → markSyncSkipped(3) ⭐ 受状态不降级保护
 ├─ syncUpdate(detail):
-│   ├─ doModify: ObjectModify 工号 ak 定位 + 增量更新
-│   │    字段: ak=工号(定位), NAME=姓名, C_CUSTOMER_ID__NAME="边城体育"(固定),
-│   │         C_STORE_ID__NAME=部门名(实时), INCUMBENCY_STS=在职状况,
-│   │         ISSALER="Y"(营业员), HANDSET=手机
-│   └─ 报"未找到对象"（ERP 无此工号）→ 兜底：降级走 syncOnboarding 用 ObjectCreate 创建
-├─ 成功（含降级创建成功）→ markSyncSuccess(1, erpObjectId) ✅
-├─ 报"已存在" → markSyncSkipped(3) ⭐ 受保护（降级创建撞上已有编号时触发）
+│   ├─ bjerpEmployeeMapper.selectByStaffNo(工号) → HR_EMPLOYEE 现值快照(ID/姓名/店仓/状态/手机/营业员/店长)
+│   ├─ 查到 → doModify: ObjectModify {table, id=记录ID, partial_update:true} + 只发差异字段
+│   │    · NAME: 姓名不同才发
+│   │    · C_STORE_ID__NAME: 仅调店时发（先校验目标店名在 C_STORE 精确存在，
+│   │      不存在→失败(2)提示"IHR部门名[x]在ERP店仓不存在(疑似店名漂移或新店未建)"等人工核正；
+│   │      店名未变不发 → 淮南/济南类漂移不阻塞手机号/状态等其他变动）
+│   │    · INCUMBENCY_STS: 仅 ERP=D(离职) 而 IHR 在职/试用时拉回（ERP 罕见码 E 保守不动）
+│   │    · ISSALER: 现值非 Y 时拉齐为 Y
+│   │    · ISSTOREMAN: 职位=店长→Y 否则空串，与现值不同才发
+│   │    · HANDSET: IHR 非空且不同才发；IHR 为空不碰 ERP 已有手机号
+│   │    · 全部无差异 → 不调 ERP 直接成功，日志请求体记"(无差异,未调用ERP)"
+│   └─ 查不到（ERP 无此工号）→ 兜底：降级 syncOnboarding 用 ObjectCreate 创建；
+│       创建报"已存在"→重查一次现值，查到转走修改；仍查不到→失败上抛(2)
+├─ 成功 → markSyncSuccess(1, erpId) ✅（修改响应无 objectid，用现值查询的 ID 回填 erp_object_id）
+├─ 报"已存在"且为入职(ONBOARDING) → markSyncSkipped(3) ⭐ 幂等防重（变更不再走跳过，防静默丢失）
 └─ 其他异常 → markSyncFailed(2, 错误信息)
 ```
 
-> 入职用 `ObjectCreate`（新增），变更用 `ObjectModify`（用工号 `ak` 定位记录后增量更新字段）。变更几乎不会报"已存在"（是改不是增），工号在 ERP 不存在时报"未找到对象"，自动降级走入职创建（见下"变更兜底"）。变更不传部门字段 `C_DEPARTMENT_ID__NAME`（伯俊 C_DEPARTMENT 表为空，传了会报"部门不存在"）。
+> 入职用 `ObjectCreate`（协议未变，NO=工号）；变更用 `ObjectModify`（id 定位 + partial_update=true 只更新差异字段）。变更不传部门字段 `C_DEPARTMENT_ID__NAME`（伯俊 C_DEPARTMENT 表为空，传了会报"部门不存在"）。
 
 ### 变更兜底：工号在 ERP 不存在时自动创建
 
-`syncUpdate` 捕获 `BusinessCallException` 后，若错误信息含 **"未找到对象"**（`BjErpApiClient.isRecordNotFound`，ObjectModify 按工号 ak 定位不到记录的固定报错），不再标失败，而是降级复用入职创建（`toCreateParams` + `ObjectCreate`），与企微变动同步"查不到人自动入职"的行为对齐：
+`syncUpdate` 先按工号查 HR_EMPLOYEE 现值，查不到（真新人/ERP漏建）降级复用入职创建（`toCreateParams` + `ObjectCreate`），与企微变动同步"查不到人自动入职"的行为对齐：
 
 | 降级创建结果 | 最终状态 |
 |---|---|
 | ObjectCreate 成功 | 已同步(1)，日志请求体可见 ObjectCreate 命令 |
-| 创建报"已存在"（与 Modify"未找到"矛盾的场景） | 已跳过(3)，走现有 isAlreadyExists 分支 |
-| 创建报其他错误 | 失败(2)，错误信息带"自动入职失败[原变更错误: …]"前缀，并携带创建的请求/响应体 |
+| 创建报"已存在"（工号带空格/竞态等） | 重查现值命中 → 转走修改；仍查不到 → 失败(2)（不再静默跳过） |
+| 创建报其他错误 | 失败(2)，携带创建的请求/响应体 |
 
-- 仅"未找到对象"触发降级；网络异常、其他业务错误（如"部门不存在"）原样上抛，行为不变。
 - 批量 `syncAll` 与手动 `syncSingle` 都走 `syncUpdate`，兜底同时生效。
 - 状态自愈：兜底建人后该员工的 ONBOARDING 行可能仍是未同步(0)，下一轮入职同步对其 ObjectCreate 会报"已存在"→标已跳过(3)，无需人工处理。
 
@@ -145,9 +154,9 @@ syncOne("LEAVING", employeeId, staffName, staffNo)
 ├─ 查 employee_information 详情
 │   └─ 查不到 → markSyncSkipped(3) ⭐ 受保护
 ├─ syncLeaving(detail):
-│   ├─ IhrToBjErpConverter.toLeavingParams(detail)
-│   │    字段: ak=工号(定位), INCUMBENCY_STS="离职", END_DATE=离职日期
-│   ├─ buildTransactions("ObjectModify", data)  → 表 12462 工号 ak 定位 + 改离职状态
+│   ├─ IhrToBjErpConverter.toLeavingParams(detail, erpId)
+│   │    字段: id=记录ID(定位), partial_update=true, INCUMBENCY_STS="离职", END_DATE=离职日期
+│   ├─ buildTransactions("ObjectModify", data)  → 表 14630 id 定位 + 改离职状态
 │   └─ bjErpApiClient.call(transactions)
 ├─ 成功 → markSyncSuccess(1, erpObjectId) ✅
 ├─ 报"已存在" → markSyncSkipped(3) ⭐ 受保护
@@ -170,7 +179,8 @@ catch (Exception e):
 | 错误类型 | 处理 | 典型场景 |
 |---|---|---|
 | "已存在"（编号重复） | 标已跳过(3) | 入职时 ERP 已有该工号 |
-| "未找到对象"（工号定位不到） | 变更：降级 ObjectCreate 创建（见"变更兜底"）；离职（未启用）：标失败(2) | 变更时 ERP 无此记录 |
+| "已存在"（编号冲突） | 入职：幂等防重标跳过(3)；变更：重查现值转修改，查不到标失败(2) | 入职重复提交；变更=工号在 ERP 但按工号查不到现值（罕见） |
+| "IHR部门名[x]在ERP店仓不存在" | 变更：失败(2)，等人工核正店名漂移/建新店 | 调店目标店名与 ERP C_STORE 漂移（如淮南/济南） |
 | 其他业务错误 | 标失败(2) | 接口报错 |
 
 > 入职/变更/离职的单条推送（列表"同步ERP"按钮）和批量推送（syncAll）**都走同一个 `syncSingle`/`syncOne` 方法**，异常处理逻辑完全一致。
@@ -242,7 +252,7 @@ public void markSyncSkipped(String syncType, String employeeId, String staffName
 | 维度 | 入职 ONBOARDING | 变更 UPDATE | 离职 LEAVING |
 |---|---|---|---|
 | 数据源 | `employee_additions` | `employee_modifications` | `employee_information` |
-| 伯俊命令 | `ObjectCreate`（新增） | `ObjectModify`（ak 定位 + 增量更新） | `ObjectModify`（ak 定位 + 改离职状态） |
+| 伯俊命令 | `ObjectCreate`（新增，NO=工号） | `ObjectModify`（id 定位 + partial_update 差异更新） | `ObjectModify`（id 定位 + 改离职状态） |
 | 参数转换 | `IhrToBjErpConverter.toCreateParams` | `IhrToBjErpConverter.toModifyParams` | `IhrToBjErpConverter.toLeavingParams` |
 | 过期基准 | `enroll_in_date`（入职日期） | `sync_date`（最近修改日） | 无 |
 | 额外过滤 | 排除已离职 `staff_status != 'LEAVED'` | 去重（同日已入职不重复处理） | — |

@@ -236,4 +236,21 @@ public class EntityChannelController {
             return Result.error("同步失败：" + e.getMessage());
         }
     }
+
+    /**
+     * 存量校正渠道维度父子关系：基础信息里移动过字典节点(改上级)的历史行，父列仍存旧父。
+     * 按字典当前树结构重算三组父列(子列有值时父列=子节点当前父级)；列指向已删/不存在节点的仅报告不修改。
+     */
+    @PostMapping("/reconcile-dims")
+    @ApiOperation("存量校正渠道维度父子关系")
+    @RequiresPermissions("bi:entity:edit")
+    @OperLog(module = "实体渠道", operation = "校正渠道维度")
+    public Result<Map<String, Object>> reconcileDims() {
+        try {
+            Map<String, Object> result = entityChannelService.reconcileChannelDims();
+            return Result.success(result);
+        } catch (Exception e) {
+            return Result.error("校正失败：" + e.getMessage());
+        }
+    }
 }

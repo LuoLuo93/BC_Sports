@@ -64,4 +64,13 @@ public interface EntityChannelService {
      * @return 统计结果：total/inserted/revived/existing/brandUnmatched/unmatchedBrands
      */
     java.util.Map<String, Object> syncStoreBrands();
+
+    /**
+     * 存量校正三组渠道维度的父子关系（地区一级/二级、渠道类型/定义、渠道性质/经营类型）。
+     * 口径：子列有值且节点在字典中存在时，父列应以字典当前父子关系为准（子节点的现父级），不一致则改写；
+     * 列指向已删除/不存在节点的仅统计报告，不修改（避免静默丢配置）。
+     * 兜底字典编辑联动上线前的历史脏数据，也可作定时自愈。
+     * @return 统计结果：total/fixed/fixGroups(修正明细)/orphanCount/orphans(悬空引用样例)
+     */
+    java.util.Map<String, Object> reconcileChannelDims();
 }

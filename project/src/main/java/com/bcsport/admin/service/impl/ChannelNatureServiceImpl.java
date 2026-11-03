@@ -9,7 +9,9 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.bcsport.admin.dto.ChannelNatureDTO;
 import com.bcsport.admin.dto.ChannelNatureQueryDTO;
 import com.bcsport.admin.entity.ChannelNature;
+import com.bcsport.admin.entity.EntityChannel;
 import com.bcsport.admin.mapper.ChannelNatureMapper;
+import com.bcsport.admin.mapper.EntityChannelMapper;
 import com.bcsport.admin.service.ChannelNatureService;
 import com.bcsport.admin.util.BeanCopyUtils;
 import com.bcsport.admin.vo.ChannelNatureVO;
@@ -20,8 +22,10 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -32,6 +36,13 @@ public class ChannelNatureServiceImpl extends ServiceImpl<ChannelNatureMapper, C
 
     @Autowired
     private ChannelNatureMapper channelNatureMapper;
+
+    /**
+     * 实体渠道配置主表：渠道维度(性质/经营类型)在此表冗余存父子两列，
+     * 字典树移动节点/删除节点时需联动，否则主表父列滞后或引用悬空。
+     */
+    @Autowired
+    private EntityChannelMapper entityChannelMapper;
 
     @Override
     public List<ChannelNatureVO> listByTree(ChannelNatureQueryDTO query) {
@@ -234,18 +245,84 @@ public class ChannelNatureServiceImpl extends ServiceImpl<ChannelNatureMapper, C
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateChannelNature(ChannelNatureDTO channelNatureDTO) {
+        // 先取旧记录留档父级：updateById 之后再查就是新值，无法判断是否移动过节点
+        ChannelNature before = channelNatureDTO.getId() != null ? getById(channelNatureDTO.getId()) : null;
+
         ChannelNature channelNature = BeanCopyUtils.copy(channelNatureDTO, ChannelNature.class);
         // updateTime 由 MybatisPlusAutoFillHandler 自动填充
         updateById(channelNature);
+
+        // 节点移动(上级变化)时联动刷新实体渠道配置父列：
+        // entity_channel 冗余存 channel_nature_id(父)+business_type_id(子)两列，字典里把"经营类型"挪到别的性质下后，
+        // 已配置行的 channel_nature_id 仍是旧父，列表展示与落库都滞后，这里同步改写
+        if (before != null && channelNatureDTO.getParentId() != null) {
+            syncEntityChannelParentOnMove(channelNatureDTO.getId(), before.getParentId(), channelNatureDTO.getParentId());
+        }
+    }
+
+    /**
+     * 上级(parentId)变化时，联动刷新实体渠道配置的父列。
+     * 规则：business_type_id = 被移动节点 的未删行，channel_nature_id 改写为节点当前父级；移成顶级('0'/空)则置 NULL。
+     * dto.parentId 为 null 时 updateById 本就不会改父级，视为未移动，调用方已跳过。
+     */
+    private void syncEntityChannelParentOnMove(String nodeId, String oldParentRaw, String newParentRaw) {
+        String oldParent = normalizeTopParent(oldParentRaw);
+        String newParent = normalizeTopParent(newParentRaw);
+        if (Objects.equals(oldParent, newParent)) {
+            return;
+        }
+        LambdaUpdateWrapper<EntityChannel> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.eq(EntityChannel::getBusinessTypeId, nodeId)
+                .eq(EntityChannel::getDeleted, 0)
+                .set(EntityChannel::getChannelNatureId, newParent)
+                .set(EntityChannel::getUpdateTime, new Date());
+        entityChannelMapper.update(null, wrapper);
+    }
+
+    /**
+     * 顶级 parentId 归一化：'0'/空白/null 统一为 null，便于比较与置空父列。
+     */
+    private String normalizeTopParent(String parentId) {
+        if (parentId == null || parentId.trim().isEmpty() || "0".equals(parentId.trim())) {
+            return null;
+        }
+        return parentId.trim();
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteChannelNature(String id) {
+        // 收集整棵子树(含自身)：后端删除会把子孙节点一并逻辑删，引用检查必须覆盖全部待删节点
+        List<String> subtreeIds = new ArrayList<>();
+        collectSubtreeIds(id, subtreeIds);
+
+        // 被实体渠道配置引用则阻止删除：硬删会让引用悬空(字典无 @TableLogic 过滤，列表仍显示已删节点名)
+        Long refCount = entityChannelMapper.selectCount(new LambdaQueryWrapper<EntityChannel>()
+                .eq(EntityChannel::getDeleted, 0)
+                .and(w -> w.in(EntityChannel::getChannelNatureId, subtreeIds)
+                        .or().in(EntityChannel::getBusinessTypeId, subtreeIds)));
+        if (refCount != null && refCount > 0) {
+            ChannelNature node = getById(id);
+            throw new IllegalArgumentException("渠道性质「" + (node != null ? node.getNatureName() : id)
+                    + "」及其子节点被 " + refCount + " 条实体渠道配置引用，请先在【BI管理→实体渠道】中处理引用后再删除");
+        }
+
         // 递归删除所有子孙节点
         deleteChannelNatureRecursive(id);
         // 删除当前节点
         removeById(id);
+    }
+
+    /**
+     * 递归收集节点及其全部子孙的 id（与 deleteChannelNatureRecursive 的遍历口径一致，不过滤 deleted）。
+     */
+    private void collectSubtreeIds(String parentId, List<String> out) {
+        out.add(parentId);
+        LambdaQueryWrapper<ChannelNature> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ChannelNature::getParentId, parentId);
+        for (ChannelNature child : this.list(wrapper)) {
+            collectSubtreeIds(child.getId(), out);
+        }
     }
 
     private void deleteChannelNatureRecursive(String parentId) {

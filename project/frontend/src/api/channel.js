@@ -91,3 +91,8 @@ export function importEntityChannel(data) {
 export function syncEntityChannelStoreNames() {
   return request.post('/api/entity-channel/sync-store-names', {}, { timeout: 300000 })
 }
+
+// 存量校正渠道维度父子关系：按字典当前树重算三组父列(基础信息里移动节点导致的历史滞后)
+export function reconcileEntityChannelDims() {
+  return request.post('/api/entity-channel/reconcile-dims', {}, { timeout: 300000 })
+}

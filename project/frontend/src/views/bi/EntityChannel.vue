@@ -32,6 +32,7 @@
           <span class="card-header-title">实体渠道配置</span>
           <div style="display:flex;gap:8px">
             <el-button v-if="hasPermission('bi:entity:edit')" type="success" size="small" :icon="Refresh" :loading="syncNameLoading" @click="handleSyncStoreNames">同步店仓名称</el-button>
+            <el-button v-if="hasPermission('bi:entity:edit')" type="success" plain size="small" :icon="MagicStick" :loading="reconcileLoading" @click="handleReconcileDims">校正渠道维度</el-button>
             <el-button v-if="hasPermission('bi:entity:add')" type="warning" size="small" :icon="Upload" @click="showImportDialog = true">批量导入</el-button>
             <el-button v-if="hasPermission('bi:entity:add')" type="primary" size="small" :icon="Plus" @click="router.push('/bi/entity-channel/form')">新增配置</el-button>
           </div>
@@ -170,8 +171,8 @@ defineOptions({ name: 'EntityChannel' })
 import { ref, reactive, onMounted, onActivated } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getEntityChannelPage, deleteEntityChannel, getEntityChannelTemplate, importEntityChannel, syncEntityChannelStoreNames } from '@/api/channel'
-import { Plus, Search, RefreshRight, Refresh, OfficeBuilding, User, PriceTag, Upload } from '@element-plus/icons-vue'
+import { getEntityChannelPage, deleteEntityChannel, getEntityChannelTemplate, importEntityChannel, syncEntityChannelStoreNames, reconcileEntityChannelDims } from '@/api/channel'
+import { Plus, Search, RefreshRight, Refresh, OfficeBuilding, User, PriceTag, Upload, MagicStick } from '@element-plus/icons-vue'
 import { usePermission } from '@/composables/usePermission'
 import { usePageQuery } from '@/composables/usePageQuery'
 import { PAGE_SIZES } from '@/utils/appConfig'
@@ -245,6 +246,48 @@ async function handleSyncStoreNames() {
     ElMessage.error('同步失败：' + (e.message || '服务器错误'))
   } finally {
     syncNameLoading.value = false
+  }
+}
+
+// === 校正渠道维度（存量父子关系按字典当前树重算）===
+const reconcileLoading = ref(false)
+async function handleReconcileDims() {
+  try {
+    await ElMessageBox.confirm(
+      '将按基础信息字典的当前树结构，重算本列表三组父子维度（一二级地区、渠道类型/定义、渠道性质/经营类型）的父级列：\n' +
+      '子级有值时父级改为子节点当前所属父级，与字典不一致的历史行会被修正；\n' +
+      '指向已删除或不存在节点的引用只报告不修改。\n是否继续？',
+      '校正渠道维度',
+      { type: 'info', confirmButtonText: '开始校正', cancelButtonText: '取消' }
+    )
+  } catch {
+    return
+  }
+  reconcileLoading.value = true
+  try {
+    const res = await reconcileEntityChannelDims()
+    const data = res.data || {}
+    const fixed = data.fixed ?? 0
+    const orphanCount = data.orphanCount ?? 0
+    let msg = `校正完成：共检查 ${data.total ?? 0} 行，修正 ${fixed} 行，悬空引用 ${orphanCount} 处`
+    const groups = data.fixGroups || []
+    if (groups.length) {
+      msg += '\n' + groups.slice(0, 10).map(g => `${g.dim}「${g.childName}」→ 父级「${g.newParentName}」(${g.rows}行)`).join('\n')
+      if (groups.length > 10) msg += `\n...共 ${groups.length} 组修正`
+    }
+    const orphans = data.orphans || []
+    if (orphans.length) {
+      msg += '\n悬空引用(未修改，需人工处理)：\n' + orphans.slice(0, 10).join('\n')
+      if (orphans.length > 10) msg += `\n...共 ${orphanCount} 处`
+    }
+    ElMessage({ type: orphanCount > 0 ? 'warning' : 'success', message: msg, duration: 8000, showClose: true })
+    if (fixed > 0) {
+      loadData()
+    }
+  } catch (e) {
+    ElMessage.error('校正失败：' + (e.message || '服务器错误'))
+  } finally {
+    reconcileLoading.value = false
   }
 }
 

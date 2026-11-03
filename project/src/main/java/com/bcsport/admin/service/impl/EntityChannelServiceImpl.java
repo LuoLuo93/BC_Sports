@@ -29,8 +29,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.Date;
@@ -993,6 +995,192 @@ public class EntityChannelServiceImpl implements EntityChannelService {
         result.put("brandUnmatched", brandUnmatched);
         result.put("unmatchedBrands", unmatchedBrands);
         return result;
+    }
+
+    /**
+     * 存量校正三组渠道维度父子关系。
+     * <p>
+     * 背景：主表把三组父子维度各冗余存两列（region_level1/2_id、channel_type_id/channel_def_id、
+     * channel_nature_id/business_type_id），历史上字典树里移动节点（改上级）不会联动主表，
+     * 导致父列存旧父、列表展示滞后。字典编辑联动（syncEntityChannelParentOnMove）已上线挡新增，
+     * 此方法按字典当前树结构重算存量。
+     * <p>
+     * 口径：子列有值且节点在字典中有效(deleted=0)时，父列应以子节点当前父级为准，不一致改写（移成顶级则置 NULL）；
+     * 任一列指向已删除/不存在的节点、或子节点的新父级本身已删——只统计报告不修改，避免静默丢配置。
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> reconcileChannelDims() {
+        // 1. 三张字典树全量(含已删)：id → 父级(归一化)/名称/是否有效
+        Map<String, String> ctParent = new HashMap<>(), cnParent = new HashMap<>(), regionParent = new HashMap<>();
+        Map<String, String> ctName = new HashMap<>(), cnName = new HashMap<>(), regionName = new HashMap<>();
+        Set<String> ctAlive = new HashSet<>(), cnAlive = new HashSet<>(), regionAlive = new HashSet<>();
+        for (ChannelType ct : channelTypeMapper.selectList(null)) {
+            ctParent.put(ct.getId(), normalizeTopParent(ct.getParentId()));
+            ctName.put(ct.getId(), ct.getTypeName());
+            if (ct.getDeleted() == null || ct.getDeleted() == 0) ctAlive.add(ct.getId());
+        }
+        for (ChannelNature cn : channelNatureMapper.selectList(null)) {
+            cnParent.put(cn.getId(), normalizeTopParent(cn.getParentId()));
+            cnName.put(cn.getId(), cn.getNatureName());
+            if (cn.getDeleted() == null || cn.getDeleted() == 0) cnAlive.add(cn.getId());
+        }
+        for (Region r : regionMapper.selectList(null)) {
+            regionParent.put(r.getId(), normalizeTopParent(r.getParentId()));
+            regionName.put(r.getId(), r.getRegionName());
+            if (r.getDeleted() == null || r.getDeleted() == 0) regionAlive.add(r.getId());
+        }
+
+        // 2. 主表全量未删行，只取三组维度列（含 id/编码/名称供明细定位）
+        List<EntityChannel> rows = entityChannelMapper.selectList(new QueryWrapper<EntityChannel>()
+                .eq("deleted", 0)
+                .select("id", "external_id", "entity_name",
+                        "region_level1_id", "region_level2_id",
+                        "channel_type_id", "channel_def_id",
+                        "channel_nature_id", "business_type_id"));
+
+        // 3. 逐行比对三组维度，收集修正组（按 子列值+期望父 聚合，后面一组一条 UPDATE）与悬空引用
+        Map<String, Map<String, Object>> fixGroups = new LinkedHashMap<>();   // key=维度|子列值|期望父
+        int orphanCount = 0;
+        List<String> orphanSamples = new ArrayList<>();
+
+        for (EntityChannel row : rows) {
+            String rowDesc = row.getExternalId() + "/" + (row.getEntityName() == null ? "" : row.getEntityName());
+
+            // 地区：region_level2_id(子) 有值时 region_level1_id(父) 应为其当前父级
+            collectDimFix(rowDesc, "地区", row.getRegionLevel2Id(), regionAlive, regionParent, regionName,
+                    normalizeTopParent(row.getRegionLevel1Id()), fixGroups);
+            if (isDeadRef(row.getRegionLevel1Id(), regionParent, regionAlive)) {
+                orphanCount = recordOrphan(orphanSamples, orphanCount, rowDesc, "一级地区", row.getRegionLevel1Id(), regionName);
+            }
+            if (isDeadRef(row.getRegionLevel2Id(), regionParent, regionAlive)) {
+                orphanCount = recordOrphan(orphanSamples, orphanCount, rowDesc, "二级地区", row.getRegionLevel2Id(), regionName);
+            }
+
+            // 渠道类型/定义
+            collectDimFix(rowDesc, "渠道类型/定义", row.getChannelDefId(), ctAlive, ctParent, ctName,
+                    normalizeTopParent(row.getChannelTypeId()), fixGroups);
+            if (isDeadRef(row.getChannelTypeId(), ctParent, ctAlive)) {
+                orphanCount = recordOrphan(orphanSamples, orphanCount, rowDesc, "渠道类型", row.getChannelTypeId(), ctName);
+            }
+            if (isDeadRef(row.getChannelDefId(), ctParent, ctAlive)) {
+                orphanCount = recordOrphan(orphanSamples, orphanCount, rowDesc, "渠道定义", row.getChannelDefId(), ctName);
+            }
+
+            // 渠道性质/经营类型
+            collectDimFix(rowDesc, "渠道性质/经营类型", row.getBusinessTypeId(), cnAlive, cnParent, cnName,
+                    normalizeTopParent(row.getChannelNatureId()), fixGroups);
+            if (isDeadRef(row.getChannelNatureId(), cnParent, cnAlive)) {
+                orphanCount = recordOrphan(orphanSamples, orphanCount, rowDesc, "渠道性质", row.getChannelNatureId(), cnName);
+            }
+            if (isDeadRef(row.getBusinessTypeId(), cnParent, cnAlive)) {
+                orphanCount = recordOrphan(orphanSamples, orphanCount, rowDesc, "经营类型", row.getBusinessTypeId(), cnName);
+            }
+        }
+
+        // 4. 执行修正：一组一条批量 UPDATE（子列=值 的未删行，父列改写为期望父，可为 NULL）
+        Date now = new Date();
+        int fixed = 0;
+        List<Map<String, Object>> fixDetails = new ArrayList<>();
+        for (Map<String, Object> g : fixGroups.values()) {
+            String dim = (String) g.get("dim");
+            String childId = (String) g.get("childId");
+            String newParent = (String) g.get("newParent");   // 归一化后，null=顶级
+            LambdaUpdateWrapper<EntityChannel> uw = new LambdaUpdateWrapper<>();
+            uw.eq(EntityChannel::getDeleted, 0);
+            switch (dim) {
+                case "地区":
+                    uw.eq(EntityChannel::getRegionLevel2Id, childId)
+                            .set(EntityChannel::getRegionLevel1Id, newParent);
+                    break;
+                case "渠道类型/定义":
+                    uw.eq(EntityChannel::getChannelDefId, childId)
+                            .set(EntityChannel::getChannelTypeId, newParent);
+                    break;
+                default:
+                    uw.eq(EntityChannel::getBusinessTypeId, childId)
+                            .set(EntityChannel::getChannelNatureId, newParent);
+                    break;
+            }
+            uw.set(EntityChannel::getUpdateTime, now);
+            int affected = entityChannelMapper.update(null, uw);
+            fixed += affected;
+
+            Map<String, Object> detail = new LinkedHashMap<>();
+            detail.put("dim", dim);
+            detail.put("childName", g.get("childName"));
+            detail.put("newParentName", newParent == null ? "(顶级)" : g.get("newParentName"));
+            detail.put("rows", affected);
+            fixDetails.add(detail);
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("total", rows.size());
+        result.put("fixed", fixed);
+        result.put("fixGroups", fixDetails);
+        result.put("orphanCount", orphanCount);
+        result.put("orphans", orphanSamples);
+        return result;
+    }
+
+    /**
+     * 单行单维度的父子比对：子列有值且字典中有效时，父列应等于子节点当前父级（归一化比较）。
+     * 不一致则登记到修正组（key=维度|子列值|期望父，聚合行数）；子节点无效、或其新父级已删则记悬空引用不动。
+     */
+    private void collectDimFix(String rowDesc, String dim,
+                               String childId, Set<String> alive, Map<String, String> parentMap, Map<String, String> nameMap,
+                               String storedParent, Map<String, Map<String, Object>> fixGroups) {
+        if (childId == null || childId.trim().isEmpty()) {
+            return;
+        }
+        if (!alive.contains(childId)) {
+            return;   // 子列悬空：由调用方的 isDeadRef 统一报告
+        }
+        String expect = parentMap.get(childId);
+        if (expect != null && !alive.contains(expect)) {
+            return;   // 子节点的新父级本身已删：属悬空，不把死 id 写进父列
+        }
+        String normalizedStored = storedParent == null || storedParent.trim().isEmpty() ? null : storedParent.trim();
+        if (Objects.equals(expect, normalizedStored)) {
+            return;   // 父列已是字典口径，无需修正
+        }
+        String key = dim + "|" + childId + "|" + (expect == null ? "" : expect);
+        Map<String, Object> g = fixGroups.computeIfAbsent(key, k -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("dim", dim);
+            m.put("childId", childId);
+            m.put("newParent", expect);
+            m.put("childName", nameMap.get(childId));
+            m.put("newParentName", expect == null ? null : nameMap.get(expect));
+            m.put("rows", 0);
+            return m;
+        });
+        g.put("rows", (Integer) g.get("rows") + 1);
+    }
+
+    /**
+     * 列值是否悬空：有值、但字典中不存在(物理缺)或已逻辑删。
+     */
+    private boolean isDeadRef(String id, Map<String, String> parentMap, Set<String> alive) {
+        return id != null && !id.trim().isEmpty() && !alive.contains(id);
+    }
+
+    private int recordOrphan(List<String> samples, int count, String rowDesc, String colLabel, String id, Map<String, String> nameMap) {
+        if (samples.size() < 50) {
+            String knownName = nameMap.get(id);
+            samples.add(rowDesc + " 的「" + colLabel + "」指向" + (knownName != null ? "已删除节点「" + knownName + "」" : "不存在的节点 id=" + id));
+        }
+        return count + 1;
+    }
+
+    /**
+     * 顶级 parentId 归一化：'0'/空白/null 统一为 null（与字典侧 syncEntityChannelParentOnMove 同一口径）。
+     */
+    private String normalizeTopParent(String parentId) {
+        if (parentId == null || parentId.trim().isEmpty() || "0".equals(parentId.trim())) {
+            return null;
+        }
+        return parentId.trim();
     }
 
     /**

@@ -20,8 +20,17 @@ jobs:
           $nssmPath = "D:\tools\nssm.exe"
           if (Test-Path $nssmPath) {
             & $nssmPath stop "BC-Sports-Admin" 2>$null
+            # remove right after stop: nssm default AppExit action is Restart,
+            # a killed/restarted app re-locks the workspace and breaks checkout (EBUSY)
+            & $nssmPath remove "BC-Sports-Admin" confirm 2>$null
           }
-          taskkill /F /IM java.exe 2>$null
+          # kill ONLY the pid listening on 9091 - blanket "taskkill /IM java.exe"
+          # also killed the Jenkins CI java running on this box
+          $conn = netstat -ano | Select-String ':9091 ' | Select-String 'LISTENING'
+          if ($conn) {
+            $pid9091 = ($conn[0].ToString().Trim() -split '\s+')[-1]
+            if ($pid9091 -match '^\d+$') { taskkill /F /PID $pid9091 2>$null }
+          }
           Start-Sleep -Seconds 3
           Write-Host "Done"
         continue-on-error: true
@@ -83,7 +92,18 @@ jobs:
         run: |
           $serviceName = "BC-Sports-Admin"
           $projectDir = "D:\B.C.Sports\actions-runner\_work\BC_Sports\BC_Sports\project"
+          $prodDir = "D:\B.C.Sports\prod"
           $nssmPath = "D:\tools\nssm.exe"
+
+          # Stage runtime files to a stable dir OUTSIDE the runner workspace.
+          # Running the app from the workspace locks that dir (CWD + jar + logs),
+          # which made the next deploy's checkout fail with EBUSY.
+          Write-Host "Staging runtime files to $prodDir ..."
+          New-Item -ItemType Directory -Force -Path "$prodDir\logs" | Out-Null
+          Copy-Item "$projectDir\target\bc-sports-admin-1.0.0.jar" "$prodDir\bc-sports-admin-1.0.0.jar" -Force
+          if (Test-Path "$projectDir\tls-override.security") {
+            Copy-Item "$projectDir\tls-override.security" "$prodDir\tls-override.security" -Force
+          }
 
           # 刷新环境变量
           $env:PATH = [Environment]::GetEnvironmentVariable("PATH", "Machine") + ";" + [Environment]::GetEnvironmentVariable("PATH", "User")
@@ -108,13 +128,13 @@ jobs:
           # 创建新服务（生产环境使用 prod profile）
           # ★ --schedule.enabled=true 是调度唯一开启点(应用默认 false):本地/验证实例不带此参数即安全
           Write-Host "Creating new production service..."
-          & $nssmPath install $serviceName $javaPath "-Djava.security.properties=./tls-override.security -Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8 -Duser.language=zh -Duser.region=CN -Xms8g -Xmx16g -jar target/bc-sports-admin-1.0.0.jar --spring.profiles.active=prod --schedule.enabled=true"
-          & $nssmPath set $serviceName AppDirectory $projectDir
+          & $nssmPath install $serviceName $javaPath "-Djava.security.properties=./tls-override.security -Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8 -Duser.language=zh -Duser.region=CN -Xms8g -Xmx16g -jar bc-sports-admin-1.0.0.jar --spring.profiles.active=prod --schedule.enabled=true"
+          & $nssmPath set $serviceName AppDirectory $prodDir
           & $nssmPath set $serviceName DisplayName "BC Sports Admin System"
           & $nssmPath set $serviceName Description "BC Sports Admin Backend Service - Production"
           & $nssmPath set $serviceName Start SERVICE_AUTO_START
-          & $nssmPath set $serviceName AppStdout "$projectDir\logs\prod-service-stdout.log"
-          & $nssmPath set $serviceName AppStderr "$projectDir\logs\prod-service-stderr.log"
+          & $nssmPath set $serviceName AppStdout "$prodDir\logs\prod-service-stdout.log"
+          & $nssmPath set $serviceName AppStderr "$prodDir\logs\prod-service-stderr.log"
 
           # 启动服务
           Write-Host "Starting production service..."

@@ -281,7 +281,7 @@ ihr:
 qywx:
   corp-id: wxad4cef3160f0157c
   corp-secret: QYdRzoud8VOO-qhbm22r1VDMwtrHU3GvwBpQqA5B1-A
-  contacts-secret: 84RorMhTLp70OVC_Ag7i_Vnv6yNDvZGOR23-7Csr0Pw
+  contacts-secret: 84RorMhTLp70OVC_Ag7i_Wfx0-bnAgG6iLUPd3Tu6eo
   api-base-url: https://qyapi.weixin.qq.com
 
 # 云盯客流(YDKL)接口配置
